@@ -10,99 +10,61 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <header class="app-header">
-        <div class="logo">
-            <i class="fa-solid fa-graduation-cap"></i> Turma PRO
-        </div>
-        <div class="user-profile">
-            <span>Olá, Ana</span>
-            <div class="avatar">AS</div>
-        </div>
-    </header>
-
-    <main class="app-content">
-        <section class="card warning-card">
-            <h3><i class="fa-solid fa-bullhorn"></i> Aviso da Direção</h3>
-            <p>Reunião de Pais agendada para a próxima sexta-feira às 18h30. Não se esqueçam de avisar em casa!</p>
-        </section>
-
-        <div class="overview-grid">
-            <div class="overview-box danger-box">
-                <span class="number">1</span>
-                <span class="label">Módulo em Atraso</span>
-            </div>
-            <div class="overview-box active-box">
-                <span class="number">2</span>
-                <span class="label">Planos Ativos</span>
-            </div>
-        </div>
-
-        <section class="section-container">
-            <h2 class="section-title">Assiduidade (Semáforo)</h2>
+    <!-- ECRÃ DE LOGIN -->
+    <div id="login-screen" class="login-container">
+        <div class="login-box">
+            <h2><i class="fa-solid fa-graduation-cap"></i> Turma PRO</h2>
+            <p>Acesso Reservado</p>
             
-            <div class="module-card">
-                <div class="module-header">
-                    <span class="module-name">Matemática</span>
-                    <span class="module-status danger-text"><i class="fa-solid fa-triangle-exclamation"></i> 11.5%</span>
-                </div>
-                <div class="progress-container">
-                    <div class="progress-bar danger-bg" style="width: 11.5%"></div>
-                </div>
-                <div class="module-footer">
-                    <span>23 Faltas (Máx: 200)</span>
-                    <span class="danger-text">Risco de Reprovação</span>
-                </div>
+            <div class="input-group">
+                <input type="text" id="login-username" placeholder="Nº de Aluno (ex: a1234)">
+                <input type="password" id="login-password" placeholder="Palavra-passe">
             </div>
-
-            <div class="module-card">
-                <div class="module-header">
-                    <span class="module-name">Português</span>
-                    <span class="module-status warning-text">7.5%</span>
-                </div>
-                <div class="progress-container">
-                    <div class="progress-bar warning-bg" style="width: 7.5%"></div>
-                </div>
-                <div class="module-footer">
-                    <span>15 Faltas (Máx: 200)</span>
-                </div>
-            </div>
-        </section>
-
-        <section class="section-container">
-            <h2 class="section-title">Planos de Recuperação</h2>
             
-            <div class="plan-card">
-                <div class="plan-header">
-                    <h4>Matemática - Módulo 2</h4>
-                    <span class="badge">Ativo</span>
-                </div>
-                <p class="plan-task">Entregar ficha formativa resolvida e assinada.</p>
-                <div class="plan-footer">
-                    <span><i class="fa-regular fa-calendar"></i> Até 25 Nov</span>
-                </div>
+            <p id="login-error" class="error-msg" style="display: none;">Credenciais inválidas.</p>
+            
+            <button id="btn-login-manual" class="primary-btn">Entrar</button>
+            
+            <div class="divider"><span>ou</span></div>
+            
+            <button id="btn-login-phone" class="secondary-btn">
+                <i class="fa-solid fa-mobile-screen"></i> Entrar com Telemóvel
+            </button>
+        </div>
+    </div>
+
+    <!-- A APLICAÇÃO (Escondida por defeito) -->
+    <div id="app-content" style="display: none;">
+        <!-- Top Header -->
+        <header class="app-header">
+            <div class="logo"><i class="fa-solid fa-graduation-cap"></i> Turma PRO</div>
+            <div class="user-profile">
+                <span>Olá, Aluno</span>
+                <button id="btn-logout" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
             </div>
-        </section>
-    </main>
+        </header>
 
-    <nav class="bottom-nav">
-        <a href="#" class="nav-item active">
-            <i class="fa-solid fa-house"></i>
-            <span>Início</span>
-        </a>
-        <a href="#" class="nav-item">
-            <i class="fa-solid fa-chart-pie"></i>
-            <span>Avaliações</span>
-        </a>
-        <a href="#" class="nav-item">
-            <i class="fa-solid fa-user-clock"></i>
-            <span>Faltas</span>
-        </a>
-        <a href="#" class="nav-item">
-            <i class="fa-solid fa-briefcase"></i>
-            <span>FCT/PAP</span>
-        </a>
-    </nav>
+        <!-- Main Content -->
+        <main class="app-content">
+            <section class="card warning-card">
+                <h3><i class="fa-solid fa-bullhorn"></i> Aviso da Direção</h3>
+                <p>Reunião de Pais agendada para a próxima sexta-feira às 18h30.</p>
+            </section>
+            <section class="section-container">
+                <h2 class="section-title">A tua área ficará disponível em breve.</h2>
+            </section>
+        </main>
+        
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <a href="#" class="nav-item active"><i class="fa-solid fa-house"></i><span>Início</span></a>
+            <a href="#" class="nav-item"><i class="fa-solid fa-chart-pie"></i><span>Avaliações</span></a>
+            <a href="#" class="nav-item"><i class="fa-solid fa-user-clock"></i><span>Faltas</span></a>
+            <a href="#" class="nav-item"><i class="fa-solid fa-briefcase"></i><span>FCT/PAP</span></a>
+        </nav>
+    </div>
 
+    <!-- Importar o nosso JavaScript -->
     <script type="module" src="app.js"></script>
 </body>
 </html>
