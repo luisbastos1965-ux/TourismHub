@@ -32,11 +32,9 @@
         </header>
 
         <main class="app-content">
+            <!-- Painéis Base Omitidos Visualmente aqui mas presentes -->
             <div id="student-dashboard" style="display: none;">
-                <section class="card warning-card">
-                    <h3><i class="fa-solid fa-bullhorn"></i> Aviso</h3>
-                    <p>Reunião de Pais agendada para a próxima sexta-feira às 18h30.</p>
-                </section>
+                <section class="card warning-card"><h3><i class="fa-solid fa-bullhorn"></i> Aviso</h3><p>Reunião agendada.</p></section>
                 <section class="section-container"><h2 class="section-title">A tua área ficará disponível em breve.</h2></section>
             </div>
 
@@ -88,48 +86,60 @@
 
             <!-- AVALIAÇÕES -->
             <div id="view-avaliacoes" style="display: none;">
-                <div class="class-header">
-                    <button id="btn-voltar-hub-avaliacoes" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button>
-                    <h2 class="section-title">Avaliações</h2>
-                </div>
+                <div class="class-header"><button id="btn-voltar-hub-avaliacoes" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Avaliações</h2></div>
                 <div id="matriz-disciplinas-container"></div>
             </div>
-
             <div id="view-disciplina-modulos" style="display: none;">
-                <div class="class-header">
-                    <button id="btn-voltar-disciplinas" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
-                    <h2 id="titulo-disciplina" class="section-title">PORT</h2>
-                </div>
-                <div class="card" style="padding: 10px 20px;">
-                    <div id="lista-modulos-disciplina"></div>
-                </div>
+                <div class="class-header"><button id="btn-voltar-disciplinas" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button><h2 id="titulo-disciplina" class="section-title">PORT</h2></div>
+                <div class="card" style="padding: 10px 20px;"><div id="lista-modulos-disciplina"></div></div>
             </div>
 
-            <!-- FALTAS (NOVO) -->
+            <!-- FALTAS (O NOVO DESIGN) -->
             <div id="view-faltas" style="display: none;">
-                <div class="class-header">
-                    <button id="btn-voltar-hub-faltas" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button>
-                    <h2 class="section-title">Registo de Faltas</h2>
+                <div class="class-header"><button id="btn-voltar-hub-faltas" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Registo de Faltas</h2></div>
+                
+                <div class="falta-tabs">
+                    <button class="falta-tab-btn active" id="tab-faltas-disciplina">Por Disciplina</button>
+                    <button class="falta-tab-btn" id="tab-faltas-data">Por Data</button>
                 </div>
-                <div id="matriz-faltas-container"></div>
-            </div>
 
-            <div id="view-faltas-modulos" style="display: none;">
-                <div class="class-header">
-                    <button id="btn-voltar-faltas-disc" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
-                    <h2 id="titulo-falta-disciplina" class="section-title">PORT</h2>
+                <!-- Visão Global (Matriz de Disciplinas) -->
+                <div id="faltas-container-disciplina">
+                    <!-- Gerado pelo JS igual às avaliações -->
                 </div>
-                <div class="card" style="padding: 10px 20px;">
-                    <div id="lista-faltas-disciplina"></div>
+
+                <!-- Visão Cronológica (Linha do Tempo) -->
+                <div id="faltas-container-data" style="display:none;">
+                    <div class="card" style="padding:15px; margin-bottom:15px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3 style="color:var(--primary-green); font-size:1rem;"><i class="fa-solid fa-plus"></i> Registar Nova Falta</h3>
+                            <button class="primary-btn small-btn">Adicionar</button>
+                        </div>
+                    </div>
+                    
+                    <h3 style="margin-bottom:15px;">Histórico de Faltas</h3>
+                    <!-- Exemplo Visual de como vai ficar -->
+                    <div class="falta-registo-card">
+                        <div class="falta-status-bar injustificada"></div>
+                        <div class="falta-registo-info">
+                            <div><strong>PORT - M2</strong><span class="falta-registo-meta">Injustificada</span></div>
+                            <div style="text-align:right;"><strong>12 Nov</strong><span class="falta-registo-meta">09:00 - 10:00</span></div>
+                        </div>
+                    </div>
+                    <div class="falta-registo-card">
+                        <div class="falta-status-bar justificada"></div>
+                        <div class="falta-registo-info">
+                            <div><strong>PORT - M2</strong><span class="falta-registo-meta">Justificada (Atestado Médico)</span></div>
+                            <div style="text-align:right;"><strong>12 Nov</strong><span class="falta-registo-meta">10:00 - 11:00</span></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <!-- INFORMAÇÕES -->
             <div id="view-informacoes" style="display: none;">
-                <div class="class-header">
-                    <button id="btn-voltar-hub-info" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button>
-                    <h2 class="section-title">Informações e Contactos</h2>
-                </div>
+                <!-- ... igual ao anterior ... -->
+                <div class="class-header"><button id="btn-voltar-hub-info" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Informações e Contactos</h2></div>
                 <div class="card">
                     <h3 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-user"></i> Dados do Aluno</h3>
                     <div id="info-aluno-display">
@@ -170,8 +180,7 @@
                     <div class="input-row">
                         <input type="number" id="prhf-horas" placeholder="Total Horas">
                         <div style="display:flex; align-items:center; width:100%; gap:5px; margin-bottom:15px; background-color:var(--bg-dark); border:1px solid #333; border-radius:8px; padding-left:10px;">
-                            <span style="color:var(--text-muted); font-size:0.85rem; white-space:nowrap;">Data Lim.:</span>
-                            <input type="date" id="prhf-prazo" style="margin-bottom:0; border:none; padding:10px;">
+                            <span style="color:var(--text-muted); font-size:0.85rem; white-space:nowrap;">Data Lim.:</span><input type="date" id="prhf-prazo" style="margin-bottom:0; border:none; padding:10px;">
                         </div>
                     </div>
                     <textarea id="prhf-descricao" class="input-field" placeholder="Descreve a tarefa..."></textarea>
@@ -214,7 +223,7 @@
         </div>
     </div>
 
-    <!-- FOLHA DO PRHF -->
+    <!-- FOLHA DO PRHF (Atualizada c/ Botão Concluir Inteligente) -->
     <div id="modal-prhf-sheet" class="modal-overlay">
         <div class="paper-sheet">
             <button class="btn-close-paper"><i class="fa-solid fa-xmark"></i></button>
@@ -224,19 +233,25 @@
             </div>
             <div class="paper-details">
                 <p><strong>Prazo:</strong> <span id="sheet-prazo">-</span></p>
-                <p><strong>Presenciais:</strong> <span id="sheet-hp">-</span>h | <strong>Autónomas:</strong> <span id="sheet-ha">-</span>h</p>
+                <p><strong>Horas Planificadas:</strong> <span id="sheet-hp">-</span>h Presenciais | <span id="sheet-ha">-</span>h Autónomas</p>
                 <div class="paper-desc" id="sheet-desc">Descrição...</div>
+                
+                <!-- Progresso Real -->
+                <div style="background-color: var(--bg-dark); color: white; padding: 10px; border-radius: 6px; font-size: 0.9rem; border: 1px dashed var(--primary-green); text-align:center;">
+                    Presenciais Realizadas: <strong id="sheet-horas-feitas" style="color:var(--primary-green); font-size:1.1rem;">0</strong> / <span id="sheet-horas-totais">0</span>h
+                </div>
             </div>
+            
             <div class="paper-actions">
-                <button id="sheet-btn-toggle-manual" class="secondary-btn" style="color:#333; border-color:#999;"><i class="fa-solid fa-pen-to-square"></i> Registar Presenciais Manual</button>
+                <button id="sheet-btn-toggle-manual" class="secondary-btn" style="color:#333; border-color:#999;"><i class="fa-solid fa-pen-to-square"></i> <span id="txt-btn-registo">Registar Presenciais</span></button>
                 <div id="manual-presence-box" class="manual-presence-form">
                     <input type="date" id="reg-pres-data">
                     <div style="display:flex; gap:5px;"><input type="time" id="reg-pres-inicio" title="Início"><input type="time" id="reg-pres-fim" title="Fim"></div>
                     <button id="btn-save-manual-pres" class="primary-btn small-btn">Guardar Registo</button>
                     <div id="lista-presencias-manuais" style="margin-top:15px; font-size:0.85rem;"></div>
                 </div>
-                <a id="sheet-btn-agendar" href="#" target="_blank" class="secondary-btn" style="color:#333; border-color:#999;"><i class="fa-regular fa-calendar-plus"></i> Agendar Presenciais</a>
-                <button id="sheet-btn-concluir" class="primary-btn"><i class="fa-solid fa-check"></i> Marcar como Concluído</button>
+                
+                <button id="sheet-btn-concluir" class="primary-btn" disabled><i class="fa-solid fa-lock"></i> Marcar como Concluído</button>
                 <button id="sheet-btn-reverter" class="danger-btn" style="display:none;"><i class="fa-solid fa-rotate-left"></i> Reverter</button>
             </div>
         </div>
