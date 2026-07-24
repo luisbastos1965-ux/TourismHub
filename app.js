@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, query, where, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAUU6riTOuybEamgkPke4UXJwyjMA0nJzU",
@@ -15,21 +15,42 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Referências aos elementos do ecrã
+// MATRIZ DO CURSO (Enviada por ti)
+const matrizCurso = {
+    "Sociocultural": {
+        "PORT": ["M1", "M2", "M3"],
+        "ING": ["M1", "M2", "M3"],
+        "AI": ["M1", "M2"],
+        "EF": ["M1", "M2", "M3", "M4", "M5"],
+        "TIC": ["M1", "M2", "M3", "M4"]
+    },
+    "Científica": {
+        "GEO": ["M1", "M2"],
+        "HCA": ["M1", "M2", "M3"],
+        "MAT": ["M1", "M2", "M3"]
+    },
+    "Técnica": {
+        "CF": ["M1", "M2", "M3"],
+        "TIAT": ["M1", "M2", "M3", "M4"],
+        "TCAT": ["M1", "M2", "M3", "M4"],
+        "OTET": ["M1", "M2", "M3", "M4"]
+    }
+};
+
+// Referências Visuais
 const loginScreen = document.getElementById('login-screen');
 const appContent = document.getElementById('app-content');
 const btnLoginManual = document.getElementById('btn-login-manual');
 const btnLogout = document.getElementById('btn-logout');
 const errorMsg = document.getElementById('login-error');
 
-// Referências aos painéis
 const painelAluno = document.getElementById('student-dashboard');
 const painelAdmin = document.getElementById('admin-dashboard');
 const classView = document.getElementById('class-view');
 const studentDetailView = document.getElementById('student-detail-view');
 const viewAvaliacoes = document.getElementById('view-avaliacoes');
+const viewDisciplinaModulos = document.getElementById('view-disciplina-modulos');
 
-// Referências à navegação de turmas e alunos
 const botoesTurma = document.querySelectorAll('.turma-card');
 const classTitle = document.getElementById('class-title');
 const btnVoltarTurmas = document.getElementById('btn-voltar-turmas');
@@ -38,19 +59,21 @@ const btnVoltarLista = document.getElementById('btn-voltar-lista');
 const detailStudentName = document.getElementById('detail-student-name');
 const detailStudentNumber = document.getElementById('detail-student-number');
 
-// Referências dos Botões do Hub
+// Botões Hub
 const btnHubAvaliacoes = document.getElementById('btn-hub-avaliacoes');
 const btnVoltarHubAvaliacoes = document.getElementById('btn-voltar-hub-avaliacoes');
+const matrizDisciplinasContainer = document.getElementById('matriz-disciplinas-container');
+const btnVoltarDisciplinas = document.getElementById('btn-voltar-disciplinas');
+const tituloDisciplina = document.getElementById('titulo-disciplina');
+const listaModulosDisciplina = document.getElementById('lista-modulos-disciplina');
 
-// Memória da App (Saber que aluno estamos a ver)
 let alunoAtualId = ""; 
 
-// 1. Escutar estado de autenticação
+// 1. Autenticação
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         loginScreen.style.display = 'none';
         appContent.style.display = 'block';
-        
         const userId = user.email.split('@')[0];
         
         try {
@@ -59,156 +82,173 @@ onAuthStateChanged(auth, async (user) => {
             
             if (docSnap.exists()) {
                 const dados = docSnap.data();
+                document.querySelector('.user-profile span').innerText = `Olá, ${dados.nome} (${dados.papel.toUpperCase()})`;
                 
-                const userProfileSpan = document.querySelector('.user-profile span');
-                userProfileSpan.innerText = `Olá, ${dados.nome} (${dados.papel.toUpperCase()})`;
-                
-                if (dados.papel === 'admin') {
-                    painelAluno.style.display = 'none';
-                    painelAdmin.style.display = 'block';
-                    classView.style.display = 'none';
-                    studentDetailView.style.display = 'none';
-                    viewAvaliacoes.style.display = 'none';
-                } else {
-                    painelAluno.style.display = 'block';
-                    painelAdmin.style.display = 'none';
-                    classView.style.display = 'none';
-                    studentDetailView.style.display = 'none';
-                    viewAvaliacoes.style.display = 'none';
-                }
+                painelAluno.style.display = dados.papel === 'admin' ? 'none' : 'block';
+                painelAdmin.style.display = dados.papel === 'admin' ? 'block' : 'none';
+                [classView, studentDetailView, viewAvaliacoes, viewDisciplinaModulos].forEach(el => el.style.display = 'none');
             }
-        } catch (error) {
-            console.error("Erro ao carregar dados do perfil:", error);
-        }
+        } catch (error) { console.error(error); }
     } else {
         loginScreen.style.display = 'flex';
         appContent.style.display = 'none';
     }
 });
 
-// 2. Fazer Login
 btnLoginManual.addEventListener('click', () => {
     const username = document.getElementById('login-username').value.trim().toLowerCase();
     const pass = document.getElementById('login-password').value;
-    const emailFalso = username + "@turmapro.com";
-
-    signInWithEmailAndPassword(auth, emailFalso, pass)
-        .then(() => {
-            errorMsg.style.display = 'none';
-        })
-        .catch((error) => {
+    signInWithEmailAndPassword(auth, username + "@turmapro.com", pass)
+        .then(() => errorMsg.style.display = 'none')
+        .catch(() => {
             errorMsg.style.display = 'block';
             errorMsg.innerText = "Erro: Credenciais inválidas.";
         });
 });
 
-// 3. Terminar Sessão
-btnLogout.addEventListener('click', () => {
-    signOut(auth);
-});
+btnLogout.addEventListener('click', () => signOut(auth));
 
-// 4. Navegação Principal (Botões de Voltar)
-if(btnVoltarTurmas) {
-    btnVoltarTurmas.addEventListener('click', () => {
-        classView.style.display = 'none';
-        painelAdmin.style.display = 'block';
-    });
-}
+// 2. Navegação Principal
+if(btnVoltarTurmas) btnVoltarTurmas.addEventListener('click', () => { classView.style.display = 'none'; painelAdmin.style.display = 'block'; });
+if(btnVoltarLista) btnVoltarLista.addEventListener('click', () => { studentDetailView.style.display = 'none'; classView.style.display = 'block'; });
+if(btnVoltarHubAvaliacoes) btnVoltarHubAvaliacoes.addEventListener('click', () => { viewAvaliacoes.style.display = 'none'; studentDetailView.style.display = 'block'; });
+if(btnVoltarDisciplinas) btnVoltarDisciplinas.addEventListener('click', () => { viewDisciplinaModulos.style.display = 'none'; viewAvaliacoes.style.display = 'block'; });
 
-if(btnVoltarLista) {
-    btnVoltarLista.addEventListener('click', () => {
-        studentDetailView.style.display = 'none';
-        classView.style.display = 'block'; 
-    });
-}
-
-if(btnVoltarHubAvaliacoes) {
-    btnVoltarHubAvaliacoes.addEventListener('click', () => {
-        viewAvaliacoes.style.display = 'none';
-        studentDetailView.style.display = 'block';
-    });
-}
-
-// 5. Abrir Turmas
 botoesTurma.forEach(botao => {
     botao.addEventListener('click', () => {
         const nomeTurma = botao.getAttribute('data-turma'); 
-        
         classTitle.innerHTML = `<i class="fa-solid fa-users"></i> Turma ${nomeTurma}`;
-        
         painelAdmin.style.display = 'none';
         classView.style.display = 'block';
-        studentDetailView.style.display = 'none';
-
         carregarAlunos(nomeTurma);
     });
 });
 
-// 6. Navegação: Abrir Avaliações no Hub
-if(btnHubAvaliacoes) {
-    btnHubAvaliacoes.addEventListener('click', () => {
-        studentDetailView.style.display = 'none';
-        viewAvaliacoes.style.display = 'block';
-    });
-}
-
-// 7. Função: Ir buscar alunos à Base de Dados
+// 3. Carregar Alunos
 async function carregarAlunos(turmaEscolhida) {
-    containerAlunos.innerHTML = '<p style="color: var(--text-muted);">A carregar lista de alunos...</p>';
-
+    containerAlunos.innerHTML = '<p class="text-muted">A carregar...</p>';
     try {
-        const q = query(
-            collection(db, "utilizadores"), 
-            where("turma", "==", turmaEscolhida), 
-            where("papel", "==", "aluno")
-        );
-        
+        const q = query(collection(db, "utilizadores"), where("turma", "==", turmaEscolhida), where("papel", "==", "aluno"));
         const resultados = await getDocs(q);
 
-        if (resultados.empty) {
-            containerAlunos.innerHTML = '<p style="color: var(--text-muted);">Ainda não há alunos registados nesta turma.</p>';
-            return;
-        }
+        if (resultados.empty) { containerAlunos.innerHTML = '<p class="text-muted">Sem alunos.</p>'; return; }
 
-        let htmlLista = '<ul class="students-list">';
-        
-        resultados.forEach((documento) => {
-            const aluno = documento.data();
-            const numeroAluno = documento.id;
-
-            htmlLista += `
+        let html = '<ul class="students-list">';
+        resultados.forEach((doc) => {
+            const aluno = doc.data();
+            html += `
                 <li class="student-item">
-                    <div class="student-info">
-                        <strong>${aluno.nome}</strong>
-                        <span>${numeroAluno.toUpperCase()}</span>
-                    </div>
-                    <button class="secondary-btn small-btn btn-ver-aluno" data-nome="${aluno.nome}" data-numero="${numeroAluno}">
-                        <i class="fa-solid fa-eye"></i> Ver
-                    </button>
-                </li>
-            `;
+                    <div class="student-info"><strong>${aluno.nome}</strong><span>${doc.id.toUpperCase()}</span></div>
+                    <button class="secondary-btn small-btn btn-ver-aluno" data-nome="${aluno.nome}" data-numero="${doc.id}"><i class="fa-solid fa-eye"></i> Ver</button>
+                </li>`;
         });
-        
-        htmlLista += '</ul>';
-        containerAlunos.innerHTML = htmlLista;
+        html += '</ul>';
+        containerAlunos.innerHTML = html;
 
-        const botoesVer = containerAlunos.querySelectorAll('.btn-ver-aluno');
-        botoesVer.forEach(botao => {
-            botao.addEventListener('click', (evento) => {
-                const nome = evento.currentTarget.getAttribute('data-nome');
-                const numero = evento.currentTarget.getAttribute('data-numero');
-                
-                detailStudentName.innerText = nome;
-                detailStudentNumber.innerText = numero.toUpperCase();
-                alunoAtualId = numero; // Guardamos na memória para uso nas Avaliações
-                
+        containerAlunos.querySelectorAll('.btn-ver-aluno').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                detailStudentName.innerText = e.currentTarget.getAttribute('data-nome');
+                alunoAtualId = e.currentTarget.getAttribute('data-numero');
+                detailStudentNumber.innerText = alunoAtualId.toUpperCase();
                 classView.style.display = 'none';
                 studentDetailView.style.display = 'block';
             });
         });
+    } catch (e) { console.error(e); }
+}
 
-    } catch (erro) {
-        console.error("Erro ao carregar alunos:", erro);
-        containerAlunos.innerHTML = '<p style="color: #ff4d4d;">Erro ao carregar a lista de alunos. Verifica a ligação.</p>';
+// 4. Construir Matriz de Avaliações
+if(btnHubAvaliacoes) {
+    btnHubAvaliacoes.addEventListener('click', () => {
+        studentDetailView.style.display = 'none';
+        viewAvaliacoes.style.display = 'block';
+        construirMatrizVisual();
+    });
+}
+
+function construirMatrizVisual() {
+    let html = "";
+    for (const [nomeComponente, disciplinas] of Object.entries(matrizCurso)) {
+        html += `
+        <div class="component-section">
+            <div class="component-header">${nomeComponente}</div>
+            <div class="subject-grid">`;
+        
+        for (const nomeDisciplina of Object.keys(disciplinas)) {
+            html += `<button class="subject-btn" data-disc="${nomeDisciplina}">${nomeDisciplina}</button>`;
+        }
+        
+        html += `</div></div>`;
     }
+    matrizDisciplinasContainer.innerHTML = html;
+
+    // Clicar numa Disciplina
+    matrizDisciplinasContainer.querySelectorAll('.subject-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const discEscolhida = e.currentTarget.getAttribute('data-disc');
+            abrirModulosDisciplina(discEscolhida);
+        });
+    });
+}
+
+// 5. Avaliar Módulos de uma Disciplina
+async function abrirModulosDisciplina(disciplina) {
+    viewAvaliacoes.style.display = 'none';
+    viewDisciplinaModulos.style.display = 'block';
+    tituloDisciplina.innerText = disciplina;
+    listaModulosDisciplina.innerHTML = '<p class="text-muted">A preparar módulos...</p>';
+
+    // Encontrar os módulos desta disciplina na nossa Matriz
+    let modulosArray = [];
+    for (const comp of Object.values(matrizCurso)) {
+        if (comp[disciplina]) modulosArray = comp[disciplina];
+    }
+
+    let html = "";
+    modulosArray.forEach(mod => {
+        // Criar uma linha para cada módulo com um input para a nota
+        html += `
+        <div class="modulo-avaliar-item">
+            <strong>${mod}</strong>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="number" class="modulo-nota-input" id="nota-${disciplina}-${mod}" placeholder="-" min="0" max="20">
+                <button class="primary-btn small-btn btn-gravar-nota" data-disc="${disciplina}" data-mod="${mod}">Gravar</button>
+            </div>
+        </div>`;
+    });
+    listaModulosDisciplina.innerHTML = html;
+
+    // TODO no próximo passo: Ler notas já existentes da Base de Dados e injetar nos inputs!
+    
+    // Gravar Nota
+    listaModulosDisciplina.querySelectorAll('.btn-gravar-nota').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const disc = e.currentTarget.getAttribute('data-disc');
+            const mod = e.currentTarget.getAttribute('data-mod');
+            const valorInput = document.getElementById(`nota-${disc}-${mod}`).value;
+            
+            if(valorInput === "") return;
+
+            e.currentTarget.innerText = "OK!";
+            e.currentTarget.style.backgroundColor = "white";
+            
+            try {
+                // Guarda a nota na subcoleção 'notas' do aluno, usando o nome "PORT_M1" como ID do documento
+                const docId = `${disc}_${mod}`;
+                await setDoc(doc(db, "utilizadores", alunoAtualId, "notas", docId), {
+                    disciplina: disc,
+                    modulo: mod,
+                    nota: Number(valorInput),
+                    data: new Date().toISOString()
+                });
+                
+                setTimeout(() => {
+                    e.currentTarget.innerText = "Gravar";
+                    e.currentTarget.style.backgroundColor = "var(--primary-green)";
+                }, 2000);
+            } catch (error) {
+                console.error("Erro ao gravar nota", error);
+            }
+        });
+    });
 }
