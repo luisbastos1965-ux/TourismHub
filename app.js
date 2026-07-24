@@ -15,7 +15,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// MATRIZ DO CURSO (Enviada por ti)
+// MATRIZ DO CURSO
 const matrizCurso = {
     "Sociocultural": {
         "PORT": ["M1", "M2", "M3"],
@@ -43,6 +43,7 @@ const appContent = document.getElementById('app-content');
 const btnLoginManual = document.getElementById('btn-login-manual');
 const btnLogout = document.getElementById('btn-logout');
 const errorMsg = document.getElementById('login-error');
+const bottomNav = document.querySelector('.bottom-nav'); // Referência à barra inferior
 
 const painelAluno = document.getElementById('student-dashboard');
 const painelAdmin = document.getElementById('admin-dashboard');
@@ -65,7 +66,7 @@ const btnVoltarHubAvaliacoes = document.getElementById('btn-voltar-hub-avaliacoe
 const matrizDisciplinasContainer = document.getElementById('matriz-disciplinas-container');
 const btnVoltarDisciplinas = document.getElementById('btn-voltar-disciplinas');
 const tituloDisciplina = document.getElementById('titulo-disciplina');
-const listaModulosDisciplina = document.getElementById('lista-modulos-disciplina');
+const listaModulosDisciplina = document.getElementById('lista-modulos-Disciplina');
 
 let alunoAtualId = ""; 
 
@@ -84,8 +85,18 @@ onAuthStateChanged(auth, async (user) => {
                 const dados = docSnap.data();
                 document.querySelector('.user-profile span').innerText = `Olá, ${dados.nome} (${dados.papel.toUpperCase()})`;
                 
-                painelAluno.style.display = dados.papel === 'admin' ? 'none' : 'block';
-                painelAdmin.style.display = dados.papel === 'admin' ? 'block' : 'none';
+                // Gestão de visibilidade baseada no papel
+                if (dados.papel === 'admin') {
+                    painelAluno.style.display = 'none';
+                    painelAdmin.style.display = 'block';
+                    bottomNav.style.display = 'none'; // Esconde barra para Admins e DTs
+                } else {
+                    painelAluno.style.display = 'block';
+                    painelAdmin.style.display = 'none';
+                    bottomNav.style.display = 'flex'; // Mostra barra para Alunos
+                }
+                
+                // Esconder os ecrãs secundários no carregamento inicial
                 [classView, studentDetailView, viewAvaliacoes, viewDisciplinaModulos].forEach(el => el.style.display = 'none');
             }
         } catch (error) { console.error(error); }
@@ -196,9 +207,12 @@ async function abrirModulosDisciplina(disciplina) {
     viewAvaliacoes.style.display = 'none';
     viewDisciplinaModulos.style.display = 'block';
     tituloDisciplina.innerText = disciplina;
-    listaModulosDisciplina.innerHTML = '<p class="text-muted">A preparar módulos...</p>';
+    
+    // Corrigido aqui para apontar para a referência certa no DOM
+    const listaModulosUI = document.getElementById('lista-modulos-disciplina');
+    listaModulosUI.innerHTML = '<p class="text-muted">A preparar módulos...</p>';
 
-    // Encontrar os módulos desta disciplina na nossa Matriz
+    // Encontrar os módulos desta disciplina na Matriz
     let modulosArray = [];
     for (const comp of Object.values(matrizCurso)) {
         if (comp[disciplina]) modulosArray = comp[disciplina];
@@ -206,7 +220,6 @@ async function abrirModulosDisciplina(disciplina) {
 
     let html = "";
     modulosArray.forEach(mod => {
-        // Criar uma linha para cada módulo com um input para a nota
         html += `
         <div class="modulo-avaliar-item">
             <strong>${mod}</strong>
@@ -216,12 +229,10 @@ async function abrirModulosDisciplina(disciplina) {
             </div>
         </div>`;
     });
-    listaModulosDisciplina.innerHTML = html;
-
-    // TODO no próximo passo: Ler notas já existentes da Base de Dados e injetar nos inputs!
+    listaModulosUI.innerHTML = html;
     
     // Gravar Nota
-    listaModulosDisciplina.querySelectorAll('.btn-gravar-nota').forEach(btn => {
+    listaModulosUI.querySelectorAll('.btn-gravar-nota').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const disc = e.currentTarget.getAttribute('data-disc');
             const mod = e.currentTarget.getAttribute('data-mod');
@@ -233,7 +244,6 @@ async function abrirModulosDisciplina(disciplina) {
             e.currentTarget.style.backgroundColor = "white";
             
             try {
-                // Guarda a nota na subcoleção 'notas' do aluno, usando o nome "PORT_M1" como ID do documento
                 const docId = `${disc}_${mod}`;
                 await setDoc(doc(db, "utilizadores", alunoAtualId, "notas", docId), {
                     disciplina: disc,
