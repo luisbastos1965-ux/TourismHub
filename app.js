@@ -1,7 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-// Adicionámos o updateDoc à lista de importações
-import { getFirestore, doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAUU6riTOuybEamgkPke4UXJwyjMA0nJzU",
@@ -16,14 +15,12 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// MATRIZ DO CURSO
 const matrizCurso = {
     "Sociocultural": { "PORT": ["M1", "M2", "M3"], "ING": ["M1", "M2", "M3"], "AI": ["M1", "M2"], "EF": ["M1", "M2", "M3", "M4", "M5"], "TIC": ["M1", "M2", "M3", "M4"] },
     "Científica": { "GEO": ["M1", "M2"], "HCA": ["M1", "M2", "M3"], "MAT": ["M1", "M2", "M3"] },
     "Técnica": { "CF": ["M1", "M2", "M3"], "TIAT": ["M1", "M2", "M3", "M4"], "TCAT": ["M1", "M2", "M3", "M4"], "OTET": ["M1", "M2", "M3", "M4"] }
 };
 
-// Referências Visuais Principais
 const loginScreen = document.getElementById('login-screen');
 const appContent = document.getElementById('app-content');
 const btnLoginManual = document.getElementById('btn-login-manual');
@@ -31,17 +28,15 @@ const btnLogout = document.getElementById('btn-logout');
 const errorMsg = document.getElementById('login-error');
 const bottomNav = document.querySelector('.bottom-nav');
 
-// Painéis e Ecrãs
 const painelAluno = document.getElementById('student-dashboard');
 const painelAdmin = document.getElementById('admin-dashboard');
 const classView = document.getElementById('class-view');
 const studentDetailView = document.getElementById('student-detail-view');
 const viewAvaliacoes = document.getElementById('view-avaliacoes');
 const viewDisciplinaModulos = document.getElementById('view-disciplina-modulos');
-const viewInformacoes = document.getElementById('view-informacoes'); // NOVO
-const viewPrhf = document.getElementById('view-prhf'); // NOVO
+const viewInformacoes = document.getElementById('view-informacoes');
+const viewPrhf = document.getElementById('view-prhf');
 
-// Referências Gerais
 const botoesTurma = document.querySelectorAll('.turma-card');
 const classTitle = document.getElementById('class-title');
 const btnVoltarTurmas = document.getElementById('btn-voltar-turmas');
@@ -50,15 +45,13 @@ const btnVoltarLista = document.getElementById('btn-voltar-lista');
 const detailStudentName = document.getElementById('detail-student-name');
 const detailStudentNumber = document.getElementById('detail-student-number');
 
-// Botões Hub
 const btnHubAvaliacoes = document.getElementById('btn-hub-avaliacoes');
 const btnVoltarHubAvaliacoes = document.getElementById('btn-voltar-hub-avaliacoes');
-const btnHubInformacoes = document.getElementById('btn-hub-informacoes'); // NOVO
-const btnVoltarHubInfo = document.getElementById('btn-voltar-hub-info'); // NOVO
-const btnHubPrhf = document.getElementById('btn-hub-prhf'); // NOVO
-const btnVoltarHubPrhf = document.getElementById('btn-voltar-hub-prhf'); // NOVO
+const btnHubInformacoes = document.getElementById('btn-hub-informacoes');
+const btnVoltarHubInfo = document.getElementById('btn-voltar-hub-info');
+const btnHubPrhf = document.getElementById('btn-hub-prhf');
+const btnVoltarHubPrhf = document.getElementById('btn-voltar-hub-prhf');
 
-// Elementos de Avaliação
 const matrizDisciplinasContainer = document.getElementById('matriz-disciplinas-container');
 const btnVoltarDisciplinas = document.getElementById('btn-voltar-disciplinas');
 const tituloDisciplina = document.getElementById('titulo-disciplina');
@@ -66,7 +59,6 @@ const listaModulosDisciplina = document.getElementById('lista-modulos-disciplina
 
 let alunoAtualId = ""; 
 
-// 1. Autenticação e Controlo de Vistas
 function esconderTudoMenos(ecraAtivo) {
     [classView, studentDetailView, viewAvaliacoes, viewDisciplinaModulos, viewInformacoes, viewPrhf].forEach(el => el.style.display = 'none');
     if(ecraAtivo) ecraAtivo.style.display = 'block';
@@ -117,7 +109,6 @@ btnLoginManual.addEventListener('click', () => {
 
 btnLogout.addEventListener('click', () => signOut(auth));
 
-// 2. Navegação Básica (Voltar Atrás)
 if(btnVoltarTurmas) btnVoltarTurmas.addEventListener('click', () => { esconderTudoMenos(null); painelAdmin.style.display = 'block'; });
 if(btnVoltarLista) btnVoltarLista.addEventListener('click', () => { esconderTudoMenos(classView); });
 if(btnVoltarHubAvaliacoes) btnVoltarHubAvaliacoes.addEventListener('click', () => { esconderTudoMenos(studentDetailView); });
@@ -125,7 +116,6 @@ if(btnVoltarDisciplinas) btnVoltarDisciplinas.addEventListener('click', () => { 
 if(btnVoltarHubInfo) btnVoltarHubInfo.addEventListener('click', () => { esconderTudoMenos(studentDetailView); });
 if(btnVoltarHubPrhf) btnVoltarHubPrhf.addEventListener('click', () => { esconderTudoMenos(studentDetailView); });
 
-// Abrir Turma
 botoesTurma.forEach(botao => {
     botao.addEventListener('click', () => {
         const nomeTurma = botao.getAttribute('data-turma'); 
@@ -136,7 +126,6 @@ botoesTurma.forEach(botao => {
     });
 });
 
-// 3. Carregar Alunos
 async function carregarAlunos(turmaEscolhida) {
     containerAlunos.innerHTML = '<p class="text-muted">A carregar...</p>';
     try {
@@ -168,7 +157,6 @@ async function carregarAlunos(turmaEscolhida) {
     } catch (e) { console.error(e); }
 }
 
-// 4. Lógica de Avaliações
 if(btnHubAvaliacoes) {
     btnHubAvaliacoes.addEventListener('click', () => {
         esconderTudoMenos(viewAvaliacoes);
@@ -238,12 +226,9 @@ async function abrirModulosDisciplina(disciplina) {
     });
 }
 
-// 5. Lógica de Informações (EE / Aluno)
 if(btnHubInformacoes) {
     btnHubInformacoes.addEventListener('click', async () => {
         esconderTudoMenos(viewInformacoes);
-        
-        // Puxar os dados atuais do aluno da Base de Dados
         try {
             const docSnap = await getDoc(doc(db, "utilizadores", alunoAtualId));
             if (docSnap.exists()) {
@@ -252,7 +237,6 @@ if(btnHubInformacoes) {
                 document.getElementById('info-aluno-telemovel').value = dados.telAluno || "";
                 document.getElementById('info-aluno-email').value = dados.emailAluno || "";
                 document.getElementById('info-aluno-morada').value = dados.morada || "";
-                
                 document.getElementById('info-ee-nome').value = dados.nomeEE || "";
                 document.getElementById('info-ee-filiacao').value = dados.filiacaoEE || "";
                 document.getElementById('info-ee-telemovel').value = dados.telEE || "";
@@ -275,38 +259,92 @@ document.getElementById('btn-guardar-informacoes').addEventListener('click', asy
             telEE: document.getElementById('info-ee-telemovel').value,
             emailEE: document.getElementById('info-ee-email').value
         });
-        
         document.getElementById('msg-sucesso-info').style.display = 'block';
         setTimeout(() => document.getElementById('msg-sucesso-info').style.display = 'none', 3000);
     } catch (error) { console.error("Erro a guardar info:", error); }
     e.currentTarget.innerText = "Guardar Informações";
 });
 
-// 6. Lógica de PRHF (Planos de Recuperação)
+// 6. Lógica de PRHF (Planos de Recuperação - NOVO SISTEMA)
 if(btnHubPrhf) {
-    btnHubPrhf.addEventListener('click', async () => {
+    btnHubPrhf.addEventListener('click', () => {
         esconderTudoMenos(viewPrhf);
-        
-        // Puxar o texto atual (se existir)
-        try {
-            const docSnap = await getDoc(doc(db, "utilizadores", alunoAtualId));
-            if (docSnap.exists()) {
-                document.getElementById('texto-prhf').value = docSnap.data().planoPRHF || "";
-            }
-        } catch (error) { console.error("Erro a carregar PRHF:", error); }
+        carregarListaPRHF(alunoAtualId);
     });
 }
 
 document.getElementById('btn-guardar-prhf').addEventListener('click', async (e) => {
+    const disc = document.getElementById('prhf-disciplina').value.trim();
+    const mod = document.getElementById('prhf-modulo').value.trim();
+    const prazo = document.getElementById('prhf-prazo').value;
+    const desc = document.getElementById('prhf-descricao').value.trim();
+
+    if(!disc || !mod || !prazo || !desc) {
+        alert("Preenche todos os campos do PRHF!");
+        return;
+    }
+
     e.currentTarget.innerText = "A gravar...";
     try {
-        const textoFicha = document.getElementById('texto-prhf').value;
-        await updateDoc(doc(db, "utilizadores", alunoAtualId), {
-            planoPRHF: textoFicha
+        // Guarda na coleção específica de PRHFs deste aluno
+        await addDoc(collection(db, "utilizadores", alunoAtualId, "prhfs"), {
+            disciplina: disc.toUpperCase(),
+            modulo: mod.toUpperCase(),
+            prazo: prazo,
+            descricao: desc,
+            dataRegisto: new Date().toISOString()
         });
         
+        // Limpar campos
+        document.getElementById('prhf-disciplina').value = "";
+        document.getElementById('prhf-modulo').value = "";
+        document.getElementById('prhf-prazo').value = "";
+        document.getElementById('prhf-descricao').value = "";
+
         document.getElementById('msg-sucesso-prhf').style.display = 'block';
         setTimeout(() => document.getElementById('msg-sucesso-prhf').style.display = 'none', 3000);
+        
+        // Atualizar lista no ecrã imediatamente
+        carregarListaPRHF(alunoAtualId);
     } catch (error) { console.error("Erro a guardar PRHF:", error); }
+    
     e.currentTarget.innerText = "Gravar Tarefa PRHF";
 });
+
+// Função para desenhar a lista de PRHFs do aluno
+async function carregarListaPRHF(idAluno) {
+    const container = document.getElementById('lista-prhf-container');
+    container.innerHTML = '<p class="text-muted">A carregar planos...</p>';
+    try {
+        const q = query(collection(db, "utilizadores", idAluno, "prhfs"));
+        const resultados = await getDocs(q);
+
+        if (resultados.empty) {
+            container.innerHTML = '<p class="text-muted">Sem tarefas de recuperação ativas.</p>';
+            return;
+        }
+
+        let html = '';
+        resultados.forEach(doc => {
+            const prhf = doc.data();
+            
+            // Inverter a data (de AAAA-MM-DD para DD-MM-AAAA) para ficar mais bonito
+            const dataParts = prhf.prazo.split('-');
+            const dataFormatada = dataParts.length === 3 ? `${dataParts[2]}-${dataParts[1]}-${dataParts[0]}` : prhf.prazo;
+
+            html += `
+                <div class="prhf-card">
+                    <div class="prhf-header">
+                        <strong>${prhf.disciplina} - ${prhf.modulo}</strong>
+                        <span class="prhf-prazo"><i class="fa-solid fa-calendar-days"></i> ${dataFormatada}</span>
+                    </div>
+                    <p style="font-size: 0.95rem;">${prhf.descricao}</p>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    } catch (error) { 
+        console.error(error); 
+        container.innerHTML = '<p style="color: #ff4d4d;">Erro ao carregar as tarefas.</p>';
+    }
+}
