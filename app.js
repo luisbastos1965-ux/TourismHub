@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, collection, query, where, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+// Adicionámos o updateDoc à lista de importações
+import { getFirestore, doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAUU6riTOuybEamgkPke4UXJwyjMA0nJzU",
@@ -17,41 +18,30 @@ const db = getFirestore(app);
 
 // MATRIZ DO CURSO
 const matrizCurso = {
-    "Sociocultural": {
-        "PORT": ["M1", "M2", "M3"],
-        "ING": ["M1", "M2", "M3"],
-        "AI": ["M1", "M2"],
-        "EF": ["M1", "M2", "M3", "M4", "M5"],
-        "TIC": ["M1", "M2", "M3", "M4"]
-    },
-    "Científica": {
-        "GEO": ["M1", "M2"],
-        "HCA": ["M1", "M2", "M3"],
-        "MAT": ["M1", "M2", "M3"]
-    },
-    "Técnica": {
-        "CF": ["M1", "M2", "M3"],
-        "TIAT": ["M1", "M2", "M3", "M4"],
-        "TCAT": ["M1", "M2", "M3", "M4"],
-        "OTET": ["M1", "M2", "M3", "M4"]
-    }
+    "Sociocultural": { "PORT": ["M1", "M2", "M3"], "ING": ["M1", "M2", "M3"], "AI": ["M1", "M2"], "EF": ["M1", "M2", "M3", "M4", "M5"], "TIC": ["M1", "M2", "M3", "M4"] },
+    "Científica": { "GEO": ["M1", "M2"], "HCA": ["M1", "M2", "M3"], "MAT": ["M1", "M2", "M3"] },
+    "Técnica": { "CF": ["M1", "M2", "M3"], "TIAT": ["M1", "M2", "M3", "M4"], "TCAT": ["M1", "M2", "M3", "M4"], "OTET": ["M1", "M2", "M3", "M4"] }
 };
 
-// Referências Visuais
+// Referências Visuais Principais
 const loginScreen = document.getElementById('login-screen');
 const appContent = document.getElementById('app-content');
 const btnLoginManual = document.getElementById('btn-login-manual');
 const btnLogout = document.getElementById('btn-logout');
 const errorMsg = document.getElementById('login-error');
-const bottomNav = document.querySelector('.bottom-nav'); // Referência à barra inferior
+const bottomNav = document.querySelector('.bottom-nav');
 
+// Painéis e Ecrãs
 const painelAluno = document.getElementById('student-dashboard');
 const painelAdmin = document.getElementById('admin-dashboard');
 const classView = document.getElementById('class-view');
 const studentDetailView = document.getElementById('student-detail-view');
 const viewAvaliacoes = document.getElementById('view-avaliacoes');
 const viewDisciplinaModulos = document.getElementById('view-disciplina-modulos');
+const viewInformacoes = document.getElementById('view-informacoes'); // NOVO
+const viewPrhf = document.getElementById('view-prhf'); // NOVO
 
+// Referências Gerais
 const botoesTurma = document.querySelectorAll('.turma-card');
 const classTitle = document.getElementById('class-title');
 const btnVoltarTurmas = document.getElementById('btn-voltar-turmas');
@@ -63,14 +53,25 @@ const detailStudentNumber = document.getElementById('detail-student-number');
 // Botões Hub
 const btnHubAvaliacoes = document.getElementById('btn-hub-avaliacoes');
 const btnVoltarHubAvaliacoes = document.getElementById('btn-voltar-hub-avaliacoes');
+const btnHubInformacoes = document.getElementById('btn-hub-informacoes'); // NOVO
+const btnVoltarHubInfo = document.getElementById('btn-voltar-hub-info'); // NOVO
+const btnHubPrhf = document.getElementById('btn-hub-prhf'); // NOVO
+const btnVoltarHubPrhf = document.getElementById('btn-voltar-hub-prhf'); // NOVO
+
+// Elementos de Avaliação
 const matrizDisciplinasContainer = document.getElementById('matriz-disciplinas-container');
 const btnVoltarDisciplinas = document.getElementById('btn-voltar-disciplinas');
 const tituloDisciplina = document.getElementById('titulo-disciplina');
-const listaModulosDisciplina = document.getElementById('lista-modulos-Disciplina');
+const listaModulosDisciplina = document.getElementById('lista-modulos-disciplina');
 
 let alunoAtualId = ""; 
 
-// 1. Autenticação
+// 1. Autenticação e Controlo de Vistas
+function esconderTudoMenos(ecraAtivo) {
+    [classView, studentDetailView, viewAvaliacoes, viewDisciplinaModulos, viewInformacoes, viewPrhf].forEach(el => el.style.display = 'none');
+    if(ecraAtivo) ecraAtivo.style.display = 'block';
+}
+
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         loginScreen.style.display = 'none';
@@ -85,19 +86,16 @@ onAuthStateChanged(auth, async (user) => {
                 const dados = docSnap.data();
                 document.querySelector('.user-profile span').innerText = `Olá, ${dados.nome} (${dados.papel.toUpperCase()})`;
                 
-                // Gestão de visibilidade baseada no papel
                 if (dados.papel === 'admin') {
                     painelAluno.style.display = 'none';
                     painelAdmin.style.display = 'block';
-                    bottomNav.style.display = 'none'; // Esconde barra para Admins e DTs
+                    bottomNav.style.display = 'none';
                 } else {
                     painelAluno.style.display = 'block';
                     painelAdmin.style.display = 'none';
-                    bottomNav.style.display = 'flex'; // Mostra barra para Alunos
+                    bottomNav.style.display = 'flex';
                 }
-                
-                // Esconder os ecrãs secundários no carregamento inicial
-                [classView, studentDetailView, viewAvaliacoes, viewDisciplinaModulos].forEach(el => el.style.display = 'none');
+                esconderTudoMenos(null);
             }
         } catch (error) { console.error(error); }
     } else {
@@ -119,18 +117,21 @@ btnLoginManual.addEventListener('click', () => {
 
 btnLogout.addEventListener('click', () => signOut(auth));
 
-// 2. Navegação Principal
-if(btnVoltarTurmas) btnVoltarTurmas.addEventListener('click', () => { classView.style.display = 'none'; painelAdmin.style.display = 'block'; });
-if(btnVoltarLista) btnVoltarLista.addEventListener('click', () => { studentDetailView.style.display = 'none'; classView.style.display = 'block'; });
-if(btnVoltarHubAvaliacoes) btnVoltarHubAvaliacoes.addEventListener('click', () => { viewAvaliacoes.style.display = 'none'; studentDetailView.style.display = 'block'; });
-if(btnVoltarDisciplinas) btnVoltarDisciplinas.addEventListener('click', () => { viewDisciplinaModulos.style.display = 'none'; viewAvaliacoes.style.display = 'block'; });
+// 2. Navegação Básica (Voltar Atrás)
+if(btnVoltarTurmas) btnVoltarTurmas.addEventListener('click', () => { esconderTudoMenos(null); painelAdmin.style.display = 'block'; });
+if(btnVoltarLista) btnVoltarLista.addEventListener('click', () => { esconderTudoMenos(classView); });
+if(btnVoltarHubAvaliacoes) btnVoltarHubAvaliacoes.addEventListener('click', () => { esconderTudoMenos(studentDetailView); });
+if(btnVoltarDisciplinas) btnVoltarDisciplinas.addEventListener('click', () => { esconderTudoMenos(viewAvaliacoes); });
+if(btnVoltarHubInfo) btnVoltarHubInfo.addEventListener('click', () => { esconderTudoMenos(studentDetailView); });
+if(btnVoltarHubPrhf) btnVoltarHubPrhf.addEventListener('click', () => { esconderTudoMenos(studentDetailView); });
 
+// Abrir Turma
 botoesTurma.forEach(botao => {
     botao.addEventListener('click', () => {
         const nomeTurma = botao.getAttribute('data-turma'); 
         classTitle.innerHTML = `<i class="fa-solid fa-users"></i> Turma ${nomeTurma}`;
         painelAdmin.style.display = 'none';
-        classView.style.display = 'block';
+        esconderTudoMenos(classView);
         carregarAlunos(nomeTurma);
     });
 });
@@ -161,18 +162,16 @@ async function carregarAlunos(turmaEscolhida) {
                 detailStudentName.innerText = e.currentTarget.getAttribute('data-nome');
                 alunoAtualId = e.currentTarget.getAttribute('data-numero');
                 detailStudentNumber.innerText = alunoAtualId.toUpperCase();
-                classView.style.display = 'none';
-                studentDetailView.style.display = 'block';
+                esconderTudoMenos(studentDetailView);
             });
         });
     } catch (e) { console.error(e); }
 }
 
-// 4. Construir Matriz de Avaliações
+// 4. Lógica de Avaliações
 if(btnHubAvaliacoes) {
     btnHubAvaliacoes.addEventListener('click', () => {
-        studentDetailView.style.display = 'none';
-        viewAvaliacoes.style.display = 'block';
+        esconderTudoMenos(viewAvaliacoes);
         construirMatrizVisual();
     });
 }
@@ -180,39 +179,27 @@ if(btnHubAvaliacoes) {
 function construirMatrizVisual() {
     let html = "";
     for (const [nomeComponente, disciplinas] of Object.entries(matrizCurso)) {
-        html += `
-        <div class="component-section">
-            <div class="component-header">${nomeComponente}</div>
-            <div class="subject-grid">`;
-        
+        html += `<div class="component-section"><div class="component-header">${nomeComponente}</div><div class="subject-grid">`;
         for (const nomeDisciplina of Object.keys(disciplinas)) {
             html += `<button class="subject-btn" data-disc="${nomeDisciplina}">${nomeDisciplina}</button>`;
         }
-        
         html += `</div></div>`;
     }
     matrizDisciplinasContainer.innerHTML = html;
 
-    // Clicar numa Disciplina
     matrizDisciplinasContainer.querySelectorAll('.subject-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const discEscolhida = e.currentTarget.getAttribute('data-disc');
-            abrirModulosDisciplina(discEscolhida);
+            abrirModulosDisciplina(e.currentTarget.getAttribute('data-disc'));
         });
     });
 }
 
-// 5. Avaliar Módulos de uma Disciplina
 async function abrirModulosDisciplina(disciplina) {
-    viewAvaliacoes.style.display = 'none';
-    viewDisciplinaModulos.style.display = 'block';
+    esconderTudoMenos(viewDisciplinaModulos);
     tituloDisciplina.innerText = disciplina;
-    
-    // Corrigido aqui para apontar para a referência certa no DOM
     const listaModulosUI = document.getElementById('lista-modulos-disciplina');
     listaModulosUI.innerHTML = '<p class="text-muted">A preparar módulos...</p>';
 
-    // Encontrar os módulos desta disciplina na Matriz
     let modulosArray = [];
     for (const comp of Object.values(matrizCurso)) {
         if (comp[disciplina]) modulosArray = comp[disciplina];
@@ -231,34 +218,95 @@ async function abrirModulosDisciplina(disciplina) {
     });
     listaModulosUI.innerHTML = html;
     
-    // Gravar Nota
     listaModulosUI.querySelectorAll('.btn-gravar-nota').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const disc = e.currentTarget.getAttribute('data-disc');
             const mod = e.currentTarget.getAttribute('data-mod');
             const valorInput = document.getElementById(`nota-${disc}-${mod}`).value;
-            
             if(valorInput === "") return;
 
             e.currentTarget.innerText = "OK!";
             e.currentTarget.style.backgroundColor = "white";
             
             try {
-                const docId = `${disc}_${mod}`;
-                await setDoc(doc(db, "utilizadores", alunoAtualId, "notas", docId), {
-                    disciplina: disc,
-                    modulo: mod,
-                    nota: Number(valorInput),
-                    data: new Date().toISOString()
+                await setDoc(doc(db, "utilizadores", alunoAtualId, "notas", `${disc}_${mod}`), {
+                    disciplina: disc, modulo: mod, nota: Number(valorInput), data: new Date().toISOString()
                 });
-                
-                setTimeout(() => {
-                    e.currentTarget.innerText = "Gravar";
-                    e.currentTarget.style.backgroundColor = "var(--primary-green)";
-                }, 2000);
-            } catch (error) {
-                console.error("Erro ao gravar nota", error);
-            }
+                setTimeout(() => { e.currentTarget.innerText = "Gravar"; e.currentTarget.style.backgroundColor = "var(--primary-green)"; }, 2000);
+            } catch (error) { console.error(error); }
         });
     });
 }
+
+// 5. Lógica de Informações (EE / Aluno)
+if(btnHubInformacoes) {
+    btnHubInformacoes.addEventListener('click', async () => {
+        esconderTudoMenos(viewInformacoes);
+        
+        // Puxar os dados atuais do aluno da Base de Dados
+        try {
+            const docSnap = await getDoc(doc(db, "utilizadores", alunoAtualId));
+            if (docSnap.exists()) {
+                const dados = docSnap.data();
+                document.getElementById('info-aluno-idade').value = dados.idade || "";
+                document.getElementById('info-aluno-telemovel').value = dados.telAluno || "";
+                document.getElementById('info-aluno-email').value = dados.emailAluno || "";
+                document.getElementById('info-aluno-morada').value = dados.morada || "";
+                
+                document.getElementById('info-ee-nome').value = dados.nomeEE || "";
+                document.getElementById('info-ee-filiacao').value = dados.filiacaoEE || "";
+                document.getElementById('info-ee-telemovel').value = dados.telEE || "";
+                document.getElementById('info-ee-email').value = dados.emailEE || "";
+            }
+        } catch (error) { console.error("Erro a carregar info:", error); }
+    });
+}
+
+document.getElementById('btn-guardar-informacoes').addEventListener('click', async (e) => {
+    e.currentTarget.innerText = "A gravar...";
+    try {
+        await updateDoc(doc(db, "utilizadores", alunoAtualId), {
+            idade: document.getElementById('info-aluno-idade').value,
+            telAluno: document.getElementById('info-aluno-telemovel').value,
+            emailAluno: document.getElementById('info-aluno-email').value,
+            morada: document.getElementById('info-aluno-morada').value,
+            nomeEE: document.getElementById('info-ee-nome').value,
+            filiacaoEE: document.getElementById('info-ee-filiacao').value,
+            telEE: document.getElementById('info-ee-telemovel').value,
+            emailEE: document.getElementById('info-ee-email').value
+        });
+        
+        document.getElementById('msg-sucesso-info').style.display = 'block';
+        setTimeout(() => document.getElementById('msg-sucesso-info').style.display = 'none', 3000);
+    } catch (error) { console.error("Erro a guardar info:", error); }
+    e.currentTarget.innerText = "Guardar Informações";
+});
+
+// 6. Lógica de PRHF (Planos de Recuperação)
+if(btnHubPrhf) {
+    btnHubPrhf.addEventListener('click', async () => {
+        esconderTudoMenos(viewPrhf);
+        
+        // Puxar o texto atual (se existir)
+        try {
+            const docSnap = await getDoc(doc(db, "utilizadores", alunoAtualId));
+            if (docSnap.exists()) {
+                document.getElementById('texto-prhf').value = docSnap.data().planoPRHF || "";
+            }
+        } catch (error) { console.error("Erro a carregar PRHF:", error); }
+    });
+}
+
+document.getElementById('btn-guardar-prhf').addEventListener('click', async (e) => {
+    e.currentTarget.innerText = "A gravar...";
+    try {
+        const textoFicha = document.getElementById('texto-prhf').value;
+        await updateDoc(doc(db, "utilizadores", alunoAtualId), {
+            planoPRHF: textoFicha
+        });
+        
+        document.getElementById('msg-sucesso-prhf').style.display = 'block';
+        setTimeout(() => document.getElementById('msg-sucesso-prhf').style.display = 'none', 3000);
+    } catch (error) { console.error("Erro a guardar PRHF:", error); }
+    e.currentTarget.innerText = "Gravar Tarefa PRHF";
+});
