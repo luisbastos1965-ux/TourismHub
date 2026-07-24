@@ -43,33 +43,23 @@
                 </section>
             </div>
 
-            <!-- NOVO PAINEL DO ADMIN (Turmas Grandes) -->
+            <!-- PAINEL DO ADMIN (Turmas Grandes, Centradas, Icons Iguais) -->
             <div id="admin-dashboard" style="display: none;">
                 <div class="dashboard-header">
                     <h2>As Minhas Turmas</h2>
-                    <p>Selecione a turma para gerir os alunos e pautas.</p>
                 </div>
                 <div class="turmas-grid-large">
                     <button class="turma-card-large" data-turma="10T">
                         <div class="tc-icon"><i class="fa-solid fa-users"></i></div>
-                        <div class="tc-info">
-                            <h3>10T</h3>
-                            <p>Ensino Profissional</p>
-                        </div>
+                        <div class="tc-info"><h3>10T</h3></div>
                     </button>
                     <button class="turma-card-large" data-turma="11T">
                         <div class="tc-icon"><i class="fa-solid fa-users"></i></div>
-                        <div class="tc-info">
-                            <h3>11T</h3>
-                            <p>Ensino Profissional</p>
-                        </div>
+                        <div class="tc-info"><h3>11T</h3></div>
                     </button>
                     <button class="turma-card-large" data-turma="12T">
-                        <div class="tc-icon"><i class="fa-solid fa-users-rays"></i></div>
-                        <div class="tc-info">
-                            <h3>12T</h3>
-                            <p>Ensino Profissional (Finalistas)</p>
-                        </div>
+                        <div class="tc-icon"><i class="fa-solid fa-users"></i></div>
+                        <div class="tc-info"><h3>12T</h3></div>
                     </button>
                 </div>
             </div>
@@ -99,8 +89,8 @@
                     <button class="hub-card" id="btn-hub-avaliacoes"><i class="fa-solid fa-star"></i><span>Avaliações</span></button>
                     <button class="hub-card" id="btn-hub-faltas"><i class="fa-solid fa-user-clock"></i><span>Faltas</span></button>
                     <button class="hub-card" id="btn-hub-prhf"><i class="fa-solid fa-file-medical"></i><span>Planos PRHF</span></button>
-                    <button class="hub-card" id="btn-hub-fct"><i class="fa-solid fa-briefcase"></i><span>FCT (Estágio)</span></button>
-                    <button class="hub-card" id="btn-hub-pap"><i class="fa-solid fa-laptop-code"></i><span>Projeto PAP</span></button>
+                    <button class="hub-card" id="btn-hub-fct" style="display: none;"><i class="fa-solid fa-briefcase"></i><span>FCT (Estágio)</span></button>
+                    <button class="hub-card" id="btn-hub-pap" style="display: none;"><i class="fa-solid fa-laptop-code"></i><span>Projeto PAP</span></button>
                 </div>
             </div>
 
@@ -176,7 +166,7 @@
                 </div>
             </div>
 
-            <!-- PRHF -->
+            <!-- PRHF (Renovado com Abas) -->
             <div id="view-prhf" style="display: none;">
                 <div class="class-header">
                     <button id="btn-voltar-hub-prhf" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button>
@@ -185,19 +175,26 @@
                 <div class="card" style="margin-bottom: 20px;">
                     <h3 style="margin-bottom: 15px;"><i class="fa-solid fa-plus"></i> Novo PRHF</h3>
                     <div class="input-row">
-                        <input type="text" id="prhf-disciplina" placeholder="Disc. (Ex: TIC)">
-                        <input type="text" id="prhf-modulo" placeholder="Mod. (Ex: M3)">
+                        <input type="text" id="prhf-disciplina" placeholder="Disc.">
+                        <input type="text" id="prhf-modulo" placeholder="Mod.">
                     </div>
                     <div class="input-row">
-                        <input type="number" id="prhf-horas" placeholder="Total Horas (Módulo)">
-                        <input type="date" id="prhf-prazo" title="Prazo de Entrega">
+                        <input type="number" id="prhf-horas" placeholder="Total Horas">
+                        <div style="display:flex; align-items:center; width:100%; gap:5px; margin-bottom:15px; background-color:var(--bg-dark); border:1px solid #333; border-radius:8px; padding-left:10px;">
+                            <span style="color:var(--text-muted); font-size:0.85rem; white-space:nowrap;">Data Lim.:</span>
+                            <input type="date" id="prhf-prazo" style="margin-bottom:0; border:none; padding:10px;">
+                        </div>
                     </div>
                     <textarea id="prhf-descricao" class="input-field" placeholder="Descreve a tarefa..."></textarea>
-                    <button id="btn-guardar-prhf" class="primary-btn" style="margin-top: 10px;">Processar e Gravar</button>
-                    <p id="msg-sucesso-prhf" class="success-msg">Plano gravado com sucesso!</p>
+                    <button id="btn-guardar-prhf" class="primary-btn" style="margin-top: 10px;">Gravar Tarefa</button>
+                    <p id="msg-sucesso-prhf" class="success-msg">Plano gravado!</p>
                 </div>
+                
                 <div class="section-container">
-                    <h3 style="margin-bottom: 15px;">Tarefas Ativas</h3>
+                    <div class="tabs-container">
+                        <button class="tab-btn active" id="tab-prhf-ativas">Ativas</button>
+                        <button class="tab-btn" id="tab-prhf-concluidas">Concluídas</button>
+                    </div>
                     <div id="lista-prhf-container"></div>
                 </div>
             </div>
@@ -211,8 +208,8 @@
         </nav>
     </div>
 
-    <!-- MODALS DE AÇÃO (Escondidos) -->
-    <div id="modal-telefone" class="modal-overlay">
+    <!-- MODALS GERAIS (Contactos Bottom) -->
+    <div id="modal-telefone" class="modal-overlay bottom">
         <div class="action-sheet">
             <h3>Opções de Contacto</h3>
             <a id="action-ligar" href="#" class="primary-btn"><i class="fa-solid fa-phone"></i> Ligar Diretamente</a>
@@ -221,11 +218,31 @@
         </div>
     </div>
     
-    <div id="modal-email" class="modal-overlay">
+    <div id="modal-email" class="modal-overlay bottom">
         <div class="action-sheet">
             <h3>Opções de Email</h3>
             <a id="action-enviar-email" href="#" class="primary-btn"><i class="fa-solid fa-envelope"></i> Escrever Email</a>
             <button class="danger-btn btn-fechar-modal">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- MODAL FOLHA PRHF (Centro) -->
+    <div id="modal-prhf-sheet" class="modal-overlay">
+        <div class="paper-sheet">
+            <button class="btn-close-paper"><i class="fa-solid fa-xmark"></i></button>
+            <div class="paper-header">
+                <h2 id="sheet-title">TIC_M3</h2>
+                <span id="sheet-status" class="paper-status">ATIVA</span>
+            </div>
+            <div class="paper-details">
+                <p><strong>Prazo:</strong> <span id="sheet-prazo">-</span></p>
+                <p><strong>Presenciais:</strong> <span id="sheet-hp">-</span>h | <strong>Autónomas:</strong> <span id="sheet-ha">-</span>h</p>
+                <div class="paper-desc" id="sheet-desc">Descrição...</div>
+            </div>
+            <div class="paper-actions">
+                <a id="sheet-btn-agendar" href="#" target="_blank" class="secondary-btn" style="color:#333; border-color:#999;"><i class="fa-regular fa-calendar-plus"></i> Agendar Aula</a>
+                <button id="sheet-btn-concluir" class="primary-btn"><i class="fa-solid fa-check"></i> Marcar como Concluído</button>
+            </div>
         </div>
     </div>
 
