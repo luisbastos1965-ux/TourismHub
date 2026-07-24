@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <div id="login-screen" class="login-container">
+    <div id="login-screen" class="login-container" style="display: none;">
         <div class="login-box">
             <h2><i class="fa-solid fa-graduation-cap"></i> Turma PRO</h2>
             <div class="input-group">
@@ -69,16 +69,13 @@
                     <p id="detail-student-number" class="text-muted">a0000</p>
                 </div>
 
+                <!-- Secção Fundida: Gestão Pedagógica, FCT e PAP -->
                 <h3 class="hub-section-title">Gestão Pedagógica</h3>
                 <div class="admin-hub-grid">
                     <button class="hub-card" id="btn-hub-informacoes"><i class="fa-solid fa-address-card"></i><span>Informações EE</span></button>
                     <button class="hub-card" id="btn-hub-avaliacoes"><i class="fa-solid fa-star"></i><span>Avaliações</span></button>
                     <button class="hub-card" id="btn-hub-faltas"><i class="fa-solid fa-user-clock"></i><span>Faltas</span></button>
                     <button class="hub-card" id="btn-hub-prhf"><i class="fa-solid fa-file-medical"></i><span>Planos PRHF</span></button>
-                </div>
-
-                <h3 class="hub-section-title">Final de Ciclo</h3>
-                <div class="admin-hub-grid">
                     <button class="hub-card" id="btn-hub-fct"><i class="fa-solid fa-briefcase"></i><span>FCT (Estágio)</span></button>
                     <button class="hub-card" id="btn-hub-pap"><i class="fa-solid fa-laptop-code"></i><span>Projeto PAP</span></button>
                 </div>
@@ -107,29 +104,66 @@
                     <button id="btn-voltar-hub-info" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button>
                     <h2 class="section-title">Informações e Contactos</h2>
                 </div>
+                
                 <div class="card">
-                    <h3 style="color: var(--primary-green); margin-bottom: 10px;"><i class="fa-solid fa-user"></i> Dados do Aluno</h3>
-                    <div class="info-grid">
-                        <input type="number" id="info-aluno-idade" placeholder="Idade">
-                        <input type="tel" id="info-aluno-telemovel" placeholder="Telemóvel">
-                        <input type="email" id="info-aluno-email" placeholder="Email do Aluno">
-                        <input type="text" id="info-aluno-morada" placeholder="Morada">
+                    <h3 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-user"></i> Dados do Aluno</h3>
+                    
+                    <!-- MODO LEITURA (ALUNO) -->
+                    <div id="info-aluno-display" style="display: block;">
+                        <div class="data-display-group"><span class="data-label">Idade</span><span class="data-value" id="display-aluno-idade">-</span></div>
+                        <div class="data-display-group"><span class="data-label">Telemóvel</span><span class="data-value" id="display-aluno-tel">-</span></div>
+                        <div class="data-display-group"><span class="data-label">Email</span><span class="data-value" id="display-aluno-email">-</span></div>
+                        <div class="data-display-group"><span class="data-label">Morada</span><span class="data-value" id="display-aluno-morada">-</span></div>
+                        <div class="action-buttons-row">
+                            <button class="secondary-btn small-btn" id="btn-editar-info-aluno"><i class="fa-solid fa-pen"></i> Editar</button>
+                        </div>
+                    </div>
+
+                    <!-- MODO EDIÇÃO (ALUNO) -->
+                    <div id="info-aluno-edit" style="display: none;">
+                        <div class="info-grid">
+                            <input type="number" id="info-aluno-idade" placeholder="Idade">
+                            <input type="tel" id="info-aluno-telemovel" placeholder="Telemóvel">
+                            <input type="email" id="info-aluno-email" placeholder="Email do Aluno">
+                            <input type="text" id="info-aluno-morada" placeholder="Morada">
+                        </div>
+                        <div class="action-buttons-row">
+                            <button id="btn-guardar-aluno" class="primary-btn small-btn">Guardar</button>
+                            <button id="btn-cancelar-aluno" class="secondary-btn small-btn">Cancelar</button>
+                        </div>
                     </div>
                 </div>
+
                 <div class="card">
-                    <h3 style="color: var(--primary-green); margin-bottom: 10px;"><i class="fa-solid fa-user-tie"></i> Encarregado de Educação</h3>
-                    <div class="info-grid">
-                        <input type="text" id="info-ee-nome" placeholder="Nome Completo">
-                        <input type="text" id="info-ee-filiacao" placeholder="Filiação (ex: Mãe, Pai)">
-                        <input type="tel" id="info-ee-telemovel" placeholder="Telemóvel">
-                        <input type="email" id="info-ee-email" placeholder="Email do E.E.">
+                    <h3 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-user-tie"></i> Encarregado de Educação</h3>
+                    
+                    <!-- MODO LEITURA (EE) -->
+                    <div id="info-ee-display" style="display: block;">
+                        <div class="data-display-group"><span class="data-label">Nome</span><span class="data-value" id="display-ee-nome">-</span></div>
+                        <div class="data-display-group"><span class="data-label">Filiação</span><span class="data-value" id="display-ee-filiacao">-</span></div>
+                        <div class="data-display-group"><span class="data-label">Telemóvel</span><span class="data-value" id="display-ee-tel">-</span></div>
+                        <div class="data-display-group"><span class="data-label">Email</span><span class="data-value" id="display-ee-email">-</span></div>
+                        <div class="action-buttons-row">
+                            <button class="secondary-btn small-btn" id="btn-editar-info-ee"><i class="fa-solid fa-pen"></i> Editar</button>
+                        </div>
                     </div>
-                    <button id="btn-guardar-informacoes" class="primary-btn" style="margin-top: 15px;">Guardar Informações</button>
-                    <p id="msg-sucesso-info" class="success-msg">Informações guardadas com sucesso!</p>
+
+                    <!-- MODO EDIÇÃO (EE) -->
+                    <div id="info-ee-edit" style="display: none;">
+                        <div class="info-grid">
+                            <input type="text" id="info-ee-nome" placeholder="Nome Completo">
+                            <input type="text" id="info-ee-filiacao" placeholder="Filiação (ex: Mãe, Pai)">
+                            <input type="tel" id="info-ee-telemovel" placeholder="Telemóvel">
+                            <input type="email" id="info-ee-email" placeholder="Email do E.E.">
+                        </div>
+                        <div class="action-buttons-row">
+                            <button id="btn-guardar-ee" class="primary-btn small-btn">Guardar</button>
+                            <button id="btn-cancelar-ee" class="secondary-btn small-btn">Cancelar</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- CAIXA 8: Planos de Recuperação (PRHF) MODIFICADA -->
             <div id="view-prhf" style="display: none;">
                 <div class="class-header">
                     <button id="btn-voltar-hub-prhf" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button>
@@ -137,27 +171,26 @@
                 </div>
                 
                 <div class="card" style="margin-bottom: 20px;">
-                    <h3 style="margin-bottom: 15px;"><i class="fa-solid fa-plus"></i> Adicionar PRHF</h3>
+                    <h3 style="margin-bottom: 15px;"><i class="fa-solid fa-plus"></i> Novo PRHF</h3>
                     
                     <div class="input-row">
-                        <input type="text" id="prhf-disciplina" placeholder="Disciplina (ex: TIC)">
-                        <input type="text" id="prhf-modulo" placeholder="Módulo (ex: M3)">
+                        <input type="text" id="prhf-disciplina" placeholder="Disc. (Ex: TIC)">
+                        <input type="text" id="prhf-modulo" placeholder="Mod. (Ex: M3)">
+                    </div>
+                    <div class="input-row">
+                        <input type="number" id="prhf-horas" placeholder="Total Horas (Módulo)" title="A app calculará os 30%">
+                        <input type="date" id="prhf-prazo" title="Prazo de Entrega">
                     </div>
                     
-                    <p class="text-muted" style="margin-top: 10px; font-size: 0.85rem;">Prazo de Entrega/Conclusão:</p>
-                    <input type="date" id="prhf-prazo" style="margin-bottom: 5px;">
+                    <textarea id="prhf-descricao" class="input-field" placeholder="Descreve a tarefa..."></textarea>
                     
-                    <textarea id="prhf-descricao" class="input-field" placeholder="Descreve a tarefa (ex: Ficha de pesquisa sobre Sistemas Operativos...)"></textarea>
-                    
-                    <button id="btn-guardar-prhf" class="primary-btn" style="margin-top: 10px;">Gravar Tarefa PRHF</button>
+                    <button id="btn-guardar-prhf" class="primary-btn" style="margin-top: 10px;">Processar e Gravar</button>
                     <p id="msg-sucesso-prhf" class="success-msg">Plano gravado com sucesso!</p>
                 </div>
 
                 <div class="section-container">
                     <h3 style="margin-bottom: 15px;">Tarefas Ativas</h3>
-                    <div id="lista-prhf-container">
-                        <p class="text-muted">A carregar planos...</p>
-                    </div>
+                    <div id="lista-prhf-container"></div>
                 </div>
             </div>
 
