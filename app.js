@@ -1,10 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-// Repara que a linha abaixo cresceu, trouxemos ferramentas de pesquisa avançada!
 import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAUU6riTOuybEamgkPke4UXJwyjMA0nJzU",
+  apiKey: "COLA_AQUI_A_TUA_CHAVE_CORRETA",
   authDomain: "turmapro-e6358.firebaseapp.com",
   projectId: "turmapro-e6358",
   storageBucket: "turmapro-e6358.firebasestorage.app",
@@ -27,12 +26,16 @@ const errorMsg = document.getElementById('login-error');
 const painelAluno = document.getElementById('student-dashboard');
 const painelAdmin = document.getElementById('admin-dashboard');
 const classView = document.getElementById('class-view');
+const studentDetailView = document.getElementById('student-detail-view'); // NOVO
 
-// Referências à navegação de turmas
+// Referências à navegação de turmas e alunos
 const botoesTurma = document.querySelectorAll('.turma-card');
 const classTitle = document.getElementById('class-title');
 const btnVoltarTurmas = document.getElementById('btn-voltar-turmas');
 const containerAlunos = document.querySelector('.students-list-container');
+const btnVoltarLista = document.getElementById('btn-voltar-lista'); // NOVO
+const detailStudentName = document.getElementById('detail-student-name'); // NOVO
+const detailStudentNumber = document.getElementById('detail-student-number'); // NOVO
 
 // 1. Escutar estado de autenticação e carregar dados do utilizador
 onAuthStateChanged(auth, async (user) => {
@@ -52,14 +55,17 @@ onAuthStateChanged(auth, async (user) => {
                 const userProfileSpan = document.querySelector('.user-profile span');
                 userProfileSpan.innerText = `Olá, ${dados.nome} (${dados.papel.toUpperCase()})`;
                 
+                // Esconder/Mostrar painéis consoante o papel
                 if (dados.papel === 'admin') {
                     painelAluno.style.display = 'none';
                     painelAdmin.style.display = 'block';
                     classView.style.display = 'none';
+                    studentDetailView.style.display = 'none';
                 } else {
                     painelAluno.style.display = 'block';
                     painelAdmin.style.display = 'none';
                     classView.style.display = 'none';
+                    studentDetailView.style.display = 'none';
                 }
             }
         } catch (error) {
@@ -92,7 +98,22 @@ btnLogout.addEventListener('click', () => {
     signOut(auth);
 });
 
-// 4. Navegação do Painel de Admin (Abrir Turmas)
+// 4. Navegação Principal (Botões de Voltar)
+if(btnVoltarTurmas) {
+    btnVoltarTurmas.addEventListener('click', () => {
+        classView.style.display = 'none';
+        painelAdmin.style.display = 'block';
+    });
+}
+
+if(btnVoltarLista) {
+    btnVoltarLista.addEventListener('click', () => {
+        studentDetailView.style.display = 'none';
+        classView.style.display = 'block'; // Volta a mostrar a pauta da turma
+    });
+}
+
+// 5. Navegação do Painel de Admin (Abrir Turmas)
 botoesTurma.forEach(botao => {
     botao.addEventListener('click', () => {
         const nomeTurma = botao.getAttribute('data-turma'); 
@@ -101,65 +122,70 @@ botoesTurma.forEach(botao => {
         
         painelAdmin.style.display = 'none';
         classView.style.display = 'block';
+        studentDetailView.style.display = 'none';
 
-        // Dispara a função mágica para ir buscar os alunos desta turma específica!
         carregarAlunos(nomeTurma);
     });
 });
 
-// Função para voltar atrás
-if(btnVoltarTurmas) {
-    btnVoltarTurmas.addEventListener('click', () => {
-        classView.style.display = 'none';
-        painelAdmin.style.display = 'block';
-    });
-}
-
-// 5. Função Mágica: Ir buscar alunos à Base de Dados
+// 6. Função Mágica: Ir buscar alunos à Base de Dados
 async function carregarAlunos(turmaEscolhida) {
-    // 1. Mostrar mensagem de carregamento
     containerAlunos.innerHTML = '<p style="color: var(--text-muted);">A carregar lista de alunos...</p>';
 
     try {
-        // 2. Fazer a pergunta (Query) à base de dados: 
-        // "Dá-me os utilizadores cuja turma seja igual à turmaEscolhida e que sejam alunos"
         const q = query(
             collection(db, "utilizadores"), 
             where("turma", "==", turmaEscolhida), 
             where("papel", "==", "aluno")
         );
         
-        // 3. Executar o pedido
         const resultados = await getDocs(q);
 
-        // 4. Verificar se a turma está vazia
         if (resultados.empty) {
             containerAlunos.innerHTML = '<p style="color: var(--text-muted);">Ainda não há alunos registados nesta turma.</p>';
             return;
         }
 
-        // 5. Se houver alunos, construir a lista em HTML
         let htmlLista = '<ul class="students-list">';
         
         resultados.forEach((documento) => {
-            const aluno = documento.data(); // Puxa o nome, papel, turma
-            const numeroAluno = documento.id; // Puxa o ID (ex: a1234)
+            const aluno = documento.data();
+            const numeroAluno = documento.id;
 
+            // Injetamos pequenos "data-attributes" para o botão saber de quem é
             htmlLista += `
                 <li class="student-item">
                     <div class="student-info">
                         <strong>${aluno.nome}</strong>
                         <span>${numeroAluno.toUpperCase()}</span>
                     </div>
-                    <button class="secondary-btn small-btn"><i class="fa-solid fa-eye"></i> Ver</button>
+                    <button class="secondary-btn small-btn btn-ver-aluno" data-nome="${aluno.nome}" data-numero="${numeroAluno}">
+                        <i class="fa-solid fa-eye"></i> Ver
+                    </button>
                 </li>
             `;
         });
         
         htmlLista += '</ul>';
-        
-        // 6. Injetar a lista pronta no ecrã
         containerAlunos.innerHTML = htmlLista;
+
+        // 7. Ativar os botões "Ver" acabados de criar!
+        const botoesVer = containerAlunos.querySelectorAll('.btn-ver-aluno');
+        botoesVer.forEach(botao => {
+            botao.addEventListener('click', (evento) => {
+                // Apanhar os dados escondidos no botão
+                const nome = evento.currentTarget.getAttribute('data-nome');
+                const numero = evento.currentTarget.getAttribute('data-numero');
+                
+                // Mudar o nome no ecrã de perfil
+                detailStudentName.innerText = nome;
+                detailStudentNumber.innerText = numero.toUpperCase();
+                
+                // Fechar a lista e abrir o perfil
+                classView.style.display = 'none';
+                studentDetailView.style.display = 'block';
+            });
+        });
 
     } catch (erro) {
         console.error("Erro ao carregar alunos:", erro);
