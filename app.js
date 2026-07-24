@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, addDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAUU6riTOuybEamgkPke4UXJwyjMA0nJzU",
@@ -82,7 +82,6 @@ document.querySelectorAll('.turma-card-large').forEach(botao => {
 async function carregarAlunos(turmaEscolhida) {
     const container = document.querySelector('.students-list-container'); container.innerHTML = '<p class="text-muted">A carregar...</p>';
     try {
-        // Lógica SuperTurma: Se for TUR, apanha todos os alunos ignorando a turma!
         const q = turmaEscolhida === 'TUR' 
             ? query(collection(db, "utilizadores"), where("papel", "==", "aluno")) 
             : query(collection(db, "utilizadores"), where("turma", "==", turmaEscolhida), where("papel", "==", "aluno"));
@@ -94,8 +93,14 @@ async function carregarAlunos(turmaEscolhida) {
         res.forEach((doc) => {
             const aluno = doc.data();
             const tagTurma = turmaEscolhida === 'TUR' ? ` (${aluno.turma})` : '';
+            // Injeta a foto do Firebase na lista, ou o ícone se não tiver
+            const miniatura = aluno.fotoPerfil ? `<img src="${aluno.fotoPerfil}" class="list-avatar">` : `<div class="list-avatar"><i class="fa-solid fa-user"></i></div>`;
+            
             html += `<li class="student-item">
-                        <div class="student-info"><strong>${aluno.nome}${tagTurma}</strong><span>${doc.id.toUpperCase()}</span></div>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            ${miniatura}
+                            <div class="student-info"><strong>${aluno.nome}${tagTurma}</strong><span>${doc.id.toUpperCase()}</span></div>
+                        </div>
                         <button class="secondary-btn small-btn btn-ver-aluno" data-nome="${aluno.nome}" data-numero="${doc.id}" data-t="${aluno.turma}"><i class="fa-solid fa-eye"></i> Ver</button>
                     </li>`;
         });
@@ -108,54 +113,49 @@ async function carregarAlunos(turmaEscolhida) {
                 document.getElementById('detail-student-number').innerText = alunoAtualId.toUpperCase();
                 
                 const turmaRealAluno = e.currentTarget.getAttribute('data-t');
-                document.getElementById('btn-hub-fct').style.display = (turmaRealAluno === '11T' || turmaRealAluno === '12T') ? 'flex' : 'none';
-                document.getElementById('btn-hub-pap').style.display = (turmaRealAluno === '12T') ? 'flex' : 'none';
+                const fct = document.getElementById('btn-hub-fct');
+                const pap = document.getElementById('btn-hub-pap');
+                
+                // Lógica Grayscale (Cinza) para FCT e PAP consoante a Turma do aluno clicado
+                if (turmaRealAluno.includes('10')) {
+                    fct.classList.add('disabled-hub-card'); pap.classList.add('disabled-hub-card');
+                } else if (turmaRealAluno.includes('11')) {
+                    fct.classList.remove('disabled-hub-card'); pap.classList.add('disabled-hub-card');
+                } else { // 12
+                    fct.classList.remove('disabled-hub-card'); pap.classList.remove('disabled-hub-card');
+                }
                 
                 esconderTudoMenos(studentDetailView);
-                carregarFotoPerfil(); // Puxa a foto do Firebase!
+                carregarFotoPerfil();
             });
         });
     } catch (e) { console.error(e); }
 }
 
-// Lógica de Foto de Perfil (Motor de Compressão)
 async function carregarFotoPerfil() {
-    document.getElementById('avatar-img').style.display = 'none';
-    document.getElementById('avatar-icon').style.display = 'block';
+    document.getElementById('avatar-img').style.display = 'none'; document.getElementById('avatar-icon').style.display = 'block';
     try {
         const docSnap = await getDoc(doc(db, "utilizadores", alunoAtualId));
         if (docSnap.exists() && docSnap.data().fotoPerfil) {
-            document.getElementById('avatar-img').src = docSnap.data().fotoPerfil;
-            document.getElementById('avatar-img').style.display = 'block';
-            document.getElementById('avatar-icon').style.display = 'none';
+            document.getElementById('avatar-img').src = docSnap.data().fotoPerfil; document.getElementById('avatar-img').style.display = 'block'; document.getElementById('avatar-icon').style.display = 'none';
         }
     } catch(e){}
 }
-
 document.getElementById('upload-avatar').addEventListener('change', (e) => {
     const file = e.target.files[0]; if(!file) return;
     const reader = new FileReader();
     reader.onload = (event) => {
         const img = new Image();
         img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 150; canvas.height = 150; // Comprime para um quadrado perfeito
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, 150, 150);
+            const canvas = document.createElement('canvas'); canvas.width = 150; canvas.height = 150; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, 150, 150);
             const base64 = canvas.toDataURL('image/jpeg', 0.8);
-            
-            // Grava na BD e atualiza visual
             updateDoc(doc(db, 'utilizadores', alunoAtualId), { fotoPerfil: base64 });
-            document.getElementById('avatar-img').src = base64;
-            document.getElementById('avatar-img').style.display = 'block';
-            document.getElementById('avatar-icon').style.display = 'none';
-        };
-        img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
+            document.getElementById('avatar-img').src = base64; document.getElementById('avatar-img').style.display = 'block'; document.getElementById('avatar-icon').style.display = 'none';
+        }; img.src = event.target.result;
+    }; reader.readAsDataURL(file);
 });
 
-// 3. AVALIAÇÕES (Código inalterado por brevidade de visualização, está no background)
+// 3. AVALIAÇÕES (Código inalterado por brevidade, intacto no background)
 document.getElementById('btn-hub-avaliacoes')?.addEventListener('click', () => { esconderTudoMenos(viewAvaliacoes); construirMatrizVisual(); });
 function construirMatrizVisual() {
     let html = "";
@@ -170,8 +170,7 @@ function construirMatrizVisual() {
 async function abrirModulosDisciplina(disciplina) {
     esconderTudoMenos(viewDisciplinaModulos); document.getElementById('titulo-disciplina').innerText = disciplina;
     const listaModulosUI = document.getElementById('lista-modulos-disciplina'); listaModulosUI.innerHTML = '<p class="text-muted">A preparar pauta...</p>';
-    const notasMapa = {};
-    try { const qNotas = await getDocs(collection(db, "utilizadores", alunoAtualId, "notas")); qNotas.forEach(d => { if (d.data().disciplina === disciplina) notasMapa[d.data().modulo] = d.data().nota; }); } catch(e){}
+    const notasMapa = {}; try { const qNotas = await getDocs(collection(db, "utilizadores", alunoAtualId, "notas")); qNotas.forEach(d => { if (d.data().disciplina === disciplina) notasMapa[d.data().modulo] = d.data().nota; }); } catch(e){}
     let modulosArray = []; for (const comp of Object.values(matrizCurso)) { if (comp[disciplina]) modulosArray = comp[disciplina]; }
     let html = "";
     modulosArray.forEach(mod => {
@@ -194,7 +193,7 @@ async function abrirModulosDisciplina(disciplina) {
     }));
 }
 
-// 4. INFORMAÇÕES (Omitido código de leitura puro por brevidade)
+// 4. INFORMAÇÕES (Com Edição Imediata reparada)
 document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { document.getElementById('modal-telefone').style.display='none'; document.getElementById('modal-email').style.display='none'; }));
 document.addEventListener('click', (e) => {
     if (e.target.classList.contains('clickable-contact')) {
@@ -210,88 +209,102 @@ document.getElementById('action-guardar-vcard')?.addEventListener('click', () =>
     const blob = new Blob([vcard], { type: 'text/vcard' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${nomePessoaContactoModal.replace(/\s+/g,'_')}.vcf`;
     document.body.appendChild(link); link.click(); document.body.removeChild(link); document.getElementById('modal-telefone').style.display = 'none';
 });
-if(document.getElementById('btn-hub-informacoes')) {
-    document.getElementById('btn-hub-informacoes').addEventListener('click', () => { esconderTudoMenos(viewInformacoes); /* lógica de leitura omitida mas correta no browser */ });
+
+async function carregarInfoLeitura() {
+    try {
+        const docSnap = await getDoc(doc(db, "utilizadores", alunoAtualId));
+        if (docSnap.exists()) {
+            const d = docSnap.data();
+            document.getElementById('display-aluno-idade').innerText = d.idade || "-"; document.getElementById('display-aluno-tel').innerText = d.telAluno || "-"; document.getElementById('display-aluno-email').innerText = d.emailAluno || "-"; document.getElementById('display-aluno-morada').innerText = d.morada || "-";
+            document.getElementById('display-ee-nome').innerText = d.nomeEE || "-"; document.getElementById('display-ee-filiacao').innerText = d.filiacaoEE || "-"; document.getElementById('display-ee-tel').innerText = d.telEE || "-"; document.getElementById('display-ee-email').innerText = d.emailEE || "-";
+            ['info-aluno-idade', 'info-aluno-telemovel', 'info-aluno-email', 'info-aluno-morada', 'info-ee-nome', 'info-ee-filiacao', 'info-ee-telemovel', 'info-ee-email'].forEach(id => {
+                const key = id.replace('info-aluno-', '').replace('info-ee-', '');
+                document.getElementById(id).value = d[key === 'telemovel' ? (id.includes('aluno') ? 'telAluno' : 'telEE') : (key === 'email' ? (id.includes('aluno') ? 'emailAluno' : 'emailEE') : key)] || d[id.includes('aluno') ? key : key + 'EE'] || "";
+            });
+        }
+    } catch (error) { console.error(error); }
 }
 
-// 5. PRHF COM DROPDOWNS E FOLHA (A Magia)
-const selDisc = document.getElementById('prhf-disciplina');
-const selMod = document.getElementById('prhf-modulo');
+if(document.getElementById('btn-hub-informacoes')) {
+    document.getElementById('btn-hub-informacoes').addEventListener('click', () => {
+        esconderTudoMenos(viewInformacoes);
+        document.getElementById('info-aluno-display').style.display = 'block'; document.getElementById('info-aluno-edit').style.display = 'none';
+        document.getElementById('info-ee-display').style.display = 'block'; document.getElementById('info-ee-edit').style.display = 'none';
+        carregarInfoLeitura();
+    });
+}
 
-// Preencher Dropdown de Disciplinas
-let optDisc = '<option value="">Disc.</option>';
-for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) optDisc += `<option value="${d}">${d}</option>`; }
-selDisc.innerHTML = optDisc;
+// Sem Confirmação, abre logo!
+document.getElementById('btn-editar-info-aluno').addEventListener('click', () => { document.getElementById('info-aluno-display').style.display='none'; document.getElementById('info-aluno-edit').style.display='block'; });
+document.getElementById('btn-editar-info-ee').addEventListener('click', () => { document.getElementById('info-ee-display').style.display='none'; document.getElementById('info-ee-edit').style.display='block'; });
+document.getElementById('btn-cancelar-aluno').addEventListener('click', () => { document.getElementById('info-aluno-display').style.display='block'; document.getElementById('info-aluno-edit').style.display='none'; });
+document.getElementById('btn-cancelar-ee').addEventListener('click', () => { document.getElementById('info-ee-display').style.display='block'; document.getElementById('info-ee-edit').style.display='none'; });
 
-// Quando escolhe Disciplina, preenche Módulos
-selDisc.addEventListener('change', (e) => {
-    const d = e.target.value; let mods = [];
-    for(const comp of Object.values(matrizCurso)) { if(comp[d]) mods = comp[d]; }
-    let optMod = '<option value="">Mod.</option>';
-    mods.forEach(m => optMod += `<option value="${m}">${m}</option>`);
-    selMod.innerHTML = optMod;
+document.getElementById('btn-guardar-aluno').addEventListener('click', async (e) => {
+    e.currentTarget.innerText = "A gravar...";
+    try { await updateDoc(doc(db, "utilizadores", alunoAtualId), { idade: document.getElementById('info-aluno-idade').value, telAluno: document.getElementById('info-aluno-telemovel').value, emailAluno: document.getElementById('info-aluno-email').value, morada: document.getElementById('info-aluno-morada').value });
+        carregarInfoLeitura(); document.getElementById('info-aluno-display').style.display='block'; document.getElementById('info-aluno-edit').style.display='none';
+    } catch(e) {} e.currentTarget.innerText = "Guardar";
 });
+document.getElementById('btn-guardar-ee').addEventListener('click', async (e) => {
+    e.currentTarget.innerText = "A gravar...";
+    try { await updateDoc(doc(db, "utilizadores", alunoAtualId), { nomeEE: document.getElementById('info-ee-nome').value, filiacaoEE: document.getElementById('info-ee-filiacao').value, telEE: document.getElementById('info-ee-telemovel').value, emailEE: document.getElementById('info-ee-email').value });
+        carregarInfoLeitura(); document.getElementById('info-ee-display').style.display='block'; document.getElementById('info-ee-edit').style.display='none';
+    } catch(e) {} e.currentTarget.innerText = "Guardar";
+});
+
+// 5. PRHF (FOLHA COM REGISTO MANUAL)
+const selDisc = document.getElementById('prhf-disciplina'); const selMod = document.getElementById('prhf-modulo');
+let optDisc = '<option value="">Disc.</option>'; for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) optDisc += `<option value="${d}">${d}</option>`; } selDisc.innerHTML = optDisc;
+selDisc.addEventListener('change', (e) => { const d = e.target.value; let mods = []; for(const comp of Object.values(matrizCurso)) { if(comp[d]) mods = comp[d]; } let optMod = '<option value="">Mod.</option>'; mods.forEach(m => optMod += `<option value="${m}">${m}</option>`); selMod.innerHTML = optMod; });
 
 let tabAtiva = 'ativas'; const modalFolha = document.getElementById('modal-prhf-sheet');
 
 if(document.getElementById('btn-hub-prhf')) {
-    document.getElementById('btn-hub-prhf').addEventListener('click', () => {
-        esconderTudoMenos(viewPrhf); tabAtiva = 'ativas'; 
-        document.getElementById('tab-prhf-ativas').classList.add('active'); document.getElementById('tab-prhf-concluidas').classList.remove('active');
-        carregarListaPRHF(alunoAtualId);
-    });
+    document.getElementById('btn-hub-prhf').addEventListener('click', () => { esconderTudoMenos(viewPrhf); tabAtiva = 'ativas'; document.getElementById('tab-prhf-ativas').classList.add('active'); document.getElementById('tab-prhf-concluidas').classList.remove('active'); carregarListaPRHF(alunoAtualId); });
 }
 
 document.getElementById('tab-prhf-ativas').addEventListener('click', (e) => { tabAtiva = 'ativas'; e.currentTarget.classList.add('active'); document.getElementById('tab-prhf-concluidas').classList.remove('active'); carregarListaPRHF(alunoAtualId); });
 document.getElementById('tab-prhf-concluidas').addEventListener('click', (e) => { tabAtiva = 'concluidas'; e.currentTarget.classList.add('active'); document.getElementById('tab-prhf-ativas').classList.remove('active'); carregarListaPRHF(alunoAtualId); });
 
 document.getElementById('btn-guardar-prhf').addEventListener('click', async (e) => {
-    const disc = selDisc.value; const mod = selMod.value;
-    const prazo = document.getElementById('prhf-prazo').value; const desc = document.getElementById('prhf-descricao').value.trim();
-    const htInput = document.getElementById('prhf-horas').value;
-
+    const disc = selDisc.value; const mod = selMod.value; const prazo = document.getElementById('prhf-prazo').value; const desc = document.getElementById('prhf-descricao').value.trim(); const htInput = document.getElementById('prhf-horas').value;
     if(!disc || !mod || !prazo || !desc || !htInput) return alert("Preenche todos os campos!");
     
-    // A Matemática corrigida!
-    const hT = parseInt(htInput);
-    let hP = 0; if(hT > 4) hP = Math.ceil(hT * 0.3); // Presenciais são os 30%
-    const hN = hT - hP; // Autónomas é o restante
+    const hT = parseInt(htInput); let hP = 0; if(hT > 4) hP = Math.ceil(hT * 0.3); const hN = hT - hP; // Matemática Corrigida (P=30%)
 
     e.currentTarget.innerText = "A gravar...";
     try {
-        await addDoc(collection(db, "utilizadores", alunoAtualId, "prhfs"), { 
-            disciplina: disc, modulo: mod, prazo: prazo, descricao: desc, 
-            horasNaoPresenciais: hN, horasPresenciais: hP, status: 'ativa', dataRegisto: new Date().toISOString() 
-        });
+        await addDoc(collection(db, "utilizadores", alunoAtualId, "prhfs"), { disciplina: disc, modulo: mod, prazo: prazo, descricao: desc, horasNaoPresenciais: hN, horasPresenciais: hP, status: 'ativa', dataRegisto: new Date().toISOString(), registosManuais: [] });
         selDisc.value = ""; selMod.value = ""; document.getElementById('prhf-prazo').value = ""; document.getElementById('prhf-descricao').value = ""; document.getElementById('prhf-horas').value = "";
-        
-        tabAtiva = 'ativas'; document.getElementById('tab-prhf-ativas').classList.add('active'); document.getElementById('tab-prhf-concluidas').classList.remove('active');
-        carregarListaPRHF(alunoAtualId);
-    } catch (err) { console.error(err); } e.currentTarget.innerText = "Gravar Tarefa";
+        tabAtiva = 'ativas'; document.getElementById('tab-prhf-ativas').classList.add('active'); document.getElementById('tab-prhf-concluidas').classList.remove('active'); carregarListaPRHF(alunoAtualId);
+    } catch (err) {} e.currentTarget.innerText = "Gravar Tarefa";
 });
 
 let prhfsMemoria = [];
 async function carregarListaPRHF(idAluno) {
     const container = document.getElementById('lista-prhf-container'); container.innerHTML = '<p class="text-muted">A carregar...</p>'; prhfsMemoria = [];
     try {
-        const q = query(collection(db, "utilizadores", idAluno, "prhfs"));
-        const res = await getDocs(q);
-        let html = '';
+        const res = await getDocs(query(collection(db, "utilizadores", idAluno, "prhfs"))); let html = '';
         res.forEach(doc => {
             const data = doc.data(); data.id = doc.id;
             if ((tabAtiva === 'ativas' && data.status === 'ativa') || (tabAtiva === 'concluidas' && data.status === 'concluida')) {
-                prhfsMemoria.push(data);
-                const classeCor = data.status === 'ativa' ? 'ativa' : 'concluida';
-                const sM = data.modulo.includes('M') ? data.modulo : 'M'+data.modulo; 
+                prhfsMemoria.push(data); const classeCor = data.status === 'ativa' ? 'ativa' : 'concluida'; const sM = data.modulo.includes('M') ? data.modulo : 'M'+data.modulo; 
                 html += `<div class="prhf-mini-card ${classeCor}" data-id="${data.id}"><strong>${data.disciplina}_${sM}</strong><i class="fa-solid fa-chevron-right" style="color:var(--text-muted); font-size:0.8rem;"></i></div>`;
             }
         });
         if (html === '') { container.innerHTML = `<p class="text-muted">Sem tarefas ${tabAtiva}.</p>`; return; }
         container.innerHTML = html;
-        container.querySelectorAll('.prhf-mini-card').forEach(card => {
-            card.addEventListener('click', (e) => { abrirFolhaPRHF(e.currentTarget.getAttribute('data-id')); });
-        });
-    } catch (err) { console.error(err); }
+        container.querySelectorAll('.prhf-mini-card').forEach(card => card.addEventListener('click', (e) => abrirFolhaPRHF(e.currentTarget.getAttribute('data-id'))));
+    } catch (err) {}
+}
+
+function desenharRegistosManuais(plano) {
+    const container = document.getElementById('lista-presencias-manuais');
+    if(!plano.registosManuais || plano.registosManuais.length === 0) { container.innerHTML = ""; return; }
+    let h = "<p style='margin-bottom:5px;'><strong>Já Registadas:</strong></p>";
+    plano.registosManuais.forEach(r => h += `<div class="registo-item"><span>${r.data}</span><span>${r.inicio} - ${r.fim}</span></div>`);
+    container.innerHTML = h;
 }
 
 function abrirFolhaPRHF(id) {
@@ -300,30 +313,62 @@ function abrirFolhaPRHF(id) {
     const sM = p.modulo.includes('M') ? p.modulo : 'M'+p.modulo;
     const dp = p.prazo.split('-'); const dF = dp.length === 3 ? `${dp[2]}/${dp[1]}/${dp[0]}` : p.prazo;
     
-    document.getElementById('sheet-title').innerText = `${p.disciplina}_${sM}`;
-    document.getElementById('sheet-prazo').innerText = dF;
-    document.getElementById('sheet-hp').innerText = p.horasPresenciais;
-    document.getElementById('sheet-ha').innerText = p.horasNaoPresenciais;
+    document.getElementById('sheet-title').innerText = `${p.disciplina}_${sM}`; document.getElementById('sheet-prazo').innerText = dF;
+    document.getElementById('sheet-hp').innerText = p.horasPresenciais; document.getElementById('sheet-ha').innerText = p.horasNaoPresenciais;
     document.getElementById('sheet-desc').innerText = p.descricao;
     
     const badge = document.getElementById('sheet-status'); badge.innerText = p.status.toUpperCase(); badge.className = `paper-status ${p.status}`;
-    
     const txtCal = p.prazo.replace(/-/g, '') + 'T090000Z/' + p.prazo.replace(/-/g, '') + 'T100000Z'; 
     document.getElementById('sheet-btn-agendar').href = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Apoio+${p.disciplina}&details=Aluno:+${document.getElementById('detail-student-name').innerText}%0AHoras:+${p.horasPresenciais}h%0A${p.descricao}&dates=${txtCal}`;
 
-    document.getElementById('sheet-btn-concluir').style.display = p.status === 'concluida' ? 'none' : 'flex';
-    document.getElementById('sheet-btn-reverter').style.display = p.status === 'concluida' ? 'flex' : 'none'; // Mostra Reverter se estiver concluída
+    // Lógica de Visibilidade dos Botões consoante Estado (Ativa vs Concluída)
+    if (p.status === 'concluida') {
+        document.getElementById('sheet-btn-concluir').style.display = 'none';
+        document.getElementById('sheet-btn-reverter').style.display = 'flex'; // Botão Reverter
+        document.getElementById('sheet-btn-agendar').style.display = 'none';
+        document.getElementById('sheet-btn-toggle-manual').style.display = 'none';
+        document.getElementById('manual-presence-box').style.display = 'none';
+    } else {
+        document.getElementById('sheet-btn-concluir').style.display = 'flex';
+        document.getElementById('sheet-btn-reverter').style.display = 'none';
+        document.getElementById('sheet-btn-agendar').style.display = 'flex';
+        document.getElementById('sheet-btn-toggle-manual').style.display = 'flex';
+        document.getElementById('manual-presence-box').style.display = 'none'; // Começa escondida a caixa
+    }
     
+    desenharRegistosManuais(p);
     modalFolha.style.display = 'flex';
 }
 document.querySelector('.btn-close-paper').addEventListener('click', () => modalFolha.style.display = 'none');
+
+// Funcionalidade: Registar Presenciais Manualmente
+document.getElementById('sheet-btn-toggle-manual').addEventListener('click', () => {
+    const box = document.getElementById('manual-presence-box');
+    box.style.display = box.style.display === 'none' ? 'block' : 'none';
+});
+
+document.getElementById('btn-save-manual-pres').addEventListener('click', async (e) => {
+    const d = document.getElementById('reg-pres-data').value; const i = document.getElementById('reg-pres-inicio').value; const f = document.getElementById('reg-pres-fim').value;
+    if(!d || !i || !f) return alert("Preenche Data, Início e Fim!");
+    e.currentTarget.innerText = "A gravar...";
+    try {
+        const novoRegisto = { data: d, inicio: i, fim: f };
+        await updateDoc(doc(db, "utilizadores", alunoAtualId, "prhfs", idPrhfAtivo), { registosManuais: arrayUnion(novoRegisto) });
+        document.getElementById('reg-pres-data').value = ""; document.getElementById('reg-pres-inicio').value = ""; document.getElementById('reg-pres-fim').value = "";
+        
+        // Atualiza Memória e View Instantaneamente
+        const p = prhfsMemoria.find(x => x.id === idPrhfAtivo);
+        if(!p.registosManuais) p.registosManuais = [];
+        p.registosManuais.push(novoRegisto);
+        desenharRegistosManuais(p);
+    } catch(err) { console.error(err); } e.currentTarget.innerText = "Guardar Registo";
+});
 
 document.getElementById('sheet-btn-concluir').addEventListener('click', async (e) => {
     if(!confirm("Marcar como CONCLUÍDO?")) return; e.currentTarget.innerText = "A validar...";
     try { await updateDoc(doc(db, "utilizadores", alunoAtualId, "prhfs", idPrhfAtivo), { status: 'concluida' }); modalFolha.style.display = 'none'; carregarListaPRHF(alunoAtualId); } catch(err) { e.currentTarget.innerText = "Marcar como Concluído"; }
 });
-
 document.getElementById('sheet-btn-reverter').addEventListener('click', async (e) => {
-    if(!confirm("Reverter para ATIVA?")) return; e.currentTarget.innerText = "A reverter...";
-    try { await updateDoc(doc(db, "utilizadores", alunoAtualId, "prhfs", idPrhfAtivo), { status: 'ativa' }); modalFolha.style.display = 'none'; carregarListaPRHF(alunoAtualId); } catch(err) { e.currentTarget.innerText = "Desconcluir"; }
+    if(!confirm("REVERTER para ATIVA?")) return; e.currentTarget.innerText = "A reverter...";
+    try { await updateDoc(doc(db, "utilizadores", alunoAtualId, "prhfs", idPrhfAtivo), { status: 'ativa' }); modalFolha.style.display = 'none'; carregarListaPRHF(alunoAtualId); } catch(err) { e.currentTarget.innerText = "Reverter"; }
 });
