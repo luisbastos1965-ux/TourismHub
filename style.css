@@ -1,313 +1,192 @@
+/* =========================================
+   VARIÁVEIS DE COR E ESTILOS GERAIS
+========================================= */
 :root {
+    --primary-green: #00cc88;
+    --primary-hover: #00a66e;
     --bg-dark: #121212;
-    --bg-card: #1E1E1E;
-    --primary-green: #009933;
-    --primary-green-light: #00cc44;
-    --warning-yellow: #FFC107;
-    --danger-red: #FF3B30;
-    --text-main: #FFFFFF;
-    --text-muted: #A0A0A0;
+    --bg-card: #1e1e1e;
+    --text-light: #ffffff;
+    --text-muted: #a0a0a0;
+    --danger-red: #ff4d4d;
 }
 
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 body {
     background-color: var(--bg-dark);
-    color: var(--text-main);
-    padding-bottom: 80px;
-}
-
-.app-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    background-color: var(--bg-card);
-    border-bottom: 1px solid #2A2A2A;
-}
-
-.logo {
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: var(--primary-green-light);
-}
-
-.user-profile {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.avatar {
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    background-color: var(--primary-green);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-weight: bold;
-}
-
-.app-content { padding: 20px; }
-
-.card {
-    background-color: var(--bg-card);
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 20px;
-}
-
-.warning-card { border-left: 4px solid var(--primary-green); }
-
-.warning-card h3 {
-    font-size: 1rem;
-    margin-bottom: 8px;
-    color: var(--primary-green-light);
-}
-
-.warning-card p {
-    font-size: 0.9rem;
-    color: var(--text-muted);
-    line-height: 1.4;
-}
-
-.overview-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    margin-bottom: 25px;
-}
-
-.overview-box {
-    background-color: var(--bg-card);
-    border-radius: 12px;
-    padding: 20px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-}
-
-.overview-box .number {
-    font-size: 2rem;
-    font-weight: bold;
-    margin-bottom: 5px;
-}
-
-.overview-box .label {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-}
-
-.danger-box .number { color: var(--danger-red); }
-.active-box .number { color: var(--primary-green-light); }
-
-.section-title {
-    font-size: 1.1rem;
-    margin-bottom: 15px;
-    color: var(--text-main);
-}
-
-.section-container { margin-bottom: 25px; }
-
-.module-card {
-    background-color: var(--bg-card);
-    border-radius: 10px;
-    padding: 15px;
-    margin-bottom: 12px;
-}
-
-.module-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 10px;
-    font-weight: 500;
-}
-
-.progress-container {
-    height: 8px;
-    background-color: #2A2A2A;
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 10px;
-}
-
-.progress-bar { height: 100%; border-radius: 4px; }
-.warning-bg { background-color: var(--warning-yellow); }
-.danger-bg { background-color: var(--danger-red); }
-.warning-text { color: var(--warning-yellow); }
-.danger-text { color: var(--danger-red); font-weight: bold; }
-
-.module-footer {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.8rem;
-    color: var(--text-muted);
-}
-
-.plan-card {
-    background-color: var(--bg-card);
-    border-radius: 10px;
-    padding: 15px;
-    border: 1px solid #2A2A2A;
-}
-
-.plan-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-.badge {
-    background-color: rgba(0, 153, 51, 0.2);
-    color: var(--primary-green-light);
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: bold;
-}
-
-.plan-task {
-    font-size: 0.9rem;
-    margin-bottom: 15px;
-    color: #E0E0E0;
-}
-
-.plan-footer {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-}
-
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background-color: var(--bg-card);
-    display: flex;
-    justify-content: space-around;
-    padding: 10px 0 20px 0;
-    border-top: 1px solid #2A2A2A;
-}
-
-.nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: var(--text-muted);
-    text-decoration: none;
-    font-size: 0.75rem;
-    gap: 5px;
-}
-
-.nav-item i { font-size: 1.2rem; }
-.nav-item.active { color: var(--primary-green-light); }
-
-/* --- Ecrã de Login --- */
-.login-container {
+    color: var(--text-light);
     height: 100vh;
     display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: var(--bg-dark);
-    padding: 20px;
+    flex-direction: column;
 }
 
-.login-box {
-    background-color: var(--bg-card);
-    padding: 30px 20px;
-    border-radius: 12px;
-    width: 100%;
-    max-width: 400px;
-    text-align: center;
-    border: 1px solid #2A2A2A;
-}
-
-.login-box h2 { color: var(--primary-green-light); margin-bottom: 5px; }
-.login-box p { color: var(--text-muted); margin-bottom: 25px; font-size: 0.9rem; }
-
-.input-group { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
-
-.input-group input {
-    background-color: var(--bg-dark);
-    border: 1px solid #333;
-    padding: 12px;
-    border-radius: 8px;
-    color: white;
-    font-size: 1rem;
-}
-
-.input-group input:focus { outline: none; border-color: var(--primary-green); }
-
+/* =========================================
+   BOTÕES E INPUTS GERAIS
+========================================= */
 .primary-btn {
     width: 100%;
     padding: 12px;
     background-color: var(--primary-green);
-    color: white;
+    color: var(--bg-dark);
     border: none;
     border-radius: 8px;
     font-size: 1rem;
     font-weight: bold;
     cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.primary-btn:hover {
+    background-color: var(--primary-hover);
 }
 
 .secondary-btn {
+    background-color: transparent;
+    color: var(--text-light);
+    border: 1px solid var(--text-muted);
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.secondary-btn:hover {
+    border-color: var(--text-light);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.small-btn {
+    width: auto;
+    padding: 8px 15px;
+    font-size: 0.9rem;
+}
+
+input {
     width: 100%;
     padding: 12px;
-    background-color: transparent;
-    color: var(--text-muted);
+    margin-bottom: 15px;
+    background-color: var(--bg-dark);
     border: 1px solid #333;
     border-radius: 8px;
+    color: var(--text-light);
     font-size: 1rem;
-    cursor: pointer;
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--primary-green);
+}
+
+.text-muted {
+    color: var(--text-muted);
+}
+
+/* =========================================
+   ECRÃ DE LOGIN
+========================================= */
+.login-container {
+    height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 8px;
+    padding: 20px;
 }
 
-.divider {
-    margin: 20px 0;
-    text-align: center;
-    position: relative;
-}
-
-.divider span {
+.login-box {
     background-color: var(--bg-card);
-    padding: 0 10px;
-    color: var(--text-muted);
-    font-size: 0.8rem;
-    position: relative;
-    z-index: 1;
-}
-
-.divider::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 0;
+    padding: 30px;
+    border-radius: 12px;
     width: 100%;
-    height: 1px;
-    background-color: #333;
-    z-index: 0;
+    max-width: 400px;
+    text-align: center;
+    border: 1px solid #333;
 }
 
-.error-msg { color: var(--danger-red) !important; margin-bottom: 15px !important; }
+.login-box h2 {
+    margin-bottom: 25px;
+    color: var(--primary-green);
+}
+
+.error-msg {
+    color: var(--danger-red);
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+}
+
+/* =========================================
+   CABEÇALHO (HEADER) DA APP
+========================================= */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background-color: var(--bg-card);
+    border-bottom: 1px solid #333;
+}
+
+.logo {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--primary-green);
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 0.9rem;
+}
 
 .logout-btn {
     background: none;
     border: none;
     color: var(--danger-red);
     cursor: pointer;
+    font-size: 0.9rem;
 }
 
-/* --- Painel de Administração --- */
+/* =========================================
+   CONTEÚDO PRINCIPAL (MAIN)
+========================================= */
+.app-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    padding-bottom: 80px; /* Espaço para a barra de navegação inferior */
+}
+
+.section-title {
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+}
+
+.card {
+    background-color: var(--bg-card);
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #333;
+}
+
+.warning-card {
+    border-left: 4px solid var(--primary-green);
+}
+
+.warning-card h3 {
+    margin-bottom: 10px;
+    color: var(--primary-green);
+}
+
+/* =========================================
+   PAINEL DE ADMINISTRAÇÃO (Turmas)
+========================================= */
 .turmas-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
@@ -345,18 +224,14 @@ body {
     box-shadow: 0 4px 15px rgba(0, 204, 136, 0.15);
 }
 
-/* --- Vista da Turma --- */
+/* =========================================
+   VISTA DA TURMA (Lista de Alunos)
+========================================= */
 .class-header {
     display: flex;
     align-items: center;
     gap: 15px;
     margin-bottom: 20px;
-}
-
-.small-btn {
-    width: auto;
-    padding: 8px 15px;
-    font-size: 0.9rem;
 }
 
 .students-list-container {
@@ -366,7 +241,6 @@ body {
     padding: 20px;
 }
 
-/* --- Lista de Alunos --- */
 .students-list {
     list-style: none;
     padding: 0;
@@ -400,7 +274,9 @@ body {
     color: var(--text-muted);
 }
 
-/* --- Perfil do Aluno --- */
+/* =========================================
+   CENTRO DE COMANDO (Perfil do Aluno)
+========================================= */
 .student-profile-header {
     text-align: center;
     margin-bottom: 20px;
@@ -419,60 +295,83 @@ body {
     color: white;
 }
 
-.text-muted { 
-    color: var(--text-muted); 
+.hub-section-title {
+    margin-top: 25px;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    color: var(--primary-green);
+    border-bottom: 1px solid #333;
+    padding-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
-.stats-grid {
+.admin-hub-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
 }
 
-.stat-card {
+.hub-card {
     background-color: var(--bg-card);
     border: 1px solid #333;
     border-radius: 12px;
-    padding: 15px;
+    padding: 20px 10px;
     text-align: center;
     display: flex;
     flex-direction: column;
-    gap: 5px;
-}
-
-.stat-card i { 
-    color: var(--primary-green); 
-    font-size: 1.5rem; 
-}
-
-.stat-card strong { 
-    font-size: 1.5rem; 
-}
-
-/* --- Gestão de Módulos --- */
-.module-item {
-    display: flex;
-    justify-content: space-between;
     align-items: center;
-    background-color: var(--bg-card);
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 12px 15px;
-    margin-bottom: 10px;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: white;
 }
 
-.module-info {
+.hub-card i {
+    font-size: 2rem;
+    color: var(--primary-green);
+}
+
+.hub-card span {
+    font-weight: bold;
+    font-size: 0.95rem;
+}
+
+.hub-card:hover {
+    border-color: var(--primary-green);
+    transform: translateY(-3px);
+    box-shadow: 0 4px 15px rgba(0, 204, 136, 0.1);
+}
+
+/* =========================================
+   NAVEGAÇÃO INFERIOR (Mobile App Feel)
+========================================= */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: var(--bg-card);
+    display: flex;
+    justify-content: space-around;
+    padding: 12px 0;
+    border-top: 1px solid #333;
+}
+
+.nav-item {
     display: flex;
     flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: var(--text-muted);
+    font-size: 0.75rem;
     gap: 5px;
 }
 
-.module-grade {
-    background-color: rgba(0, 204, 136, 0.1);
-    color: var(--primary-green);
-    padding: 8px 15px;
-    border-radius: 8px;
-    font-weight: bold;
+.nav-item i {
     font-size: 1.2rem;
-    border: 1px solid var(--primary-green);
+}
+
+.nav-item.active {
+    color: var(--primary-green);
 }
