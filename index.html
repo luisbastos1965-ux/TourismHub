@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+    <!-- ECRÃ DE LOGIN -->
     <div id="login-screen" class="login-container">
         <div class="login-box">
             <h2><i class="fa-solid fa-graduation-cap"></i> Turma PRO</h2>
@@ -22,6 +23,7 @@
         </div>
     </div>
 
+    <!-- A APLICAÇÃO -->
     <div id="app-content" style="display: none;">
         <header class="app-header">
             <div class="logo"><i class="fa-solid fa-graduation-cap"></i> Turma PRO</div>
@@ -32,7 +34,7 @@
         </header>
 
         <main class="app-content">
-            <!-- CAIXA 1: Painel do Aluno -->
+            <!-- CAIXAS 1, 2 e 3: Omitidas visualmente aqui para focar no novo conteúdo, mas estão no código final! -->
             <div id="student-dashboard" style="display: none;">
                 <section class="card warning-card">
                     <h3><i class="fa-solid fa-bullhorn"></i> Aviso da Direção</h3>
@@ -43,7 +45,6 @@
                 </section>
             </div>
 
-            <!-- CAIXA 2: Painel de Administração -->
             <div id="admin-dashboard" style="display: none;">
                 <h2 class="section-title"><i class="fa-solid fa-users-gear"></i> As Minhas Turmas</h2>
                 <div class="turmas-grid">
@@ -53,13 +54,12 @@
                 </div>
             </div>
 
-            <!-- CAIXA 3: Vista da Turma -->
             <div id="class-view" style="display: none;">
                 <div class="class-header">
                     <button id="btn-voltar-turmas" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                     <h2 id="class-title" class="section-title">Turma X</h2>
                 </div>
-                <div class="students-list-container"><p class="text-muted">A carregar lista de alunos...</p></div>
+                <div class="students-list-container"><p class="text-muted">A carregar...</p></div>
             </div>
 
             <!-- CAIXA 4: Centro de Comando (Perfil) -->
@@ -88,28 +88,67 @@
                 </div>
             </div>
 
-            <!-- CAIXA 5: Hierarquia de Avaliações -->
+            <!-- CAIXAS 5 e 6: Avaliações -->
             <div id="view-avaliacoes" style="display: none;">
                 <div class="class-header">
                     <button id="btn-voltar-hub-avaliacoes" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button>
                     <h2 class="section-title">Avaliações</h2>
                 </div>
-                <div id="matriz-disciplinas-container">
-                    <!-- As componentes vão ser injetadas aqui pelo JS -->
-                </div>
+                <div id="matriz-disciplinas-container"></div>
             </div>
 
-            <!-- CAIXA 6: Avaliar Disciplina Específica -->
             <div id="view-disciplina-modulos" style="display: none;">
                 <div class="class-header">
                     <button id="btn-voltar-disciplinas" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Disciplinas</button>
                     <h2 id="titulo-disciplina" class="section-title">PORT</h2>
                 </div>
                 <div class="card">
-                    <p class="text-muted" style="margin-bottom: 15px;">Insere a nota (10-20) e clica em Gravar.</p>
-                    <div id="lista-modulos-disciplina">
-                        <!-- Módulos injetados aqui -->
+                    <div id="lista-modulos-disciplina"></div>
+                </div>
+            </div>
+
+            <!-- CAIXA 7: Informações EE -->
+            <div id="view-informacoes" style="display: none;">
+                <div class="class-header">
+                    <button id="btn-voltar-hub-info" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button>
+                    <h2 class="section-title">Informações e Contactos</h2>
+                </div>
+                
+                <div class="card">
+                    <h3 style="color: var(--primary-green); margin-bottom: 10px;"><i class="fa-solid fa-user"></i> Dados do Aluno</h3>
+                    <div class="info-grid">
+                        <input type="number" id="info-aluno-idade" placeholder="Idade">
+                        <input type="tel" id="info-aluno-telemovel" placeholder="Telemóvel">
+                        <input type="email" id="info-aluno-email" placeholder="Email do Aluno">
+                        <input type="text" id="info-aluno-morada" placeholder="Morada">
                     </div>
+                </div>
+
+                <div class="card">
+                    <h3 style="color: var(--primary-green); margin-bottom: 10px;"><i class="fa-solid fa-user-tie"></i> Encarregado de Educação</h3>
+                    <div class="info-grid">
+                        <input type="text" id="info-ee-nome" placeholder="Nome Completo">
+                        <input type="text" id="info-ee-filiacao" placeholder="Filiação (ex: Mãe, Pai)">
+                        <input type="tel" id="info-ee-telemovel" placeholder="Telemóvel">
+                        <input type="email" id="info-ee-email" placeholder="Email do E.E.">
+                    </div>
+                    <button id="btn-guardar-informacoes" class="primary-btn" style="margin-top: 15px;">Guardar Informações</button>
+                    <p id="msg-sucesso-info" class="success-msg">Informações guardadas com sucesso!</p>
+                </div>
+            </div>
+
+            <!-- CAIXA 8: Planos de Recuperação (PRHF) -->
+            <div id="view-prhf" style="display: none;">
+                <div class="class-header">
+                    <button id="btn-voltar-hub-prhf" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button>
+                    <h2 class="section-title">Plano de Recuperação (PRHF)</h2>
+                </div>
+                
+                <div class="card">
+                    <p class="text-muted" style="margin-bottom: 15px;">Regista aqui a tarefa de recuperação proposta ao aluno (indicando Módulo e Prazo).</p>
+                    <textarea id="texto-prhf" class="input-field" placeholder="Ex: O aluno deve realizar uma ficha de pesquisa sobre o Módulo 3 de TIC e entregar até dia 15 de Novembro..."></textarea>
+                    <button id="btn-guardar-prhf" class="primary-btn">Gravar Tarefa PRHF</button>
+                    <p id="msg-sucesso-prhf" class="success-msg">Plano gravado com sucesso!</p>
                 </div>
             </div>
 
