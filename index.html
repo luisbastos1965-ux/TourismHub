@@ -37,25 +37,18 @@
                     <h3><i class="fa-solid fa-bullhorn"></i> Aviso</h3>
                     <p>Reunião de Pais agendada para a próxima sexta-feira às 18h30.</p>
                 </section>
-                <section class="section-container">
-                    <h2 class="section-title">A tua área ficará disponível em breve.</h2>
-                </section>
+                <section class="section-container"><h2 class="section-title">A tua área ficará disponível em breve.</h2></section>
             </div>
 
             <div id="admin-dashboard" style="display: none;">
-                <div class="dashboard-header">
-                    <h2>As Minhas Turmas</h2>
-                </div>
+                <div class="dashboard-header"><h2>As Minhas Turmas</h2></div>
                 <div class="turmas-grid-large">
                     <button class="turma-card-large" data-turma="10T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>10T</h3></div></button>
                     <button class="turma-card-large" data-turma="11T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>11T</h3></div></button>
                     <button class="turma-card-large" data-turma="12T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>12T</h3></div></button>
                     <button class="turma-card-large" data-turma="TUR" style="border-left-color: var(--text-muted);">
                         <div class="tc-icon" style="color: var(--text-muted);"><i class="fa-solid fa-globe"></i></div>
-                        <div class="tc-info">
-                            <h3 style="color: var(--text-muted);">TUR</h3>
-                            <p style="font-size: 0.85rem; color: #777;">Visão Global</p>
-                        </div>
+                        <div class="tc-info"><h3 style="color: var(--text-muted);">TUR</h3><p style="font-size: 0.85rem; color: #777;">Visão Global</p></div>
                     </button>
                 </div>
             </div>
@@ -88,12 +81,12 @@
                     <button class="hub-card" id="btn-hub-avaliacoes"><i class="fa-solid fa-star"></i><span>Avaliações</span></button>
                     <button class="hub-card" id="btn-hub-faltas"><i class="fa-solid fa-user-clock"></i><span>Faltas</span></button>
                     <button class="hub-card" id="btn-hub-prhf"><i class="fa-solid fa-file-medical"></i><span>Planos PRHF</span></button>
-                    <!-- Agora estão sempre no ecrã, o JS é que os vai "desligar" se for o 10T/11T -->
-                    <button class="hub-card" id="btn-hub-fct"><i class="fa-solid fa-briefcase"></i><span>FCT (Estágio)</span></button>
-                    <button class="hub-card" id="btn-hub-pap"><i class="fa-solid fa-laptop-code"></i><span>Projeto PAP</span></button>
+                    <button class="hub-card disabled-hub-card" id="btn-hub-fct"><i class="fa-solid fa-briefcase"></i><span>FCT (Estágio)</span></button>
+                    <button class="hub-card disabled-hub-card" id="btn-hub-pap"><i class="fa-solid fa-laptop-code"></i><span>Projeto PAP</span></button>
                 </div>
             </div>
 
+            <!-- AVALIAÇÕES -->
             <div id="view-avaliacoes" style="display: none;">
                 <div class="class-header">
                     <button id="btn-voltar-hub-avaliacoes" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button>
@@ -112,6 +105,26 @@
                 </div>
             </div>
 
+            <!-- FALTAS (NOVO) -->
+            <div id="view-faltas" style="display: none;">
+                <div class="class-header">
+                    <button id="btn-voltar-hub-faltas" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button>
+                    <h2 class="section-title">Registo de Faltas</h2>
+                </div>
+                <div id="matriz-faltas-container"></div>
+            </div>
+
+            <div id="view-faltas-modulos" style="display: none;">
+                <div class="class-header">
+                    <button id="btn-voltar-faltas-disc" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+                    <h2 id="titulo-falta-disciplina" class="section-title">PORT</h2>
+                </div>
+                <div class="card" style="padding: 10px 20px;">
+                    <div id="lista-faltas-disciplina"></div>
+                </div>
+            </div>
+
+            <!-- INFORMAÇÕES -->
             <div id="view-informacoes" style="display: none;">
                 <div class="class-header">
                     <button id="btn-voltar-hub-info" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button>
@@ -127,16 +140,8 @@
                         <div class="action-buttons-row"><button class="secondary-btn small-btn" id="btn-editar-info-aluno"><i class="fa-solid fa-pen"></i> Editar</button></div>
                     </div>
                     <div id="info-aluno-edit" style="display: none;">
-                        <div class="info-grid">
-                            <input type="number" id="info-aluno-idade" placeholder="Idade">
-                            <input type="tel" id="info-aluno-telemovel" placeholder="Telemóvel">
-                            <input type="email" id="info-aluno-email" placeholder="Email do Aluno">
-                            <input type="text" id="info-aluno-morada" placeholder="Morada">
-                        </div>
-                        <div class="action-buttons-row">
-                            <button id="btn-guardar-aluno" class="primary-btn small-btn">Guardar</button>
-                            <button id="btn-cancelar-aluno" class="secondary-btn small-btn">Cancelar</button>
-                        </div>
+                        <div class="info-grid"><input type="number" id="info-aluno-idade" placeholder="Idade"><input type="tel" id="info-aluno-telemovel" placeholder="Telemóvel"><input type="email" id="info-aluno-email" placeholder="Email do Aluno"><input type="text" id="info-aluno-morada" placeholder="Morada"></div>
+                        <div class="action-buttons-row"><button id="btn-guardar-aluno" class="primary-btn small-btn">Guardar</button><button id="btn-cancelar-aluno" class="secondary-btn small-btn">Cancelar</button></div>
                     </div>
                 </div>
 
@@ -150,25 +155,15 @@
                         <div class="action-buttons-row"><button class="secondary-btn small-btn" id="btn-editar-info-ee"><i class="fa-solid fa-pen"></i> Editar</button></div>
                     </div>
                     <div id="info-ee-edit" style="display: none;">
-                        <div class="info-grid">
-                            <input type="text" id="info-ee-nome" placeholder="Nome Completo">
-                            <input type="text" id="info-ee-filiacao" placeholder="Filiação (ex: Mãe, Pai)">
-                            <input type="tel" id="info-ee-telemovel" placeholder="Telemóvel">
-                            <input type="email" id="info-ee-email" placeholder="Email do E.E.">
-                        </div>
-                        <div class="action-buttons-row">
-                            <button id="btn-guardar-ee" class="primary-btn small-btn">Guardar</button>
-                            <button id="btn-cancelar-ee" class="secondary-btn small-btn">Cancelar</button>
-                        </div>
+                        <div class="info-grid"><input type="text" id="info-ee-nome" placeholder="Nome Completo"><input type="text" id="info-ee-filiacao" placeholder="Filiação"><input type="tel" id="info-ee-telemovel" placeholder="Telemóvel"><input type="email" id="info-ee-email" placeholder="Email do E.E."></div>
+                        <div class="action-buttons-row"><button id="btn-guardar-ee" class="primary-btn small-btn">Guardar</button><button id="btn-cancelar-ee" class="secondary-btn small-btn">Cancelar</button></div>
                     </div>
                 </div>
             </div>
 
+            <!-- PRHF -->
             <div id="view-prhf" style="display: none;">
-                <div class="class-header">
-                    <button id="btn-voltar-hub-prhf" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button>
-                    <h2 class="section-title">Planos de Recuperação</h2>
-                </div>
+                <div class="class-header"><button id="btn-voltar-hub-prhf" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Planos de Recuperação</h2></div>
                 <div class="card" style="margin-bottom: 20px;">
                     <h3 style="margin-bottom: 15px;"><i class="fa-solid fa-plus"></i> Novo PRHF</h3>
                     <div class="input-row"><select id="prhf-disciplina"><option value="">Disc.</option></select><select id="prhf-modulo"><option value="">Mod.</option></select></div>
@@ -219,7 +214,7 @@
         </div>
     </div>
 
-    <!-- MODAL FOLHA PRHF ATUALIZADO (C/ Registo Manual) -->
+    <!-- FOLHA DO PRHF -->
     <div id="modal-prhf-sheet" class="modal-overlay">
         <div class="paper-sheet">
             <button class="btn-close-paper"><i class="fa-solid fa-xmark"></i></button>
@@ -233,22 +228,14 @@
                 <div class="paper-desc" id="sheet-desc">Descrição...</div>
             </div>
             <div class="paper-actions">
-                
-                <!-- BOTÃO REGISTO MANUAL E CAIXA ESCONDIDA -->
-                <button id="sheet-btn-toggle-manual" class="secondary-btn" style="color:#333; border-color:#999;"><i class="fa-solid fa-pen-to-square"></i> Registar Presenciais (Manual)</button>
+                <button id="sheet-btn-toggle-manual" class="secondary-btn" style="color:#333; border-color:#999;"><i class="fa-solid fa-pen-to-square"></i> Registar Presenciais Manual</button>
                 <div id="manual-presence-box" class="manual-presence-form">
                     <input type="date" id="reg-pres-data">
-                    <div style="display:flex; gap:5px;">
-                        <input type="time" id="reg-pres-inicio" title="Início">
-                        <input type="time" id="reg-pres-fim" title="Fim">
-                    </div>
+                    <div style="display:flex; gap:5px;"><input type="time" id="reg-pres-inicio" title="Início"><input type="time" id="reg-pres-fim" title="Fim"></div>
                     <button id="btn-save-manual-pres" class="primary-btn small-btn">Guardar Registo</button>
                     <div id="lista-presencias-manuais" style="margin-top:15px; font-size:0.85rem;"></div>
                 </div>
-
-                <a id="sheet-btn-agendar" href="#" target="_blank" class="secondary-btn" style="color:#333; border-color:#999;"><i class="fa-regular fa-calendar-plus"></i> Agendar Presenciais (Google)</a>
-                
-                <!-- BOTÕES DE CONCLUIR/REVERTER -->
+                <a id="sheet-btn-agendar" href="#" target="_blank" class="secondary-btn" style="color:#333; border-color:#999;"><i class="fa-regular fa-calendar-plus"></i> Agendar Presenciais</a>
                 <button id="sheet-btn-concluir" class="primary-btn"><i class="fa-solid fa-check"></i> Marcar como Concluído</button>
                 <button id="sheet-btn-reverter" class="danger-btn" style="display:none;"><i class="fa-solid fa-rotate-left"></i> Reverter</button>
             </div>
