@@ -15,6 +15,13 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// 0. Prevenir Fecho ou Refresh Acidental
+window.addEventListener('beforeunload', (e) => {
+    // Isto obriga o browser a mostrar um aviso "Tens a certeza que queres sair?"
+    e.preventDefault();
+    e.returnValue = ''; 
+});
+
 const matrizCurso = {
     "Sociocultural": { "PORT": ["M1", "M2", "M3"], "ING": ["M1", "M2", "M3"], "AI": ["M1", "M2"], "EF": ["M1", "M2", "M3", "M4", "M5"], "TIC": ["M1", "M2", "M3", "M4"] },
     "Científica": { "GEO": ["M1", "M2"], "HCA": ["M1", "M2", "M3"], "MAT": ["M1", "M2", "M3"] },
@@ -55,7 +62,6 @@ const btnVoltarHubPrhf = document.getElementById('btn-voltar-hub-prhf');
 const matrizDisciplinasContainer = document.getElementById('matriz-disciplinas-container');
 const btnVoltarDisciplinas = document.getElementById('btn-voltar-disciplinas');
 const tituloDisciplina = document.getElementById('titulo-disciplina');
-const listaModulosDisciplina = document.getElementById('lista-modulos-disciplina');
 
 let alunoAtualId = ""; 
 
@@ -64,33 +70,29 @@ function esconderTudoMenos(ecraAtivo) {
     if(ecraAtivo) ecraAtivo.style.display = 'block';
 }
 
+// 1. Autenticação
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        loginScreen.style.display = 'none';
-        appContent.style.display = 'block';
+        // Sessão ativa
         const userId = user.email.split('@')[0];
-        
         try {
             const docRef = doc(db, "utilizadores", userId);
             const docSnap = await getDoc(docRef);
-            
             if (docSnap.exists()) {
                 const dados = docSnap.data();
                 document.querySelector('.user-profile span').innerText = `Olá, ${dados.nome} (${dados.papel.toUpperCase()})`;
                 
-                if (dados.papel === 'admin') {
-                    painelAluno.style.display = 'none';
-                    painelAdmin.style.display = 'block';
-                    bottomNav.style.display = 'none';
-                } else {
-                    painelAluno.style.display = 'block';
-                    painelAdmin.style.display = 'none';
-                    bottomNav.style.display = 'flex';
-                }
+                painelAluno.style.display = dados.papel === 'admin' ? 'none' : 'block';
+                painelAdmin.style.display = dados.papel === 'admin' ? 'block' : 'none';
+                bottomNav.style.display = dados.papel === 'admin' ? 'none' : 'flex';
+                
+                loginScreen.style.display = 'none';
+                appContent.style.display = 'block';
                 esconderTudoMenos(null);
             }
         } catch (error) { console.error(error); }
     } else {
+        // Nenhuma sessão
         loginScreen.style.display = 'flex';
         appContent.style.display = 'none';
     }
@@ -101,14 +103,12 @@ btnLoginManual.addEventListener('click', () => {
     const pass = document.getElementById('login-password').value;
     signInWithEmailAndPassword(auth, username + "@turmapro.com", pass)
         .then(() => errorMsg.style.display = 'none')
-        .catch(() => {
-            errorMsg.style.display = 'block';
-            errorMsg.innerText = "Erro: Credenciais inválidas.";
-        });
+        .catch(() => { errorMsg.style.display = 'block'; errorMsg.innerText = "Erro: Credenciais inválidas."; });
 });
 
 btnLogout.addEventListener('click', () => signOut(auth));
 
+// 2. Navegação Básica
 if(btnVoltarTurmas) btnVoltarTurmas.addEventListener('click', () => { esconderTudoMenos(null); painelAdmin.style.display = 'block'; });
 if(btnVoltarLista) btnVoltarLista.addEventListener('click', () => { esconderTudoMenos(classView); });
 if(btnVoltarHubAvaliacoes) btnVoltarHubAvaliacoes.addEventListener('click', () => { esconderTudoMenos(studentDetailView); });
@@ -131,7 +131,6 @@ async function carregarAlunos(turmaEscolhida) {
     try {
         const q = query(collection(db, "utilizadores"), where("turma", "==", turmaEscolhida), where("papel", "==", "aluno"));
         const resultados = await getDocs(q);
-
         if (resultados.empty) { containerAlunos.innerHTML = '<p class="text-muted">Sem alunos.</p>'; return; }
 
         let html = '<ul class="students-list">';
@@ -157,13 +156,13 @@ async function carregarAlunos(turmaEscolhida) {
     } catch (e) { console.error(e); }
 }
 
+// 3. Avaliações (Omitido código duplicado por brevidade de explicação visual, continua intacto no background)
 if(btnHubAvaliacoes) {
     btnHubAvaliacoes.addEventListener('click', () => {
         esconderTudoMenos(viewAvaliacoes);
         construirMatrizVisual();
     });
 }
-
 function construirMatrizVisual() {
     let html = "";
     for (const [nomeComponente, disciplinas] of Object.entries(matrizCurso)) {
@@ -174,14 +173,10 @@ function construirMatrizVisual() {
         html += `</div></div>`;
     }
     matrizDisciplinasContainer.innerHTML = html;
-
     matrizDisciplinasContainer.querySelectorAll('.subject-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            abrirModulosDisciplina(e.currentTarget.getAttribute('data-disc'));
-        });
+        btn.addEventListener('click', (e) => { abrirModulosDisciplina(e.currentTarget.getAttribute('data-disc')); });
     });
 }
-
 async function abrirModulosDisciplina(disciplina) {
     esconderTudoMenos(viewDisciplinaModulos);
     tituloDisciplina.innerText = disciplina;
@@ -189,10 +184,7 @@ async function abrirModulosDisciplina(disciplina) {
     listaModulosUI.innerHTML = '<p class="text-muted">A preparar módulos...</p>';
 
     let modulosArray = [];
-    for (const comp of Object.values(matrizCurso)) {
-        if (comp[disciplina]) modulosArray = comp[disciplina];
-    }
-
+    for (const comp of Object.values(matrizCurso)) { if (comp[disciplina]) modulosArray = comp[disciplina]; }
     let html = "";
     modulosArray.forEach(mod => {
         html += `
@@ -205,17 +197,14 @@ async function abrirModulosDisciplina(disciplina) {
         </div>`;
     });
     listaModulosUI.innerHTML = html;
-    
     listaModulosUI.querySelectorAll('.btn-gravar-nota').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const disc = e.currentTarget.getAttribute('data-disc');
             const mod = e.currentTarget.getAttribute('data-mod');
             const valorInput = document.getElementById(`nota-${disc}-${mod}`).value;
             if(valorInput === "") return;
-
             e.currentTarget.innerText = "OK!";
             e.currentTarget.style.backgroundColor = "white";
-            
             try {
                 await setDoc(doc(db, "utilizadores", alunoAtualId, "notas", `${disc}_${mod}`), {
                     disciplina: disc, modulo: mod, nota: Number(valorInput), data: new Date().toISOString()
@@ -226,27 +215,78 @@ async function abrirModulosDisciplina(disciplina) {
     });
 }
 
+// 4. Lógica de Informações (Módulo Leitura/Edição)
+async function carregarInfoLeitura() {
+    try {
+        const docSnap = await getDoc(doc(db, "utilizadores", alunoAtualId));
+        if (docSnap.exists()) {
+            const d = docSnap.data();
+            
+            // Injetar nos Textos de Leitura
+            document.getElementById('display-aluno-idade').innerText = d.idade || "-";
+            document.getElementById('display-aluno-tel').innerText = d.telAluno || "-";
+            document.getElementById('display-aluno-email').innerText = d.emailAluno || "-";
+            document.getElementById('display-aluno-morada').innerText = d.morada || "-";
+            
+            document.getElementById('display-ee-nome').innerText = d.nomeEE || "-";
+            document.getElementById('display-ee-filiacao').innerText = d.filiacaoEE || "-";
+            document.getElementById('display-ee-tel').innerText = d.telEE || "-";
+            document.getElementById('display-ee-email').innerText = d.emailEE || "-";
+            
+            // Injetar nos Inputs de Edição
+            document.getElementById('info-aluno-idade').value = d.idade || "";
+            document.getElementById('info-aluno-telemovel').value = d.telAluno || "";
+            document.getElementById('info-aluno-email').value = d.emailAluno || "";
+            document.getElementById('info-aluno-morada').value = d.morada || "";
+            
+            document.getElementById('info-ee-nome').value = d.nomeEE || "";
+            document.getElementById('info-ee-filiacao').value = d.filiacaoEE || "";
+            document.getElementById('info-ee-telemovel').value = d.telEE || "";
+            document.getElementById('info-ee-email').value = d.emailEE || "";
+        }
+    } catch (error) { console.error(error); }
+}
+
 if(btnHubInformacoes) {
-    btnHubInformacoes.addEventListener('click', async () => {
+    btnHubInformacoes.addEventListener('click', () => {
         esconderTudoMenos(viewInformacoes);
-        try {
-            const docSnap = await getDoc(doc(db, "utilizadores", alunoAtualId));
-            if (docSnap.exists()) {
-                const dados = docSnap.data();
-                document.getElementById('info-aluno-idade').value = dados.idade || "";
-                document.getElementById('info-aluno-telemovel').value = dados.telAluno || "";
-                document.getElementById('info-aluno-email').value = dados.emailAluno || "";
-                document.getElementById('info-aluno-morada').value = dados.morada || "";
-                document.getElementById('info-ee-nome').value = dados.nomeEE || "";
-                document.getElementById('info-ee-filiacao').value = dados.filiacaoEE || "";
-                document.getElementById('info-ee-telemovel').value = dados.telEE || "";
-                document.getElementById('info-ee-email').value = dados.emailEE || "";
-            }
-        } catch (error) { console.error("Erro a carregar info:", error); }
+        
+        // Garante que ao abrir entra sempre em modo Leitura
+        document.getElementById('info-aluno-display').style.display = 'block';
+        document.getElementById('info-aluno-edit').style.display = 'none';
+        document.getElementById('info-ee-display').style.display = 'block';
+        document.getElementById('info-ee-edit').style.display = 'none';
+        
+        carregarInfoLeitura();
     });
 }
 
-document.getElementById('btn-guardar-informacoes').addEventListener('click', async (e) => {
+// Botões "Editar" - Com Confirmação de Segurança
+document.getElementById('btn-editar-info-aluno').addEventListener('click', () => {
+    if(confirm("Pretendes editar as informações do Aluno?")) {
+        document.getElementById('info-aluno-display').style.display = 'none';
+        document.getElementById('info-aluno-edit').style.display = 'block';
+    }
+});
+document.getElementById('btn-editar-info-ee').addEventListener('click', () => {
+    if(confirm("Pretendes editar as informações do Encarregado de Educação?")) {
+        document.getElementById('info-ee-display').style.display = 'none';
+        document.getElementById('info-ee-edit').style.display = 'block';
+    }
+});
+
+// Botões "Cancelar Edição"
+document.getElementById('btn-cancelar-aluno').addEventListener('click', () => {
+    document.getElementById('info-aluno-display').style.display = 'block';
+    document.getElementById('info-aluno-edit').style.display = 'none';
+});
+document.getElementById('btn-cancelar-ee').addEventListener('click', () => {
+    document.getElementById('info-ee-display').style.display = 'block';
+    document.getElementById('info-ee-edit').style.display = 'none';
+});
+
+// Botões "Guardar"
+document.getElementById('btn-guardar-aluno').addEventListener('click', async (e) => {
     e.currentTarget.innerText = "A gravar...";
     try {
         await updateDoc(doc(db, "utilizadores", alunoAtualId), {
@@ -254,18 +294,30 @@ document.getElementById('btn-guardar-informacoes').addEventListener('click', asy
             telAluno: document.getElementById('info-aluno-telemovel').value,
             emailAluno: document.getElementById('info-aluno-email').value,
             morada: document.getElementById('info-aluno-morada').value,
+        });
+        carregarInfoLeitura();
+        document.getElementById('info-aluno-display').style.display = 'block';
+        document.getElementById('info-aluno-edit').style.display = 'none';
+    } catch (error) { console.error(error); }
+    e.currentTarget.innerText = "Guardar";
+});
+document.getElementById('btn-guardar-ee').addEventListener('click', async (e) => {
+    e.currentTarget.innerText = "A gravar...";
+    try {
+        await updateDoc(doc(db, "utilizadores", alunoAtualId), {
             nomeEE: document.getElementById('info-ee-nome').value,
             filiacaoEE: document.getElementById('info-ee-filiacao').value,
             telEE: document.getElementById('info-ee-telemovel').value,
             emailEE: document.getElementById('info-ee-email').value
         });
-        document.getElementById('msg-sucesso-info').style.display = 'block';
-        setTimeout(() => document.getElementById('msg-sucesso-info').style.display = 'none', 3000);
-    } catch (error) { console.error("Erro a guardar info:", error); }
-    e.currentTarget.innerText = "Guardar Informações";
+        carregarInfoLeitura();
+        document.getElementById('info-ee-display').style.display = 'block';
+        document.getElementById('info-ee-edit').style.display = 'none';
+    } catch (error) { console.error(error); }
+    e.currentTarget.innerText = "Guardar";
 });
 
-// 6. Lógica de PRHF (Planos de Recuperação - NOVO SISTEMA)
+// 5. Lógica de PRHF 
 if(btnHubPrhf) {
     btnHubPrhf.addEventListener('click', () => {
         esconderTudoMenos(viewPrhf);
@@ -278,40 +330,50 @@ document.getElementById('btn-guardar-prhf').addEventListener('click', async (e) 
     const mod = document.getElementById('prhf-modulo').value.trim();
     const prazo = document.getElementById('prhf-prazo').value;
     const desc = document.getElementById('prhf-descricao').value.trim();
+    const horasTotaisInput = document.getElementById('prhf-horas').value;
 
-    if(!disc || !mod || !prazo || !desc) {
-        alert("Preenche todos os campos do PRHF!");
+    if(!disc || !mod || !prazo || !desc || !horasTotaisInput) {
+        alert("Preenche todos os campos (incluindo as horas)!");
         return;
     }
 
+    // O Cérebro Matemático da tua Escola
+    const horasTotais = parseInt(horasTotaisInput);
+    let horasNaoPresenciais = 0;
+    
+    // =SE(C5<=4;0;ARRED.EXCESSO(C5*0,3;1))
+    if(horasTotais > 4) {
+        horasNaoPresenciais = Math.ceil(horasTotais * 0.3);
+    }
+    const horasPresenciais = horasTotais - horasNaoPresenciais;
+
     e.currentTarget.innerText = "A gravar...";
     try {
-        // Guarda na coleção específica de PRHFs deste aluno
         await addDoc(collection(db, "utilizadores", alunoAtualId, "prhfs"), {
             disciplina: disc.toUpperCase(),
             modulo: mod.toUpperCase(),
             prazo: prazo,
             descricao: desc,
+            horasNaoPresenciais: horasNaoPresenciais,
+            horasPresenciais: horasPresenciais,
             dataRegisto: new Date().toISOString()
         });
         
-        // Limpar campos
         document.getElementById('prhf-disciplina').value = "";
         document.getElementById('prhf-modulo').value = "";
         document.getElementById('prhf-prazo').value = "";
         document.getElementById('prhf-descricao').value = "";
+        document.getElementById('prhf-horas').value = "";
 
         document.getElementById('msg-sucesso-prhf').style.display = 'block';
         setTimeout(() => document.getElementById('msg-sucesso-prhf').style.display = 'none', 3000);
         
-        // Atualizar lista no ecrã imediatamente
         carregarListaPRHF(alunoAtualId);
-    } catch (error) { console.error("Erro a guardar PRHF:", error); }
+    } catch (error) { console.error(error); }
     
-    e.currentTarget.innerText = "Gravar Tarefa PRHF";
+    e.currentTarget.innerText = "Processar e Gravar";
 });
 
-// Função para desenhar a lista de PRHFs do aluno
 async function carregarListaPRHF(idAluno) {
     const container = document.getElementById('lista-prhf-container');
     container.innerHTML = '<p class="text-muted">A carregar planos...</p>';
@@ -320,15 +382,13 @@ async function carregarListaPRHF(idAluno) {
         const resultados = await getDocs(q);
 
         if (resultados.empty) {
-            container.innerHTML = '<p class="text-muted">Sem tarefas de recuperação ativas.</p>';
+            container.innerHTML = '<p class="text-muted">Sem tarefas ativas.</p>';
             return;
         }
 
         let html = '';
         resultados.forEach(doc => {
             const prhf = doc.data();
-            
-            // Inverter a data (de AAAA-MM-DD para DD-MM-AAAA) para ficar mais bonito
             const dataParts = prhf.prazo.split('-');
             const dataFormatada = dataParts.length === 3 ? `${dataParts[2]}-${dataParts[1]}-${dataParts[0]}` : prhf.prazo;
 
@@ -338,13 +398,16 @@ async function carregarListaPRHF(idAluno) {
                         <strong>${prhf.disciplina} - ${prhf.modulo}</strong>
                         <span class="prhf-prazo"><i class="fa-solid fa-calendar-days"></i> ${dataFormatada}</span>
                     </div>
-                    <p style="font-size: 0.95rem;">${prhf.descricao}</p>
+                    <p style="font-size: 0.95rem; margin-bottom: 10px;">${prhf.descricao}</p>
+                    
+                    <div style="background-color: var(--bg-dark); padding: 8px; border-radius: 6px; font-size: 0.85rem; border: 1px dashed var(--primary-green);">
+                        <div style="color: var(--primary-green); margin-bottom: 4px;"><strong>Cálculo do Plano:</strong></div>
+                        <div>Horas Autónomas (Não Presenciais): <strong>${prhf.horasNaoPresenciais}h</strong></div>
+                        <div>Horas com Professor (Presenciais): <strong>${prhf.horasPresenciais}h</strong></div>
+                    </div>
                 </div>
             `;
         });
         container.innerHTML = html;
-    } catch (error) { 
-        console.error(error); 
-        container.innerHTML = '<p style="color: #ff4d4d;">Erro ao carregar as tarefas.</p>';
-    }
+    } catch (error) { console.error(error); }
 }
