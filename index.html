@@ -32,7 +32,6 @@
         </header>
 
         <main class="app-content">
-            <!-- PAINEL DO ALUNO -->
             <div id="student-dashboard" style="display: none;">
                 <section class="card warning-card">
                     <h3><i class="fa-solid fa-bullhorn"></i> Aviso</h3>
@@ -43,7 +42,6 @@
                 </section>
             </div>
 
-            <!-- PAINEL DO ADMIN (Turmas Grandes, Centradas, Icons Iguais) -->
             <div id="admin-dashboard" style="display: none;">
                 <div class="dashboard-header">
                     <h2>As Minhas Turmas</h2>
@@ -61,10 +59,17 @@
                         <div class="tc-icon"><i class="fa-solid fa-users"></i></div>
                         <div class="tc-info"><h3>12T</h3></div>
                     </button>
+                    <!-- BOTÃO SUPER TURMA -->
+                    <button class="turma-card-large" data-turma="TUR" style="border-left-color: var(--text-muted);">
+                        <div class="tc-icon" style="color: var(--text-muted);"><i class="fa-solid fa-globe"></i></div>
+                        <div class="tc-info">
+                            <h3 style="color: var(--text-muted);">TUR</h3>
+                            <p style="font-size: 0.85rem; color: #777;">Visão Global</p>
+                        </div>
+                    </button>
                 </div>
             </div>
 
-            <!-- VISTA DA TURMA -->
             <div id="class-view" style="display: none;">
                 <div class="class-header">
                     <button id="btn-voltar-turmas" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
@@ -73,13 +78,18 @@
                 <div class="students-list-container"><p class="text-muted">A carregar...</p></div>
             </div>
 
-            <!-- PERFIL DO ALUNO (HUB) -->
             <div id="student-detail-view" style="display: none;">
                 <div class="class-header">
-                    <button id="btn-voltar-lista" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button>
+                    <button id="btn-voltar-lista" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                 </div>
                 <div class="student-profile-header">
-                    <div class="profile-avatar"><i class="fa-solid fa-user"></i></div>
+                    <!-- FOTO DE PERFIL C/ UPLOAD -->
+                    <div class="profile-avatar">
+                        <img id="avatar-img" src="" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:50%;">
+                        <i class="fa-solid fa-user" id="avatar-icon"></i>
+                        <label for="upload-avatar" class="edit-avatar-btn"><i class="fa-solid fa-camera"></i></label>
+                        <input type="file" id="upload-avatar" accept="image/*" style="display:none;">
+                    </div>
                     <h2 id="detail-student-name">Nome</h2>
                     <p id="detail-student-number" class="text-muted">a0000</p>
                 </div>
@@ -94,7 +104,6 @@
                 </div>
             </div>
 
-            <!-- AVALIAÇÕES E DISCIPLINAS -->
             <div id="view-avaliacoes" style="display: none;">
                 <div class="class-header">
                     <button id="btn-voltar-hub-avaliacoes" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button>
@@ -113,7 +122,6 @@
                 </div>
             </div>
 
-            <!-- INFORMAÇÕES E PRHF (Com spans clicáveis) -->
             <div id="view-informacoes" style="display: none;">
                 <div class="class-header">
                     <button id="btn-voltar-hub-info" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button>
@@ -166,7 +174,7 @@
                 </div>
             </div>
 
-            <!-- PRHF (Renovado com Abas) -->
+            <!-- PRHF COM DROPDOWNS -->
             <div id="view-prhf" style="display: none;">
                 <div class="class-header">
                     <button id="btn-voltar-hub-prhf" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button>
@@ -175,8 +183,8 @@
                 <div class="card" style="margin-bottom: 20px;">
                     <h3 style="margin-bottom: 15px;"><i class="fa-solid fa-plus"></i> Novo PRHF</h3>
                     <div class="input-row">
-                        <input type="text" id="prhf-disciplina" placeholder="Disc.">
-                        <input type="text" id="prhf-modulo" placeholder="Mod.">
+                        <select id="prhf-disciplina"><option value="">Disc.</option></select>
+                        <select id="prhf-modulo"><option value="">Mod.</option></select>
                     </div>
                     <div class="input-row">
                         <input type="number" id="prhf-horas" placeholder="Total Horas">
@@ -186,7 +194,7 @@
                         </div>
                     </div>
                     <textarea id="prhf-descricao" class="input-field" placeholder="Descreve a tarefa..."></textarea>
-                    <button id="btn-guardar-prhf" class="primary-btn" style="margin-top: 10px;">Gravar Tarefa</button>
+                    <button id="btn-guardar-prhf" class="primary-btn" style="margin-top: 10px;">Processar e Gravar</button>
                     <p id="msg-sucesso-prhf" class="success-msg">Plano gravado!</p>
                 </div>
                 
@@ -208,12 +216,12 @@
         </nav>
     </div>
 
-    <!-- MODALS GERAIS (Contactos Bottom) -->
+    <!-- MODALS GERAIS E DA FOLHA -->
     <div id="modal-telefone" class="modal-overlay bottom">
         <div class="action-sheet">
             <h3>Opções de Contacto</h3>
             <a id="action-ligar" href="#" class="primary-btn"><i class="fa-solid fa-phone"></i> Ligar Diretamente</a>
-            <button id="action-guardar-vcard" class="secondary-btn"><i class="fa-solid fa-user-plus"></i> Adicionar aos Contactos</button>
+            <button id="action-guardar-vcard" class="secondary-btn"><i class="fa-solid fa-user-plus"></i> Guardar Contacto</button>
             <button class="danger-btn btn-fechar-modal">Cancelar</button>
         </div>
     </div>
@@ -226,7 +234,6 @@
         </div>
     </div>
 
-    <!-- MODAL FOLHA PRHF (Centro) -->
     <div id="modal-prhf-sheet" class="modal-overlay">
         <div class="paper-sheet">
             <button class="btn-close-paper"><i class="fa-solid fa-xmark"></i></button>
@@ -240,8 +247,9 @@
                 <div class="paper-desc" id="sheet-desc">Descrição...</div>
             </div>
             <div class="paper-actions">
-                <a id="sheet-btn-agendar" href="#" target="_blank" class="secondary-btn" style="color:#333; border-color:#999;"><i class="fa-regular fa-calendar-plus"></i> Agendar Aula</a>
+                <a id="sheet-btn-agendar" href="#" target="_blank" class="secondary-btn" style="color:#333; border-color:#999;"><i class="fa-regular fa-calendar-plus"></i> Agendar Presenciais</a>
                 <button id="sheet-btn-concluir" class="primary-btn"><i class="fa-solid fa-check"></i> Marcar como Concluído</button>
+                <button id="sheet-btn-reverter" class="danger-btn" style="display:none;"><i class="fa-solid fa-rotate-left"></i> Desconcluir</button>
             </div>
         </div>
     </div>
