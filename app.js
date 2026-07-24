@@ -1,9 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAUU6riTOuybEamgkPke4UXJwyjMA0nJzU",
+  apiKey: "AIzaSyAUU6rITouybEamgkPke4UXJwyjMA0nJzU",
   authDomain: "turmapro-e6358.firebaseapp.com",
   projectId: "turmapro-e6358",
   storageBucket: "turmapro-e6358.firebasestorage.app",
@@ -22,40 +22,56 @@ const btnLoginManual = document.getElementById('btn-login-manual');
 const btnLogout = document.getElementById('btn-logout');
 const errorMsg = document.getElementById('login-error');
 
-// 1. Escutar se alguém entrou ou saiu
-onAuthStateChanged(auth, (user) => {
+// 1. Escutar estado de autenticação e carregar dados do utilizador
+onAuthStateChanged(auth, async (user) => {
     if (user) {
-        // Tem sessão iniciada! Esconde o login, mostra a app.
+        // O utilizador está logado. Vamos descobrir o nome dele na base de dados!
         loginScreen.style.display = 'none';
         appContent.style.display = 'block';
+        
+        // Extrair o ID do utilizador a partir do email (ex: "admin" de "admin@turmapro.com")
+        const userId = user.email.split('@')[0];
+        
+        try {
+            // Ir buscar o documento correspondente à tabela "utilizadores"
+            const docRef = doc(db, "utilizadores", userId);
+            const docSnap = await getDoc(docRef);
+            
+            if (docSnap.exists()) {
+                const dados = docSnap.data();
+                // Atualizar o cabeçalho com o nome real e o papel
+                const userProfileSpan = document.querySelector('.user-profile span');
+                userProfileSpan.innerText = `Olá, ${dados.nome} (${dados.papel.toUpperCase()})`;
+            }
+        } catch (error) {
+            console.error("Erro ao carregar dados do perfil:", error);
+        }
+
     } else {
-        // Não tem sessão. Mostra o login, esconde a app.
+        // Não tem sessão iniciada
         loginScreen.style.display = 'flex';
         appContent.style.display = 'none';
     }
 });
 
-// 2. Fazer Login (O truque do a1234)
+// 2. Fazer Login
 btnLoginManual.addEventListener('click', () => {
-    // O .trim() corta automaticamente espaços em branco invisíveis no início ou fim
-    const username = document.getElementById('login-username').value.trim();
+    const username = document.getElementById('login-username').value.trim().toLowerCase();
     const pass = document.getElementById('login-password').value;
     
-    // O nosso truque: juntar o domínio
     const emailFalso = username + "@turmapro.com";
 
     signInWithEmailAndPassword(auth, emailFalso, pass)
-        .then((userCredential) => {
-            errorMsg.style.display = 'none'; // Login com sucesso
+        .then(() => {
+            errorMsg.style.display = 'none';
         })
         .catch((error) => {
-            errorMsg.style.display = 'block'; 
-            // Agora a app vai mostrar o erro exato do Firebase no ecrã!
-            errorMsg.innerText = "Erro do Firebase: " + error.code; 
+            errorMsg.style.display = 'block';
+            errorMsg.innerText = "Erro: Credenciais inválidas.";
         });
 });
 
-// 3. Terminar Sessão (Sair)
+// 3. Terminar Sessão
 btnLogout.addEventListener('click', () => {
     signOut(auth);
 });
