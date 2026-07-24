@@ -344,3 +344,24 @@ body {
     transform: translateY(-3px);
     box-shadow: 0 4px 15px rgba(0, 204, 136, 0.15);
 }
+
+/* --- Vista da Turma --- */
+.class-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.small-btn {
+    width: auto;
+    padding: 8px 15px;
+    font-size: 0.9rem;
+}
+
+.students-list-container {
+    background-color: var(--bg-card);
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 20px;
+}
