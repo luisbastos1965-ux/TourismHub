@@ -375,3 +375,62 @@ input:focus {
 .nav-item.active {
     color: var(--primary-green);
 }
+
+/* --- Hierarquia de Avaliações (Componentes e Disciplinas) --- */
+.component-section {
+    margin-bottom: 25px;
+    background-color: var(--bg-card);
+    border: 1px solid #333;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.component-header {
+    background-color: rgba(0, 204, 136, 0.1);
+    color: var(--primary-green);
+    padding: 15px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    border-bottom: 1px solid #333;
+}
+
+.subject-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+    padding: 15px;
+}
+
+.subject-btn {
+    background-color: var(--bg-dark);
+    border: 1px solid #444;
+    color: var(--text-light);
+    padding: 15px 10px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.subject-btn:hover {
+    border-color: var(--primary-green);
+    color: var(--primary-green);
+}
+
+/* --- Lista de Módulos para Avaliar --- */
+.modulo-avaliar-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid #333;
+}
+.modulo-avaliar-item:last-child {
+    border-bottom: none;
+}
+.modulo-nota-input {
+    width: 70px;
+    margin-bottom: 0;
+    text-align: center;
+    padding: 8px;
+}
