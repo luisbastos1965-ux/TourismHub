@@ -22,38 +22,44 @@ const btnLoginManual = document.getElementById('btn-login-manual');
 const btnLogout = document.getElementById('btn-logout');
 const errorMsg = document.getElementById('login-error');
 
+// Referências aos painéis
+const painelAluno = document.getElementById('student-dashboard');
+const painelAdmin = document.getElementById('admin-dashboard');
+const classView = document.getElementById('class-view');
+
+// Referências à navegação de turmas
+const botoesTurma = document.querySelectorAll('.turma-card');
+const classTitle = document.getElementById('class-title');
+const btnVoltarTurmas = document.getElementById('btn-voltar-turmas');
+
 // 1. Escutar estado de autenticação e carregar dados do utilizador
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        // Tem sessão iniciada. Esconde o login, mostra a app.
         loginScreen.style.display = 'none';
         appContent.style.display = 'block';
         
-        // Extrair o ID do utilizador a partir do email (ex: "admin")
         const userId = user.email.split('@')[0];
         
         try {
-            // Ir à coleção "utilizadores" procurar pelo documento do utilizador
             const docRef = doc(db, "utilizadores", userId);
             const docSnap = await getDoc(docRef);
             
             if (docSnap.exists()) {
                 const dados = docSnap.data();
                 
-                // 1.1 Atualizar o cabeçalho com nome e papel
+                // Atualizar o cabeçalho
                 const userProfileSpan = document.querySelector('.user-profile span');
                 userProfileSpan.innerText = `Olá, ${dados.nome} (${dados.papel.toUpperCase()})`;
                 
-                // 1.2 O "Gestor de Tráfego": Mostra o painel correto conforme o papel
-                const painelAluno = document.getElementById('student-dashboard');
-                const painelAdmin = document.getElementById('admin-dashboard');
-                
+                // O "Gestor de Tráfego": Mostra o painel correto conforme o papel
                 if (dados.papel === 'admin') {
                     painelAluno.style.display = 'none';
                     painelAdmin.style.display = 'block';
+                    classView.style.display = 'none'; // Garante que a vista da turma está fechada no início
                 } else {
                     painelAluno.style.display = 'block';
                     painelAdmin.style.display = 'none';
+                    classView.style.display = 'none';
                 }
             }
         } catch (error) {
@@ -61,7 +67,6 @@ onAuthStateChanged(auth, async (user) => {
         }
 
     } else {
-        // Não tem sessão. Mostra o login, esconde a app.
         loginScreen.style.display = 'flex';
         appContent.style.display = 'none';
     }
@@ -69,16 +74,13 @@ onAuthStateChanged(auth, async (user) => {
 
 // 2. Fazer Login
 btnLoginManual.addEventListener('click', () => {
-    // Recolher dados, remover espaços em branco invisíveis e forçar minúsculas
     const username = document.getElementById('login-username').value.trim().toLowerCase();
     const pass = document.getElementById('login-password').value;
-    
-    // O truque da simulação de e-mail
     const emailFalso = username + "@turmapro.com";
 
     signInWithEmailAndPassword(auth, emailFalso, pass)
         .then(() => {
-            errorMsg.style.display = 'none'; // Sucesso
+            errorMsg.style.display = 'none';
         })
         .catch((error) => {
             errorMsg.style.display = 'block';
@@ -90,3 +92,23 @@ btnLoginManual.addEventListener('click', () => {
 btnLogout.addEventListener('click', () => {
     signOut(auth);
 });
+
+// 4. Navegação do Painel de Admin (Abrir Turmas)
+botoesTurma.forEach(botao => {
+    botao.addEventListener('click', () => {
+        const nomeTurma = botao.getAttribute('data-turma'); 
+        
+        classTitle.innerHTML = `<i class="fa-solid fa-users"></i> Turma ${nomeTurma}`;
+        
+        painelAdmin.style.display = 'none';
+        classView.style.display = 'block';
+    });
+});
+
+// Função para voltar atrás
+if(btnVoltarTurmas) {
+    btnVoltarTurmas.addEventListener('click', () => {
+        classView.style.display = 'none';
+        painelAdmin.style.display = 'block';
+    });
+}
