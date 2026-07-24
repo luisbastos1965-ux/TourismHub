@@ -42,7 +42,9 @@ const viewInformacoes = document.getElementById('view-informacoes');
 const viewPrhf = document.getElementById('view-prhf');
 
 let alunoAtualId = ""; 
-let nomePessoaContactoModal = ""; // Para o nome no VCard
+let turmaAtual = ""; // Memória da Turma Escolhida
+let nomePessoaContactoModal = ""; 
+let idPrhfAtivo = ""; // Memória do PRHF aberto no Modal
 
 function esconderTudoMenos(ecraAtivo) {
     [classView, studentDetailView, viewAvaliacoes, viewDisciplinaModulos, viewInformacoes, viewPrhf].forEach(el => el.style.display = 'none');
@@ -93,11 +95,11 @@ document.getElementById('btn-voltar-hub-prhf')?.addEventListener('click', () => 
 
 document.querySelectorAll('.turma-card-large').forEach(botao => {
     botao.addEventListener('click', () => {
-        const nomeTurma = botao.getAttribute('data-turma'); 
-        document.getElementById('class-title').innerHTML = `<i class="fa-solid fa-users"></i> Turma ${nomeTurma}`;
+        turmaAtual = botao.getAttribute('data-turma'); // Guarda a turma
+        document.getElementById('class-title').innerHTML = `<i class="fa-solid fa-users"></i> Turma ${turmaAtual}`;
         painelAdmin.style.display = 'none';
         esconderTudoMenos(classView);
-        carregarAlunos(nomeTurma);
+        carregarAlunos(turmaAtual);
     });
 });
 
@@ -125,13 +127,18 @@ async function carregarAlunos(turmaEscolhida) {
                 document.getElementById('detail-student-name').innerText = e.currentTarget.getAttribute('data-nome');
                 alunoAtualId = e.currentTarget.getAttribute('data-numero');
                 document.getElementById('detail-student-number').innerText = alunoAtualId.toUpperCase();
+                
+                // Lógica Mostrar/Esconder FCT e PAP consoante a Turma
+                document.getElementById('btn-hub-fct').style.display = (turmaAtual === '11T' || turmaAtual === '12T') ? 'flex' : 'none';
+                document.getElementById('btn-hub-pap').style.display = (turmaAtual === '12T') ? 'flex' : 'none';
+
                 esconderTudoMenos(studentDetailView);
             });
         });
     } catch (e) { console.error(e); }
 }
 
-// 3. AVALIAÇÕES (Lógica de Bloqueio/Edição SN)
+// 3. AVALIAÇÕES (Bloqueio SN)
 document.getElementById('btn-hub-avaliacoes')?.addEventListener('click', () => {
     esconderTudoMenos(viewAvaliacoes);
     let html = "";
@@ -154,14 +161,10 @@ async function abrirModulosDisciplina(disciplina) {
     const listaModulosUI = document.getElementById('lista-modulos-disciplina');
     listaModulosUI.innerHTML = '<p class="text-muted">A preparar pauta...</p>';
 
-    // Vai buscar notas existentes do aluno
     const notasMapa = {};
     try {
         const qNotas = await getDocs(collection(db, "utilizadores", alunoAtualId, "notas"));
-        qNotas.forEach(doc => {
-            const data = doc.data();
-            if (data.disciplina === disciplina) notasMapa[data.modulo] = data.nota;
-        });
+        qNotas.forEach(doc => { const data = doc.data(); if (data.disciplina === disciplina) notasMapa[data.modulo] = data.nota; });
     } catch(e) { console.error(e); }
 
     let modulosArray = [];
@@ -189,103 +192,61 @@ async function abrirModulosDisciplina(disciplina) {
     });
     listaModulosUI.innerHTML = html;
     
-    // Lógica dos Botões de Mostrar/Esconder Edição
     listaModulosUI.querySelectorAll('.btn-abrir-edicao-nota').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const mod = e.currentTarget.getAttribute('data-mod');
-            document.getElementById(`view-${disciplina}-${mod}`).style.display = 'none';
-            document.getElementById(`edit-${disciplina}-${mod}`).style.display = 'flex';
+            document.getElementById(`view-${disciplina}-${mod}`).style.display = 'none'; document.getElementById(`edit-${disciplina}-${mod}`).style.display = 'flex';
         });
     });
     listaModulosUI.querySelectorAll('.btn-fechar-edicao-nota').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const mod = e.currentTarget.getAttribute('data-mod');
-            document.getElementById(`view-${disciplina}-${mod}`).style.display = 'flex';
-            document.getElementById(`edit-${disciplina}-${mod}`).style.display = 'none';
+            document.getElementById(`view-${disciplina}-${mod}`).style.display = 'flex'; document.getElementById(`edit-${disciplina}-${mod}`).style.display = 'none';
         });
     });
 
-    // Lógica de Gravar
     listaModulosUI.querySelectorAll('.btn-gravar-nota').forEach(btn => {
         btn.addEventListener('click', async (e) => {
-            const disc = e.currentTarget.getAttribute('data-disc');
-            const mod = e.currentTarget.getAttribute('data-mod');
-            const inputEl = document.getElementById(`input-${disc}-${mod}`);
-            const valorNovaNota = inputEl.value;
-            
+            const disc = e.currentTarget.getAttribute('data-disc'); const mod = e.currentTarget.getAttribute('data-mod');
+            const valorNovaNota = document.getElementById(`input-${disc}-${mod}`).value;
             if(valorNovaNota === "") return;
-            
-            const btnEl = e.currentTarget;
-            btnEl.innerText = "OK";
-            
+            const btnEl = e.currentTarget; btnEl.innerText = "OK";
             try {
-                await setDoc(doc(db, "utilizadores", alunoAtualId, "notas", `${disc}_${mod}`), {
-                    disciplina: disc, modulo: mod, nota: Number(valorNovaNota), data: new Date().toISOString()
-                });
-                
-                // Atualiza o Visual sem recarregar a página
-                const badge = document.getElementById(`badge-${disc}-${mod}`);
-                badge.innerText = valorNovaNota;
-                badge.classList.remove('sn');
-                
-                // Fecha a edição passados uns segundos
+                await setDoc(doc(db, "utilizadores", alunoAtualId, "notas", `${disc}_${mod}`), { disciplina: disc, modulo: mod, nota: Number(valorNovaNota), data: new Date().toISOString() });
+                const badge = document.getElementById(`badge-${disc}-${mod}`); badge.innerText = valorNovaNota; badge.classList.remove('sn');
                 setTimeout(() => {
                     btnEl.innerText = "Gravar";
-                    document.getElementById(`view-${disc}-${mod}`).style.display = 'flex';
-                    document.getElementById(`edit-${disc}-${mod}`).style.display = 'none';
+                    document.getElementById(`view-${disc}-${mod}`).style.display = 'flex'; document.getElementById(`edit-${disc}-${mod}`).style.display = 'none';
                 }, 1000);
-
             } catch (error) { console.error(error); }
         });
     });
 }
 
-// 4. INFORMAÇÕES (Com Integrações de Contacto)
+// 4. INFORMAÇÕES E CONTACTOS
 const modalTelefone = document.getElementById('modal-telefone');
 const modalEmail = document.getElementById('modal-email');
 let contactoTemp = "";
 
-document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => {
-    modalTelefone.style.display = 'none'; modalEmail.style.display = 'none';
-}));
+document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { modalTelefone.style.display = 'none'; modalEmail.style.display = 'none'; }));
 
-// Delegação de cliques nos spans das Informações
 document.addEventListener('click', (e) => {
     if (e.target.classList.contains('clickable-contact')) {
         const tipo = e.target.getAttribute('data-type');
         const valor = e.target.innerText;
         if(valor === "-" || valor === "") return;
-        
-        // Descobre se é Aluno ou EE para nomear o VCard
-        if (e.target.id.includes('aluno')) {
-            nomePessoaContactoModal = document.getElementById('detail-student-name').innerText;
-        } else {
-            nomePessoaContactoModal = document.getElementById('display-ee-nome').innerText || "Enc. Educação";
-        }
-
+        nomePessoaContactoModal = e.target.id.includes('aluno') ? document.getElementById('detail-student-name').innerText : (document.getElementById('display-ee-nome').innerText || "Enc. Educação");
         contactoTemp = valor;
-        if (tipo === 'tel') {
-            document.getElementById('action-ligar').href = `tel:${contactoTemp}`;
-            modalTelefone.style.display = 'flex';
-        } else if (tipo === 'email') {
-            document.getElementById('action-enviar-email').href = `mailto:${contactoTemp}?subject=Contacto da Escola`;
-            modalEmail.style.display = 'flex';
-        }
+        if (tipo === 'tel') { document.getElementById('action-ligar').href = `tel:${contactoTemp}`; modalTelefone.style.display = 'flex'; } 
+        else if (tipo === 'email') { document.getElementById('action-enviar-email').href = `mailto:${contactoTemp}?subject=Contacto da Escola`; modalEmail.style.display = 'flex'; }
     }
 });
 
-// Gerar e Descarregar Contacto VCard
 document.getElementById('action-guardar-vcard')?.addEventListener('click', () => {
     const vcardData = `BEGIN:VCARD\nVERSION:3.0\nFN:${nomePessoaContactoModal}\nTEL:${contactoTemp}\nEND:VCARD`;
     const blob = new Blob([vcardData], { type: 'text/vcard' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${nomePessoaContactoModal.replace(/\s+/g, '_')}.vcf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    modalTelefone.style.display = 'none';
+    const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${nomePessoaContactoModal.replace(/\s+/g, '_')}.vcf`;
+    document.body.appendChild(link); link.click(); document.body.removeChild(link); modalTelefone.style.display = 'none';
 });
 
 async function carregarInfoLeitura() {
@@ -293,16 +254,8 @@ async function carregarInfoLeitura() {
         const docSnap = await getDoc(doc(db, "utilizadores", alunoAtualId));
         if (docSnap.exists()) {
             const d = docSnap.data();
-            document.getElementById('display-aluno-idade').innerText = d.idade || "-";
-            document.getElementById('display-aluno-tel').innerText = d.telAluno || "-";
-            document.getElementById('display-aluno-email').innerText = d.emailAluno || "-";
-            document.getElementById('display-aluno-morada').innerText = d.morada || "-";
-            
-            document.getElementById('display-ee-nome').innerText = d.nomeEE || "-";
-            document.getElementById('display-ee-filiacao').innerText = d.filiacaoEE || "-";
-            document.getElementById('display-ee-tel').innerText = d.telEE || "-";
-            document.getElementById('display-ee-email').innerText = d.emailEE || "-";
-            
+            document.getElementById('display-aluno-idade').innerText = d.idade || "-"; document.getElementById('display-aluno-tel').innerText = d.telAluno || "-"; document.getElementById('display-aluno-email').innerText = d.emailAluno || "-"; document.getElementById('display-aluno-morada').innerText = d.morada || "-";
+            document.getElementById('display-ee-nome').innerText = d.nomeEE || "-"; document.getElementById('display-ee-filiacao').innerText = d.filiacaoEE || "-"; document.getElementById('display-ee-tel').innerText = d.telEE || "-"; document.getElementById('display-ee-email').innerText = d.emailEE || "-";
             ['info-aluno-idade', 'info-aluno-telemovel', 'info-aluno-email', 'info-aluno-morada', 'info-ee-nome', 'info-ee-filiacao', 'info-ee-telemovel', 'info-ee-email'].forEach(id => {
                 const key = id.replace('info-aluno-', '').replace('info-ee-', '');
                 document.getElementById(id).value = d[key === 'telemovel' ? (id.includes('aluno') ? 'telAluno' : 'telEE') : (key === 'email' ? (id.includes('aluno') ? 'emailAluno' : 'emailEE') : key)] || d[id.includes('aluno') ? key : key + 'EE'] || "";
@@ -327,28 +280,41 @@ document.getElementById('btn-cancelar-ee').addEventListener('click', () => { doc
 
 document.getElementById('btn-guardar-aluno').addEventListener('click', async (e) => {
     e.currentTarget.innerText = "A gravar...";
-    try {
-        await updateDoc(doc(db, "utilizadores", alunoAtualId), { idade: document.getElementById('info-aluno-idade').value, telAluno: document.getElementById('info-aluno-telemovel').value, emailAluno: document.getElementById('info-aluno-email').value, morada: document.getElementById('info-aluno-morada').value });
-        carregarInfoLeitura();
-        document.getElementById('info-aluno-display').style.display='block'; document.getElementById('info-aluno-edit').style.display='none';
-    } catch(e) { console.error(e); } e.currentTarget.innerText = "Guardar";
+    try { await updateDoc(doc(db, "utilizadores", alunoAtualId), { idade: document.getElementById('info-aluno-idade').value, telAluno: document.getElementById('info-aluno-telemovel').value, emailAluno: document.getElementById('info-aluno-email').value, morada: document.getElementById('info-aluno-morada').value });
+        carregarInfoLeitura(); document.getElementById('info-aluno-display').style.display='block'; document.getElementById('info-aluno-edit').style.display='none';
+    } catch(e) {} e.currentTarget.innerText = "Guardar";
 });
 document.getElementById('btn-guardar-ee').addEventListener('click', async (e) => {
     e.currentTarget.innerText = "A gravar...";
-    try {
-        await updateDoc(doc(db, "utilizadores", alunoAtualId), { nomeEE: document.getElementById('info-ee-nome').value, filiacaoEE: document.getElementById('info-ee-filiacao').value, telEE: document.getElementById('info-ee-telemovel').value, emailEE: document.getElementById('info-ee-email').value });
-        carregarInfoLeitura();
-        document.getElementById('info-ee-display').style.display='block'; document.getElementById('info-ee-edit').style.display='none';
-    } catch(e) { console.error(e); } e.currentTarget.innerText = "Guardar";
+    try { await updateDoc(doc(db, "utilizadores", alunoAtualId), { nomeEE: document.getElementById('info-ee-nome').value, filiacaoEE: document.getElementById('info-ee-filiacao').value, telEE: document.getElementById('info-ee-telemovel').value, emailEE: document.getElementById('info-ee-email').value });
+        carregarInfoLeitura(); document.getElementById('info-ee-display').style.display='block'; document.getElementById('info-ee-edit').style.display='none';
+    } catch(e) {} e.currentTarget.innerText = "Guardar";
 });
 
-// 5. PRHF E INTEGRAÇÃO CALENDÁRIO
+// 5. PRHF (ABAS E FOLHA MODAL)
+let tabAtiva = 'ativas'; // Estado da aba selecionada
+const modalFolha = document.getElementById('modal-prhf-sheet');
+
 if(document.getElementById('btn-hub-prhf')) {
     document.getElementById('btn-hub-prhf').addEventListener('click', () => {
         esconderTudoMenos(viewPrhf);
+        tabAtiva = 'ativas'; 
+        document.getElementById('tab-prhf-ativas').classList.add('active');
+        document.getElementById('tab-prhf-concluidas').classList.remove('active');
         carregarListaPRHF(alunoAtualId);
     });
 }
+
+document.getElementById('tab-prhf-ativas').addEventListener('click', (e) => {
+    tabAtiva = 'ativas';
+    e.currentTarget.classList.add('active'); document.getElementById('tab-prhf-concluidas').classList.remove('active');
+    carregarListaPRHF(alunoAtualId);
+});
+document.getElementById('tab-prhf-concluidas').addEventListener('click', (e) => {
+    tabAtiva = 'concluidas';
+    e.currentTarget.classList.add('active'); document.getElementById('tab-prhf-ativas').classList.remove('active');
+    carregarListaPRHF(alunoAtualId);
+});
 
 document.getElementById('btn-guardar-prhf').addEventListener('click', async (e) => {
     const disc = document.getElementById('prhf-disciplina').value.trim(); const mod = document.getElementById('prhf-modulo').value.trim();
@@ -363,44 +329,96 @@ document.getElementById('btn-guardar-prhf').addEventListener('click', async (e) 
 
     e.currentTarget.innerText = "A gravar...";
     try {
-        await addDoc(collection(db, "utilizadores", alunoAtualId, "prhfs"), { disciplina: disc.toUpperCase(), modulo: mod.toUpperCase(), prazo: prazo, descricao: desc, horasNaoPresenciais: hN, horasPresenciais: hP, dataRegisto: new Date().toISOString() });
+        await addDoc(collection(db, "utilizadores", alunoAtualId, "prhfs"), { 
+            disciplina: disc.toUpperCase(), modulo: mod.toUpperCase(), prazo: prazo, descricao: desc, 
+            horasNaoPresenciais: hN, horasPresenciais: hP, status: 'ativa', dataRegisto: new Date().toISOString() 
+        });
         document.getElementById('prhf-disciplina').value = ""; document.getElementById('prhf-modulo').value = ""; document.getElementById('prhf-prazo').value = ""; document.getElementById('prhf-descricao').value = ""; document.getElementById('prhf-horas').value = "";
+        
+        tabAtiva = 'ativas'; document.getElementById('tab-prhf-ativas').classList.add('active'); document.getElementById('tab-prhf-concluidas').classList.remove('active');
         carregarListaPRHF(alunoAtualId);
-    } catch (e) { console.error(e); } e.currentTarget.innerText = "Processar e Gravar";
+    } catch (e) { console.error(e); } e.currentTarget.innerText = "Gravar Tarefa";
 });
+
+let prhfsMemoria = []; // Guarda os dados para abrir na folha
 
 async function carregarListaPRHF(idAluno) {
     const container = document.getElementById('lista-prhf-container');
-    container.innerHTML = '<p class="text-muted">A carregar planos...</p>';
+    container.innerHTML = '<p class="text-muted">A carregar...</p>';
+    prhfsMemoria = [];
     try {
         const q = query(collection(db, "utilizadores", idAluno, "prhfs"));
         const resultados = await getDocs(q);
-        if (resultados.empty) { container.innerHTML = '<p class="text-muted">Sem tarefas ativas.</p>'; return; }
 
         let html = '';
         resultados.forEach(doc => {
-            const prhf = doc.data();
-            const dataP = prhf.prazo.split('-'); const dataF = dataP.length === 3 ? `${dataP[2]}-${dataP[1]}-${dataP[0]}` : prhf.prazo;
-            // Cria um link especial para o Google Calendar do telemóvel
-            const textoDataCalendario = prhf.prazo.replace(/-/g, '') + 'T090000Z/' + prhf.prazo.replace(/-/g, '') + 'T100000Z'; 
-            const calLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Apoio+${prhf.disciplina}&details=Aluno:+${document.getElementById('detail-student-name').innerText}%0AHoras:+${prhf.horasPresenciais}h%0A${prhf.descricao}&dates=${textoDataCalendario}`;
-
-            html += `
-                <div class="prhf-card">
-                    <div class="prhf-header"><strong>${prhf.disciplina} - ${prhf.modulo}</strong><span class="prhf-prazo"><i class="fa-solid fa-calendar-days"></i> ${dataF}</span></div>
-                    <p style="font-size: 0.95rem; margin-bottom: 10px;">${prhf.descricao}</p>
-                    <div style="background-color: var(--bg-dark); padding: 10px; border-radius: 6px; font-size: 0.85rem; border: 1px dashed var(--primary-green);">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <div>
-                                <div style="color: var(--primary-green); margin-bottom: 4px;"><strong>Cálculo do Plano:</strong></div>
-                                <div>Horas Autónomas: <strong>${prhf.horasNaoPresenciais}h</strong></div>
-                                <div>Horas Presenciais: <strong>${prhf.horasPresenciais}h</strong></div>
-                            </div>
-                            <a href="${calLink}" target="_blank" class="primary-btn small-btn" style="text-decoration:none;"><i class="fa-regular fa-calendar-plus"></i> Agendar</a>
-                        </div>
+            const data = doc.data(); data.id = doc.id;
+            // Só guarda na memória e desenha se o status coincidir com a aba
+            if ((tabAtiva === 'ativas' && data.status === 'ativa') || (tabAtiva === 'concluidas' && data.status === 'concluida')) {
+                prhfsMemoria.push(data);
+                const classeCor = data.status === 'ativa' ? 'ativa' : 'concluida';
+                const siglaMod = data.modulo.includes('M') ? data.modulo : 'M'+data.modulo; // Garante o M
+                
+                html += `
+                    <div class="prhf-mini-card ${classeCor}" data-id="${data.id}">
+                        <strong>${data.disciplina}_${siglaMod}</strong>
+                        <i class="fa-solid fa-chevron-right" style="color:var(--text-muted); font-size:0.8rem;"></i>
                     </div>
-                </div>`;
+                `;
+            }
         });
+        
+        if (html === '') { container.innerHTML = `<p class="text-muted">Sem tarefas ${tabAtiva}.</p>`; return; }
+        
         container.innerHTML = html;
+
+        // Adicionar clique para abrir a Folha
+        container.querySelectorAll('.prhf-mini-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                const idClicado = e.currentTarget.getAttribute('data-id');
+                abrirFolhaPRHF(idClicado);
+            });
+        });
     } catch (e) { console.error(e); }
 }
+
+// Lógica da Folha (Modal Paper)
+function abrirFolhaPRHF(id) {
+    const plano = prhfsMemoria.find(p => p.id === id);
+    if(!plano) return;
+    
+    idPrhfAtivo = id; // Memória para o botão concluir
+    const siglaMod = plano.modulo.includes('M') ? plano.modulo : 'M'+plano.modulo;
+    const dataParts = plano.prazo.split('-'); const dataF = dataParts.length === 3 ? `${dataParts[2]}/${dataParts[1]}/${dataParts[0]}` : plano.prazo;
+    
+    document.getElementById('sheet-title').innerText = `${plano.disciplina}_${siglaMod}`;
+    document.getElementById('sheet-prazo').innerText = dataF;
+    document.getElementById('sheet-hp').innerText = plano.horasPresenciais;
+    document.getElementById('sheet-ha').innerText = plano.horasNaoPresenciais;
+    document.getElementById('sheet-desc').innerText = plano.descricao;
+    
+    const badgeStatus = document.getElementById('sheet-status');
+    badgeStatus.innerText = plano.status.toUpperCase();
+    badgeStatus.className = `paper-status ${plano.status}`;
+
+    // Link do Calendário
+    const textoDataCalendario = plano.prazo.replace(/-/g, '') + 'T090000Z/' + plano.prazo.replace(/-/g, '') + 'T100000Z'; 
+    document.getElementById('sheet-btn-agendar').href = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Apoio+${plano.disciplina}&details=Aluno:+${document.getElementById('detail-student-name').innerText}%0AHoras:+${plano.horasPresenciais}h%0A${plano.descricao}&dates=${textoDataCalendario}`;
+
+    // Esconde o botão Concluir se já estiver concluído
+    document.getElementById('sheet-btn-concluir').style.display = plano.status === 'concluida' ? 'none' : 'flex';
+    
+    modalFolha.style.display = 'flex';
+}
+
+document.querySelector('.btn-close-paper').addEventListener('click', () => modalFolha.style.display = 'none');
+
+document.getElementById('sheet-btn-concluir').addEventListener('click', async (e) => {
+    if(!confirm("Marcar este plano como CONCLUÍDO?")) return;
+    e.currentTarget.innerText = "A validar...";
+    try {
+        await updateDoc(doc(db, "utilizadores", alunoAtualId, "prhfs", idPrhfAtivo), { status: 'concluida' });
+        modalFolha.style.display = 'none';
+        carregarListaPRHF(alunoAtualId); // Recarrega a lista para a tarefa desaparecer da aba 'Ativas'
+    } catch(err) { console.error(err); e.currentTarget.innerText = "Marcar como Concluído"; }
+});
