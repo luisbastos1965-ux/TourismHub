@@ -1,0 +1,210 @@
+:root {
+    --bg-dark: #121212;
+    --bg-card: #1E1E1E;
+    --primary-green: #009933;
+    --primary-green-light: #00cc44;
+    --warning-yellow: #FFC107;
+    --danger-red: #FF3B30;
+    --text-main: #FFFFFF;
+    --text-muted: #A0A0A0;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    padding-bottom: 80px;
+}
+
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background-color: var(--bg-card);
+    border-bottom: 1px solid #2A2A2A;
+}
+
+.logo {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--primary-green-light);
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background-color: var(--primary-green);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+}
+
+.app-content { padding: 20px; }
+
+.card {
+    background-color: var(--bg-card);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.warning-card { border-left: 4px solid var(--primary-green); }
+
+.warning-card h3 {
+    font-size: 1rem;
+    margin-bottom: 8px;
+    color: var(--primary-green-light);
+}
+
+.warning-card p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.overview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.overview-box {
+    background-color: var(--bg-card);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+}
+
+.overview-box .number {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.overview-box .label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.danger-box .number { color: var(--danger-red); }
+.active-box .number { color: var(--primary-green-light); }
+
+.section-title {
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    color: var(--text-main);
+}
+
+.section-container { margin-bottom: 25px; }
+
+.module-card {
+    background-color: var(--bg-card);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 12px;
+}
+
+.module-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.progress-container {
+    height: 8px;
+    background-color: #2A2A2A;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.progress-bar { height: 100%; border-radius: 4px; }
+.warning-bg { background-color: var(--warning-yellow); }
+.danger-bg { background-color: var(--danger-red); }
+.warning-text { color: var(--warning-yellow); }
+.danger-text { color: var(--danger-red); font-weight: bold; }
+
+.module-footer {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.plan-card {
+    background-color: var(--bg-card);
+    border-radius: 10px;
+    padding: 15px;
+    border: 1px solid #2A2A2A;
+}
+
+.plan-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.badge {
+    background-color: rgba(0, 153, 51, 0.2);
+    color: var(--primary-green-light);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.plan-task {
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+    color: #E0E0E0;
+}
+
+.plan-footer {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: var(--bg-card);
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0 20px 0;
+    border-top: 1px solid #2A2A2A;
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.75rem;
+    gap: 5px;
+}
+
+.nav-item i { font-size: 1.2rem; }
+.nav-item.active { color: var(--primary-green-light); }
