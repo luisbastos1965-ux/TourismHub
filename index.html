@@ -32,20 +32,47 @@
         <header class="app-header">
             <div class="logo"><i class="fa-solid fa-graduation-cap"></i> Turma PRO</div>
             <div class="user-profile">
-                <span>Olá, Aluno</span>
+                <span>A carregar...</span>
                 <button id="btn-logout" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
             </div>
         </header>
 
-        <!-- Main Content -->
+        <!-- Main Content (Onde a magia dos painéis acontece) -->
         <main class="app-content">
-            <section class="card warning-card">
-                <h3><i class="fa-solid fa-bullhorn"></i> Aviso da Direção</h3>
-                <p>Reunião de Pais agendada para a próxima sexta-feira às 18h30.</p>
-            </section>
-            <section class="section-container">
-                <h2 class="section-title">A tua área ficará disponível em breve.</h2>
-            </section>
+            
+            <!-- CAIXA 1: Painel do Aluno (Visível por defeito para estudantes) -->
+            <div id="student-dashboard" style="display: none;">
+                <section class="card warning-card">
+                    <h3><i class="fa-solid fa-bullhorn"></i> Aviso da Direção</h3>
+                    <p>Reunião de Pais agendada para a próxima sexta-feira às 18h30.</p>
+                </section>
+                <section class="section-container">
+                    <h2 class="section-title">A tua área ficará disponível em breve.</h2>
+                </section>
+            </div>
+
+            <!-- CAIXA 2: Painel de Administração (Escondido, apenas para admins) -->
+            <div id="admin-dashboard" style="display: none;">
+                <h2 class="section-title"><i class="fa-solid fa-users-gear"></i> As Minhas Turmas</h2>
+                
+                <div class="turmas-grid">
+                    <button class="turma-card" data-turma="10T">
+                        <i class="fa-solid fa-users"></i>
+                        <span>10T</span>
+                    </button>
+                    
+                    <button class="turma-card" data-turma="11T">
+                        <i class="fa-solid fa-users"></i>
+                        <span>11T</span>
+                    </button>
+                    
+                    <button class="turma-card" data-turma="12T">
+                        <i class="fa-solid fa-users"></i>
+                        <span>12T</span>
+                    </button>
+                </div>
+            </div>
+
         </main>
         
         <!-- Bottom Navigation -->
@@ -57,6 +84,7 @@
         </nav>
     </div>
 
+    <!-- Importar o nosso JavaScript -->
     <script type="module" src="app.js"></script>
 </body>
 </html>
