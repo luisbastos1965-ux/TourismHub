@@ -785,3 +785,57 @@ textarea.input-field:focus {
 .nav-item.active {
     color: var(--primary-green);
 }
+
+/* --- Novas Classes: Avatares na Lista e Hub Bloqueado --- */
+.list-avatar {
+    width: 45px; 
+    height: 45px; 
+    border-radius: 50%; 
+    background-color: var(--primary-green);
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    color: white; 
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.disabled-hub-card {
+    opacity: 0.3;
+    pointer-events: none; /* Impede o clique */
+    filter: grayscale(100%);
+}
+
+/* --- Formulário de Presenças Manuais no PRHF --- */
+.manual-presence-form {
+    display: none; 
+    background: #f0f0f0; 
+    padding: 15px; 
+    border-radius: 8px; 
+    margin-top: 10px; 
+    border: 1px solid #ccc;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.manual-presence-form input {
+    background: white; 
+    color: #333; 
+    border: 1px solid #aaa; 
+    padding: 10px; 
+    margin-bottom: 8px;
+}
+
+.manual-presence-form input:focus {
+    border-color: #333;
+}
+
+.registo-item {
+    display: flex;
+    justify-content: space-between;
+    background-color: white;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    margin-bottom: 5px;
+    font-size: 0.85rem;
+}
