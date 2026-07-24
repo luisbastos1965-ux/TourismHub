@@ -37,7 +37,8 @@ onAuthStateChanged(auth, (user) => {
 
 // 2. Fazer Login (O truque do a1234)
 btnLoginManual.addEventListener('click', () => {
-    const username = document.getElementById('login-username').value;
+    // O .trim() corta automaticamente espaços em branco invisíveis no início ou fim
+    const username = document.getElementById('login-username').value.trim();
     const pass = document.getElementById('login-password').value;
     
     // O nosso truque: juntar o domínio
@@ -48,7 +49,9 @@ btnLoginManual.addEventListener('click', () => {
             errorMsg.style.display = 'none'; // Login com sucesso
         })
         .catch((error) => {
-            errorMsg.style.display = 'block'; // Erro na password ou utilizador
+            errorMsg.style.display = 'block'; 
+            // Agora a app vai mostrar o erro exato do Firebase no ecrã!
+            errorMsg.innerText = "Erro do Firebase: " + error.code; 
         });
 });
 
