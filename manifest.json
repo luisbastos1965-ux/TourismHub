@@ -8,12 +8,12 @@
   "description": "Plataforma de gestão escolar para alunos e diretores de turma",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "logo_tur.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "icon-512.png",
+      "src": "logo_tur.png",
       "sizes": "512x512",
       "type": "image/png"
     }
