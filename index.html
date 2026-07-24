@@ -10,7 +10,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- ECRÃ DE LOGIN -->
     <div id="login-screen" class="login-container">
         <div class="login-box">
             <h2><i class="fa-solid fa-graduation-cap"></i> Turma PRO</h2>
@@ -23,7 +22,6 @@
         </div>
     </div>
 
-    <!-- A APLICAÇÃO -->
     <div id="app-content" style="display: none;">
         <header class="app-header">
             <div class="logo"><i class="fa-solid fa-graduation-cap"></i> Turma PRO</div>
@@ -34,7 +32,6 @@
         </header>
 
         <main class="app-content">
-            <!-- CAIXAS 1, 2 e 3: Omitidas visualmente aqui para focar no novo conteúdo, mas estão no código final! -->
             <div id="student-dashboard" style="display: none;">
                 <section class="card warning-card">
                     <h3><i class="fa-solid fa-bullhorn"></i> Aviso da Direção</h3>
@@ -62,7 +59,6 @@
                 <div class="students-list-container"><p class="text-muted">A carregar...</p></div>
             </div>
 
-            <!-- CAIXA 4: Centro de Comando (Perfil) -->
             <div id="student-detail-view" style="display: none;">
                 <div class="class-header">
                     <button id="btn-voltar-lista" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button>
@@ -88,7 +84,6 @@
                 </div>
             </div>
 
-            <!-- CAIXAS 5 e 6: Avaliações -->
             <div id="view-avaliacoes" style="display: none;">
                 <div class="class-header">
                     <button id="btn-voltar-hub-avaliacoes" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button>
@@ -107,13 +102,11 @@
                 </div>
             </div>
 
-            <!-- CAIXA 7: Informações EE -->
             <div id="view-informacoes" style="display: none;">
                 <div class="class-header">
                     <button id="btn-voltar-hub-info" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button>
                     <h2 class="section-title">Informações e Contactos</h2>
                 </div>
-                
                 <div class="card">
                     <h3 style="color: var(--primary-green); margin-bottom: 10px;"><i class="fa-solid fa-user"></i> Dados do Aluno</h3>
                     <div class="info-grid">
@@ -123,7 +116,6 @@
                         <input type="text" id="info-aluno-morada" placeholder="Morada">
                     </div>
                 </div>
-
                 <div class="card">
                     <h3 style="color: var(--primary-green); margin-bottom: 10px;"><i class="fa-solid fa-user-tie"></i> Encarregado de Educação</h3>
                     <div class="info-grid">
@@ -137,18 +129,35 @@
                 </div>
             </div>
 
-            <!-- CAIXA 8: Planos de Recuperação (PRHF) -->
+            <!-- CAIXA 8: Planos de Recuperação (PRHF) MODIFICADA -->
             <div id="view-prhf" style="display: none;">
                 <div class="class-header">
                     <button id="btn-voltar-hub-prhf" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button>
-                    <h2 class="section-title">Plano de Recuperação (PRHF)</h2>
+                    <h2 class="section-title">Planos de Recuperação</h2>
                 </div>
                 
-                <div class="card">
-                    <p class="text-muted" style="margin-bottom: 15px;">Regista aqui a tarefa de recuperação proposta ao aluno (indicando Módulo e Prazo).</p>
-                    <textarea id="texto-prhf" class="input-field" placeholder="Ex: O aluno deve realizar uma ficha de pesquisa sobre o Módulo 3 de TIC e entregar até dia 15 de Novembro..."></textarea>
-                    <button id="btn-guardar-prhf" class="primary-btn">Gravar Tarefa PRHF</button>
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px;"><i class="fa-solid fa-plus"></i> Adicionar PRHF</h3>
+                    
+                    <div class="input-row">
+                        <input type="text" id="prhf-disciplina" placeholder="Disciplina (ex: TIC)">
+                        <input type="text" id="prhf-modulo" placeholder="Módulo (ex: M3)">
+                    </div>
+                    
+                    <p class="text-muted" style="margin-top: 10px; font-size: 0.85rem;">Prazo de Entrega/Conclusão:</p>
+                    <input type="date" id="prhf-prazo" style="margin-bottom: 5px;">
+                    
+                    <textarea id="prhf-descricao" class="input-field" placeholder="Descreve a tarefa (ex: Ficha de pesquisa sobre Sistemas Operativos...)"></textarea>
+                    
+                    <button id="btn-guardar-prhf" class="primary-btn" style="margin-top: 10px;">Gravar Tarefa PRHF</button>
                     <p id="msg-sucesso-prhf" class="success-msg">Plano gravado com sucesso!</p>
+                </div>
+
+                <div class="section-container">
+                    <h3 style="margin-bottom: 15px;">Tarefas Ativas</h3>
+                    <div id="lista-prhf-container">
+                        <p class="text-muted">A carregar planos...</p>
+                    </div>
                 </div>
             </div>
 
