@@ -448,3 +448,31 @@ body {
 .stat-card strong { 
     font-size: 1.5rem; 
 }
+
+/* --- Gestão de Módulos --- */
+.module-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--bg-card);
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin-bottom: 10px;
+}
+
+.module-info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.module-grade {
+    background-color: rgba(0, 204, 136, 0.1);
+    color: var(--primary-green);
+    padding: 8px 15px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 1.2rem;
+    border: 1px solid var(--primary-green);
+}
