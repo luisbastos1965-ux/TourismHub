@@ -208,3 +208,101 @@ body {
 
 .nav-item i { font-size: 1.2rem; }
 .nav-item.active { color: var(--primary-green-light); }
+
+/* --- Ecrã de Login --- */
+.login-container {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--bg-dark);
+    padding: 20px;
+}
+
+.login-box {
+    background-color: var(--bg-card);
+    padding: 30px 20px;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    border: 1px solid #2A2A2A;
+}
+
+.login-box h2 { color: var(--primary-green-light); margin-bottom: 5px; }
+.login-box p { color: var(--text-muted); margin-bottom: 25px; font-size: 0.9rem; }
+
+.input-group { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
+
+.input-group input {
+    background-color: var(--bg-dark);
+    border: 1px solid #333;
+    padding: 12px;
+    border-radius: 8px;
+    color: white;
+    font-size: 1rem;
+}
+
+.input-group input:focus { outline: none; border-color: var(--primary-green); }
+
+.primary-btn {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--primary-green);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.secondary-btn {
+    width: 100%;
+    padding: 12px;
+    background-color: transparent;
+    color: var(--text-muted);
+    border: 1px solid #333;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.divider {
+    margin: 20px 0;
+    text-align: center;
+    position: relative;
+}
+
+.divider span {
+    background-color: var(--bg-card);
+    padding: 0 10px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    position: relative;
+    z-index: 1;
+}
+
+.divider::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background-color: #333;
+    z-index: 0;
+}
+
+.error-msg { color: var(--danger-red) !important; margin-bottom: 15px !important; }
+
+.logout-btn {
+    background: none;
+    border: none;
+    color: var(--danger-red);
+    cursor: pointer;
+}
