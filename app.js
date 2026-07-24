@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, addDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAUU6riTOuybEamgkPke4UXJwyjMA0nJzU",
@@ -30,12 +30,12 @@ const painelAluno = document.getElementById('student-dashboard'); const painelAd
 const classView = document.getElementById('class-view'); const studentDetailView = document.getElementById('student-detail-view');
 const viewAvaliacoes = document.getElementById('view-avaliacoes'); const viewDisciplinaModulos = document.getElementById('view-disciplina-modulos');
 const viewInformacoes = document.getElementById('view-informacoes'); const viewPrhf = document.getElementById('view-prhf');
-const viewFaltas = document.getElementById('view-faltas'); const viewFaltasModulos = document.getElementById('view-faltas-modulos');
+const viewFaltas = document.getElementById('view-faltas');
 
 let alunoAtualId = ""; let turmaAtual = ""; let nomePessoaContactoModal = ""; let idPrhfAtivo = ""; 
 
 function esconderTudoMenos(ecraAtivo) {
-    [classView, studentDetailView, viewAvaliacoes, viewDisciplinaModulos, viewInformacoes, viewPrhf, viewFaltas, viewFaltasModulos].forEach(el => el.style.display = 'none');
+    [classView, studentDetailView, viewAvaliacoes, viewDisciplinaModulos, viewInformacoes, viewPrhf, viewFaltas].forEach(el => el.style.display = 'none');
     if(ecraAtivo) ecraAtivo.style.display = 'block';
 }
 
@@ -72,7 +72,6 @@ document.getElementById('btn-voltar-disciplinas')?.addEventListener('click', () 
 document.getElementById('btn-voltar-hub-info')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
 document.getElementById('btn-voltar-hub-prhf')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
 document.getElementById('btn-voltar-hub-faltas')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
-document.getElementById('btn-voltar-faltas-disc')?.addEventListener('click', () => esconderTudoMenos(viewFaltas));
 
 document.querySelectorAll('.turma-card-large').forEach(botao => {
     botao.addEventListener('click', () => {
@@ -136,7 +135,7 @@ document.getElementById('upload-avatar').addEventListener('change', (e) => {
     }; reader.readAsDataURL(file);
 });
 
-// 3. AVALIAÇÕES (Grelha Moderna 10-20 + REP)
+// 3. AVALIAÇÕES (Grelha e Bug "A Gravar" Resolvido)
 document.getElementById('btn-hub-avaliacoes')?.addEventListener('click', () => { esconderTudoMenos(viewAvaliacoes); construirMatrizVisual(document.getElementById('matriz-disciplinas-container'), abrirModulosDisciplinaAvaliacao); });
 
 function construirMatrizVisual(containerEl, funcaoClique) {
@@ -156,7 +155,6 @@ async function abrirModulosDisciplinaAvaliacao(disciplina) {
     const notasMapa = {}; try { const qNotas = await getDocs(collection(db, "utilizadores", alunoAtualId, "notas")); qNotas.forEach(d => { if (d.data().disciplina === disciplina) notasMapa[d.data().modulo] = d.data().nota; }); } catch(e){}
     let modulosArray = []; for (const comp of Object.values(matrizCurso)) { if (comp[disciplina]) modulosArray = comp[disciplina]; }
     
-    // Constrói a grelha de botões em HTML (10 a 20 e REP)
     let gridBtns = "";
     for(let i=10; i<=20; i++) { gridBtns += `<button class="grade-btn" data-val="${i}">${i}</button>`; }
     gridBtns += `<button class="grade-btn rep" data-val="REP">REP</button>`;
@@ -185,45 +183,43 @@ async function abrirModulosDisciplinaAvaliacao(disciplina) {
     });
     listaModulosUI.innerHTML = html;
     
-    // Lógica para abrir/fechar edição
     listaModulosUI.querySelectorAll('.btn-abrir-edicao-nota').forEach(b => b.addEventListener('click', (e) => { const m=e.currentTarget.getAttribute('data-mod'); document.getElementById(`view-${disciplina}-${m}`).style.display='none'; document.getElementById(`edit-${disciplina}-${m}`).style.display='flex'; }));
     listaModulosUI.querySelectorAll('.btn-fechar-edicao-nota').forEach(b => b.addEventListener('click', (e) => { const m=e.currentTarget.getAttribute('data-mod'); document.getElementById(`view-${disciplina}-${m}`).style.display='flex'; document.getElementById(`edit-${disciplina}-${m}`).style.display='none'; }));
     
-    // Lógica de Seleção da Nota na Grelha
-    let notaSelecionadaTemporaria = {}; // Objeto para guardar a nota clicada antes do OK
+    let notaSelecionadaTemporaria = {};
     listaModulosUI.querySelectorAll('.grade-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const gridPai = e.currentTarget.parentElement;
-            gridPai.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('selected'));
-            e.currentTarget.classList.add('selected');
-            const modId = gridPai.id.split('-')[2]; // Ex: grid-PORT-M1
+            const gridPai = e.currentTarget.parentElement; gridPai.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('selected'));
+            e.currentTarget.classList.add('selected'); const modId = gridPai.id.split('-')[2];
             notaSelecionadaTemporaria[modId] = e.currentTarget.getAttribute('data-val');
         });
     });
 
-    // Lógica do OK (Gravar)
     listaModulosUI.querySelectorAll('.btn-gravar-nota').forEach(b => b.addEventListener('click', async (e) => {
         const d = e.currentTarget.getAttribute('data-disc'); const m = e.currentTarget.getAttribute('data-mod'); 
         const v = notaSelecionadaTemporaria[m];
-        if(!v) return; // Não escolheu nota
+        if(!v) return; 
         
-        e.currentTarget.innerText = "A gravar...";
+        const btnRef = e.currentTarget; // Guarda referência do botão!
+        btnRef.innerText = "A gravar...";
         try { 
             const valorDb = v === "REP" ? "REP" : Number(v);
             await setDoc(doc(db, "utilizadores", alunoAtualId, "notas", `${d}_${m}`), { disciplina: d, modulo: m, nota: valorDb, data: new Date().toISOString() });
             
             const badge = document.getElementById(`badge-${d}-${m}`); badge.innerText = v; 
-            badge.className = `nota-badge ${v === "REP" ? "rep" : ""}`; // Reseta classes
+            badge.className = `nota-badge ${v === "REP" ? "rep" : ""}`; 
             
-            // Fecha Imediatamente!
-            e.currentTarget.innerText = "OK (Gravar)";
-            document.getElementById(`view-${d}-${m}`).style.display='flex'; document.getElementById(`edit-${d}-${m}`).style.display='none';
-            notaSelecionadaTemporaria[m] = null; // Limpa memória
-        } catch(err){}
+            btnRef.innerText = "Gravado!";
+            setTimeout(() => {
+                btnRef.innerText = "OK (Gravar)";
+                document.getElementById(`view-${d}-${m}`).style.display='flex'; document.getElementById(`edit-${d}-${m}`).style.display='none';
+                notaSelecionadaTemporaria[m] = null;
+            }, 800);
+        } catch(err){ btnRef.innerText = "Erro!"; }
     }));
 }
 
-// 4. INFORMAÇÕES (Com Edição Reparada - Abre Logo)
+// 4. INFORMAÇÕES (Contactos e VCards)
 document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { document.getElementById('modal-telefone').style.display='none'; document.getElementById('modal-email').style.display='none'; }));
 document.addEventListener('click', (e) => {
     if (e.target.classList.contains('clickable-contact')) {
@@ -264,7 +260,6 @@ if(document.getElementById('btn-hub-informacoes')) {
     });
 }
 
-// Removidos os confirms chatos nas Informações
 document.getElementById('btn-editar-info-aluno').addEventListener('click', () => { document.getElementById('info-aluno-display').style.display='none'; document.getElementById('info-aluno-edit').style.display='block'; });
 document.getElementById('btn-editar-info-ee').addEventListener('click', () => { document.getElementById('info-ee-display').style.display='none'; document.getElementById('info-ee-edit').style.display='block'; });
 document.getElementById('btn-cancelar-aluno').addEventListener('click', () => { document.getElementById('info-aluno-display').style.display='block'; document.getElementById('info-aluno-edit').style.display='none'; });
@@ -283,7 +278,7 @@ document.getElementById('btn-guardar-ee').addEventListener('click', async (e) =>
     } catch(e) {} e.currentTarget.innerText = "Guardar";
 });
 
-// 5. PRHF (Protegido e Matemático)
+// 5. PRHF - MAGIA MATEMÁTICA E LÓGICA INTELIGENTE
 const selDisc = document.getElementById('prhf-disciplina'); const selMod = document.getElementById('prhf-modulo');
 let optDisc = '<option value="">Disc.</option>'; for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) optDisc += `<option value="${d}">${d}</option>`; } selDisc.innerHTML = optDisc;
 selDisc.addEventListener('change', (e) => { const d = e.target.value; let mods = []; for(const comp of Object.values(matrizCurso)) { if(comp[d]) mods = comp[d]; } let optMod = '<option value="">Mod.</option>'; mods.forEach(m => optMod += `<option value="${m}">${m}</option>`); selMod.innerHTML = optMod; });
@@ -301,14 +296,17 @@ document.getElementById('btn-guardar-prhf').addEventListener('click', async (e) 
     const disc = selDisc.value; const mod = selMod.value; const prazo = document.getElementById('prhf-prazo').value; const desc = document.getElementById('prhf-descricao').value.trim(); const htInput = document.getElementById('prhf-horas').value;
     if(!disc || !mod || !prazo || !desc || !htInput) return alert("Preenche todos os campos!");
     
-    const hT = parseInt(htInput); let hP = 0; if(hT > 4) hP = Math.ceil(hT * 0.3); const hN = hT - hP; // P = 30%, N = 70%
+    // Matemática: Presenciais = 30% (A fatia menor)
+    const hT = parseInt(htInput); 
+    const hP = hT > 4 ? Math.ceil(hT * 0.3) : 0; 
+    const hN = hT - hP; // Autónomas = O resto (A fatia maior)
 
     e.currentTarget.innerText = "A gravar...";
     try {
         await addDoc(collection(db, "utilizadores", alunoAtualId, "prhfs"), { disciplina: disc, modulo: mod, prazo: prazo, descricao: desc, horasNaoPresenciais: hN, horasPresenciais: hP, status: 'ativa', dataRegisto: new Date().toISOString(), registosManuais: [] });
         selDisc.value = ""; selMod.value = ""; document.getElementById('prhf-prazo').value = ""; document.getElementById('prhf-descricao').value = ""; document.getElementById('prhf-horas').value = "";
         tabAtiva = 'ativas'; document.getElementById('tab-prhf-ativas').classList.add('active'); document.getElementById('tab-prhf-concluidas').classList.remove('active'); carregarListaPRHF(alunoAtualId);
-    } catch (err) {} e.currentTarget.innerText = "Gravar Tarefa";
+    } catch (err) {} e.currentTarget.innerText = "Processar e Gravar";
 });
 
 let prhfsMemoria = [];
@@ -329,12 +327,70 @@ async function carregarListaPRHF(idAluno) {
     } catch (err) {}
 }
 
+// Função Auxiliar: Calcular horas entre Início e Fim
+function calcularDiferencaHoras(inicio, fim) {
+    const [hI, mI] = inicio.split(':').map(Number);
+    const [hF, mF] = fim.split(':').map(Number);
+    let diff = (hF + mF/60) - (hI + mI/60);
+    return diff > 0 ? diff : 0;
+}
+
 function desenharRegistosManuais(plano) {
     const container = document.getElementById('lista-presencias-manuais');
-    if(!plano.registosManuais || plano.registosManuais.length === 0) { container.innerHTML = ""; return; }
-    let h = "<p style='margin-bottom:5px;'><strong>Já Registadas:</strong></p>";
-    plano.registosManuais.forEach(r => h += `<div class="registo-item"><span>${r.data}</span><span>${r.inicio} - ${r.fim}</span></div>`);
-    container.innerHTML = h;
+    let totalRealizado = 0;
+    
+    if(!plano.registosManuais || plano.registosManuais.length === 0) { 
+        container.innerHTML = ""; 
+    } else {
+        let h = "<p style='margin-bottom:5px;'><strong>Já Registadas:</strong></p>";
+        plano.registosManuais.forEach((r, idx) => {
+            totalRealizado += r.horas;
+            h += `<div class="registo-item">
+                    <span>${r.data} (${r.inicio} - ${r.fim}) [${r.horas}h]</span>
+                    <i class="fa-solid fa-trash registo-item-del" data-idx="${idx}"></i>
+                  </div>`;
+        });
+        container.innerHTML = h;
+        
+        // Lógica de Apagar Registo
+        container.querySelectorAll('.registo-item-del').forEach(icon => {
+            icon.addEventListener('click', async (e) => {
+                if(!confirm("Apagar este registo?")) return;
+                const indexToRemove = e.currentTarget.getAttribute('data-idx');
+                const novaLista = [...plano.registosManuais];
+                novaLista.splice(indexToRemove, 1);
+                
+                try {
+                    await updateDoc(doc(db, "utilizadores", alunoAtualId, "prhfs", idPrhfAtivo), { registosManuais: novaLista });
+                    plano.registosManuais = novaLista;
+                    desenharRegistosManuais(plano); // Redesenha a lista e atualiza botão
+                } catch(err) { console.error("Erro a apagar registo", err); }
+            });
+        });
+    }
+
+    // Atualiza Progresso e Botões
+    document.getElementById('sheet-horas-feitas').innerText = totalRealizado;
+    document.getElementById('sheet-horas-totais').innerText = plano.horasPresenciais;
+    
+    const btnConcluir = document.getElementById('sheet-btn-concluir');
+    const txtRegisto = document.getElementById('txt-btn-registo');
+
+    if(totalRealizado >= plano.horasPresenciais && plano.horasPresenciais > 0) {
+        // Atingiu o objetivo
+        btnConcluir.disabled = false;
+        btnConcluir.style.backgroundColor = "var(--success-green)";
+        btnConcluir.style.color = "white";
+        btnConcluir.innerHTML = `<i class="fa-solid fa-check"></i> Marcar como Concluído`;
+        txtRegisto.innerText = "Retificar Presenciais";
+    } else {
+        // Faltam horas
+        btnConcluir.disabled = true;
+        btnConcluir.style.backgroundColor = "#555";
+        btnConcluir.style.color = "#888";
+        btnConcluir.innerHTML = `<i class="fa-solid fa-lock"></i> Marcar como Concluído`;
+        txtRegisto.innerText = "Registar Presenciais";
+    }
 }
 
 function abrirFolhaPRHF(id) {
@@ -348,20 +404,15 @@ function abrirFolhaPRHF(id) {
     document.getElementById('sheet-desc').innerText = p.descricao;
     
     const badge = document.getElementById('sheet-status'); badge.innerText = p.status.toUpperCase(); badge.className = `paper-status ${p.status}`;
-    
-    const txtCal = p.prazo ? (p.prazo.replace(/-/g, '') + 'T090000Z/' + p.prazo.replace(/-/g, '') + 'T100000Z') : ""; 
-    document.getElementById('sheet-btn-agendar').href = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Apoio+${p.disciplina}&details=Aluno:+${document.getElementById('detail-student-name').innerText}%0AHoras:+${p.horasPresenciais}h%0A${p.descricao}&dates=${txtCal}`;
 
     if (p.status === 'concluida') {
         document.getElementById('sheet-btn-concluir').style.display = 'none';
-        document.getElementById('sheet-btn-reverter').style.display = 'flex'; // Reverter!
-        document.getElementById('sheet-btn-agendar').style.display = 'none'; // Esconde Agenda
+        document.getElementById('sheet-btn-reverter').style.display = 'flex';
         document.getElementById('sheet-btn-toggle-manual').style.display = 'none';
         document.getElementById('manual-presence-box').style.display = 'none';
     } else {
         document.getElementById('sheet-btn-concluir').style.display = 'flex';
         document.getElementById('sheet-btn-reverter').style.display = 'none';
-        document.getElementById('sheet-btn-agendar').style.display = 'flex';
         document.getElementById('sheet-btn-toggle-manual').style.display = 'flex';
         document.getElementById('manual-presence-box').style.display = 'none'; 
     }
@@ -378,13 +429,28 @@ document.getElementById('sheet-btn-toggle-manual').addEventListener('click', () 
 document.getElementById('btn-save-manual-pres').addEventListener('click', async (e) => {
     const d = document.getElementById('reg-pres-data').value; const i = document.getElementById('reg-pres-inicio').value; const f = document.getElementById('reg-pres-fim').value;
     if(!d || !i || !f) return alert("Preenche Data, Início e Fim!");
-    e.currentTarget.innerText = "A gravar...";
+    
+    const horasCalculadas = calcularDiferencaHoras(i, f);
+    if(horasCalculadas <= 0) return alert("A hora de fim tem de ser maior que a de início!");
+
+    const btnRef = e.currentTarget;
+    btnRef.innerText = "A gravar...";
     try {
-        const novoRegisto = { data: d, inicio: i, fim: f };
-        await updateDoc(doc(db, "utilizadores", alunoAtualId, "prhfs", idPrhfAtivo), { registosManuais: arrayUnion(novoRegisto) });
+        const novoRegisto = { data: d, inicio: i, fim: f, horas: horasCalculadas };
+        
+        // Puxar o array atual para fazer push (para termos controlo total)
+        const p = prhfsMemoria.find(x => x.id === idPrhfAtivo);
+        const novaLista = p.registosManuais ? [...p.registosManuais, novoRegisto] : [novoRegisto];
+        
+        await updateDoc(doc(db, "utilizadores", alunoAtualId, "prhfs", idPrhfAtivo), { registosManuais: novaLista });
         document.getElementById('reg-pres-data').value = ""; document.getElementById('reg-pres-inicio').value = ""; document.getElementById('reg-pres-fim').value = "";
-        const p = prhfsMemoria.find(x => x.id === idPrhfAtivo); if(!p.registosManuais) p.registosManuais = []; p.registosManuais.push(novoRegisto); desenharRegistosManuais(p);
-    } catch(err){} e.currentTarget.innerText = "Guardar Registo";
+        
+        p.registosManuais = novaLista; 
+        desenharRegistosManuais(p);
+        
+        btnRef.innerText = "Gravado!";
+        setTimeout(() => btnRef.innerText = "Guardar Registo", 1000);
+    } catch(err){ btnRef.innerText = "Erro!"; } 
 });
 
 document.getElementById('sheet-btn-concluir').addEventListener('click', async (e) => {
@@ -396,33 +462,25 @@ document.getElementById('sheet-btn-reverter').addEventListener('click', async (e
     try { await updateDoc(doc(db, "utilizadores", alunoAtualId, "prhfs", idPrhfAtivo), { status: 'ativa' }); modalFolha.style.display = 'none'; carregarListaPRHF(alunoAtualId); } catch(err){}
 });
 
-// 6. MOTOR DE FALTAS (O Início)
+// 6. MOTOR DE FALTAS (Esqueleto das Abas Preparado!)
 if(document.getElementById('btn-hub-faltas')) {
-    document.getElementById('btn-hub-faltas').addEventListener('click', () => { esconderTudoMenos(viewFaltas); construirMatrizVisual(document.getElementById('matriz-faltas-container'), abrirModulosDisciplinaFaltas); });
+    document.getElementById('btn-hub-faltas').addEventListener('click', () => { 
+        esconderTudoMenos(viewFaltas); 
+        // Por defeito, abre a aba Disciplina
+        document.getElementById('tab-faltas-disciplina').classList.add('active');
+        document.getElementById('tab-faltas-data').classList.remove('active');
+        document.getElementById('faltas-container-disciplina').style.display = 'block';
+        document.getElementById('faltas-container-data').style.display = 'none';
+        construirMatrizVisual(document.getElementById('faltas-container-disciplina'), () => { alert("Funcionalidade em construção no próximo passo!"); }); 
+    });
 }
 
-async function abrirModulosDisciplinaFaltas(disciplina) {
-    esconderTudoMenos(viewFaltasModulos); document.getElementById('titulo-falta-disciplina').innerText = disciplina;
-    const container = document.getElementById('lista-faltas-disciplina'); container.innerHTML = '<p class="text-muted">A preparar faltas...</p>';
-    
-    // Futura integração com Base de Dados para Faltas ficará aqui! 
-    let html = `<p class="text-muted" style="margin-bottom:15px;">Motor de Gestão de Faltas (10%) pronto a arrancar no próximo passo!</p>`;
-    
-    let modulosArray = []; for (const comp of Object.values(matrizCurso)) { if (comp[disciplina]) modulosArray = comp[disciplina]; }
-    modulosArray.forEach(mod => {
-        html += `
-        <div style="background:var(--bg-dark); padding:15px; border-radius:8px; border:1px solid #333; margin-bottom:12px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                <strong>${mod}</strong><span class="falta-badge" id="badge-falta-${mod}">0 / ?</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <input type="number" placeholder="Tot. Aulas" style="width:100px; margin:0; padding:8px;">
-                <div style="display:flex; gap:5px;">
-                    <button class="secondary-btn small-btn">-</button><button class="primary-btn small-btn">+</button>
-                </div>
-            </div>
-            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:0%;"></div></div>
-        </div>`;
-    });
-    container.innerHTML = html;
-}
+document.getElementById('tab-faltas-disciplina').addEventListener('click', (e) => {
+    e.currentTarget.classList.add('active'); document.getElementById('tab-faltas-data').classList.remove('active');
+    document.getElementById('faltas-container-disciplina').style.display = 'block'; document.getElementById('faltas-container-data').style.display = 'none';
+});
+
+document.getElementById('tab-faltas-data').addEventListener('click', (e) => {
+    e.currentTarget.classList.add('active'); document.getElementById('tab-faltas-disciplina').classList.remove('active');
+    document.getElementById('faltas-container-disciplina').style.display = 'none'; document.getElementById('faltas-container-data').style.display = 'block';
+});
