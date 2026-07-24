@@ -3,7 +3,7 @@ import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAUU6rITouybEamgkPke4UXJwyjMA0nJzU",
+  apiKey: "AIzaSyAUU6riTOuybEamgkPke4UXJwyjMA0nJzU",
   authDomain: "turmapro-e6358.firebaseapp.com",
   projectId: "turmapro-e6358",
   storageBucket: "turmapro-e6358.firebasestorage.app",
