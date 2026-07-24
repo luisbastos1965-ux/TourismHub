@@ -47,19 +47,9 @@
                     <h2>As Minhas Turmas</h2>
                 </div>
                 <div class="turmas-grid-large">
-                    <button class="turma-card-large" data-turma="10T">
-                        <div class="tc-icon"><i class="fa-solid fa-users"></i></div>
-                        <div class="tc-info"><h3>10T</h3></div>
-                    </button>
-                    <button class="turma-card-large" data-turma="11T">
-                        <div class="tc-icon"><i class="fa-solid fa-users"></i></div>
-                        <div class="tc-info"><h3>11T</h3></div>
-                    </button>
-                    <button class="turma-card-large" data-turma="12T">
-                        <div class="tc-icon"><i class="fa-solid fa-users"></i></div>
-                        <div class="tc-info"><h3>12T</h3></div>
-                    </button>
-                    <!-- BOTÃO SUPER TURMA -->
+                    <button class="turma-card-large" data-turma="10T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>10T</h3></div></button>
+                    <button class="turma-card-large" data-turma="11T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>11T</h3></div></button>
+                    <button class="turma-card-large" data-turma="12T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>12T</h3></div></button>
                     <button class="turma-card-large" data-turma="TUR" style="border-left-color: var(--text-muted);">
                         <div class="tc-icon" style="color: var(--text-muted);"><i class="fa-solid fa-globe"></i></div>
                         <div class="tc-info">
@@ -83,7 +73,6 @@
                     <button id="btn-voltar-lista" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                 </div>
                 <div class="student-profile-header">
-                    <!-- FOTO DE PERFIL C/ UPLOAD -->
                     <div class="profile-avatar">
                         <img id="avatar-img" src="" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:50%;">
                         <i class="fa-solid fa-user" id="avatar-icon"></i>
@@ -99,8 +88,9 @@
                     <button class="hub-card" id="btn-hub-avaliacoes"><i class="fa-solid fa-star"></i><span>Avaliações</span></button>
                     <button class="hub-card" id="btn-hub-faltas"><i class="fa-solid fa-user-clock"></i><span>Faltas</span></button>
                     <button class="hub-card" id="btn-hub-prhf"><i class="fa-solid fa-file-medical"></i><span>Planos PRHF</span></button>
-                    <button class="hub-card" id="btn-hub-fct" style="display: none;"><i class="fa-solid fa-briefcase"></i><span>FCT (Estágio)</span></button>
-                    <button class="hub-card" id="btn-hub-pap" style="display: none;"><i class="fa-solid fa-laptop-code"></i><span>Projeto PAP</span></button>
+                    <!-- Agora estão sempre no ecrã, o JS é que os vai "desligar" se for o 10T/11T -->
+                    <button class="hub-card" id="btn-hub-fct"><i class="fa-solid fa-briefcase"></i><span>FCT (Estágio)</span></button>
+                    <button class="hub-card" id="btn-hub-pap"><i class="fa-solid fa-laptop-code"></i><span>Projeto PAP</span></button>
                 </div>
             </div>
 
@@ -174,7 +164,6 @@
                 </div>
             </div>
 
-            <!-- PRHF COM DROPDOWNS -->
             <div id="view-prhf" style="display: none;">
                 <div class="class-header">
                     <button id="btn-voltar-hub-prhf" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button>
@@ -182,10 +171,7 @@
                 </div>
                 <div class="card" style="margin-bottom: 20px;">
                     <h3 style="margin-bottom: 15px;"><i class="fa-solid fa-plus"></i> Novo PRHF</h3>
-                    <div class="input-row">
-                        <select id="prhf-disciplina"><option value="">Disc.</option></select>
-                        <select id="prhf-modulo"><option value="">Mod.</option></select>
-                    </div>
+                    <div class="input-row"><select id="prhf-disciplina"><option value="">Disc.</option></select><select id="prhf-modulo"><option value="">Mod.</option></select></div>
                     <div class="input-row">
                         <input type="number" id="prhf-horas" placeholder="Total Horas">
                         <div style="display:flex; align-items:center; width:100%; gap:5px; margin-bottom:15px; background-color:var(--bg-dark); border:1px solid #333; border-radius:8px; padding-left:10px;">
@@ -195,7 +181,6 @@
                     </div>
                     <textarea id="prhf-descricao" class="input-field" placeholder="Descreve a tarefa..."></textarea>
                     <button id="btn-guardar-prhf" class="primary-btn" style="margin-top: 10px;">Processar e Gravar</button>
-                    <p id="msg-sucesso-prhf" class="success-msg">Plano gravado!</p>
                 </div>
                 
                 <div class="section-container">
@@ -216,7 +201,7 @@
         </nav>
     </div>
 
-    <!-- MODALS GERAIS E DA FOLHA -->
+    <!-- MODALS -->
     <div id="modal-telefone" class="modal-overlay bottom">
         <div class="action-sheet">
             <h3>Opções de Contacto</h3>
@@ -234,6 +219,7 @@
         </div>
     </div>
 
+    <!-- MODAL FOLHA PRHF ATUALIZADO (C/ Registo Manual) -->
     <div id="modal-prhf-sheet" class="modal-overlay">
         <div class="paper-sheet">
             <button class="btn-close-paper"><i class="fa-solid fa-xmark"></i></button>
@@ -247,9 +233,24 @@
                 <div class="paper-desc" id="sheet-desc">Descrição...</div>
             </div>
             <div class="paper-actions">
-                <a id="sheet-btn-agendar" href="#" target="_blank" class="secondary-btn" style="color:#333; border-color:#999;"><i class="fa-regular fa-calendar-plus"></i> Agendar Presenciais</a>
+                
+                <!-- BOTÃO REGISTO MANUAL E CAIXA ESCONDIDA -->
+                <button id="sheet-btn-toggle-manual" class="secondary-btn" style="color:#333; border-color:#999;"><i class="fa-solid fa-pen-to-square"></i> Registar Presenciais (Manual)</button>
+                <div id="manual-presence-box" class="manual-presence-form">
+                    <input type="date" id="reg-pres-data">
+                    <div style="display:flex; gap:5px;">
+                        <input type="time" id="reg-pres-inicio" title="Início">
+                        <input type="time" id="reg-pres-fim" title="Fim">
+                    </div>
+                    <button id="btn-save-manual-pres" class="primary-btn small-btn">Guardar Registo</button>
+                    <div id="lista-presencias-manuais" style="margin-top:15px; font-size:0.85rem;"></div>
+                </div>
+
+                <a id="sheet-btn-agendar" href="#" target="_blank" class="secondary-btn" style="color:#333; border-color:#999;"><i class="fa-regular fa-calendar-plus"></i> Agendar Presenciais (Google)</a>
+                
+                <!-- BOTÕES DE CONCLUIR/REVERTER -->
                 <button id="sheet-btn-concluir" class="primary-btn"><i class="fa-solid fa-check"></i> Marcar como Concluído</button>
-                <button id="sheet-btn-reverter" class="danger-btn" style="display:none;"><i class="fa-solid fa-rotate-left"></i> Desconcluir</button>
+                <button id="sheet-btn-reverter" class="danger-btn" style="display:none;"><i class="fa-solid fa-rotate-left"></i> Reverter</button>
             </div>
         </div>
     </div>
