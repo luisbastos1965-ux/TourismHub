@@ -434,3 +434,35 @@ input:focus {
     text-align: center;
     padding: 8px;
 }
+
+/* --- Informações e PRHF --- */
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+textarea.input-field {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--bg-dark);
+    border: 1px solid #333;
+    border-radius: 8px;
+    color: var(--text-light);
+    font-size: 1rem;
+    resize: vertical;
+    min-height: 120px;
+    margin-bottom: 15px;
+}
+textarea.input-field:focus {
+    outline: none;
+    border-color: var(--primary-green);
+}
+
+.success-msg {
+    color: var(--primary-green);
+    margin-top: 10px;
+    font-size: 0.9rem;
+    display: none;
+}
