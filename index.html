@@ -37,10 +37,10 @@
             </div>
         </header>
 
-        <!-- Main Content (Onde a magia dos painéis acontece) -->
+        <!-- Main Content -->
         <main class="app-content">
             
-            <!-- CAIXA 1: Painel do Aluno (Visível por defeito para estudantes) -->
+            <!-- CAIXA 1: Painel do Aluno -->
             <div id="student-dashboard" style="display: none;">
                 <section class="card warning-card">
                     <h3><i class="fa-solid fa-bullhorn"></i> Aviso da Direção</h3>
@@ -51,7 +51,7 @@
                 </section>
             </div>
 
-            <!-- CAIXA 2: Painel de Administração (Escondido, apenas para admins) -->
+            <!-- CAIXA 2: Painel de Administração -->
             <div id="admin-dashboard" style="display: none;">
                 <h2 class="section-title"><i class="fa-solid fa-users-gear"></i> As Minhas Turmas</h2>
                 
@@ -70,6 +70,20 @@
                         <i class="fa-solid fa-users"></i>
                         <span>12T</span>
                     </button>
+                </div>
+            </div>
+
+            <!-- CAIXA 3: Vista da Turma -->
+            <div id="class-view" style="display: none;">
+                <div class="class-header">
+                    <button id="btn-voltar-turmas" class="secondary-btn small-btn">
+                        <i class="fa-solid fa-arrow-left"></i> Voltar
+                    </button>
+                    <h2 id="class-title" class="section-title">Turma X</h2>
+                </div>
+                
+                <div class="students-list-container">
+                    <p style="color: var(--text-muted);">A carregar lista de alunos...</p>
                 </div>
             </div>
 
