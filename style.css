@@ -24,6 +24,7 @@ body {
     height: 100vh;
     display: flex;
     flex-direction: column;
+    overscroll-behavior-y: contain; /* Evita o Pull-to-Refresh acidental no mobile */
 }
 
 /* =========================================
@@ -42,9 +43,7 @@ body {
     transition: background-color 0.2s;
 }
 
-.primary-btn:hover {
-    background-color: var(--primary-hover);
-}
+.primary-btn:hover { background-color: var(--primary-hover); }
 
 .secondary-btn {
     background-color: transparent;
@@ -59,6 +58,15 @@ body {
 .secondary-btn:hover {
     border-color: var(--text-light);
     background-color: rgba(255, 255, 255, 0.05);
+}
+
+.danger-btn {
+    background-color: transparent;
+    color: var(--danger-red);
+    border: 1px solid var(--danger-red);
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
 }
 
 .small-btn {
@@ -83,9 +91,7 @@ input:focus {
     border-color: var(--primary-green);
 }
 
-.text-muted {
-    color: var(--text-muted);
-}
+.text-muted { color: var(--text-muted); }
 
 /* =========================================
    ECRÃ DE LOGIN
@@ -97,7 +103,6 @@ input:focus {
     align-items: center;
     padding: 20px;
 }
-
 .login-box {
     background-color: var(--bg-card);
     padding: 30px;
@@ -107,20 +112,11 @@ input:focus {
     text-align: center;
     border: 1px solid #333;
 }
-
-.login-box h2 {
-    margin-bottom: 25px;
-    color: var(--primary-green);
-}
-
-.error-msg {
-    color: var(--danger-red);
-    margin-bottom: 15px;
-    font-size: 0.9rem;
-}
+.login-box h2 { margin-bottom: 25px; color: var(--primary-green); }
+.error-msg { color: var(--danger-red); margin-bottom: 15px; font-size: 0.9rem; }
 
 /* =========================================
-   CABEÇALHO (HEADER) DA APP
+   CABEÇALHO DA APP
 ========================================= */
 .app-header {
     display: flex;
@@ -130,27 +126,9 @@ input:focus {
     background-color: var(--bg-card);
     border-bottom: 1px solid #333;
 }
-
-.logo {
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: var(--primary-green);
-}
-
-.user-profile {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    font-size: 0.9rem;
-}
-
-.logout-btn {
-    background: none;
-    border: none;
-    color: var(--danger-red);
-    cursor: pointer;
-    font-size: 0.9rem;
-}
+.logo { font-size: 1.2rem; font-weight: bold; color: var(--primary-green); }
+.user-profile { display: flex; align-items: center; gap: 15px; font-size: 0.9rem; }
+.logout-btn { background: none; border: none; color: var(--danger-red); cursor: pointer; font-size: 0.9rem; }
 
 /* =========================================
    CONTEÚDO PRINCIPAL (MAIN)
@@ -159,14 +137,9 @@ input:focus {
     flex: 1;
     overflow-y: auto;
     padding: 20px;
-    padding-bottom: 80px; /* Espaço para a barra de navegação inferior */
+    padding-bottom: 80px;
 }
-
-.section-title {
-    margin-bottom: 15px;
-    font-size: 1.2rem;
-}
-
+.section-title { margin-bottom: 15px; font-size: 1.2rem; }
 .card {
     background-color: var(--bg-card);
     padding: 20px;
@@ -174,18 +147,11 @@ input:focus {
     margin-bottom: 20px;
     border: 1px solid #333;
 }
-
-.warning-card {
-    border-left: 4px solid var(--primary-green);
-}
-
-.warning-card h3 {
-    margin-bottom: 10px;
-    color: var(--primary-green);
-}
+.warning-card { border-left: 4px solid var(--primary-green); }
+.warning-card h3 { margin-bottom: 10px; color: var(--primary-green); }
 
 /* =========================================
-   PAINEL DE ADMINISTRAÇÃO (Turmas)
+   PAINEL DE ADMINISTRAÇÃO E TURMA
 ========================================= */
 .turmas-grid {
     display: grid;
@@ -193,308 +159,75 @@ input:focus {
     gap: 15px;
     margin-top: 15px;
 }
-
 .turma-card {
     background-color: var(--bg-card);
     border: 1px solid #333;
     border-radius: 12px;
     padding: 25px 10px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-    color: white;
-    transition: all 0.2s ease;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    cursor: pointer; color: white; transition: all 0.2s ease;
 }
+.turma-card i { font-size: 2.2rem; color: var(--primary-green); }
+.turma-card span { font-weight: bold; font-size: 1.2rem; }
+.turma-card:hover { border-color: var(--primary-green); transform: translateY(-3px); }
 
-.turma-card i {
-    font-size: 2.2rem;
-    color: var(--primary-green);
-}
-
-.turma-card span {
-    font-weight: bold;
-    font-size: 1.2rem;
-}
-
-.turma-card:hover {
-    border-color: var(--primary-green);
-    transform: translateY(-3px);
-    box-shadow: 0 4px 15px rgba(0, 204, 136, 0.15);
-}
-
-/* =========================================
-   VISTA DA TURMA (Lista de Alunos)
-========================================= */
-.class-header {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 20px;
-}
-
-.students-list-container {
-    background-color: var(--bg-card);
-    border: 1px solid #333;
-    border-radius: 12px;
-    padding: 20px;
-}
-
-.students-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.student-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid #333;
-}
-
-.student-item:last-child {
-    border-bottom: none;
-}
-
-.student-info {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.student-info strong {
-    font-size: 1.1rem;
-}
-
-.student-info span {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-}
+.class-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+.students-list-container { background-color: var(--bg-card); border: 1px solid #333; border-radius: 12px; padding: 20px; }
+.students-list { list-style: none; padding: 0; margin: 0; }
+.student-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #333; }
+.student-item:last-child { border-bottom: none; }
+.student-info { display: flex; flex-direction: column; gap: 3px; }
+.student-info strong { font-size: 1.1rem; }
+.student-info span { font-size: 0.85rem; color: var(--text-muted); }
 
 /* =========================================
    CENTRO DE COMANDO (Perfil do Aluno)
 ========================================= */
-.student-profile-header {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.profile-avatar {
-    width: 80px;
-    height: 80px;
-    background-color: var(--primary-green);
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 0 auto 10px auto;
-    font-size: 2rem;
-    color: white;
-}
-
-.hub-section-title {
-    margin-top: 25px;
-    margin-bottom: 15px;
-    font-size: 1.1rem;
-    color: var(--primary-green);
-    border-bottom: 1px solid #333;
-    padding-bottom: 8px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.admin-hub-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 12px;
-}
-
-.hub-card {
-    background-color: var(--bg-card);
-    border: 1px solid #333;
-    border-radius: 12px;
-    padding: 20px 10px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    color: white;
-}
-
-.hub-card i {
-    font-size: 2rem;
-    color: var(--primary-green);
-}
-
-.hub-card span {
-    font-weight: bold;
-    font-size: 0.95rem;
-}
-
-.hub-card:hover {
-    border-color: var(--primary-green);
-    transform: translateY(-3px);
-    box-shadow: 0 4px 15px rgba(0, 204, 136, 0.1);
-}
+.student-profile-header { text-align: center; margin-bottom: 20px; }
+.profile-avatar { width: 80px; height: 80px; background-color: var(--primary-green); border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 10px auto; font-size: 2rem; color: white; }
+.hub-section-title { margin-top: 25px; margin-bottom: 15px; font-size: 1.1rem; color: var(--primary-green); border-bottom: 1px solid #333; padding-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+.admin-hub-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
+.hub-card { background-color: var(--bg-card); border: 1px solid #333; border-radius: 12px; padding: 20px 10px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s ease; color: white; }
+.hub-card i { font-size: 2rem; color: var(--primary-green); }
+.hub-card span { font-weight: bold; font-size: 0.95rem; }
+.hub-card:hover { border-color: var(--primary-green); transform: translateY(-3px); }
 
 /* =========================================
-   NAVEGAÇÃO INFERIOR (Mobile App Feel)
+   AVALIAÇÕES
 ========================================= */
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background-color: var(--bg-card);
-    display: flex;
-    justify-content: space-around;
-    padding: 12px 0;
-    border-top: 1px solid #333;
-}
+.component-section { margin-bottom: 25px; background-color: var(--bg-card); border: 1px solid #333; border-radius: 12px; overflow: hidden; }
+.component-header { background-color: rgba(0, 204, 136, 0.1); color: var(--primary-green); padding: 15px; font-weight: bold; font-size: 1.1rem; border-bottom: 1px solid #333; }
+.subject-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; padding: 15px; }
+.subject-btn { background-color: var(--bg-dark); border: 1px solid #444; color: var(--text-light); padding: 15px 10px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+.subject-btn:hover { border-color: var(--primary-green); color: var(--primary-green); }
+.modulo-avaliar-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #333; }
+.modulo-avaliar-item:last-child { border-bottom: none; }
+.modulo-nota-input { width: 70px; margin-bottom: 0; text-align: center; padding: 8px; }
 
-.nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-decoration: none;
-    color: var(--text-muted);
-    font-size: 0.75rem;
-    gap: 5px;
-}
+/* =========================================
+   INFORMAÇÕES E PRHF
+========================================= */
+.info-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 15px; }
+.input-row { display: flex; gap: 10px; }
+textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-dark); border: 1px solid #333; border-radius: 8px; color: var(--text-light); font-size: 1rem; resize: vertical; min-height: 100px; margin-top: 10px; }
+textarea.input-field:focus { outline: none; border-color: var(--primary-green); }
+.success-msg { color: var(--primary-green); margin-top: 10px; font-size: 0.9rem; display: none; }
 
-.nav-item i {
-    font-size: 1.2rem;
-}
+/* Modo de Leitura (View Mode) */
+.data-display-group { margin-bottom: 12px; }
+.data-label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 3px; }
+.data-value { display: block; font-size: 1.05rem; font-weight: 500; color: white; padding: 5px 0; border-bottom: 1px dashed #333; }
+.action-buttons-row { display: flex; gap: 10px; margin-top: 15px; }
 
-.nav-item.active {
-    color: var(--primary-green);
-}
+.prhf-card { background-color: var(--bg-card); border: 1px solid #333; border-left: 4px solid var(--danger-red); border-radius: 8px; padding: 15px; margin-bottom: 12px; }
+.prhf-header { display: flex; justify-content: space-between; margin-bottom: 8px; align-items: center; }
+.prhf-header strong { font-size: 1.1rem; color: var(--text-light); }
+.prhf-prazo { font-size: 0.85rem; color: var(--text-muted); }
 
-/* --- Hierarquia de Avaliações (Componentes e Disciplinas) --- */
-.component-section {
-    margin-bottom: 25px;
-    background-color: var(--bg-card);
-    border: 1px solid #333;
-    border-radius: 12px;
-    overflow: hidden;
-}
-
-.component-header {
-    background-color: rgba(0, 204, 136, 0.1);
-    color: var(--primary-green);
-    padding: 15px;
-    font-weight: bold;
-    font-size: 1.1rem;
-    border-bottom: 1px solid #333;
-}
-
-.subject-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 10px;
-    padding: 15px;
-}
-
-.subject-btn {
-    background-color: var(--bg-dark);
-    border: 1px solid #444;
-    color: var(--text-light);
-    padding: 15px 10px;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.subject-btn:hover {
-    border-color: var(--primary-green);
-    color: var(--primary-green);
-}
-
-/* --- Lista de Módulos para Avaliar --- */
-.modulo-avaliar-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px;
-    border-bottom: 1px solid #333;
-}
-.modulo-avaliar-item:last-child {
-    border-bottom: none;
-}
-.modulo-nota-input {
-    width: 70px;
-    margin-bottom: 0;
-    text-align: center;
-    padding: 8px;
-}
-
-/* --- Informações e PRHF --- */
-.info-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 15px;
-    margin-top: 15px;
-}
-
-.input-row {
-    display: flex;
-    gap: 10px;
-}
-
-textarea.input-field {
-    width: 100%;
-    padding: 12px;
-    background-color: var(--bg-dark);
-    border: 1px solid #333;
-    border-radius: 8px;
-    color: var(--text-light);
-    font-size: 1rem;
-    resize: vertical;
-    min-height: 100px;
-    margin-top: 10px;
-}
-
-textarea.input-field:focus {
-    outline: none;
-    border-color: var(--primary-green);
-}
-
-.success-msg {
-    color: var(--primary-green);
-    margin-top: 10px;
-    font-size: 0.9rem;
-    display: none;
-}
-
-.prhf-card {
-    background-color: var(--bg-card);
-    border: 1px solid #333;
-    border-left: 4px solid var(--danger-red);
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 12px;
-}
-
-.prhf-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
-    align-items: center;
-}
-
-.prhf-header strong {
-    font-size: 1.1rem;
-    color: var(--text-light);
-}
-
-.prhf-prazo {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-}
+/* =========================================
+   NAVEGAÇÃO INFERIOR
+========================================= */
+.bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--bg-card); display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #333; }
+.nav-item { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: var(--text-muted); font-size: 0.75rem; gap: 5px; }
+.nav-item i { font-size: 1.2rem; }
+.nav-item.active { color: var(--primary-green); }
