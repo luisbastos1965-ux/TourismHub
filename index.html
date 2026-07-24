@@ -60,12 +60,10 @@
                         <i class="fa-solid fa-users"></i>
                         <span>10T</span>
                     </button>
-                    
                     <button class="turma-card" data-turma="11T">
                         <i class="fa-solid fa-users"></i>
                         <span>11T</span>
                     </button>
-                    
                     <button class="turma-card" data-turma="12T">
                         <i class="fa-solid fa-users"></i>
                         <span>12T</span>
@@ -84,6 +82,36 @@
                 
                 <div class="students-list-container">
                     <p style="color: var(--text-muted);">A carregar lista de alunos...</p>
+                </div>
+            </div>
+
+            <!-- CAIXA 4: Perfil Individual do Aluno -->
+            <div id="student-detail-view" style="display: none;">
+                <div class="class-header">
+                    <button id="btn-voltar-lista" class="secondary-btn small-btn">
+                        <i class="fa-solid fa-arrow-left"></i> Turma
+                    </button>
+                </div>
+                
+                <div class="student-profile-header">
+                    <div class="profile-avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <h2 id="detail-student-name">Nome do Aluno</h2>
+                    <p id="detail-student-number" class="text-muted">a0000</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <i class="fa-solid fa-star"></i>
+                        <span>Módulos Feitos</span>
+                        <strong>0</strong>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fa-solid fa-user-clock"></i>
+                        <span>Faltas</span>
+                        <strong>0</strong>
+                    </div>
                 </div>
             </div>
 
