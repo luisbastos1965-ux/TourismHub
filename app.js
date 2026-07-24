@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+// Repara que a linha abaixo cresceu, trouxemos ferramentas de pesquisa avançada!
+import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAUU6riTOuybEamgkPke4UXJwyjMA0nJzU",
@@ -31,6 +32,7 @@ const classView = document.getElementById('class-view');
 const botoesTurma = document.querySelectorAll('.turma-card');
 const classTitle = document.getElementById('class-title');
 const btnVoltarTurmas = document.getElementById('btn-voltar-turmas');
+const containerAlunos = document.querySelector('.students-list-container');
 
 // 1. Escutar estado de autenticação e carregar dados do utilizador
 onAuthStateChanged(auth, async (user) => {
@@ -47,15 +49,13 @@ onAuthStateChanged(auth, async (user) => {
             if (docSnap.exists()) {
                 const dados = docSnap.data();
                 
-                // Atualizar o cabeçalho
                 const userProfileSpan = document.querySelector('.user-profile span');
                 userProfileSpan.innerText = `Olá, ${dados.nome} (${dados.papel.toUpperCase()})`;
                 
-                // O "Gestor de Tráfego": Mostra o painel correto conforme o papel
                 if (dados.papel === 'admin') {
                     painelAluno.style.display = 'none';
                     painelAdmin.style.display = 'block';
-                    classView.style.display = 'none'; // Garante que a vista da turma está fechada no início
+                    classView.style.display = 'none';
                 } else {
                     painelAluno.style.display = 'block';
                     painelAdmin.style.display = 'none';
@@ -65,7 +65,6 @@ onAuthStateChanged(auth, async (user) => {
         } catch (error) {
             console.error("Erro ao carregar dados do perfil:", error);
         }
-
     } else {
         loginScreen.style.display = 'flex';
         appContent.style.display = 'none';
@@ -102,6 +101,9 @@ botoesTurma.forEach(botao => {
         
         painelAdmin.style.display = 'none';
         classView.style.display = 'block';
+
+        // Dispara a função mágica para ir buscar os alunos desta turma específica!
+        carregarAlunos(nomeTurma);
     });
 });
 
@@ -111,4 +113,56 @@ if(btnVoltarTurmas) {
         classView.style.display = 'none';
         painelAdmin.style.display = 'block';
     });
+}
+
+// 5. Função Mágica: Ir buscar alunos à Base de Dados
+async function carregarAlunos(turmaEscolhida) {
+    // 1. Mostrar mensagem de carregamento
+    containerAlunos.innerHTML = '<p style="color: var(--text-muted);">A carregar lista de alunos...</p>';
+
+    try {
+        // 2. Fazer a pergunta (Query) à base de dados: 
+        // "Dá-me os utilizadores cuja turma seja igual à turmaEscolhida e que sejam alunos"
+        const q = query(
+            collection(db, "utilizadores"), 
+            where("turma", "==", turmaEscolhida), 
+            where("papel", "==", "aluno")
+        );
+        
+        // 3. Executar o pedido
+        const resultados = await getDocs(q);
+
+        // 4. Verificar se a turma está vazia
+        if (resultados.empty) {
+            containerAlunos.innerHTML = '<p style="color: var(--text-muted);">Ainda não há alunos registados nesta turma.</p>';
+            return;
+        }
+
+        // 5. Se houver alunos, construir a lista em HTML
+        let htmlLista = '<ul class="students-list">';
+        
+        resultados.forEach((documento) => {
+            const aluno = documento.data(); // Puxa o nome, papel, turma
+            const numeroAluno = documento.id; // Puxa o ID (ex: a1234)
+
+            htmlLista += `
+                <li class="student-item">
+                    <div class="student-info">
+                        <strong>${aluno.nome}</strong>
+                        <span>${numeroAluno.toUpperCase()}</span>
+                    </div>
+                    <button class="secondary-btn small-btn"><i class="fa-solid fa-eye"></i> Ver</button>
+                </li>
+            `;
+        });
+        
+        htmlLista += '</ul>';
+        
+        // 6. Injetar a lista pronta no ecrã
+        containerAlunos.innerHTML = htmlLista;
+
+    } catch (erro) {
+        console.error("Erro ao carregar alunos:", erro);
+        containerAlunos.innerHTML = '<p style="color: #ff4d4d;">Erro ao carregar a lista de alunos. Verifica a ligação.</p>';
+    }
 }
