@@ -168,3 +168,37 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--bg-card); display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #333; }
 .nav-item { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: var(--text-muted); font-size: 0.75rem; gap: 5px; }
 .nav-item.active { color: var(--primary-green); }
+
+/* --- Melhorias Faltas e PDF --- */
+.falta-actions { 
+    display: flex; 
+    flex-direction: row; 
+    gap: 8px;
+    background: #222; 
+    padding: 8px 15px; 
+    justify-content: flex-end;
+    border-top: 1px solid #333;
+}
+.falta-actions button { 
+    background: var(--bg-dark); 
+    border: 1px solid #444; 
+    color: var(--text-light); 
+    padding: 6px 12px; 
+    border-radius: 6px;
+    cursor: pointer; 
+    transition: 0.2s;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.falta-actions button:hover { border-color: var(--primary-green); color: var(--primary-green); }
+.falta-actions button.del-btn:hover { border-color: var(--danger-red); color: var(--danger-red); }
+
+.file-name-display {
+    font-size: 0.85rem;
+    color: var(--primary-green);
+    margin-top: 5px;
+    display: block;
+    word-break: break-all;
+}
