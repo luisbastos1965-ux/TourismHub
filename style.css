@@ -10,8 +10,6 @@ body { background-color: var(--bg-dark); color: var(--text-light); height: 100vh
 ========================================= */
 .primary-btn { width: 100%; padding: 12px; background-color: var(--primary-green); color: var(--bg-dark); border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px;}
 .primary-btn:hover { background-color: var(--primary-hover); }
-.primary-btn:disabled { background-color: #555; color: #888; cursor: not-allowed; } /* Botão Bloqueado */
-
 .secondary-btn { width: 100%; background-color: transparent; color: var(--text-light); border: 1px solid var(--text-muted); padding: 12px; border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px;}
 .secondary-btn:hover { border-color: var(--text-light); background-color: rgba(255, 255, 255, 0.05); }
 .danger-btn { width: 100%; background-color: transparent; color: var(--danger-red); border: 1px solid var(--danger-red); padding: 12px; border-radius: 8px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s;}
@@ -21,6 +19,14 @@ body { background-color: var(--bg-dark); color: var(--text-light); height: 100vh
 input, select { width: 100%; padding: 12px; margin-bottom: 15px; background-color: var(--bg-dark); border: 1px solid #333; border-radius: 8px; color: var(--text-light); font-size: 1rem; }
 input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .text-muted { color: var(--text-muted); }
+
+/* Botão de Progresso Dinâmico (O novo Concluído) */
+.btn-progress-container { position: relative; overflow: hidden; width: 100%; border-radius: 8px; background-color: #444; border: none; cursor: not-allowed; transition: 0.3s; }
+.btn-progress-fill { position: absolute; top: 0; left: 0; height: 100%; background-color: var(--primary-green); transition: width 0.5s ease-in-out; z-index: 1; }
+.btn-progress-text { position: relative; z-index: 2; padding: 12px; font-weight: bold; color: white; display: flex; justify-content: center; align-items: center; gap: 8px; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+.btn-progress-container.ready { cursor: pointer; background-color: var(--primary-green); }
+.btn-progress-container.ready .btn-progress-fill { background-color: transparent; }
+.btn-progress-container.ready:hover { filter: brightness(1.1); }
 
 /* =========================================
    LOGIN E CABEÇALHO
@@ -39,18 +45,16 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .warning-card { border-left: 4px solid var(--primary-green); }
 
 /* =========================================
-   PAINEL DO ADMIN (Turmas Grandes)
+   PAINEL DO ADMIN E TURMAS
 ========================================= */
 #admin-dashboard { flex: 1; display: flex; flex-direction: column; }
 .dashboard-header { margin-bottom: 20px; text-align: center; }
 .dashboard-header h2 { font-size: 1.8rem; color: var(--primary-green); }
 .turmas-grid-large { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 20px; padding-bottom: 20px; }
-.turma-card-large { background: linear-gradient(135deg, var(--bg-card) 0%, #252525 100%); border: 1px solid #333; border-left: 5px solid var(--primary-green); border-radius: 15px; padding: 40px 20px; display: flex; align-items: center; justify-content: center; gap: 25px; color: white; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; width: 100%; text-align: center; flex: 1; min-height: 120px; }
+.turma-card-large { background: linear-gradient(135deg, var(--bg-card) 0%, #252525 100%); border: 1px solid #333; border-left: 5px solid var(--primary-green); border-radius: 15px; padding: 40px 20px; display: flex; align-items: center; justify-content: center; gap: 25px; color: white; cursor: pointer; transition: transform 0.2s; width: 100%; text-align: center; flex: 1; min-height: 120px; }
 .turma-card-large:hover { transform: scale(1.02); border-color: var(--primary-green); box-shadow: 0 8px 20px rgba(0, 204, 136, 0.15); }
 .tc-icon { font-size: 3rem; color: var(--primary-green); }
 .tc-info h3 { font-size: 2rem; }
-
-/* Lista de Alunos e Avatares */
 .class-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
 .students-list-container { background-color: var(--bg-card); border: 1px solid #333; border-radius: 12px; padding: 20px; }
 .students-list { list-style: none; padding: 0; margin: 0; }
@@ -60,8 +64,6 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .student-info strong { font-size: 1.1rem; }
 .student-info span { font-size: 0.85rem; color: var(--text-muted); }
 .list-avatar { width: 45px; height: 45px; border-radius: 50%; background-color: var(--primary-green); display: flex; justify-content: center; align-items: center; color: white; object-fit: cover; flex-shrink: 0; }
-
-/* Centro de Comando */
 .student-profile-header { text-align: center; margin-bottom: 20px; }
 .profile-avatar { width: 80px; height: 80px; background-color: var(--primary-green); border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 10px auto; font-size: 2rem; color: white; position: relative; overflow: hidden; }
 .edit-avatar-btn { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.6); font-size: 0.75rem; text-align: center; padding: 4px 0; cursor: pointer; transition: 0.2s; color: white;}
@@ -75,7 +77,7 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .disabled-hub-card { opacity: 0.3; pointer-events: none; filter: grayscale(100%); }
 
 /* =========================================
-   AVALIAÇÕES
+   AVALIAÇÕES E FALTAS
 ========================================= */
 .component-section { margin-bottom: 25px; background-color: var(--bg-card); border: 1px solid #333; border-radius: 12px; overflow: hidden; }
 .component-header { background-color: rgba(0, 204, 136, 0.1); color: var(--primary-green); padding: 15px; font-weight: bold; font-size: 1.1rem; border-bottom: 1px solid #333; }
@@ -88,7 +90,7 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .mod-view { display: flex; justify-content: space-between; align-items: center; width: 100%; }
 .mod-edit { background-color: var(--bg-dark); padding: 15px; border-radius: 8px; border: 1px solid #333; margin-top: 15px; }
 
-.grade-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 15px; }
+.grade-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
 .grade-btn { background-color: #2a2a2a; color: white; border: 1px solid #444; border-radius: 6px; padding: 12px 0; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
 .grade-btn.selected { background-color: var(--primary-green); color: var(--bg-dark); border-color: var(--primary-green); }
 .grade-btn.rep { color: var(--danger-red); border-color: var(--danger-red); }
@@ -97,21 +99,24 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .nota-badge.sn { color: var(--text-muted); border-color: #555; background-color: transparent; }
 .nota-badge.rep { color: var(--danger-red); border-color: var(--danger-red); background-color: rgba(255, 77, 77, 0.1); }
 
-/* =========================================
-   FALTAS (Novo Design)
-========================================= */
+/* Faltas (Novo Design Abas e Lista) */
 .falta-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
 .falta-tab-btn { flex: 1; padding: 12px; background-color: var(--bg-dark); color: var(--text-muted); border: 1px solid #333; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
 .falta-tab-btn.active { background-color: rgba(0, 204, 136, 0.1); border-color: var(--primary-green); color: var(--primary-green); }
-
-/* Faltas Por Data */
-.falta-registo-card { display: flex; background: var(--bg-dark); border: 1px solid #333; border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+.falta-registo-card { display: flex; background: var(--bg-dark); border: 1px solid #333; border-radius: 8px; margin-bottom: 10px; overflow: hidden; align-items: stretch;}
 .falta-status-bar { width: 10px; flex-shrink: 0; }
 .falta-status-bar.injustificada { background-color: var(--danger-red); }
 .falta-status-bar.justificada { background-color: var(--success-green); }
 .falta-registo-info { padding: 12px 15px; flex: 1; display: flex; justify-content: space-between; align-items: center; }
 .falta-registo-info strong { font-size: 1.1rem; display: block; margin-bottom: 3px;}
 .falta-registo-meta { font-size: 0.85rem; color: var(--text-muted); }
+.falta-actions { display: flex; flex-direction: column; justify-content: space-around; background: #222; padding: 5px; }
+.falta-actions button { background: none; border: none; color: var(--text-muted); padding: 8px; cursor: pointer; transition: 0.2s; }
+.falta-actions button:hover { color: white; }
+
+.falta-badge { font-weight: bold; font-size: 1.1rem; padding: 4px 10px; border-radius: 6px; background: rgba(255, 255, 255, 0.1); }
+.progress-bar-bg { height: 8px; background-color: #333; border-radius: 4px; overflow: hidden; margin-top: 15px; width: 100%; }
+.progress-bar-fill { height: 100%; background-color: var(--primary-green); transition: width 0.3s; }
 
 /* =========================================
    INFORMAÇÕES E PRHF
@@ -129,14 +134,18 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .tabs-container { display: flex; gap: 10px; margin-bottom: 15px; }
 .tab-btn { flex: 1; padding: 10px; background-color: var(--bg-dark); color: var(--text-muted); border: 1px solid #333; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
 .tab-btn.active { background-color: rgba(0, 204, 136, 0.1); border-color: var(--primary-green); color: var(--primary-green); }
+
 .prhf-mini-card { background-color: var(--bg-card); border: 1px solid #333; border-radius: 8px; padding: 15px; margin-bottom: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
-.prhf-mini-card.ativa { border-left: 4px solid var(--danger-red); }
+/* As 3 Cores do PRHF */
+.prhf-mini-card.ativa-decorrer { border-left: 4px solid var(--warning-yellow); }
+.prhf-mini-card.ativa-terminado { border-left: 4px solid var(--danger-red); }
 .prhf-mini-card.concluida { border-left: 4px solid var(--success-green); }
 
 .paper-sheet { background-color: #fdfdfd; color: #333; width: 90%; max-width: 450px; border-radius: 12px; padding: 25px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 .paper-header { border-bottom: 2px solid #ddd; padding-bottom: 15px; margin-bottom: 15px; text-align: center; }
 .paper-status { font-size: 0.85rem; font-weight: bold; padding: 3px 10px; border-radius: 20px; display: inline-block; margin-top: 5px; }
-.paper-status.ativa { background-color: rgba(255, 77, 77, 0.2); color: var(--danger-red); }
+.paper-status.ativa-decorrer { background-color: rgba(255, 204, 0, 0.2); color: #d4a000; }
+.paper-status.ativa-terminado { background-color: rgba(255, 77, 77, 0.2); color: var(--danger-red); }
 .paper-status.concluida { background-color: rgba(40, 167, 69, 0.2); color: var(--success-green); }
 .paper-details p { margin-bottom: 10px; font-size: 0.95rem; line-height: 1.5; }
 .paper-desc { background-color: #f5f5f5; padding: 15px; border-radius: 8px; border-left: 3px solid #ccc; font-style: italic; margin-top: 15px; margin-bottom: 20px; }
@@ -144,19 +153,18 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .btn-close-paper { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.2rem; color: #888; cursor: pointer; }
 @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
-/* Formulário Manual */
 .manual-presence-form { display: none; background: #f0f0f0; padding: 15px; border-radius: 8px; margin-top: 10px; border: 1px solid #ccc; }
 .manual-presence-form input { background: white; color: #333; border: 1px solid #aaa; padding: 10px; margin-bottom: 8px; }
 .registo-item { display: flex; justify-content: space-between; align-items:center; background-color: white; padding: 10px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 5px; font-size: 0.9rem; }
 .registo-item-del { color: var(--danger-red); cursor: pointer; padding: 5px;}
 
-/* MODALS GERAIS */
+/* =========================================
+   MODALS GERAIS E NAV
+========================================= */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
 .modal-overlay.bottom { align-items: flex-end; }
 .action-sheet { background-color: var(--bg-card); width: 100%; border-radius: 20px 20px 0 0; padding: 25px; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 12px; animation: slideUp 0.3s ease-out; }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-/* NAVEGAÇÃO INFERIOR */
 .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--bg-card); display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #333; }
 .nav-item { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: var(--text-muted); font-size: 0.75rem; gap: 5px; }
 .nav-item.active { color: var(--primary-green); }
