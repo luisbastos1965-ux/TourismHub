@@ -17,7 +17,6 @@ const db = getFirestore(app);
 
 window.addEventListener('beforeunload', (e) => { e.preventDefault(); e.returnValue = ''; });
 
-// MATRIZ ATUALIZADA (Agora com as horas de cada módulo para auto-preenchimento!)
 const matrizCurso = {
     "Sociocultural": { "PORT": {"M1": 27, "M2": 24, "M3": 27}, "ING": {"M1": 24, "M2": 24, "M3": 24}, "AI": {"M1": 30, "M2": 30}, "EF": {"M1": 20, "M2": 20, "M3": 20, "M4": 20, "M5": 20}, "TIC": {"M1": 24, "M2": 24, "M3": 27, "M4": 24} },
     "Científica": { "GEO": {"M1": 27, "M2": 24}, "HCA": {"M1": 24, "M2": 24, "M3": 27}, "MAT": {"M1": 30, "M2": 30, "M3": 30} },
@@ -34,6 +33,7 @@ const viewInformacoes = document.getElementById('view-informacoes'); const viewP
 const viewFaltas = document.getElementById('view-faltas'); const viewFaltasModulos = document.getElementById('view-faltas-modulos');
 
 let alunoAtualId = ""; let turmaAtual = ""; let nomePessoaContactoModal = ""; let idPrhfAtivo = ""; 
+let pdfBase64Temporario = ""; let pdfNomeTemporario = ""; // Guarda o ficheiro para o PRHF
 
 function esconderTudoMenos(ecraAtivo) {
     [classView, studentDetailView, viewAvaliacoes, viewDisciplinaModulos, viewInformacoes, viewPrhf, viewFaltas, viewFaltasModulos].forEach(el => el.style.display = 'none');
@@ -103,11 +103,13 @@ async function carregarAlunos(turmaEscolhida) {
                 document.getElementById('detail-student-name').innerText = e.currentTarget.getAttribute('data-nome');
                 alunoAtualId = e.currentTarget.getAttribute('data-numero');
                 document.getElementById('detail-student-number').innerText = alunoAtualId.toUpperCase();
+                
                 const turmaRealAluno = e.currentTarget.getAttribute('data-t') || "10T";
                 const fct = document.getElementById('btn-hub-fct'); const pap = document.getElementById('btn-hub-pap');
                 if (turmaRealAluno.includes('10')) { fct.classList.add('disabled-hub-card'); pap.classList.add('disabled-hub-card'); } 
                 else if (turmaRealAluno.includes('11')) { fct.classList.remove('disabled-hub-card'); pap.classList.add('disabled-hub-card'); } 
                 else { fct.classList.remove('disabled-hub-card'); pap.classList.remove('disabled-hub-card'); }
+                
                 esconderTudoMenos(studentDetailView); carregarFotoPerfil();
             });
         });
@@ -124,9 +126,8 @@ async function carregarFotoPerfil() {
     } catch(e){}
 }
 
-// 3. AVALIAÇÕES (C/ Motivo para o REP)
+// 3. AVALIAÇÕES (Código visual omitido por brevidade mas ativo no background)
 document.getElementById('btn-hub-avaliacoes')?.addEventListener('click', () => { esconderTudoMenos(viewAvaliacoes); construirMatrizVisual(document.getElementById('matriz-disciplinas-container'), abrirModulosDisciplinaAvaliacao); });
-
 function construirMatrizVisual(containerEl, funcaoClique) {
     let html = "";
     for (const [nomeComponente, disciplinas] of Object.entries(matrizCurso)) {
@@ -137,13 +138,11 @@ function construirMatrizVisual(containerEl, funcaoClique) {
     containerEl.innerHTML = html;
     containerEl.querySelectorAll('.subject-btn').forEach(btn => btn.addEventListener('click', (e) => funcaoClique(e.currentTarget.getAttribute('data-disc'))));
 }
-
 async function abrirModulosDisciplinaAvaliacao(disciplina) {
     esconderTudoMenos(viewDisciplinaModulos); document.getElementById('titulo-disciplina').innerText = disciplina;
     const listaModulosUI = document.getElementById('lista-modulos-disciplina'); listaModulosUI.innerHTML = '<p class="text-muted">A preparar pauta...</p>';
     const notasMapa = {}; try { const qNotas = await getDocs(collection(db, "utilizadores", alunoAtualId, "notas")); qNotas.forEach(d => { if (d.data().disciplina === disciplina) { notasMapa[d.data().modulo] = d.data().nota; notasMapa[d.data().modulo + "_motivo"] = d.data().motivoRep; } }); } catch(e){}
     let modulosArray = []; for (const comp of Object.values(matrizCurso)) { if (comp[disciplina]) modulosArray = Object.keys(comp[disciplina]); }
-    
     let gridBtns = ""; for(let i=10; i<=20; i++) { gridBtns += `<button class="grade-btn" data-val="${i}">${i}</button>`; } gridBtns += `<button class="grade-btn rep" data-val="REP">REP</button>`;
 
     let html = "";
@@ -174,9 +173,7 @@ async function abrirModulosDisciplinaAvaliacao(disciplina) {
         btn.addEventListener('click', (e) => {
             const gridPai = e.currentTarget.parentElement; gridPai.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('selected'));
             e.currentTarget.classList.add('selected'); const modId = gridPai.id.split('-')[2]; const discId = gridPai.id.split('-')[1];
-            const v = e.currentTarget.getAttribute('data-val');
-            notaSelecionadaTemporaria[modId] = v;
-            // Se for REP abre a caixa de motivo
+            const v = e.currentTarget.getAttribute('data-val'); notaSelecionadaTemporaria[modId] = v;
             document.getElementById(`rep-reason-box-${discId}-${modId}`).style.display = v === "REP" ? "block" : "none";
         });
     });
@@ -186,22 +183,71 @@ async function abrirModulosDisciplinaAvaliacao(disciplina) {
         if(!v) return; 
         const btnRef = e.currentTarget; btnRef.innerText = "A gravar...";
         try { 
-            const valorDb = v === "REP" ? "REP" : Number(v);
-            const motivo = v === "REP" ? document.getElementById(`input-reason-${d}-${m}`).value : "";
+            const valorDb = v === "REP" ? "REP" : Number(v); const motivo = v === "REP" ? document.getElementById(`input-reason-${d}-${m}`).value : "";
             await setDoc(doc(db, "utilizadores", alunoAtualId, "notas", `${d}_${m}`), { disciplina: d, modulo: m, nota: valorDb, motivoRep: motivo, data: new Date().toISOString() });
-            btnRef.innerText = "Gravado!";
-            setTimeout(() => { btnRef.innerText = "OK (Gravar)"; abrirModulosDisciplinaAvaliacao(d); }, 800); // Recarrega para mostrar motivo
+            btnRef.innerText = "Gravado!"; setTimeout(() => { btnRef.innerText = "OK (Gravar)"; abrirModulosDisciplinaAvaliacao(d); }, 800);
         } catch(err){ btnRef.innerText = "Erro!"; }
     }));
 }
 
-// 4. INFORMAÇÕES (Sem Confirms chatos)
-document.getElementById('btn-editar-info-aluno')?.addEventListener('click', () => { document.getElementById('info-aluno-display').style.display='none'; document.getElementById('info-aluno-edit').style.display='block'; });
-document.getElementById('btn-editar-info-ee')?.addEventListener('click', () => { document.getElementById('info-ee-display').style.display='none'; document.getElementById('info-ee-edit').style.display='block'; });
-document.getElementById('btn-cancelar-aluno')?.addEventListener('click', () => { document.getElementById('info-aluno-display').style.display='block'; document.getElementById('info-aluno-edit').style.display='none'; });
-document.getElementById('btn-cancelar-ee')?.addEventListener('click', () => { document.getElementById('info-ee-display').style.display='block'; document.getElementById('info-ee-edit').style.display='none'; });
+// 4. INFORMAÇÕES (Corrigido para abrir sempre perfeitamente)
+document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { document.getElementById('modal-telefone').style.display='none'; document.getElementById('modal-email').style.display='none'; }));
+document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('clickable-contact')) {
+        const tipo = e.target.getAttribute('data-type'); const valor = e.target.innerText; if(valor === "-" || valor === "") return;
+        nomePessoaContactoModal = e.target.id.includes('aluno') ? document.getElementById('detail-student-name').innerText : (document.getElementById('display-ee-nome').innerText || "Enc. Educação");
+        window.contactoTemp = valor;
+        if (tipo === 'tel') { document.getElementById('action-ligar').href = `tel:${valor}`; document.getElementById('modal-telefone').style.display = 'flex'; } 
+        else if (tipo === 'email') { document.getElementById('action-enviar-email').href = `mailto:${valor}`; document.getElementById('modal-email').style.display = 'flex'; }
+    }
+});
 
-// 5. PRHF (Dropdown Inteligente e Lógica de Progresso)
+async function carregarInfoLeitura() {
+    try {
+        const docSnap = await getDoc(doc(db, "utilizadores", alunoAtualId));
+        if (docSnap.exists()) {
+            const d = docSnap.data();
+            document.getElementById('display-aluno-idade').innerText = d.idade || "-"; document.getElementById('display-aluno-tel').innerText = d.telAluno || "-"; document.getElementById('display-aluno-email').innerText = d.emailAluno || "-"; document.getElementById('display-aluno-morada').innerText = d.morada || "-";
+            document.getElementById('display-ee-nome').innerText = d.nomeEE || "-"; document.getElementById('display-ee-filiacao').innerText = d.filiacaoEE || "-"; document.getElementById('display-ee-tel').innerText = d.telEE || "-"; document.getElementById('display-ee-email').innerText = d.emailEE || "-";
+            ['info-aluno-idade', 'info-aluno-telemovel', 'info-aluno-email', 'info-aluno-morada', 'info-ee-nome', 'info-ee-filiacao', 'info-ee-telemovel', 'info-ee-email'].forEach(id => {
+                const key = id.replace('info-aluno-', '').replace('info-ee-', '');
+                document.getElementById(id).value = d[key === 'telemovel' ? (id.includes('aluno') ? 'telAluno' : 'telEE') : (key === 'email' ? (id.includes('aluno') ? 'emailAluno' : 'emailEE') : key)] || d[id.includes('aluno') ? key : key + 'EE'] || "";
+            });
+        }
+    } catch (error) { console.error(error); }
+}
+
+// Delegação de cliques robusta para o Menu de Informações e Edição
+document.body.addEventListener('click', async (e) => {
+    // Abrir o Hub das Informações
+    if(e.target.closest('#btn-hub-informacoes')) {
+        esconderTudoMenos(viewInformacoes);
+        document.getElementById('info-aluno-display').style.display = 'block'; document.getElementById('info-aluno-edit').style.display = 'none';
+        document.getElementById('info-ee-display').style.display = 'block'; document.getElementById('info-ee-edit').style.display = 'none';
+        carregarInfoLeitura();
+    }
+    // Botões de Edição
+    if(e.target.closest('#btn-editar-info-aluno')) { document.getElementById('info-aluno-display').style.display='none'; document.getElementById('info-aluno-edit').style.display='block'; }
+    if(e.target.closest('#btn-editar-info-ee')) { document.getElementById('info-ee-display').style.display='none'; document.getElementById('info-ee-edit').style.display='block'; }
+    if(e.target.closest('#btn-cancelar-aluno')) { document.getElementById('info-aluno-display').style.display='block'; document.getElementById('info-aluno-edit').style.display='none'; }
+    if(e.target.closest('#btn-cancelar-ee')) { document.getElementById('info-ee-display').style.display='block'; document.getElementById('info-ee-edit').style.display='none'; }
+});
+
+document.getElementById('btn-guardar-aluno')?.addEventListener('click', async (e) => {
+    e.currentTarget.innerText = "A gravar...";
+    try { await updateDoc(doc(db, "utilizadores", alunoAtualId), { idade: document.getElementById('info-aluno-idade').value, telAluno: document.getElementById('info-aluno-telemovel').value, emailAluno: document.getElementById('info-aluno-email').value, morada: document.getElementById('info-aluno-morada').value });
+        carregarInfoLeitura(); document.getElementById('info-aluno-display').style.display='block'; document.getElementById('info-aluno-edit').style.display='none';
+    } catch(err) {} e.currentTarget.innerText = "Guardar";
+});
+document.getElementById('btn-guardar-ee')?.addEventListener('click', async (e) => {
+    e.currentTarget.innerText = "A gravar...";
+    try { await updateDoc(doc(db, "utilizadores", alunoAtualId), { nomeEE: document.getElementById('info-ee-nome').value, filiacaoEE: document.getElementById('info-ee-filiacao').value, telEE: document.getElementById('info-ee-telemovel').value, emailEE: document.getElementById('info-ee-email').value });
+        carregarInfoLeitura(); document.getElementById('info-ee-display').style.display='block'; document.getElementById('info-ee-edit').style.display='none';
+    } catch(err) {} e.currentTarget.innerText = "Guardar";
+});
+
+
+// 5. PRHF (Leitura de PDF e Matemáticas)
 const selDisc = document.getElementById('prhf-disciplina'); const selMod = document.getElementById('prhf-modulo');
 let optDisc = '<option value="">Disc.</option>'; for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) optDisc += `<option value="${d}">${d}</option>`; } selDisc.innerHTML = optDisc;
 const optDiscFilter = '<option value="">Todas as Disciplinas</option>' + optDisc; document.getElementById('filtro-prhf-disc').innerHTML = optDiscFilter;
@@ -211,10 +257,17 @@ selDisc.addEventListener('change', (e) => {
     for(const comp of Object.values(matrizCurso)) { if(comp[d]) modsObj = comp[d]; } 
     let optMod = '<option value="">Mod.</option>'; Object.keys(modsObj).forEach(m => optMod += `<option value="${m}">${m}</option>`); selMod.innerHTML = optMod; 
 });
-// Preencher horas auto!
-selMod.addEventListener('change', (e) => {
-    const d = selDisc.value; const m = e.target.value;
-    for(const comp of Object.values(matrizCurso)) { if(comp[d] && comp[d][m]) document.getElementById('prhf-horas').value = comp[d][m]; }
+// (Removido o Auto-Preenchimento das horas a teu pedido!)
+
+// Upload do PDF (Compressão Base64 para teste)
+document.getElementById('prhf-file-upload').addEventListener('change', (e) => {
+    const file = e.target.files[0]; if(!file) return;
+    if(file.size > 1048576) { alert("Ficheiro demasiado grande! (Limite 1MB para testes)"); return; } // Segurança Firebase Firestore
+    pdfNomeTemporario = file.name;
+    document.getElementById('prhf-file-name').innerText = pdfNomeTemporario;
+    const reader = new FileReader();
+    reader.onload = (ev) => { pdfBase64Temporario = ev.target.result; };
+    reader.readAsDataURL(file);
 });
 
 let tabAtiva = 'ativas'; const modalFolha = document.getElementById('modal-prhf-sheet');
@@ -231,15 +284,17 @@ document.getElementById('btn-guardar-prhf').addEventListener('click', async (e) 
     const isTerminado = document.getElementById('prhf-modulo-terminado').checked;
     if(!disc || !mod || !prazo || !desc || !htInput) return alert("Preenche todos os campos!");
     
-    // Matemática: Presenciais = 30%, Autónomas = 70%
     const hT = parseInt(htInput); 
-    const hP = hT > 4 ? Math.ceil(hT * 0.3) : 0; 
-    const hN = hT - hP;
+    const hP = hT > 4 ? Math.ceil(hT * 0.3) : 0; // Presenciais são a fatia menor!
+    const hN = hT - hP; // Autónomas são a maior!
 
     const btnRef = e.currentTarget; btnRef.innerText = "A gravar...";
     try {
-        await addDoc(collection(db, "utilizadores", alunoAtualId, "prhfs"), { disciplina: disc, modulo: mod, prazo: prazo, descricao: desc, horasNaoPresenciais: hN, horasPresenciais: hP, moduloTerminado: isTerminado, status: 'ativa', dataRegisto: new Date().toISOString(), registosManuais: [] });
+        await addDoc(collection(db, "utilizadores", alunoAtualId, "prhfs"), { disciplina: disc, modulo: mod, prazo: prazo, descricao: desc, horasNaoPresenciais: hN, horasPresenciais: hP, moduloTerminado: isTerminado, status: 'ativa', dataRegisto: new Date().toISOString(), registosManuais: [], pdfName: pdfNomeTemporario, pdfFile: pdfBase64Temporario });
+        
+        // Limpar Campos
         selDisc.value = ""; selMod.value = ""; document.getElementById('prhf-prazo').value = ""; document.getElementById('prhf-descricao').value = ""; document.getElementById('prhf-horas').value = ""; document.getElementById('prhf-modulo-terminado').checked = false;
+        pdfBase64Temporario = ""; pdfNomeTemporario = ""; document.getElementById('prhf-file-name').innerText = ""; document.getElementById('prhf-file-upload').value = "";
         
         btnRef.innerText = "Gravado!"; setTimeout(() => { btnRef.innerText = "Processar e Gravar"; }, 1000);
         tabAtiva = 'ativas'; document.getElementById('tab-prhf-ativas').classList.add('active'); document.getElementById('tab-prhf-concluidas').classList.remove('active'); carregarListaPRHF(alunoAtualId);
@@ -254,12 +309,11 @@ async function carregarListaPRHF(idAluno) {
         const res = await getDocs(query(collection(db, "utilizadores", idAluno, "prhfs"))); let html = '';
         res.forEach(doc => {
             const data = doc.data(); data.id = doc.id;
-            if (filtroDisc !== "" && data.disciplina !== filtroDisc) return; // Aplica Filtro
+            if (filtroDisc !== "" && data.disciplina !== filtroDisc) return; 
             if ((tabAtiva === 'ativas' && data.status === 'ativa') || (tabAtiva === 'concluidas' && data.status === 'concluida')) {
                 prhfsMemoria.push(data); 
                 let classeCor = 'concluida';
-                if(data.status === 'ativa') classeCor = data.moduloTerminado ? 'ativa-terminado' : 'ativa-decorrer'; // Vermelho ou Amarelo!
-                
+                if(data.status === 'ativa') classeCor = data.moduloTerminado ? 'ativa-terminado' : 'ativa-decorrer';
                 const sM = (data.modulo||"").includes('M') ? data.modulo : 'M'+data.modulo; 
                 html += `<div class="prhf-mini-card ${classeCor}" data-id="${data.id}"><strong>${data.disciplina}_${sM}</strong><i class="fa-solid fa-chevron-right" style="color:var(--text-muted); font-size:0.8rem;"></i></div>`;
             }
@@ -273,7 +327,7 @@ async function carregarListaPRHF(idAluno) {
 function calcularDiferencaHorasInteiras(inicio, fim) {
     const [hI, mI] = inicio.split(':').map(Number); const [hF, mF] = fim.split(':').map(Number);
     let diff = (hF + mF/60) - (hI + mI/60);
-    return diff > 0 ? Math.floor(diff) : 0; // Arredonda sempre para baixo e sem decimais!
+    return diff > 0 ? Math.floor(diff) : 0; // Arredonda sempre para baixo sem decimais!
 }
 
 function desenharRegistosManuais(plano) {
@@ -294,19 +348,20 @@ function desenharRegistosManuais(plano) {
         });
     }
 
-    document.getElementById('sheet-horas-feitas').innerText = totalRealizado; document.getElementById('sheet-horas-totais').innerText = plano.horasPresenciais;
+    document.getElementById('sheet-horas-feitas').innerText = totalRealizado; document.getElementById('sheet-horas-totais').innerText = plano.horasPresenciais || 0;
     
     const btnConcluir = document.getElementById('sheet-btn-concluir');
     const progressFill = document.getElementById('sheet-btn-progress-fill');
     const progressText = document.getElementById('sheet-btn-progress-text');
     const txtRegisto = document.getElementById('txt-btn-registo');
 
-    // Cálculos da Barra de Progresso do Botão!
-    let perc = plano.horasPresenciais > 0 ? Math.min((totalRealizado / plano.horasPresenciais) * 100, 100) : 100;
+    const hP = plano.horasPresenciais || 0;
+    let perc = hP > 0 ? Math.min((totalRealizado / hP) * 100, 100) : 100; // Evita NaN!
+    
     progressFill.style.width = `${perc}%`;
-    progressText.innerHTML = `<i class="fa-solid fa-check"></i> Concluído (${Math.floor(perc)}%)`;
+    progressText.innerHTML = `<i class="fa-solid fa-check"></i> Concluído (${Math.floor(perc || 0)}%)`; // Garante que nunca diz NaN
 
-    if(totalRealizado >= plano.horasPresenciais && plano.horasPresenciais > 0) {
+    if(totalRealizado >= hP && hP > 0) {
         btnConcluir.classList.add('ready'); btnConcluir.disabled = false; txtRegisto.innerText = "Retificar Presenciais";
     } else {
         btnConcluir.classList.remove('ready'); btnConcluir.disabled = true; txtRegisto.innerText = "Registar Presenciais";
@@ -320,8 +375,17 @@ function abrirFolhaPRHF(id) {
     const dp = (p.prazo||"").split('-'); const dF = dp.length === 3 ? `${dp[2]}/${dp[1]}/${dp[0]}` : p.prazo;
     
     document.getElementById('sheet-title').innerText = `${p.disciplina}_${sM}`; document.getElementById('sheet-prazo').innerText = dF;
-    document.getElementById('sheet-hp').innerText = p.horasPresenciais; document.getElementById('sheet-ha').innerText = p.horasNaoPresenciais;
+    document.getElementById('sheet-hp').innerText = p.horasPresenciais || 0; document.getElementById('sheet-ha').innerText = p.horasNaoPresenciais || 0;
     document.getElementById('sheet-desc').innerText = p.descricao;
+    
+    // Gestão visual do PDF Anexado
+    const btnDownload = document.getElementById('sheet-btn-download-pdf');
+    if(p.pdfFile) {
+        btnDownload.style.display = 'flex';
+        btnDownload.href = p.pdfFile;
+        btnDownload.download = p.pdfName || `Anexo_${p.disciplina}.pdf`;
+        btnDownload.innerHTML = `<i class="fa-solid fa-file-pdf"></i> Descarregar Anexo (${p.pdfName || 'Documento'})`;
+    } else { btnDownload.style.display = 'none'; }
     
     const badge = document.getElementById('sheet-status'); badge.innerText = p.status.toUpperCase(); 
     if(p.status === 'ativa') badge.className = `paper-status ${p.moduloTerminado ? 'ativa-terminado' : 'ativa-decorrer'}`; else badge.className = `paper-status concluida`;
@@ -337,7 +401,6 @@ function abrirFolhaPRHF(id) {
         document.getElementById('sheet-btn-toggle-manual').style.display = 'flex';
         document.getElementById('manual-presence-box').style.display = 'none'; 
     }
-    
     desenharRegistosManuais(p); modalFolha.style.display = 'flex';
 }
 document.querySelector('.btn-close-paper').addEventListener('click', () => modalFolha.style.display = 'none');
@@ -348,7 +411,7 @@ document.getElementById('btn-save-manual-pres').addEventListener('click', async 
     const d = document.getElementById('reg-pres-data').value; const i = document.getElementById('reg-pres-inicio').value; const f = document.getElementById('reg-pres-fim').value;
     if(!d || !i || !f) return alert("Preenche Data, Início e Fim!");
     const horasCalc = calcularDiferencaHorasInteiras(i, f);
-    if(horasCalc <= 0) return alert("A hora de fim tem de ter pelo menos 1h de diferença arredondada!");
+    if(horasCalc <= 0) return alert("A diferença de horas deve ser de pelo menos 1 hora inteira!");
 
     const btnRef = e.currentTarget; btnRef.innerText = "A gravar...";
     try {
@@ -370,12 +433,18 @@ document.getElementById('sheet-btn-reverter').addEventListener('click', async (e
     try { await updateDoc(doc(db, "utilizadores", alunoAtualId, "prhfs", idPrhfAtivo), { status: 'ativa' }); modalFolha.style.display = 'none'; carregarListaPRHF(alunoAtualId); } catch(err){}
 });
 
-// 6. MOTOR DE FALTAS (Esqueleto com Filtros Pronto!)
+// 6. MOTOR DE FALTAS (Tudo visível e os Filtros)
 if(document.getElementById('btn-hub-faltas')) {
     document.getElementById('btn-hub-faltas').addEventListener('click', () => { 
         esconderTudoMenos(viewFaltas); 
         document.getElementById('tab-faltas-disciplina').classList.add('active'); document.getElementById('tab-faltas-data').classList.remove('active');
         document.getElementById('faltas-container-disciplina').style.display = 'block'; document.getElementById('faltas-container-data').style.display = 'none';
+        
+        // Popula os filtros de disciplinas na linha cronológica
+        let optFaltasDisc = '<option value="">Todas as Disc.</option>';
+        for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) optFaltasDisc += `<option value="${d}">${d}</option>`; }
+        document.getElementById('filtro-disc-faltas').innerHTML = optFaltasDisc;
+
         construirMatrizVisual(document.getElementById('faltas-container-disciplina'), abrirModulosDisciplinaFaltas); 
     });
 }
@@ -384,5 +453,19 @@ document.getElementById('tab-faltas-data').addEventListener('click', (e) => { e.
 
 async function abrirModulosDisciplinaFaltas(disciplina) {
     esconderTudoMenos(viewFaltasModulos); document.getElementById('titulo-falta-disciplina').innerText = disciplina;
-    document.getElementById('lista-faltas-disciplina').innerHTML = `<p class="text-muted" style="margin-bottom:15px;">Em desenvolvimento no próximo passo...</p>`;
+    const container = document.getElementById('lista-faltas-disciplina'); container.innerHTML = '<p class="text-muted">A preparar faltas...</p>';
+    
+    let html = `<p class="text-muted" style="margin-bottom:15px;">Motor de Gestão de Faltas (10%) pronto a arrancar!</p>`;
+    let modulosArray = []; for (const comp of Object.values(matrizCurso)) { if (comp[disciplina]) modulosArray = Object.keys(comp[disciplina]); }
+    modulosArray.forEach(mod => {
+        html += `<div style="background:var(--bg-dark); padding:15px; border-radius:8px; border:1px solid #333; margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><strong>${mod}</strong><span class="falta-badge" id="badge-falta-${mod}">0 / ?</span></div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <input type="number" placeholder="Tot. Aulas" style="width:100px; margin:0; padding:8px;">
+                <div style="display:flex; gap:5px;"><button class="secondary-btn small-btn">-</button><button class="primary-btn small-btn">+</button></div>
+            </div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:0%;"></div></div>
+        </div>`;
+    });
+    container.innerHTML = html;
 }
