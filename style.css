@@ -202,3 +202,49 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
     display: block;
     word-break: break-all;
 }
+
+/* --- Barra de Ferramentas das Faltas --- */
+.faltas-toolbar {
+    display: flex;
+    gap: 10px;
+    background-color: var(--bg-card);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    margin-bottom: 15px;
+}
+
+.faltas-toolbar button {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #444;
+    background: var(--bg-dark);
+    color: var(--text-light);
+    cursor: pointer;
+    transition: 0.2s;
+    font-weight: bold;
+}
+
+.faltas-toolbar button:hover {
+    border-color: var(--primary-green);
+    color: var(--primary-green);
+}
+
+.faltas-toolbar button.del-btn:hover {
+    border-color: var(--danger-red);
+    color: var(--danger-red);
+}
+
+/* Checkbox para seleção múltipla */
+.falta-checkbox {
+    margin-right: 15px;
+    width: 20px;
+    height: 20px;
+    accent-color: var(--primary-green);
+    cursor: pointer;
+}
