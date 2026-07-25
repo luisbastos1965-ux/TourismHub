@@ -33,7 +33,7 @@ const viewInformacoes = document.getElementById('view-informacoes'); const viewP
 const viewFaltas = document.getElementById('view-faltas'); const viewFaltasModulos = document.getElementById('view-faltas-modulos');
 
 let alunoAtualId = ""; let turmaAtual = ""; let nomePessoaContactoModal = ""; let idPrhfAtivo = ""; 
-let pdfBase64Temporario = ""; let pdfNomeTemporario = ""; // Guarda o ficheiro para o PRHF
+let pdfBase64Temporario = ""; let pdfNomeTemporario = "";
 
 function esconderTudoMenos(ecraAtivo) {
     [classView, studentDetailView, viewAvaliacoes, viewDisciplinaModulos, viewInformacoes, viewPrhf, viewFaltas, viewFaltasModulos].forEach(el => el.style.display = 'none');
@@ -103,13 +103,11 @@ async function carregarAlunos(turmaEscolhida) {
                 document.getElementById('detail-student-name').innerText = e.currentTarget.getAttribute('data-nome');
                 alunoAtualId = e.currentTarget.getAttribute('data-numero');
                 document.getElementById('detail-student-number').innerText = alunoAtualId.toUpperCase();
-                
                 const turmaRealAluno = e.currentTarget.getAttribute('data-t') || "10T";
                 const fct = document.getElementById('btn-hub-fct'); const pap = document.getElementById('btn-hub-pap');
                 if (turmaRealAluno.includes('10')) { fct.classList.add('disabled-hub-card'); pap.classList.add('disabled-hub-card'); } 
                 else if (turmaRealAluno.includes('11')) { fct.classList.remove('disabled-hub-card'); pap.classList.add('disabled-hub-card'); } 
                 else { fct.classList.remove('disabled-hub-card'); pap.classList.remove('disabled-hub-card'); }
-                
                 esconderTudoMenos(studentDetailView); carregarFotoPerfil();
             });
         });
@@ -126,7 +124,19 @@ async function carregarFotoPerfil() {
     } catch(e){}
 }
 
-// 3. AVALIAÇÕES (Código visual omitido por brevidade mas ativo no background)
+document.getElementById('upload-avatar').addEventListener('change', (e) => {
+    const file = e.target.files[0]; if(!file) return; const reader = new FileReader();
+    reader.onload = (event) => {
+        const img = new Image(); img.onload = () => {
+            const canvas = document.createElement('canvas'); canvas.width = 150; canvas.height = 150; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, 150, 150);
+            const base64 = canvas.toDataURL('image/jpeg', 0.8);
+            updateDoc(doc(db, 'utilizadores', alunoAtualId), { fotoPerfil: base64 });
+            document.getElementById('avatar-img').src = base64; document.getElementById('avatar-img').style.display = 'block'; document.getElementById('avatar-icon').style.display = 'none';
+        }; img.src = event.target.result;
+    }; reader.readAsDataURL(file);
+});
+
+// 3. AVALIAÇÕES (Grelha c/ Motivos)
 document.getElementById('btn-hub-avaliacoes')?.addEventListener('click', () => { esconderTudoMenos(viewAvaliacoes); construirMatrizVisual(document.getElementById('matriz-disciplinas-container'), abrirModulosDisciplinaAvaliacao); });
 function construirMatrizVisual(containerEl, funcaoClique) {
     let html = "";
@@ -138,6 +148,7 @@ function construirMatrizVisual(containerEl, funcaoClique) {
     containerEl.innerHTML = html;
     containerEl.querySelectorAll('.subject-btn').forEach(btn => btn.addEventListener('click', (e) => funcaoClique(e.currentTarget.getAttribute('data-disc'))));
 }
+
 async function abrirModulosDisciplinaAvaliacao(disciplina) {
     esconderTudoMenos(viewDisciplinaModulos); document.getElementById('titulo-disciplina').innerText = disciplina;
     const listaModulosUI = document.getElementById('lista-modulos-disciplina'); listaModulosUI.innerHTML = '<p class="text-muted">A preparar pauta...</p>';
@@ -190,7 +201,7 @@ async function abrirModulosDisciplinaAvaliacao(disciplina) {
     }));
 }
 
-// 4. INFORMAÇÕES (Corrigido para abrir sempre perfeitamente)
+// 4. INFORMAÇÕES
 document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { document.getElementById('modal-telefone').style.display='none'; document.getElementById('modal-email').style.display='none'; }));
 document.addEventListener('click', (e) => {
     if (e.target.classList.contains('clickable-contact')) {
@@ -200,6 +211,11 @@ document.addEventListener('click', (e) => {
         if (tipo === 'tel') { document.getElementById('action-ligar').href = `tel:${valor}`; document.getElementById('modal-telefone').style.display = 'flex'; } 
         else if (tipo === 'email') { document.getElementById('action-enviar-email').href = `mailto:${valor}`; document.getElementById('modal-email').style.display = 'flex'; }
     }
+});
+document.getElementById('action-guardar-vcard')?.addEventListener('click', () => {
+    const vcard = `BEGIN:VCARD\nVERSION:3.0\nFN:${nomePessoaContactoModal}\nTEL:${window.contactoTemp}\nEND:VCARD`;
+    const blob = new Blob([vcard], { type: 'text/vcard' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${nomePessoaContactoModal.replace(/\s+/g,'_')}.vcf`;
+    document.body.appendChild(link); link.click(); document.body.removeChild(link); document.getElementById('modal-telefone').style.display = 'none';
 });
 
 async function carregarInfoLeitura() {
@@ -217,16 +233,13 @@ async function carregarInfoLeitura() {
     } catch (error) { console.error(error); }
 }
 
-// Delegação de cliques robusta para o Menu de Informações e Edição
 document.body.addEventListener('click', async (e) => {
-    // Abrir o Hub das Informações
     if(e.target.closest('#btn-hub-informacoes')) {
         esconderTudoMenos(viewInformacoes);
         document.getElementById('info-aluno-display').style.display = 'block'; document.getElementById('info-aluno-edit').style.display = 'none';
         document.getElementById('info-ee-display').style.display = 'block'; document.getElementById('info-ee-edit').style.display = 'none';
         carregarInfoLeitura();
     }
-    // Botões de Edição
     if(e.target.closest('#btn-editar-info-aluno')) { document.getElementById('info-aluno-display').style.display='none'; document.getElementById('info-aluno-edit').style.display='block'; }
     if(e.target.closest('#btn-editar-info-ee')) { document.getElementById('info-ee-display').style.display='none'; document.getElementById('info-ee-edit').style.display='block'; }
     if(e.target.closest('#btn-cancelar-aluno')) { document.getElementById('info-aluno-display').style.display='block'; document.getElementById('info-aluno-edit').style.display='none'; }
@@ -246,8 +259,7 @@ document.getElementById('btn-guardar-ee')?.addEventListener('click', async (e) =
     } catch(err) {} e.currentTarget.innerText = "Guardar";
 });
 
-
-// 5. PRHF (Leitura de PDF e Matemáticas)
+// 5. PRHF (Upload de PDF e Gestão Manual das Horas)
 const selDisc = document.getElementById('prhf-disciplina'); const selMod = document.getElementById('prhf-modulo');
 let optDisc = '<option value="">Disc.</option>'; for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) optDisc += `<option value="${d}">${d}</option>`; } selDisc.innerHTML = optDisc;
 const optDiscFilter = '<option value="">Todas as Disciplinas</option>' + optDisc; document.getElementById('filtro-prhf-disc').innerHTML = optDiscFilter;
@@ -257,17 +269,13 @@ selDisc.addEventListener('change', (e) => {
     for(const comp of Object.values(matrizCurso)) { if(comp[d]) modsObj = comp[d]; } 
     let optMod = '<option value="">Mod.</option>'; Object.keys(modsObj).forEach(m => optMod += `<option value="${m}">${m}</option>`); selMod.innerHTML = optMod; 
 });
-// (Removido o Auto-Preenchimento das horas a teu pedido!)
 
-// Upload do PDF (Compressão Base64 para teste)
 document.getElementById('prhf-file-upload').addEventListener('change', (e) => {
     const file = e.target.files[0]; if(!file) return;
-    if(file.size > 1048576) { alert("Ficheiro demasiado grande! (Limite 1MB para testes)"); return; } // Segurança Firebase Firestore
+    if(file.size > 1048576) { alert("Ficheiro demasiado grande! (Limite 1MB)"); return; } 
     pdfNomeTemporario = file.name;
     document.getElementById('prhf-file-name').innerText = pdfNomeTemporario;
-    const reader = new FileReader();
-    reader.onload = (ev) => { pdfBase64Temporario = ev.target.result; };
-    reader.readAsDataURL(file);
+    const reader = new FileReader(); reader.onload = (ev) => { pdfBase64Temporario = ev.target.result; }; reader.readAsDataURL(file);
 });
 
 let tabAtiva = 'ativas'; const modalFolha = document.getElementById('modal-prhf-sheet');
@@ -284,15 +292,11 @@ document.getElementById('btn-guardar-prhf').addEventListener('click', async (e) 
     const isTerminado = document.getElementById('prhf-modulo-terminado').checked;
     if(!disc || !mod || !prazo || !desc || !htInput) return alert("Preenche todos os campos!");
     
-    const hT = parseInt(htInput); 
-    const hP = hT > 4 ? Math.ceil(hT * 0.3) : 0; // Presenciais são a fatia menor!
-    const hN = hT - hP; // Autónomas são a maior!
+    const hT = parseInt(htInput); const hP = hT > 4 ? Math.ceil(hT * 0.3) : 0; const hN = hT - hP;
 
     const btnRef = e.currentTarget; btnRef.innerText = "A gravar...";
     try {
         await addDoc(collection(db, "utilizadores", alunoAtualId, "prhfs"), { disciplina: disc, modulo: mod, prazo: prazo, descricao: desc, horasNaoPresenciais: hN, horasPresenciais: hP, moduloTerminado: isTerminado, status: 'ativa', dataRegisto: new Date().toISOString(), registosManuais: [], pdfName: pdfNomeTemporario, pdfFile: pdfBase64Temporario });
-        
-        // Limpar Campos
         selDisc.value = ""; selMod.value = ""; document.getElementById('prhf-prazo').value = ""; document.getElementById('prhf-descricao').value = ""; document.getElementById('prhf-horas').value = ""; document.getElementById('prhf-modulo-terminado').checked = false;
         pdfBase64Temporario = ""; pdfNomeTemporario = ""; document.getElementById('prhf-file-name').innerText = ""; document.getElementById('prhf-file-upload').value = "";
         
@@ -312,8 +316,7 @@ async function carregarListaPRHF(idAluno) {
             if (filtroDisc !== "" && data.disciplina !== filtroDisc) return; 
             if ((tabAtiva === 'ativas' && data.status === 'ativa') || (tabAtiva === 'concluidas' && data.status === 'concluida')) {
                 prhfsMemoria.push(data); 
-                let classeCor = 'concluida';
-                if(data.status === 'ativa') classeCor = data.moduloTerminado ? 'ativa-terminado' : 'ativa-decorrer';
+                let classeCor = 'concluida'; if(data.status === 'ativa') classeCor = data.moduloTerminado ? 'ativa-terminado' : 'ativa-decorrer';
                 const sM = (data.modulo||"").includes('M') ? data.modulo : 'M'+data.modulo; 
                 html += `<div class="prhf-mini-card ${classeCor}" data-id="${data.id}"><strong>${data.disciplina}_${sM}</strong><i class="fa-solid fa-chevron-right" style="color:var(--text-muted); font-size:0.8rem;"></i></div>`;
             }
@@ -327,7 +330,7 @@ async function carregarListaPRHF(idAluno) {
 function calcularDiferencaHorasInteiras(inicio, fim) {
     const [hI, mI] = inicio.split(':').map(Number); const [hF, mF] = fim.split(':').map(Number);
     let diff = (hF + mF/60) - (hI + mI/60);
-    return diff > 0 ? Math.floor(diff) : 0; // Arredonda sempre para baixo sem decimais!
+    return diff > 0 ? Math.floor(diff) : 0; 
 }
 
 function desenharRegistosManuais(plano) {
@@ -350,16 +353,10 @@ function desenharRegistosManuais(plano) {
 
     document.getElementById('sheet-horas-feitas').innerText = totalRealizado; document.getElementById('sheet-horas-totais').innerText = plano.horasPresenciais || 0;
     
-    const btnConcluir = document.getElementById('sheet-btn-concluir');
-    const progressFill = document.getElementById('sheet-btn-progress-fill');
-    const progressText = document.getElementById('sheet-btn-progress-text');
-    const txtRegisto = document.getElementById('txt-btn-registo');
-
-    const hP = plano.horasPresenciais || 0;
-    let perc = hP > 0 ? Math.min((totalRealizado / hP) * 100, 100) : 100; // Evita NaN!
+    const btnConcluir = document.getElementById('sheet-btn-concluir'); const progressFill = document.getElementById('sheet-btn-progress-fill'); const progressText = document.getElementById('sheet-btn-progress-text'); const txtRegisto = document.getElementById('txt-btn-registo');
+    const hP = plano.horasPresenciais || 0; let perc = hP > 0 ? Math.min((totalRealizado / hP) * 100, 100) : 100; 
     
-    progressFill.style.width = `${perc}%`;
-    progressText.innerHTML = `<i class="fa-solid fa-check"></i> Concluído (${Math.floor(perc || 0)}%)`; // Garante que nunca diz NaN
+    progressFill.style.width = `${perc}%`; progressText.innerHTML = `<i class="fa-solid fa-check"></i> Concluído (${Math.floor(perc || 0)}%)`; 
 
     if(totalRealizado >= hP && hP > 0) {
         btnConcluir.classList.add('ready'); btnConcluir.disabled = false; txtRegisto.innerText = "Retificar Presenciais";
@@ -378,14 +375,8 @@ function abrirFolhaPRHF(id) {
     document.getElementById('sheet-hp').innerText = p.horasPresenciais || 0; document.getElementById('sheet-ha').innerText = p.horasNaoPresenciais || 0;
     document.getElementById('sheet-desc').innerText = p.descricao;
     
-    // Gestão visual do PDF Anexado
     const btnDownload = document.getElementById('sheet-btn-download-pdf');
-    if(p.pdfFile) {
-        btnDownload.style.display = 'flex';
-        btnDownload.href = p.pdfFile;
-        btnDownload.download = p.pdfName || `Anexo_${p.disciplina}.pdf`;
-        btnDownload.innerHTML = `<i class="fa-solid fa-file-pdf"></i> Descarregar Anexo (${p.pdfName || 'Documento'})`;
-    } else { btnDownload.style.display = 'none'; }
+    if(p.pdfFile) { btnDownload.style.display = 'flex'; btnDownload.href = p.pdfFile; btnDownload.download = p.pdfName || `Anexo_${p.disciplina}.pdf`; } else { btnDownload.style.display = 'none'; }
     
     const badge = document.getElementById('sheet-status'); badge.innerText = p.status.toUpperCase(); 
     if(p.status === 'ativa') badge.className = `paper-status ${p.moduloTerminado ? 'ativa-terminado' : 'ativa-decorrer'}`; else badge.className = `paper-status concluida`;
@@ -404,7 +395,6 @@ function abrirFolhaPRHF(id) {
     desenharRegistosManuais(p); modalFolha.style.display = 'flex';
 }
 document.querySelector('.btn-close-paper').addEventListener('click', () => modalFolha.style.display = 'none');
-
 document.getElementById('sheet-btn-toggle-manual').addEventListener('click', () => { const box = document.getElementById('manual-presence-box'); box.style.display = box.style.display === 'none' ? 'block' : 'none'; });
 
 document.getElementById('btn-save-manual-pres').addEventListener('click', async (e) => {
@@ -425,22 +415,24 @@ document.getElementById('btn-save-manual-pres').addEventListener('click', async 
 });
 
 document.getElementById('sheet-btn-concluir').addEventListener('click', async () => {
+    const p = prhfsMemoria.find(x => x.id === idPrhfAtivo);
+    if(p.status === 'concluida' || document.getElementById('sheet-btn-concluir').disabled) return;
     if(!confirm("Marcar como CONCLUÍDO?")) return;
     try { await updateDoc(doc(db, "utilizadores", alunoAtualId, "prhfs", idPrhfAtivo), { status: 'concluida' }); modalFolha.style.display = 'none'; carregarListaPRHF(alunoAtualId); } catch(err){}
 });
 document.getElementById('sheet-btn-reverter').addEventListener('click', async (e) => {
     if(!confirm("REVERTER para ATIVA?")) return; e.currentTarget.innerText = "A reverter...";
-    try { await updateDoc(doc(db, "utilizadores", alunoAtualId, "prhfs", idPrhfAtivo), { status: 'ativa' }); modalFolha.style.display = 'none'; carregarListaPRHF(alunoAtualId); } catch(err){}
+    try { await updateDoc(doc(db, "utilizadores", alunoAtualId, "prhfs", idPrhfAtivo), { status: 'ativa' }); modalFolha.style.display = 'none'; carregarListaPRHF(alunoAtualId); } catch(err){ e.currentTarget.innerText = "Reverter para Ativa"; }
 });
 
-// 6. MOTOR DE FALTAS (Tudo visível e os Filtros)
+// 6. MOTOR DE FALTAS (Esqueleto Pronto)
 if(document.getElementById('btn-hub-faltas')) {
     document.getElementById('btn-hub-faltas').addEventListener('click', () => { 
         esconderTudoMenos(viewFaltas); 
         document.getElementById('tab-faltas-disciplina').classList.add('active'); document.getElementById('tab-faltas-data').classList.remove('active');
         document.getElementById('faltas-container-disciplina').style.display = 'block'; document.getElementById('faltas-container-data').style.display = 'none';
+        document.getElementById('toolbar-faltas-data').style.display = 'none';
         
-        // Popula os filtros de disciplinas na linha cronológica
         let optFaltasDisc = '<option value="">Todas as Disc.</option>';
         for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) optFaltasDisc += `<option value="${d}">${d}</option>`; }
         document.getElementById('filtro-disc-faltas').innerHTML = optFaltasDisc;
@@ -448,8 +440,16 @@ if(document.getElementById('btn-hub-faltas')) {
         construirMatrizVisual(document.getElementById('faltas-container-disciplina'), abrirModulosDisciplinaFaltas); 
     });
 }
-document.getElementById('tab-faltas-disciplina').addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('tab-faltas-data').classList.remove('active'); document.getElementById('faltas-container-disciplina').style.display = 'block'; document.getElementById('faltas-container-data').style.display = 'none'; });
-document.getElementById('tab-faltas-data').addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('tab-faltas-disciplina').classList.remove('active'); document.getElementById('faltas-container-disciplina').style.display = 'none'; document.getElementById('faltas-container-data').style.display = 'block'; });
+document.getElementById('tab-faltas-disciplina').addEventListener('click', (e) => { 
+    e.currentTarget.classList.add('active'); document.getElementById('tab-faltas-data').classList.remove('active'); 
+    document.getElementById('faltas-container-disciplina').style.display = 'block'; document.getElementById('faltas-container-data').style.display = 'none'; 
+    document.getElementById('toolbar-faltas-data').style.display = 'none';
+});
+document.getElementById('tab-faltas-data').addEventListener('click', (e) => { 
+    e.currentTarget.classList.add('active'); document.getElementById('tab-faltas-disciplina').classList.remove('active'); 
+    document.getElementById('faltas-container-disciplina').style.display = 'none'; document.getElementById('faltas-container-data').style.display = 'block'; 
+    document.getElementById('toolbar-faltas-data').style.display = 'flex';
+});
 
 async function abrirModulosDisciplinaFaltas(disciplina) {
     esconderTudoMenos(viewFaltasModulos); document.getElementById('titulo-falta-disciplina').innerText = disciplina;
