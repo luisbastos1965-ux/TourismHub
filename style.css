@@ -413,3 +413,38 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
     border-radius: 4px;
     border: 1px dashed #444;
 }
+
+/* --- CALENDÁRIO: CORES INTELIGENTES --- */
+.calendar-event-card { display: flex; background: var(--bg-card); border: 1px solid #333; border-left: 4px solid var(--primary-green); border-radius: 8px; margin-bottom: 12px; overflow: hidden; align-items: stretch; }
+.calendar-date-box { background: rgba(0,0,0,0.2); padding: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 80px; border-right: 1px solid #333;}
+.calendar-date-box .day { font-size: 1.5rem; font-weight: bold; color: white; line-height: 1;}
+.calendar-date-box .month { font-size: 0.85rem; color: var(--primary-green); text-transform: uppercase; font-weight: bold;}
+.calendar-info { padding: 15px; flex: 1; }
+.calendar-info h4 { margin-bottom: 5px; color: white; font-size: 1.1rem;}
+.calendar-info p { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0;}
+
+.calendar-event-card.concluido { border-left-color: var(--success-green); opacity: 0.75; }
+.calendar-event-card.teste { border-left-color: #ffaa00; }
+.calendar-event-card.avaliacao { border-left-color: #00d2ff; }
+.calendar-event-card.outro { border-left-color: #b82bf2; }
+
+.badge-tipo-evento { font-size: 0.75rem; font-weight: bold; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-bottom: 4px; }
+.badge-tipo-evento.teste { background-color: rgba(255, 170, 0, 0.2); color: #ffaa00; }
+.badge-tipo-evento.avaliacao { background-color: rgba(0, 210, 255, 0.2); color: #00d2ff; }
+.badge-tipo-evento.outro { background-color: rgba(184, 43, 242, 0.2); color: #b82bf2; }
+.badge-tipo-evento.concluido { background-color: rgba(40, 167, 69, 0.2); color: var(--success-green); }
+
+/* --- HORÁRIO REFINADO --- */
+.horario-grid { display: grid; grid-template-columns: 55px repeat(5, 1fr); gap: 4px; overflow-x: auto; padding-bottom: 10px; }
+.horario-header { background: #222; text-align: center; padding: 10px 5px; font-size: 0.8rem; font-weight: bold; color: var(--primary-green); border-radius: 4px; }
+.horario-time { background: transparent; text-align: center; padding: 10px 0; font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; justify-content: center;}
+.horario-slot { background: var(--bg-card); border: 1px solid #333; border-radius: 4px; min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: 0.8rem; padding: 5px; transition: 0.2s; cursor: pointer;}
+.horario-slot:hover { border-color: var(--primary-green); }
+.horario-slot.filled { background: rgba(0, 204, 136, 0.1); border-color: var(--primary-green); color: white; }
+.horario-linha-almoco { grid-column: span 6; background: #1a1a1a; text-align: center; padding: 8px; font-size: 0.85rem; font-weight: bold; color: var(--text-muted); border-radius: 4px; border: 1px dashed #444; margin: 2px 0;}
+
+/* --- FALTAS BARRA DE FERRAMENTAS --- */
+.faltas-toolbar { display: flex; gap: 10px; background-color: var(--bg-card); padding: 15px; border-radius: 8px; border: 1px solid #333; margin-bottom: 15px; }
+.faltas-toolbar button { flex: 1; display: flex; justify-content: center; align-items: center; gap: 8px; padding: 10px; border-radius: 6px; border: 1px solid #444; background: var(--bg-dark); color: var(--text-light); cursor: pointer; transition: 0.2s; font-weight: bold; }
+.faltas-toolbar button:hover { border-color: var(--primary-green); color: var(--primary-green); }
+.falta-linha-multipla { display: flex; gap: 5px; margin-bottom: 5px; align-items: center; background: #111; padding: 5px; border-radius: 6px; border: 1px solid #333;}
