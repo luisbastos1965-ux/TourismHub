@@ -76,16 +76,14 @@
             <!-- CALENDÁRIO -->
             <div id="view-class-calendario" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-cal-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-cal-turma">Calendário</h2></div>
-                
                 <div style="display:flex; gap:10px; margin-bottom: 20px;">
                     <button id="btn-abrir-modal-evento" class="primary-btn" style="flex:1;"><i class="fa-solid fa-plus"></i> Adicionar Avaliação / Evento</button>
                     <button id="btn-refresh-calendario" class="secondary-btn" style="width:auto; padding:12px 20px;"><i class="fa-solid fa-rotate-right"></i></button>
                 </div>
-
                 <div id="lista-calendario-container"><p class="text-muted">A carregar...</p></div>
             </div>
 
-            <!-- HORÁRIO REAL DA ESCOLA -->
+            <!-- HORÁRIO REAL DA ESCOLA (8 Linhas Contínuas) -->
             <div id="view-class-horario" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-horario-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-horario-turma">Horário</h2></div>
                 <div style="display:flex; gap:10px; margin-bottom: 15px;">
@@ -95,30 +93,76 @@
                 <div class="card" style="padding: 10px;">
                     <div class="horario-grid" id="grid-horario-turma">
                         <div></div><div class="horario-header">SEG</div><div class="horario-header">TER</div><div class="horario-header">QUA</div><div class="horario-header">QUI</div><div class="horario-header">SEX</div>
-                        <div class="horario-time">08:30<br>09:30</div><div class="horario-slot" data-dia="seg" data-hora="1"></div><div class="horario-slot" data-dia="ter" data-hora="1"></div><div class="horario-slot" data-dia="qua" data-hora="1"></div><div class="horario-slot" data-dia="qui" data-hora="1"></div><div class="horario-slot" data-dia="sex" data-hora="1"></div>
-                        <div class="horario-time">09:35<br>10:35</div><div class="horario-slot" data-dia="seg" data-hora="2"></div><div class="horario-slot" data-dia="ter" data-hora="2"></div><div class="horario-slot" data-dia="qua" data-hora="2"></div><div class="horario-slot" data-dia="qui" data-hora="2"></div><div class="horario-slot" data-dia="sex" data-hora="2"></div>
-                        <div class="horario-time">10:50<br>11:50</div><div class="horario-slot" data-dia="seg" data-hora="3"></div><div class="horario-slot" data-dia="ter" data-hora="3"></div><div class="horario-slot" data-dia="qua" data-hora="3"></div><div class="horario-slot" data-dia="qui" data-hora="3"></div><div class="horario-slot" data-dia="sex" data-hora="3"></div>
-                        <div class="horario-time">11:55<br>12:55</div><div class="horario-slot" data-dia="seg" data-hora="4"></div><div class="horario-slot" data-dia="ter" data-hora="4"></div><div class="horario-slot" data-dia="qua" data-hora="4"></div><div class="horario-slot" data-dia="qui" data-hora="4"></div><div class="horario-slot" data-dia="sex" data-hora="4"></div>
-                        <div class="horario-time">13:00<br>14:00</div><div class="horario-slot" data-dia="seg" data-hora="1300"></div><div class="horario-slot" data-dia="ter" data-hora="1300"></div><div class="horario-slot" data-dia="qua" data-hora="1300"></div><div class="horario-slot" data-dia="qui" data-hora="1300"></div><div class="horario-slot" data-dia="sex" data-hora="1300"></div>
-                        <div class="horario-linha-almoco">PAUSA ALMOÇO</div>
-                        <div class="horario-time">14:05<br>15:05</div><div class="horario-slot" data-dia="seg" data-hora="5"></div><div class="horario-slot" data-dia="ter" data-hora="5"></div><div class="horario-slot" data-dia="qua" data-hora="5"></div><div class="horario-slot" data-dia="qui" data-hora="5"></div><div class="horario-slot" data-dia="sex" data-hora="5"></div>
-                        <div class="horario-time">15:15<br>16:15</div><div class="horario-slot" data-dia="seg" data-hora="6"></div><div class="horario-slot" data-dia="ter" data-hora="6"></div><div class="horario-slot" data-dia="qua" data-hora="6"></div><div class="horario-slot" data-dia="qui" data-hora="6"></div><div class="horario-slot" data-dia="sex" data-hora="6"></div>
-                        <div class="horario-time">16:20<br>17:20</div><div class="horario-slot" data-dia="seg" data-hora="7"></div><div class="horario-slot" data-dia="ter" data-hora="7"></div><div class="horario-slot" data-dia="qua" data-hora="7"></div><div class="horario-slot" data-dia="qui" data-hora="7"></div><div class="horario-slot" data-dia="sex" data-hora="7"></div>
+                        
+                        <div class="horario-time">08:30<br>09:30</div>
+                        <div class="horario-slot" data-dia="seg" data-hora="1"></div><div class="horario-slot" data-dia="ter" data-hora="1"></div><div class="horario-slot" data-dia="qua" data-hora="1"></div><div class="horario-slot" data-dia="qui" data-hora="1"></div><div class="horario-slot" data-dia="sex" data-hora="1"></div>
+                        
+                        <div class="horario-time">09:35<br>10:35</div>
+                        <div class="horario-slot" data-dia="seg" data-hora="2"></div><div class="horario-slot" data-dia="ter" data-hora="2"></div><div class="horario-slot" data-dia="qua" data-hora="2"></div><div class="horario-slot" data-dia="qui" data-hora="2"></div><div class="horario-slot" data-dia="sex" data-hora="2"></div>
+                        
+                        <div class="horario-time">10:50<br>11:50</div>
+                        <div class="horario-slot" data-dia="seg" data-hora="3"></div><div class="horario-slot" data-dia="ter" data-hora="3"></div><div class="horario-slot" data-dia="qua" data-hora="3"></div><div class="horario-slot" data-dia="qui" data-hora="3"></div><div class="horario-slot" data-dia="sex" data-hora="3"></div>
+                        
+                        <div class="horario-time">11:55<br>12:55</div>
+                        <div class="horario-slot" data-dia="seg" data-hora="4"></div><div class="horario-slot" data-dia="ter" data-hora="4"></div><div class="horario-slot" data-dia="qua" data-hora="4"></div><div class="horario-slot" data-dia="qui" data-hora="4"></div><div class="horario-slot" data-dia="sex" data-hora="4"></div>
+                        
+                        <div class="horario-time">14:05<br>15:05</div>
+                        <div class="horario-slot" data-dia="seg" data-hora="5"></div><div class="horario-slot" data-dia="ter" data-hora="5"></div><div class="horario-slot" data-dia="qua" data-hora="5"></div><div class="horario-slot" data-dia="qui" data-hora="5"></div><div class="horario-slot" data-dia="sex" data-hora="5"></div>
+                        
+                        <div class="horario-time">15:15<br>16:15</div>
+                        <div class="horario-slot" data-dia="seg" data-hora="6"></div><div class="horario-slot" data-dia="ter" data-hora="6"></div><div class="horario-slot" data-dia="qua" data-hora="6"></div><div class="horario-slot" data-dia="qui" data-hora="6"></div><div class="horario-slot" data-dia="sex" data-hora="6"></div>
+                        
+                        <div class="horario-time">16:20<br>17:20</div>
+                        <div class="horario-slot" data-dia="seg" data-hora="7"></div><div class="horario-slot" data-dia="ter" data-hora="7"></div><div class="horario-slot" data-dia="qua" data-hora="7"></div><div class="horario-slot" data-dia="qui" data-hora="7"></div><div class="horario-slot" data-dia="sex" data-hora="7"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- FÓRUM E ESTATÍSTICAS -->
+            <!-- NOVO: FÓRUM COM CANAIS -->
             <div id="view-class-forum" style="display: none;">
-                <div class="class-header"><button id="btn-voltar-forum-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-forum-turma">Fórum Principal</h2></div>
-                <div class="forum-container">
-                    <div class="forum-messages"><div class="chat-bubble admin"><strong>Aviso Importante!</strong><br>Amanhã a aula será na sala 12.<span class="chat-meta">DT • Ontem</span></div></div>
-                    <div class="forum-input-area"><input type="text" placeholder="Escreve uma mensagem..." id="input-forum"><button class="forum-send-btn"><i class="fa-solid fa-paper-plane"></i></button></div>
+                <div class="class-header"><button id="btn-voltar-forum-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-forum-turma">Fóruns da Turma</h2></div>
+                
+                <div id="forum-channel-list">
+                    <button id="btn-novo-forum" class="primary-btn" style="margin-bottom: 15px;"><i class="fa-solid fa-plus"></i> Criar Novo Canal</button>
+                    <div class="forum-canais-grid">
+                        <div class="canal-card">
+                            <div class="canal-icon"><i class="fa-solid fa-bullhorn"></i></div>
+                            <div class="canal-info"><h4>Avisos Gerais (DT)</h4><p>Toda a Turma</p></div>
+                        </div>
+                        <div class="canal-card">
+                            <div class="canal-icon"><i class="fa-regular fa-comments"></i></div>
+                            <div class="canal-info"><h4>Dúvidas - TIC</h4><p>Prof. Informática</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="forum-chat-view" style="display:none; flex-direction:column; height:65vh; background:var(--bg-card); border-radius:12px; border:1px solid #333; overflow:hidden;">
+                    <div style="background:#222; padding:15px; display:flex; align-items:center; gap:10px; border-bottom:1px solid #333;">
+                        <button id="btn-voltar-canais" class="secondary-btn small-btn" style="padding:5px 10px; width:auto; border:none;"><i class="fa-solid fa-arrow-left"></i></button>
+                        <h3 id="chat-active-title" style="color:var(--primary-green); font-size:1.1rem; margin:0;">Avisos Gerais</h3>
+                    </div>
+                    <div class="forum-messages" id="chat-messages-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:15px;">
+                        <div class="chat-bubble admin"><strong>Bem-vindo ao Fórum!</strong><br>O chat real será ligado em breve.<span class="chat-meta">Sistema</span></div>
+                    </div>
+                    <div class="forum-input-area" style="background:#1a1a1a; padding:10px; border-top:1px solid #333; display:flex; gap:8px; align-items:center;">
+                        <button class="icon-btn"><i class="fa-solid fa-paperclip"></i></button>
+                        <button class="icon-btn"><i class="fa-solid fa-microphone"></i></button>
+                        <input type="text" id="input-forum-msg" placeholder="Escreve aqui..." style="margin:0; flex:1; border-radius:20px; padding:10px 15px;">
+                        <button class="icon-btn"><i class="fa-regular fa-face-smile"></i></button>
+                        <button class="forum-send-btn" style="width:40px; height:40px;"><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
                 </div>
             </div>
+
+            <!-- ESTATÍSTICAS REAIS -->
             <div id="view-class-estatisticas" style="display: none;">
-                <div class="class-header"><button id="btn-voltar-stats-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-stats-turma">Estatísticas</h2></div>
-                <div class="stats-grid"><div class="stat-card"><i class="fa-solid fa-graduation-cap"></i><div class="stat-value">14.5</div><div class="stat-label">Média da Turma</div></div><div class="stat-card"><i class="fa-solid fa-user-check"></i><div class="stat-value" style="color:var(--success-green);">94%</div><div class="stat-label">Assiduidade</div></div></div>
+                <div class="class-header"><button id="btn-voltar-stats-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-stats-turma">Estatísticas Reais</h2></div>
+                <div class="stats-grid">
+                    <div class="stat-card"><i class="fa-solid fa-graduation-cap"></i><div class="stat-value" id="stat-media-turma">...</div><div class="stat-label">Média da Turma</div></div>
+                    <div class="stat-card"><i class="fa-solid fa-user-check"></i><div class="stat-value" id="stat-assiduidade" style="color:var(--success-green);">...</div><div class="stat-label">Assiduidade</div></div>
+                    <div class="stat-card"><i class="fa-solid fa-file-medical"></i><div class="stat-value" id="stat-prhf-ativos" style="color:var(--warning-yellow);">...</div><div class="stat-label">PRHF Ativos</div></div>
+                    <div class="stat-card"><i class="fa-solid fa-triangle-exclamation"></i><div class="stat-value" id="stat-alunos-risco" style="color:var(--danger-red);">...</div><div class="stat-label">Alunos em Risco (≥3 Neg.)</div></div>
+                </div>
             </div>
 
             <!-- ALUNOS DA TURMA E DETALHE -->
@@ -145,7 +189,7 @@
                 </div>
             </div>
 
-            <!-- AVALIAÇÕES -->
+            <!-- AVALIAÇÕES E FALTAS -->
             <div id="view-avaliacoes" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-hub-avaliacoes" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Avaliações</h2></div>
                 <button id="btn-pauta-global" class="primary-btn" style="margin-bottom: 25px; background-color: transparent; border: 1px solid var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-table-list"></i> Consultar Pauta Global</button>
@@ -156,7 +200,6 @@
                 <div class="card" style="padding: 10px 20px;"><div id="lista-modulos-disciplina"></div></div>
             </div>
 
-            <!-- FALTAS -->
             <div id="view-faltas" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-hub-faltas" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Registo de Faltas</h2></div>
                 <div class="falta-tabs"><button class="falta-tab-btn active" id="tab-faltas-disciplina">Por Disciplina</button><button class="falta-tab-btn" id="tab-faltas-data">Por Data</button></div>
@@ -174,7 +217,7 @@
                     <div style="display:flex; gap:10px; margin-bottom:15px; align-items:center;">
                         <select id="filtro-mes-faltas" style="margin:0; flex:1;"><option value="">Mês (Todos)</option><option value="09">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option><option value="01">Janeiro</option><option value="02">Fevereiro</option><option value="03">Março</option><option value="04">Abril</option><option value="05">Maio</option><option value="06">Junho</option><option value="07">Julho</option></select>
                         <select id="filtro-disc-faltas" style="margin:0; flex:1;"><option value="">Todas as Disc.</option></select>
-                        <select id="filtro-just-faltas" style="margin:0; flex:1;"><option value="">Justificações</option><option value="justificada">Justificadas</option><option value="injustificada">Injustificadas</option></select>
+                        <select id="filtro-just-faltas" style="margin:0; flex:1;"><option value="">Todas</option><option value="justificada">Justificadas</option><option value="injustificada">Injustificadas</option></select>
                         <button id="btn-refresh-faltas" class="secondary-btn" style="margin:0; width:auto; padding:12px;"><i class="fa-solid fa-rotate-right"></i></button>
                     </div>
                     <div id="lista-historico-faltas-container"><p class="text-muted" style="text-align:center; margin-top:20px;">Sem faltas registadas.</p></div>
@@ -186,7 +229,7 @@
                 <div class="card" style="padding: 10px 20px;"><div id="lista-faltas-disciplina"></div></div>
             </div>
 
-            <!-- INFORMAÇÕES -->
+            <!-- INFORMAÇÕES E PRHF-->
             <div id="view-informacoes" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-hub-info" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Informações e Contactos</h2></div>
                 <div class="card">
@@ -201,7 +244,6 @@
                 </div>
             </div>
 
-            <!-- PRHF -->
             <div id="view-prhf" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-hub-prhf" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Planos de Recuperação</h2></div>
                 <div class="card" style="margin-bottom: 20px;">
@@ -286,7 +328,17 @@
         </div>
     </div>
 
-    <!-- MODAL NOVA FALTA (COM ABAS E MAIS ESPAÇO) -->
+    <!-- MODAL NOVO FÓRUM -->
+    <div id="modal-novo-forum" class="modal-overlay">
+        <div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto;">
+            <h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-comments"></i> Criar Fórum</h3>
+            <input type="text" id="novo-forum-nome" placeholder="Nome do Canal (ex: Matemática)" style="margin-bottom:15px;">
+            <select id="novo-forum-visibilidade" style="margin-bottom:15px;"><option value="todos">Toda a Turma</option><option value="privado">Privado (Membros Específicos)</option></select>
+            <div style="display:flex; gap:10px;"><button id="btn-gravar-forum" class="primary-btn" style="flex:1;">Criar</button><button id="btn-cancelar-forum" class="danger-btn" style="flex:1;">Cancelar</button></div>
+        </div>
+    </div>
+
+    <!-- MODAL NOVA FALTA (COM MAIS ESPAÇO) -->
     <div id="modal-nova-falta" class="modal-overlay">
         <div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto; max-height: 90vh; overflow-y:auto;">
             <h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-plus"></i> Registar Falta(s)</h3>
@@ -317,7 +369,7 @@
         </div>
     </div>
 
-    <!-- NOVO MODAL: ALTERAR FALTA -->
+    <!-- MODAL ALTERAR FALTA -->
     <div id="modal-alterar-falta" class="modal-overlay">
         <div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto;">
             <h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-pen"></i> Alterar Falta</h3>
