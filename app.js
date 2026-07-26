@@ -615,7 +615,7 @@ async function carregarHistoricoFaltas() {
                 html += `<div class="falta-date-divider">${dateStr}</div>`;
             }
             const cBar = f.justificada ? 'justificada' : 'injustificada'; const cMeta = f.justificada ? 'var(--success-green)' : 'var(--danger-red)'; const tMeta = f.justificada ? 'Justificada' : 'Injustificada';
-            html += `<div class="falta-registo-card" style="flex-direction: row; align-items:center; background:var(--bg-dark);"><div class="falta-status-bar ${cBar}" style="align-self: stretch;"></div><input type="checkbox" class="falta-card-checkbox" data-id="${f.id}"><div class="falta-registo-info" style="flex:1;"><div><strong>${f.disciplina} - ${f.modulo}</strong><span class="falta-registo-meta" style="color:${cMeta};">${tMeta}</span></div><div style="text-align:right;"><strong>${f.horas}h</strong></div></div></div>`;
+            html += `<div class="falta-registo-card" style="flex-direction: row; align-items:center; background:var(--bg-dark);"><div class="falta-status-bar ${cBar}" style="align-self: stretch;"></div><input type="checkbox" class="falta-card-checkbox" data-id="${f.id}"><div class="falta-registo-info" style="flex:1;"><div><strong>${f.disciplina} - ${f.modulo} - ${f.horas}h</strong></div><div style="text-align:right;"><span class="falta-registo-meta" style="color:${cMeta}; font-weight:bold;">${tMeta}</span></div></div></div>`;
         });
         container.innerHTML = html;
     } catch(err) { container.innerHTML = '<p class="text-muted" style="color:var(--danger-red); text-align:center;">Erro ao carregar faltas.</p>'; }
