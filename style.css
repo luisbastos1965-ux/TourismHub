@@ -248,3 +248,57 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
     accent-color: var(--primary-green);
     cursor: pointer;
 }
+
+/* --- PAUTA GLOBAL MODAL --- */
+.pauta-global-componente {
+    margin-bottom: 20px;
+    background: var(--bg-dark);
+    border: 1px solid #333;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.pauta-global-header {
+    background-color: rgba(0, 204, 136, 0.1);
+    color: var(--primary-green);
+    padding: 10px 15px;
+    font-weight: bold;
+    border-bottom: 1px solid #333;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.pauta-global-disc {
+    padding: 12px 15px;
+    border-bottom: 1px solid #222;
+}
+.pauta-global-disc:last-child {
+    border-bottom: none;
+}
+.pauta-global-disc-title {
+    font-weight: bold;
+    color: var(--text-light);
+    margin-bottom: 8px;
+    font-size: 1.05rem;
+}
+.pauta-global-notas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.pg-nota-item {
+    background: var(--bg-card);
+    border: 1px solid #444;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.pg-nota-val {
+    font-weight: bold;
+    font-size: 1rem;
+}
+.pg-nota-val.sn { color: var(--text-muted); }
+.pg-nota-val.positiva { color: var(--primary-green); }
+.pg-nota-val.negativa { color: var(--danger-red); }
