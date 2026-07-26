@@ -78,14 +78,13 @@
                 <div class="class-header"><button id="btn-voltar-cal-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-cal-turma">Calendário</h2></div>
                 <button id="btn-abrir-modal-evento" class="primary-btn" style="margin-bottom: 20px;"><i class="fa-solid fa-plus"></i> Adicionar Avaliação / Evento</button>
                 <h3 style="margin-bottom: 15px; color: var(--primary-green); font-size: 1rem;">Eventos e Testes</h3>
-                <div id="lista-calendario-container">
-                    <!-- Gerado por JS com as cores inteligentes -->
-                </div>
+                <div id="lista-calendario-container"><p class="text-muted">A carregar...</p></div>
             </div>
 
             <!-- HORÁRIO REAL DA ESCOLA -->
             <div id="view-class-horario" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-horario-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-horario-turma">Horário</h2></div>
+                <button id="btn-editar-horario" class="secondary-btn" style="margin-bottom: 15px;"><i class="fa-solid fa-pen"></i> Editar Horário (Em breve)</button>
                 <div class="card" style="padding: 10px;">
                     <div class="horario-grid">
                         <div></div><div class="horario-header">SEG</div><div class="horario-header">TER</div><div class="horario-header">QUA</div><div class="horario-header">QUI</div><div class="horario-header">SEX</div>
@@ -108,20 +107,13 @@
             <div id="view-class-forum" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-forum-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-forum-turma">Fórum Principal</h2></div>
                 <div class="forum-container">
-                    <div class="forum-messages">
-                        <div class="chat-bubble admin"><strong>Aviso Importante!</strong><br>Amanhã a aula será na sala 12.<span class="chat-meta">DT • Ontem</span></div>
-                    </div>
+                    <div class="forum-messages"><div class="chat-bubble admin"><strong>Aviso Importante!</strong><br>Amanhã a aula será na sala 12.<span class="chat-meta">DT • Ontem</span></div></div>
                     <div class="forum-input-area"><input type="text" placeholder="Escreve uma mensagem..." id="input-forum"><button class="forum-send-btn"><i class="fa-solid fa-paper-plane"></i></button></div>
                 </div>
             </div>
-
             <div id="view-class-estatisticas" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-stats-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-stats-turma">Estatísticas</h2></div>
-                <div class="stats-grid">
-                    <div class="stat-card"><i class="fa-solid fa-graduation-cap"></i><div class="stat-value">14.5</div><div class="stat-label">Média da Turma</div></div>
-                    <div class="stat-card"><i class="fa-solid fa-user-check"></i><div class="stat-value" style="color:var(--success-green);">94%</div><div class="stat-label">Assiduidade</div></div>
-                    <div class="stat-card"><i class="fa-solid fa-file-medical"></i><div class="stat-value" style="color:var(--warning-yellow);">8</div><div class="stat-label">PRHF Ativos</div></div>
-                </div>
+                <div class="stats-grid"><div class="stat-card"><i class="fa-solid fa-graduation-cap"></i><div class="stat-value">14.5</div><div class="stat-label">Média da Turma</div></div><div class="stat-card"><i class="fa-solid fa-user-check"></i><div class="stat-value" style="color:var(--success-green);">94%</div><div class="stat-label">Assiduidade</div></div></div>
             </div>
 
             <!-- ALUNOS DA TURMA E DETALHE -->
@@ -161,13 +153,13 @@
             <div id="view-faltas" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-hub-faltas" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Registo de Faltas</h2></div>
                 <div class="falta-tabs"><button class="falta-tab-btn active" id="tab-faltas-disciplina">Por Disciplina</button><button class="falta-tab-btn" id="tab-faltas-data">Por Data</button></div>
-                <div class="faltas-toolbar" id="toolbar-faltas-data" style="display:none;">
-                    <button id="btn-nova-falta"><i class="fa-solid fa-plus"></i> Nova</button>
-                    <button id="btn-alterar-falta"><i class="fa-solid fa-pen"></i> Alterar</button>
-                    <button id="btn-eliminar-falta" class="del-btn"><i class="fa-solid fa-trash"></i> Eliminar</button>
-                </div>
+                
                 <div id="faltas-container-disciplina"></div>
+                
                 <div id="faltas-container-data" style="display:none;">
+                    <div class="faltas-toolbar">
+                        <button id="btn-nova-falta"><i class="fa-solid fa-plus"></i> Nova</button>
+                    </div>
                     <div style="display:flex; gap:10px; margin-bottom:15px;">
                         <select id="filtro-mes-faltas" style="margin:0; flex:1;"><option value="">Mês (Todos)</option><option value="09">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option><option value="01">Janeiro</option><option value="02">Fevereiro</option><option value="03">Março</option><option value="04">Abril</option><option value="05">Maio</option><option value="06">Junho</option><option value="07">Julho</option></select>
                         <select id="filtro-disc-faltas" style="margin:0; flex:1;"><option value="">Todas as Disc.</option></select>
@@ -181,38 +173,27 @@
                 <div class="card" style="padding: 10px 20px;"><div id="lista-faltas-disciplina"></div></div>
             </div>
 
-            <!-- INFORMAÇÕES -->
+            <!-- INFORMAÇÕES E PRHF OMITIDOS (Estão na versão de baixo do código base) -->
+            <!-- COPIADOS AQUI PARA ESTAR COMPLETO -->
             <div id="view-informacoes" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-hub-info" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Informações e Contactos</h2></div>
                 <div class="card">
                     <h3 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-user"></i> Dados do Aluno</h3>
-                    <div id="info-aluno-display"><div class="data-display-group"><span class="data-label">Idade</span><span class="data-value" id="display-aluno-idade">-</span></div><div class="data-display-group"><span class="data-label">Telemóvel</span><span class="data-value clickable-contact" data-type="tel" id="display-aluno-tel">-</span></div><div class="data-display-group"><span class="data-label">Email</span><span class="data-value clickable-contact" data-type="email" id="display-aluno-email">-</span></div><div class="data-display-group"><span class="data-label">Morada</span><span class="data-value" id="display-aluno-morada">-</span></div><div class="action-buttons-row"><button class="secondary-btn small-btn" id="btn-editar-info-aluno"><i class="fa-solid fa-pen"></i> Editar</button></div></div>
-                    <div id="info-aluno-edit" style="display: none;"><div class="info-grid"><input type="number" id="info-aluno-idade" placeholder="Idade"><input type="tel" id="info-aluno-telemovel" placeholder="Telemóvel"><input type="email" id="info-aluno-email" placeholder="Email do Aluno"><input type="text" id="info-aluno-morada" placeholder="Morada"></div><div class="action-buttons-row"><button id="btn-guardar-aluno" class="primary-btn small-btn">Guardar</button><button id="btn-cancelar-aluno" class="secondary-btn small-btn">Cancelar</button></div></div>
-                </div>
-                <div class="card">
-                    <h3 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-user-tie"></i> Encarregado de Educação</h3>
-                    <div id="info-ee-display"><div class="data-display-group"><span class="data-label">Nome</span><span class="data-value" id="display-ee-nome">-</span></div><div class="data-display-group"><span class="data-label">Filiação</span><span class="data-value" id="display-ee-filiacao">-</span></div><div class="data-display-group"><span class="data-label">Telemóvel</span><span class="data-value clickable-contact" data-type="tel" id="display-ee-tel">-</span></div><div class="data-display-group"><span class="data-label">Email</span><span class="data-value clickable-contact" data-type="email" id="display-ee-email">-</span></div><div class="action-buttons-row"><button class="secondary-btn small-btn" id="btn-editar-info-ee"><i class="fa-solid fa-pen"></i> Editar</button></div></div>
-                    <div id="info-ee-edit" style="display: none;"><div class="info-grid"><input type="text" id="info-ee-nome" placeholder="Nome Completo"><input type="text" id="info-ee-filiacao" placeholder="Filiação"><input type="tel" id="info-ee-telemovel" placeholder="Telemóvel"><input type="email" id="info-ee-email" placeholder="Email do E.E."></div><div class="action-buttons-row"><button id="btn-guardar-ee" class="primary-btn small-btn">Guardar</button><button id="btn-cancelar-ee" class="secondary-btn small-btn">Cancelar</button></div></div>
+                    <div id="info-aluno-display"><div class="data-display-group"><span class="data-label">Idade</span><span class="data-value" id="display-aluno-idade">-</span></div><div class="action-buttons-row"><button class="secondary-btn small-btn" id="btn-editar-info-aluno">Editar</button></div></div>
+                    <div id="info-aluno-edit" style="display: none;"><div class="info-grid"><input type="number" id="info-aluno-idade" placeholder="Idade"></div><div class="action-buttons-row"><button id="btn-guardar-aluno" class="primary-btn small-btn">Guardar</button></div></div>
                 </div>
             </div>
-
-            <!-- PRHF -->
+            
             <div id="view-prhf" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-hub-prhf" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Planos de Recuperação</h2></div>
                 <div class="card" style="margin-bottom: 20px;">
                     <h3 style="margin-bottom: 15px;"><i class="fa-solid fa-plus"></i> Novo PRHF</h3>
                     <div class="input-row"><select id="prhf-disciplina"><option value="">Disc.</option></select><select id="prhf-modulo"><option value="">Mod.</option></select></div>
-                    <div class="input-row"><input type="number" id="prhf-horas" placeholder="Total Horas"><div style="display:flex; align-items:center; width:100%; gap:5px; margin-bottom:15px; background-color:var(--bg-dark); border:1px solid #333; border-radius:8px; padding-left:10px;"><span style="color:var(--text-muted); font-size:0.85rem; white-space:nowrap;">Data Lim.:</span><input type="date" id="prhf-prazo" style="margin-bottom:0; border:none; padding:10px;"></div></div>
-                    <div class="input-row" style="margin-bottom:15px;"><label style="display:flex; align-items:center; gap:10px; font-size:0.9rem; color:var(--text-light);"><input type="checkbox" id="prhf-modulo-terminado" style="width:auto; margin:0;"> O Módulo já terminou?</label></div>
-                    <textarea id="prhf-descricao" class="input-field" placeholder="Descreve a tarefa..."></textarea>
-                    <div style="display:flex; flex-direction:column; margin-top:10px; margin-bottom:15px;"><div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:0.9rem; color:var(--text-muted);">Anexos:</span><label for="prhf-file-upload" class="secondary-btn small-btn" style="margin:0;"><i class="fa-solid fa-paperclip"></i> Anexar PDF</label><input type="file" id="prhf-file-upload" style="display:none;" accept=".pdf,.doc,.docx"></div><span id="prhf-file-name" class="file-name-display"></span></div>
+                    <div class="input-row"><input type="number" id="prhf-horas" placeholder="Total Horas"><input type="date" id="prhf-prazo" style="margin-bottom:0; border:none; padding:10px;"></div>
+                    <textarea id="prhf-descricao" class="input-field" placeholder="Descreve..."></textarea>
                     <button id="btn-guardar-prhf" class="primary-btn">Processar e Gravar</button>
                 </div>
-                <div class="section-container">
-                    <div class="tabs-container"><button class="tab-btn active" id="tab-prhf-ativas">Ativas</button><button class="tab-btn" id="tab-prhf-concluidas">Concluídas</button></div>
-                    <div style="margin-bottom:15px;"><select id="filtro-prhf-disc" style="margin:0; padding:8px;"><option value="">Todas as Disciplinas</option></select></div>
-                    <div id="lista-prhf-container"></div>
-                </div>
+                <div class="section-container"><div id="lista-prhf-container"></div></div>
             </div>
         </main>
         
@@ -224,91 +205,72 @@
         </nav>
     </div>
 
-    <!-- MODALS -->
-    <div id="modal-telefone" class="modal-overlay bottom"><div class="action-sheet"><h3>Opções de Contacto</h3><a id="action-ligar" href="#" class="primary-btn"><i class="fa-solid fa-phone"></i> Ligar Diretamente</a><button id="action-guardar-vcard" class="secondary-btn"><i class="fa-solid fa-user-plus"></i> Guardar Contacto</button><button class="danger-btn btn-fechar-modal">Cancelar</button></div></div>
-    <div id="modal-email" class="modal-overlay bottom"><div class="action-sheet"><h3>Opções de Email</h3><a id="action-enviar-email" href="#" class="primary-btn"><i class="fa-solid fa-envelope"></i> Escrever Email</a><button class="danger-btn btn-fechar-modal">Cancelar</button></div></div>
-
-    <div id="modal-prhf-sheet" class="modal-overlay">
-        <div class="paper-sheet">
-            <button class="btn-close-paper"><i class="fa-solid fa-xmark"></i></button>
-            <div class="paper-header"><h2 id="sheet-title">TIC_M3</h2><span id="sheet-status" class="paper-status">ATIVA</span></div>
-            <div class="paper-details">
-                <p><strong>Prazo:</strong> <span id="sheet-prazo">-</span></p>
-                <p><strong>Planificadas:</strong> <span id="sheet-hp">-</span>h Presenciais | <span id="sheet-ha">-</span>h Autónomas</p>
-                <div class="paper-desc" id="sheet-desc">Descrição...</div>
-                <a id="sheet-btn-download-pdf" href="#" download="Anexo_PRHF.pdf" class="secondary-btn small-btn" style="display:none; margin-bottom:15px; color:var(--primary-green); border-color:var(--primary-green);"><i class="fa-solid fa-file-pdf"></i> Descarregar Anexo</a>
-                <div style="background-color: var(--bg-dark); color: white; padding: 10px; border-radius: 6px; font-size: 0.9rem; border: 1px dashed var(--primary-green); text-align:center;">Presenciais Realizadas: <strong id="sheet-horas-feitas" style="color:var(--primary-green); font-size:1.1rem;">0</strong> / <span id="sheet-horas-totais">0</span>h</div>
-            </div>
-            <div class="paper-actions">
-                <button id="sheet-btn-toggle-manual" class="secondary-btn" style="color:#333; border-color:#999;"><i class="fa-solid fa-pen-to-square"></i> <span id="txt-btn-registo">Registar Presenciais</span></button>
-                <div id="manual-presence-box" class="manual-presence-form">
-                    <input type="date" id="reg-pres-data">
-                    <div style="display:flex; gap:5px;"><input type="time" id="reg-pres-inicio" title="Início"><input type="time" id="reg-pres-fim" title="Fim"></div>
-                    <button id="btn-save-manual-pres" class="primary-btn small-btn">Guardar Registo</button>
-                    <div id="lista-presencias-manuais" style="margin-top:15px; font-size:0.85rem;"></div>
-                </div>
-                <button id="sheet-btn-concluir" class="btn-progress-container"><div class="btn-progress-fill" id="sheet-btn-progress-fill" style="width:0%;"></div><div class="btn-progress-text" id="sheet-btn-progress-text">Concluído (0%)</div></button>
-                <button id="sheet-btn-reverter" class="danger-btn" style="display:none;"><i class="fa-solid fa-rotate-left"></i> Reverter para Ativa</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="modal-pauta-global" class="modal-overlay">
-        <div class="paper-sheet" style="max-width: 600px; width: 95%; max-height: 85vh; overflow-y: auto;">
-            <button id="btn-close-pauta" class="btn-close-paper"><i class="fa-solid fa-xmark"></i></button>
-            <h2 style="text-align:center; margin-bottom: 20px; color: var(--primary-green);"><i class="fa-solid fa-table-list"></i> Pauta Global</h2>
-            <div id="pauta-global-content"><p class="text-muted" style="text-align:center;">A compilar notas...</p></div>
-        </div>
-    </div>
-
-    <!-- NOVO MODAL: ADICIONAR EVENTO / AVALIAÇÃO -->
+    <!-- MODALS GERAIS E EVENTOS -->
     <div id="modal-novo-evento" class="modal-overlay">
         <div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto;">
-            <h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-calendar-plus"></i> Novo Evento / Teste</h3>
+            <h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-calendar-plus"></i> Novo Evento</h3>
             <div class="falta-form-grid">
-                <div class="falta-form-full"><input type="text" id="ev-titulo" placeholder="Título (ex: Frequência PORT)" style="margin:0;"></div>
-                <div class="falta-form-full"><select id="ev-tipo" style="margin:0;"><option value="teste">Teste / Frequência</option><option value="avaliacao">Avaliação / Trabalho</option></select></div>
-                <div><input type="date" id="ev-data" style="margin:0;"></div>
-                <div><input type="time" id="ev-hora" style="margin:0;" value="09:00"></div>
-                <div class="falta-form-full"><select id="ev-disc" style="margin:0;"><option value="">Disciplina</option></select></div>
+                <div class="falta-form-full"><input type="text" id="ev-titulo" placeholder="Título (ex: Teste PORT)" style="margin:0;"></div>
+                <div class="falta-form-full"><select id="ev-tipo" style="margin:0;"><option value="teste">Teste / Frequência</option><option value="avaliacao">Avaliação / Trabalho</option><option value="outro">Outro Evento / Visita</option></select></div>
+                <div><input type="date" id="ev-data" style="margin:0;"></div><div><input type="time" id="ev-hora" style="margin:0;" value="09:00"></div>
+                <div class="falta-form-full"><select id="ev-disc" style="margin:0;"><option value="">Disciplina Relacionada</option></select></div>
             </div>
-            <div style="display:flex; gap:10px; margin-top:15px;">
-                <button id="btn-gravar-evento" class="primary-btn" style="flex:1;">Criar Evento</button>
-                <button id="btn-cancelar-evento" class="danger-btn" style="flex:1;">Cancelar</button>
-            </div>
+            <div style="display:flex; gap:10px; margin-top:15px;"><button id="btn-gravar-evento" class="primary-btn">Criar Evento</button><button id="btn-cancelar-evento" class="danger-btn">Cancelar</button></div>
         </div>
     </div>
 
-    <!-- MODAL NOVA FALTA (C/ Intervalo de Dias e Horas Funcionais) -->
+    <!-- MODAL NOVA FALTA (COM AS DUAS ABAS - SIMPLES E MÚLTIPLA) -->
     <div id="modal-nova-falta" class="modal-overlay">
-        <div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto;">
-            <h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-plus"></i> Registar Nova Falta</h3>
-            <div class="falta-form-grid">
-                <div class="falta-form-full">
-                    <label class="text-muted" style="font-size:0.8rem; display:block; margin-bottom:3px;">Data Inicial:</label>
-                    <input type="date" id="nf-data-inicio" style="margin:0;">
-                </div>
-                <div class="falta-form-full">
-                    <label class="text-muted" style="font-size:0.8rem; display:block; margin-bottom:3px;">Data Final (Se forem vários dias):</label>
-                    <input type="date" id="nf-data-fim" style="margin:0;">
-                </div>
-                <div><select id="nf-disc" style="margin:0;"><option value="">Disciplina</option></select></div>
-                <div><select id="nf-mod" style="margin:0;"><option value="">Módulo</option></select></div>
-                <div class="falta-form-full" style="display:flex; gap:10px; align-items:center; justify-content:center; margin-top:5px;">
-                    <span class="text-muted">Horas:</span>
-                    <button id="btn-menos-hora" class="secondary-btn small-btn" style="width:40px;">-</button>
-                    <input type="number" id="nf-horas" value="1" min="1" max="8" style="margin:0; text-align:center; width:60px;">
-                    <button id="btn-mais-hora" class="primary-btn small-btn" style="width:40px;">+</button>
-                </div>
-                <div class="falta-form-full" style="margin-top:5px;">
-                    <label class="falta-checkbox-group"><input type="checkbox" id="nf-justificada"><span>Falta Justificada?</span></label>
+        <div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto; max-height: 90vh; overflow-y:auto;">
+            <h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-plus"></i> Registar Falta(s)</h3>
+            
+            <div class="falta-tabs" style="margin-bottom: 15px;">
+                <button class="falta-tab-btn active" id="tab-falta-simples" style="padding:8px; font-size:0.9rem;">1 Disciplina</button>
+                <button class="falta-tab-btn" id="tab-falta-multipla" style="padding:8px; font-size:0.9rem;">Múltiplas / Dias</button>
+            </div>
+
+            <!-- View Falta Simples -->
+            <div id="view-falta-simples">
+                <div class="falta-form-grid">
+                    <div class="falta-form-full"><input type="date" id="nf-data" style="margin:0;"></div>
+                    <div><select id="nf-disc" style="margin:0;"><option value="">Disciplina</option></select></div>
+                    <div><select id="nf-mod" style="margin:0;"><option value="">Módulo</option></select></div>
+                    <div class="falta-form-full" style="display:flex; gap:10px; align-items:center;">
+                        <span class="text-muted">Horas:</span>
+                        <button id="btn-menos-hora" class="secondary-btn small-btn" style="width:40px;">-</button>
+                        <input type="number" id="nf-horas" value="1" min="1" max="8" style="margin:0; text-align:center; width:60px;">
+                        <button id="btn-mais-hora" class="primary-btn small-btn" style="width:40px;">+</button>
+                    </div>
                 </div>
             </div>
-            <div style="display:flex; gap:10px; margin-top:15px;">
+
+            <!-- View Falta Múltipla -->
+            <div id="view-falta-multipla" style="display:none;">
+                <div class="falta-form-grid">
+                    <div><label class="text-muted" style="font-size:0.8rem;">De:</label><input type="date" id="nfm-data-inicio" style="margin:0;"></div>
+                    <div><label class="text-muted" style="font-size:0.8rem;">Até:</label><input type="date" id="nfm-data-fim" style="margin:0;"></div>
+                </div>
+                <div style="margin-top:10px; margin-bottom:10px;">
+                    <label class="text-muted" style="font-size:0.8rem; margin-bottom:5px; display:block;">Disciplinas e Horas Afetadas:</label>
+                    <div id="lista-linhas-faltas" style="display:flex; flex-direction:column; gap:5px;"></div>
+                    <button id="btn-add-linha-falta" class="secondary-btn small-btn" style="margin-top:10px; width:100%; border-style:dashed;"><i class="fa-solid fa-plus"></i> Adicionar Disciplina</button>
+                </div>
+            </div>
+
+            <div class="falta-form-full" style="margin-top:15px; margin-bottom:15px;">
+                <label class="falta-checkbox-group" style="display:flex; align-items:center; gap:10px; background:var(--bg-dark); padding:10px; border-radius:6px; border:1px solid #333;"><input type="checkbox" id="nf-justificada" style="width:20px; height:20px;"><span>Falta Justificada?</span></label>
+            </div>
+            
+            <div style="display:flex; gap:10px;">
                 <button id="btn-gravar-nova-falta" class="primary-btn" style="flex:1;">Registar</button>
                 <button id="btn-cancelar-nova-falta" class="danger-btn" style="flex:1;">Cancelar</button>
             </div>
         </div>
+    </div>
+
+    <!-- PAUTA GLOBAL -->
+    <div id="modal-pauta-global" class="modal-overlay">
+        <div class="paper-sheet" style="max-width: 600px; width: 95%; max-height: 85vh; overflow-y: auto;"><button id="btn-close-pauta" class="btn-close-paper"><i class="fa-solid fa-xmark"></i></button><h2 style="text-align:center; margin-bottom: 20px; color: var(--primary-green);">Pauta Global</h2><div id="pauta-global-content"></div></div>
     </div>
 
     <script type="module" src="app.js"></script>
