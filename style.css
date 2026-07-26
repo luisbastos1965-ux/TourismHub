@@ -88,6 +88,8 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .student-profile-header { text-align: center; margin-bottom: 20px; }
 .profile-avatar { width: 80px; height: 80px; background-color: var(--primary-green); border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 10px auto; font-size: 2rem; color: white; position: relative; overflow: hidden; }
 .edit-avatar-btn { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.6); font-size: 0.75rem; text-align: center; padding: 4px 0; cursor: pointer; transition: 0.2s; color: white;}
+.edit-avatar-btn:hover { background: var(--primary-green); color: var(--bg-dark); }
+
 .admin-hub-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
 .hub-card { background-color: var(--bg-card); border: 1px solid #333; border-radius: 12px; padding: 20px 10px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s ease; color: white; }
 .hub-card i { font-size: 2rem; color: var(--primary-green); }
@@ -127,16 +129,18 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .pg-nota-val.negativa { color: var(--danger-red); }
 
 /* =========================================
-   FALTAS (Com Toolbar e Divisores)
+   FALTAS (Toolbar com Justificar Rápido)
 ========================================= */
 .falta-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
 .falta-tab-btn { flex: 1; padding: 12px; background-color: var(--bg-dark); color: var(--text-muted); border: 1px solid #333; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
 .falta-tab-btn.active { background-color: rgba(0, 204, 136, 0.1); border-color: var(--primary-green); color: var(--primary-green); }
 
-.faltas-toolbar { display: flex; gap: 10px; background-color: var(--bg-card); padding: 15px; border-radius: 8px; border: 1px solid #333; margin-bottom: 15px; }
-.faltas-toolbar button { flex: 1; display: flex; justify-content: center; align-items: center; gap: 8px; padding: 10px; border-radius: 6px; border: 1px solid #444; background: var(--bg-dark); color: var(--text-light); cursor: pointer; transition: 0.2s; font-weight: bold; }
+.faltas-toolbar { display: flex; gap: 10px; background-color: var(--bg-card); padding: 15px; border-radius: 8px; border: 1px solid #333; margin-bottom: 15px; flex-wrap: wrap;}
+.faltas-toolbar button { flex: 1; min-width: 100px; display: flex; justify-content: center; align-items: center; gap: 8px; padding: 10px; border-radius: 6px; border: 1px solid #444; background: var(--bg-dark); color: var(--text-light); cursor: pointer; transition: 0.2s; font-weight: bold; font-size: 0.85rem;}
 .faltas-toolbar button:hover { border-color: var(--primary-green); color: var(--primary-green); }
 .faltas-toolbar button.del-btn:hover { border-color: var(--danger-red); color: var(--danger-red); }
+.faltas-toolbar button.just-btn { color: var(--warning-yellow); border-color: #665200; }
+.faltas-toolbar button.just-btn:hover { border-color: var(--warning-yellow); background: rgba(255,204,0,0.1); }
 
 .falta-date-divider { background-color: #222; color: var(--primary-green); padding: 8px 15px; font-size: 0.9rem; font-weight: bold; border-radius: 6px; margin: 20px 0 10px 0; border-left: 3px solid var(--primary-green); }
 .falta-card-checkbox { margin: 0 15px 0 10px; accent-color: var(--primary-green); width: 18px; height: 18px; cursor: pointer; }
@@ -185,6 +189,7 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .badge-tipo-evento.avaliacao { background-color: rgba(0, 210, 255, 0.2); color: #00d2ff; }
 .badge-tipo-evento.outro { background-color: rgba(184, 43, 242, 0.2); color: #b82bf2; }
 .badge-tipo-evento.concluido { background-color: rgba(40, 167, 69, 0.2); color: var(--success-green); }
+
 .calendar-divider { text-align: center; margin: 30px 0 15px 0; position: relative; }
 .calendar-divider::before { content: ""; position: absolute; top: 50%; left: 0; width: 100%; height: 1px; border-top: 1px dashed #555; z-index: 1; }
 .calendar-divider span { background-color: var(--bg-dark); padding: 0 15px; color: var(--text-muted); font-size: 0.85rem; font-weight: bold; text-transform: uppercase; position: relative; z-index: 2; }
@@ -245,7 +250,7 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 /* MODALS E NAV */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
 .modal-overlay.bottom { align-items: flex-end; }
-.action-sheet { background-color: var(--bg-card); width: 100%; border-radius: 20px 20px 0 0; padding: 25px; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 12px; animation: slideUp 0.3s ease-out; }
+.action-sheet { background-color: var(--bg-card); width: 100%; border-radius: 20px 20px 0 0; padding: 25px; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 12px; animation: slideUp 0.3s ease-out; max-height: 90vh; overflow-y:auto;}
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--bg-card); display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #333; }
 .nav-item { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: var(--text-muted); font-size: 0.75rem; gap: 5px; }
