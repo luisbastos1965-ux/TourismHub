@@ -44,6 +44,7 @@ function esconderTudoMenos(ecraAtivo) {
     if(ecraAtivo) ecraAtivo.style.display = 'block';
 }
 
+// 1. Autenticação e Gamificação Aluno
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         const userId = user.email.split('@')[0];
@@ -70,6 +71,7 @@ btnLoginManual.addEventListener('click', () => {
 });
 btnLogout.addEventListener('click', () => signOut(auth));
 
+// 2. Navegação Geral
 document.getElementById('btn-voltar-turmas-hub')?.addEventListener('click', () => { esconderTudoMenos(null); painelAdmin.style.display = 'block'; });
 document.getElementById('btn-voltar-class-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
 document.getElementById('btn-voltar-lista')?.addEventListener('click', () => esconderTudoMenos(classView));
@@ -88,10 +90,18 @@ document.getElementById('btn-hub-calendario')?.addEventListener('click', () => {
 document.getElementById('btn-voltar-cal-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
 document.getElementById('btn-hub-horario')?.addEventListener('click', () => { document.getElementById('title-horario-turma').innerText = `Horário - ${turmaAtual}`; esconderTudoMenos(viewClassHorario); carregarHorario(); });
 document.getElementById('btn-voltar-horario-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
-document.getElementById('btn-hub-forum')?.addEventListener('click', () => { document.getElementById('title-forum-turma').innerText = `Fórum - ${turmaAtual}`; esconderTudoMenos(viewClassForum); });
+
+// ABRE FÓRUM E ESTATÍSTICAS
+document.getElementById('btn-hub-forum')?.addEventListener('click', () => { document.getElementById('title-forum-turma').innerText = `Fóruns - ${turmaAtual}`; esconderTudoMenos(viewClassForum); });
 document.getElementById('btn-voltar-forum-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
-document.getElementById('btn-hub-estatisticas')?.addEventListener('click', () => { document.getElementById('title-stats-turma').innerText = `Estatísticas - ${turmaAtual}`; esconderTudoMenos(viewClassEstatisticas); });
+document.getElementById('btn-voltar-canais')?.addEventListener('click', () => { document.getElementById('forum-chat-view').style.display = 'none'; document.getElementById('forum-channel-list').style.display = 'block'; });
+
+document.getElementById('btn-novo-forum')?.addEventListener('click', () => { document.getElementById('modal-novo-forum').style.display = 'flex'; });
+document.getElementById('btn-cancelar-forum')?.addEventListener('click', () => { document.getElementById('modal-novo-forum').style.display = 'none'; });
+
+document.getElementById('btn-hub-estatisticas')?.addEventListener('click', () => { document.getElementById('title-stats-turma').innerText = `Estatísticas - ${turmaAtual}`; esconderTudoMenos(viewClassEstatisticas); calcularEstatisticasTurma(); });
 document.getElementById('btn-voltar-stats-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
+
 
 document.querySelectorAll('.turma-card-large').forEach(botao => {
     botao.addEventListener('click', () => {
@@ -226,6 +236,7 @@ document.querySelectorAll('.horario-slot').forEach(slot => {
         slotSelecionado = e.currentTarget;
         let opt = '<option value="">Sem Aula (Limpar)</option>';
         for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) opt += `<option value="${d}">${d}</option>`; }
+        opt += `<option disabled>──────────</option><option value="Almoço">Almoço</option><option value="Visita">Visita Estudo</option><option value="FCT">FCT</option><option value="PAP">PAP</option><option value="PRHF">PRHF</option>`;
         document.getElementById('ed-horario-disc').innerHTML = opt;
         document.getElementById('modal-editar-horario').style.display = 'flex';
     });
@@ -262,6 +273,42 @@ async function carregarHorario() {
     } catch(err){}
 }
 
+// MOTOR DE ESTATÍSTICAS REAIS
+async function calcularEstatisticasTurma() {
+    document.getElementById('stat-media-turma').innerText = '...';
+    document.getElementById('stat-assiduidade').innerText = '...';
+    document.getElementById('stat-prhf-ativos').innerText = '...';
+    document.getElementById('stat-alunos-risco').innerText = '...';
+    
+    try {
+        const qAlunos = query(collection(db, "utilizadores"), where("turma", "==", turmaAtual), where("papel", "==", "aluno"));
+        const snapshotAlunos = await getDocs(qAlunos);
+        if(snapshotAlunos.empty) return;
+        
+        let totalNotas = 0; let countNotas = 0; let prhfsAtivos = 0; let alunosEmRisco = 0; let totalHorasFalta = 0;
+        
+        for(let alunoDoc of snapshotAlunos.docs) {
+            const aId = alunoDoc.id; let notasNegativas = 0;
+            const notas = await getDocs(collection(db, "utilizadores", aId, "notas"));
+            notas.forEach(n => {
+                const val = n.data().nota;
+                if(val !== 'REP' && !isNaN(val)) { totalNotas += Number(val); countNotas++; if(Number(val) < 10) notasNegativas++; } 
+                else if (val === 'REP') { notasNegativas++; }
+            });
+            const prhfs = await getDocs(collection(db, "utilizadores", aId, "prhfs"));
+            prhfs.forEach(p => { if(p.data().status === 'ativa') prhfsAtivos++; });
+            const faltas = await getDocs(collection(db, "utilizadores", aId, "faltas"));
+            faltas.forEach(f => { if(!f.data().justificada) totalHorasFalta += f.data().horas; });
+            if(notasNegativas >= 3) alunosEmRisco++;
+        }
+        
+        const mediaFinal = countNotas > 0 ? (totalNotas / countNotas).toFixed(1) : '-';
+        document.getElementById('stat-media-turma').innerText = mediaFinal;
+        document.getElementById('stat-prhf-ativos').innerText = prhfsAtivos;
+        document.getElementById('stat-alunos-risco').innerText = alunosEmRisco;
+        document.getElementById('stat-assiduidade').innerText = totalHorasFalta > 0 ? `-${totalHorasFalta}h` : '100%';
+    } catch(e) {}
+}
 
 // AVALIAÇÕES E PAUTA GLOBAL
 document.getElementById('btn-hub-avaliacoes')?.addEventListener('click', () => { esconderTudoMenos(viewAvaliacoes); construirMatrizVisual(document.getElementById('matriz-disciplinas-container'), abrirModulosDisciplinaAvaliacao); });
@@ -304,7 +351,6 @@ async function abrirModulosDisciplinaAvaliacao(disciplina) {
     modulosArray.forEach(mod => {
         const nEx = notasMapa[mod] !== undefined ? notasMapa[mod] : "SN"; let classeBadge = ""; if(nEx === "SN") classeBadge = "sn"; else if(nEx === "REP") classeBadge = "rep";
         const txtMotivo = (nEx === "REP" && notasMapa[mod+"_motivo"]) ? `<div style="font-size:0.8rem; color:var(--text-muted); margin-top:5px;"><i>Motivo: ${notasMapa[mod+"_motivo"]}</i></div>` : "";
-
         html += `<div class="modulo-avaliar-item" style="display:flex; flex-direction:column;">
             <div class="mod-view" id="view-${disciplina}-${mod}" style="display:flex; justify-content:space-between; width:100%; align-items:center;">
                 <div><strong>${mod}</strong>${txtMotivo}</div>
@@ -312,7 +358,7 @@ async function abrirModulosDisciplinaAvaliacao(disciplina) {
             </div>
             <div class="mod-edit" id="edit-${disciplina}-${mod}" style="display:none; flex-direction:column; width:100%;">
                 <div class="grade-grid" id="grid-${disciplina}-${mod}">${gridBtns}</div>
-                <div id="rep-reason-box-${disciplina}-${mod}" style="display:none; width:100%; margin-bottom:10px;"><input type="text" id="input-reason-${disciplina}-${mod}" placeholder="Motivo do REP (Opc. Ex: Falta de Teste)" style="margin:0; padding:8px; font-size:0.9rem;"></div>
+                <div id="rep-reason-box-${disciplina}-${mod}" style="display:none; width:100%; margin-bottom:10px;"><input type="text" id="input-reason-${disciplina}-${mod}" placeholder="Motivo do REP" style="margin:0; padding:8px; font-size:0.9rem;"></div>
                 <div style="display:flex; gap:10px;"><button class="primary-btn small-btn btn-gravar-nota" data-disc="${disciplina}" data-mod="${mod}" style="flex:1;">OK (Gravar)</button><button class="secondary-btn small-btn btn-fechar-edicao-nota" data-mod="${mod}" style="flex:1;">Cancelar</button></div>
             </div>
         </div>`;
@@ -341,7 +387,7 @@ async function abrirModulosDisciplinaAvaliacao(disciplina) {
 }
 
 // INFORMAÇÕES
-document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { document.getElementById('modal-telefone').style.display='none'; document.getElementById('modal-email').style.display='none'; document.getElementById('modal-nova-falta').style.display='none'; document.getElementById('modal-alterar-falta').style.display='none'; document.getElementById('modal-novo-evento').style.display='none'; document.getElementById('modal-editar-horario').style.display='none'; }));
+document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { document.getElementById('modal-telefone').style.display='none'; document.getElementById('modal-email').style.display='none'; document.getElementById('modal-nova-falta').style.display='none'; document.getElementById('modal-alterar-falta').style.display='none'; document.getElementById('modal-novo-evento').style.display='none'; document.getElementById('modal-editar-horario').style.display='none'; document.getElementById('modal-novo-forum').style.display='none'; }));
 document.addEventListener('click', (e) => {
     if (e.target.classList.contains('clickable-contact')) {
         const tipo = e.target.getAttribute('data-type'); const valor = e.target.innerText; if(valor === "-" || valor === "") return;
@@ -370,16 +416,14 @@ async function carregarInfoLeitura() {
         }
     } catch (error) {}
 }
-document.body.addEventListener('click', async (e) => {
-    if(e.target.closest('#btn-hub-informacoes')) { esconderTudoMenos(viewInformacoes); document.getElementById('info-aluno-display').style.display = 'block'; document.getElementById('info-aluno-edit').style.display = 'none'; document.getElementById('info-ee-display').style.display = 'block'; document.getElementById('info-ee-edit').style.display = 'none'; carregarInfoLeitura(); }
-    if(e.target.closest('#btn-editar-info-aluno')) { document.getElementById('info-aluno-display').style.display='none'; document.getElementById('info-aluno-edit').style.display='block'; }
-    if(e.target.closest('#btn-editar-info-ee')) { document.getElementById('info-ee-display').style.display='none'; document.getElementById('info-ee-edit').style.display='block'; }
-    if(e.target.closest('#btn-cancelar-aluno')) { document.getElementById('info-aluno-display').style.display='block'; document.getElementById('info-aluno-edit').style.display='none'; }
-    if(e.target.closest('#btn-cancelar-ee')) { document.getElementById('info-ee-display').style.display='block'; document.getElementById('info-ee-edit').style.display='none'; }
-});
+document.getElementById('btn-hub-informacoes')?.addEventListener('click', () => { esconderTudoMenos(viewInformacoes); document.getElementById('info-aluno-display').style.display = 'block'; document.getElementById('info-aluno-edit').style.display = 'none'; document.getElementById('info-ee-display').style.display = 'block'; document.getElementById('info-ee-edit').style.display = 'none'; carregarInfoLeitura(); });
+document.getElementById('btn-editar-info-aluno')?.addEventListener('click', () => { document.getElementById('info-aluno-display').style.display='none'; document.getElementById('info-aluno-edit').style.display='block'; });
+document.getElementById('btn-editar-info-ee')?.addEventListener('click', () => { document.getElementById('info-ee-display').style.display='none'; document.getElementById('info-ee-edit').style.display='block'; });
+document.getElementById('btn-cancelar-aluno')?.addEventListener('click', () => { document.getElementById('info-aluno-display').style.display='block'; document.getElementById('info-aluno-edit').style.display='none'; });
+document.getElementById('btn-cancelar-ee')?.addEventListener('click', () => { document.getElementById('info-ee-display').style.display='block'; document.getElementById('info-ee-edit').style.display='none'; });
+
 document.getElementById('btn-guardar-aluno')?.addEventListener('click', async (e) => { const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; try { await updateDoc(doc(db, "utilizadores", alunoAtualId), { idade: document.getElementById('info-aluno-idade').value, telAluno: document.getElementById('info-aluno-telemovel').value, emailAluno: document.getElementById('info-aluno-email').value, morada: document.getElementById('info-aluno-morada').value }); carregarInfoLeitura(); document.getElementById('info-aluno-display').style.display='block'; document.getElementById('info-aluno-edit').style.display='none'; } catch(err) {} btnRef.innerText = "Guardar"; });
 document.getElementById('btn-guardar-ee')?.addEventListener('click', async (e) => { const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; try { await updateDoc(doc(db, "utilizadores", alunoAtualId), { nomeEE: document.getElementById('info-ee-nome').value, filiacaoEE: document.getElementById('info-ee-filiacao').value, telEE: document.getElementById('info-ee-telemovel').value, emailEE: document.getElementById('info-ee-email').value }); carregarInfoLeitura(); document.getElementById('info-ee-display').style.display='block'; document.getElementById('info-ee-edit').style.display='none'; } catch(err) {} btnRef.innerText = "Guardar"; });
-
 
 // PRHF 
 const selDisc = document.getElementById('prhf-disciplina'); const selMod = document.getElementById('prhf-modulo');
@@ -387,7 +431,7 @@ let optDisc = '<option value="">Disc.</option>'; for(const comp of Object.values
 const optDiscFilter = '<option value="">Todas as Disciplinas</option>' + optDisc; document.getElementById('filtro-prhf-disc').innerHTML = optDiscFilter;
 
 selDisc.addEventListener('change', (e) => { const d = e.target.value; let modsObj = {}; for(const comp of Object.values(matrizCurso)) { if(comp[d]) modsObj = comp[d]; } let optMod = '<option value="">Mod.</option>'; Object.keys(modsObj).forEach(m => optMod += `<option value="${m}">${m}</option>`); selMod.innerHTML = optMod; });
-document.getElementById('prhf-file-upload')?.addEventListener('change', (e) => { const file = e.target.files[0]; if(!file) return; if(file.size > 1048576) { alert("Ficheiro demasiado grande! (Limite 1MB)"); return; } pdfNomeTemporario = file.name; document.getElementById('prhf-file-name').innerText = pdfNomeTemporario; const reader = new FileReader(); reader.onload = (ev) => { pdfBase64Temporario = ev.target.result; }; reader.readAsDataURL(file); });
+document.getElementById('prhf-file-upload')?.addEventListener('change', (e) => { const file = e.target.files[0]; if(!file) return; if(file.size > 1048576) { alert("Ficheiro demasiado grande! (Limite 1MB para testes)"); return; } pdfNomeTemporario = file.name; document.getElementById('prhf-file-name').innerText = pdfNomeTemporario; const reader = new FileReader(); reader.onload = (ev) => { pdfBase64Temporario = ev.target.result; }; reader.readAsDataURL(file); });
 
 let tabAtivaPrhf = 'ativas'; const modalFolha = document.getElementById('modal-prhf-sheet');
 
@@ -446,6 +490,7 @@ function desenharRegistosManuais(plano) {
             });
         });
     }
+
     document.getElementById('sheet-horas-feitas').innerText = totalRealizado; document.getElementById('sheet-horas-totais').innerText = plano.horasPresenciais || 0;
     const btnConcluir = document.getElementById('sheet-btn-concluir'); const progressFill = document.getElementById('sheet-btn-progress-fill'); const progressText = document.getElementById('sheet-btn-progress-text'); const txtRegisto = document.getElementById('txt-btn-registo');
     const hP = plano.horasPresenciais || 0; let perc = hP > 0 ? Math.min((totalRealizado / hP) * 100, 100) : 100; 
@@ -463,6 +508,7 @@ function abrirFolhaPRHF(id) {
     if(p.pdfFile) { btnDownload.style.display = 'flex'; btnDownload.href = p.pdfFile; btnDownload.download = p.pdfName || `Anexo_${p.disciplina}.pdf`; } else { btnDownload.style.display = 'none'; }
     const badge = document.getElementById('sheet-status'); badge.innerText = p.status.toUpperCase(); 
     if(p.status === 'ativa') badge.className = `paper-status ${p.moduloTerminado ? 'ativa-terminado' : 'ativa-decorrer'}`; else badge.className = `paper-status concluida`;
+
     if (p.status === 'concluida') { document.getElementById('sheet-btn-concluir').style.display = 'none'; document.getElementById('sheet-btn-reverter').style.display = 'flex'; document.getElementById('sheet-btn-toggle-manual').style.display = 'none'; document.getElementById('manual-presence-box').style.display = 'none'; } 
     else { document.getElementById('sheet-btn-concluir').style.display = 'block'; document.getElementById('sheet-btn-reverter').style.display = 'none'; document.getElementById('sheet-btn-toggle-manual').style.display = 'flex'; document.getElementById('manual-presence-box').style.display = 'none'; }
     desenharRegistosManuais(p); modalFolha.style.display = 'flex';
@@ -496,7 +542,7 @@ document.getElementById('sheet-btn-reverter')?.addEventListener('click', async (
 
 
 // ==========================================
-// 8. MOTOR DE FALTAS (TUDO OPERACIONAL E COM REFRESH)
+// 8. MOTOR DE FALTAS (COM 3 FILTROS, JUSTIFICAR RÁPIDO E REFRESH AUTO)
 // ==========================================
 let optFaltasDiscOptionsOnly = ""; let faltasMemoria = [];
 for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) optFaltasDiscOptionsOnly += `<option value="${d}">${d}</option>`; }
@@ -560,7 +606,7 @@ document.getElementById('nf-disc')?.addEventListener('change', (e) => {
     let optMod = '<option value="">Módulo</option>'; Object.keys(modsObj).forEach(m => optMod += `<option value="${m}">${m}</option>`); document.getElementById('nf-mod').innerHTML = optMod; 
 });
 
-// Gravação Nova Falta Desencravada
+// Gravação Nova Falta Desencravada (REFRESH AUTO)
 document.getElementById('btn-gravar-nova-falta')?.addEventListener('click', async (e) => {
     const justificada = document.getElementById('nf-justificada').checked;
     const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A registar...';
@@ -609,6 +655,7 @@ async function carregarHistoricoFaltas() {
         
         faltasFiltradas.sort((a,b) => b.dataInicio.localeCompare(a.dataInicio));
         let html = ''; let currentDate = ''; const mesArr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        
         faltasFiltradas.forEach(f => {
             if(f.dataInicio !== currentDate) {
                 currentDate = f.dataInicio; const dp = currentDate.split('-'); const dateStr = `${dp[2]} de ${mesArr[parseInt(dp[1])-1]} de ${dp[0]}`;
@@ -666,6 +713,7 @@ document.getElementById('af-disc')?.addEventListener('change', (e) => {
     let optMod = '<option value="">Módulo</option>'; Object.keys(modsObj).forEach(m => optMod += `<option value="${m}">${m}</option>`); document.getElementById('af-mod').innerHTML = optMod; 
 });
 document.getElementById('btn-cancelar-alteracao-falta')?.addEventListener('click', () => document.getElementById('modal-alterar-falta').style.display = 'none');
+
 document.getElementById('btn-gravar-alteracao-falta')?.addEventListener('click', async (e) => {
     const dataInicio = document.getElementById('af-data').value; const disciplina = document.getElementById('af-disc').value; const modulo = document.getElementById('af-mod').value;
     const horas = parseInt(document.getElementById('af-horas').value) || 1; const justificada = document.getElementById('af-justificada').checked;
