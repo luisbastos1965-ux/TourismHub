@@ -17,7 +17,6 @@ const db = getFirestore(app);
 
 window.addEventListener('beforeunload', (e) => { e.preventDefault(); e.returnValue = ''; });
 
-// MATRIZ DO CURSO COM AS HORAS DOS MÓDULOS
 const matrizCurso = {
     "Sociocultural": { "PORT": {"M1": 27, "M2": 24, "M3": 27}, "ING": {"M1": 24, "M2": 24, "M3": 24}, "AI": {"M1": 30, "M2": 30}, "EF": {"M1": 20, "M2": 20, "M3": 20, "M4": 20, "M5": 20}, "TIC": {"M1": 24, "M2": 24, "M3": 27, "M4": 24} },
     "Científica": { "GEO": {"M1": 27, "M2": 24}, "HCA": {"M1": 24, "M2": 24, "M3": 27}, "MAT": {"M1": 30, "M2": 30, "M3": 30} },
@@ -94,15 +93,13 @@ document.getElementById('btn-voltar-hub-prhf')?.addEventListener('click', () => 
 document.getElementById('btn-voltar-hub-faltas')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
 document.getElementById('btn-voltar-faltas-disc')?.addEventListener('click', () => esconderTudoMenos(viewFaltas));
 
-// Navegação Aluno
 document.getElementById('btn-lms-meu-perfil')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
 document.getElementById('btn-open-study-mode')?.addEventListener('click', () => esconderTudoMenos(viewStudyMode));
 document.getElementById('btn-voltar-study')?.addEventListener('click', () => esconderTudoMenos(painelAluno));
 
-// Navegação Hub da Turma
 document.getElementById('btn-hub-calendario')?.addEventListener('click', () => { document.getElementById('title-cal-turma').innerText = `Calendário - ${turmaAtual}`; esconderTudoMenos(viewClassCalendario); carregarEventosCalendario(); });
 document.getElementById('btn-voltar-cal-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
-document.getElementById('btn-hub-horario')?.addEventListener('click', () => { document.getElementById('title-horario-turma').innerText = `Horário - ${turmaAtual}`; esconderTudoMenos(viewClassHorario); });
+document.getElementById('btn-hub-horario')?.addEventListener('click', () => { document.getElementById('title-horario-turma').innerText = `Horário - ${turmaAtual}`; esconderTudoMenos(viewClassHorario); carregarHorario(); });
 document.getElementById('btn-voltar-horario-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
 document.getElementById('btn-hub-forum')?.addEventListener('click', () => { document.getElementById('title-forum-turma').innerText = `Fórum - ${turmaAtual}`; esconderTudoMenos(viewClassForum); });
 document.getElementById('btn-voltar-forum-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
@@ -165,7 +162,7 @@ document.getElementById('upload-avatar').addEventListener('change', (e) => {
 
 
 // ==========================================
-// 3. CALENDÁRIO DA TURMA (Com Cores)
+// 3. CALENDÁRIO DA TURMA (Com Cores e Divisão)
 // ==========================================
 document.getElementById('btn-abrir-modal-evento')?.addEventListener('click', () => {
     document.getElementById('modal-novo-evento').style.display = 'flex';
@@ -195,22 +192,101 @@ async function carregarEventosCalendario() {
         const res = await getDocs(query(collection(db, "turmas", turmaAtual, "eventos")));
         if(res.empty) { container.innerHTML = '<p class="text-muted">Sem eventos agendados.</p>'; return; }
 
-        let html = ''; const hoje = new Date().toISOString().split('T')[0];
-        res.forEach(docSnap => {
-            const ev = docSnap.data(); const jaPassou = ev.data < hoje;
+        let evs = []; res.forEach(d => evs.push(d.data()));
+        const hoje = new Date().toISOString().split('T')[0];
+        
+        // Separa e Ordena: Futuros (crescente), Passados (decrescente)
+        const futuros = evs.filter(e => e.data >= hoje).sort((a,b) => a.data.localeCompare(b.data));
+        const passados = evs.filter(e => e.data < hoje).sort((a,b) => b.data.localeCompare(a.data));
+
+        let html = '';
+        const mesArr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        
+        function renderCard(ev, jaPassou) {
             let classeCard = "outro"; let badgeClass = "outro"; let badgeTexto = "OUTRO EVENTO";
-            
             if(jaPassou) { classeCard = "concluido"; badgeClass = "concluido"; badgeTexto = "CONCLUÍDO"; } 
             else if(ev.tipo === 'teste') { classeCard = "teste"; badgeClass = "teste"; badgeTexto = "TESTE / FREQUÊNCIA"; } 
             else if (ev.tipo === 'avaliacao') { classeCard = "avaliacao"; badgeClass = "avaliacao"; badgeTexto = "AVALIAÇÃO / TRABALHO"; }
-
-            const dp = ev.data.split('-'); const mesArr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+            const dp = ev.data.split('-'); const mesStr = dp.length === 3 ? mesArr[parseInt(dp[1])-1] : ''; const diaStr = dp.length === 3 ? dp[2] : '';
             const pDisc = ev.disciplina ? `<p><i class="fa-solid fa-book"></i> ${ev.disciplina} | ${ev.hora || '09:00'}</p>` : `<p><i class="fa-regular fa-clock"></i> ${ev.hora || '09:00'}</p>`;
-            
-            html += `<div class="calendar-event-card ${classeCard}"><div class="calendar-date-box"><span class="day">${dp[2]||''}</span><span class="month">${mesArr[parseInt(dp[1])-1]||''}</span></div><div class="calendar-info"><span class="badge-tipo-evento ${badgeClass}">${badgeTexto}</span><h4>${ev.titulo}</h4>${pDisc}</div></div>`;
-        });
+            return `<div class="calendar-event-card ${classeCard}"><div class="calendar-date-box"><span class="day">${diaStr}</span><span class="month">${mesStr}</span></div><div class="calendar-info"><span class="badge-tipo-evento ${badgeClass}">${badgeTexto}</span><h4>${ev.titulo}</h4>${pDisc}</div></div>`;
+        }
+
+        futuros.forEach(e => html += renderCard(e, false));
+        if(passados.length > 0) {
+            html += `<div class="calendar-divider"><span>Eventos Passados</span></div>`;
+            passados.forEach(e => html += renderCard(e, true));
+        }
+        
         container.innerHTML = html;
     } catch(err) { container.innerHTML = '<p class="text-muted" style="color:var(--danger-red);">Erro ao carregar calendário.</p>'; }
+}
+
+
+// ==========================================
+// 3B. HORÁRIO DINÂMICO (Editar e Gravar)
+// ==========================================
+let modoEdicaoHorario = false; let slotSelecionado = null;
+
+document.getElementById('btn-editar-horario')?.addEventListener('click', (e) => {
+    modoEdicaoHorario = true;
+    e.currentTarget.style.display = 'none'; document.getElementById('btn-salvar-horario').style.display = 'flex';
+    document.querySelectorAll('.horario-slot').forEach(slot => slot.classList.add('edit-mode'));
+});
+document.getElementById('btn-salvar-horario')?.addEventListener('click', (e) => {
+    modoEdicaoHorario = false;
+    e.currentTarget.style.display = 'none'; document.getElementById('btn-editar-horario').style.display = 'flex';
+    document.querySelectorAll('.horario-slot').forEach(slot => slot.classList.remove('edit-mode'));
+});
+
+document.querySelectorAll('.horario-slot').forEach(slot => {
+    slot.addEventListener('click', (e) => {
+        if(!modoEdicaoHorario) return;
+        slotSelecionado = e.currentTarget;
+        let opt = '<option value="">Sem Aula (Limpar)</option>';
+        for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) opt += `<option value="${d}">${d}</option>`; }
+        document.getElementById('ed-horario-disc').innerHTML = opt;
+        document.getElementById('modal-editar-horario').style.display = 'flex';
+    });
+});
+document.getElementById('btn-cancelar-bloco-horario')?.addEventListener('click', () => document.getElementById('modal-editar-horario').style.display = 'none');
+document.getElementById('btn-gravar-bloco-horario')?.addEventListener('click', async (e) => {
+    if(!slotSelecionado) return;
+    const novaDisc = document.getElementById('ed-horario-disc').value;
+    const dia = slotSelecionado.getAttribute('data-dia');
+    const horaId = slotSelecionado.getAttribute('data-hora');
+    
+    e.currentTarget.innerText = "A guardar...";
+    try {
+        await updateDoc(doc(db, "turmas", turmaAtual), { [`horario.${dia}_${horaId}`]: novaDisc });
+        slotSelecionado.innerHTML = novaDisc ? `<strong>${novaDisc}</strong>` : "";
+        if(novaDisc) slotSelecionado.classList.add('filled'); else slotSelecionado.classList.remove('filled');
+        document.getElementById('modal-editar-horario').style.display = 'none';
+        e.currentTarget.innerText = "Confirmar";
+    } catch(err) {
+        // Se o doc da turma não existir, criamos.
+        await setDoc(doc(db, "turmas", turmaAtual), { horario: { [`${dia}_${horaId}`]: novaDisc } }, {merge:true});
+        slotSelecionado.innerHTML = novaDisc ? `<strong>${novaDisc}</strong>` : "";
+        if(novaDisc) slotSelecionado.classList.add('filled'); else slotSelecionado.classList.remove('filled');
+        document.getElementById('modal-editar-horario').style.display = 'none';
+        e.currentTarget.innerText = "Confirmar";
+    }
+});
+
+async function carregarHorario() {
+    // Limpa a grelha primeiro
+    document.querySelectorAll('.horario-slot').forEach(slot => { slot.innerHTML = ""; slot.classList.remove('filled'); });
+    try {
+        const docSnap = await getDoc(doc(db, "turmas", turmaAtual));
+        if(docSnap.exists() && docSnap.data().horario) {
+            const h = docSnap.data().horario;
+            for(const key in h) {
+                const [dia, hora] = key.split('_');
+                const slot = document.querySelector(`.horario-slot[data-dia="${dia}"][data-hora="${hora}"]`);
+                if(slot && h[key]) { slot.innerHTML = `<strong>${h[key]}</strong>`; slot.classList.add('filled'); }
+            }
+        }
+    } catch(err){}
 }
 
 
@@ -309,7 +385,7 @@ async function abrirModulosDisciplinaAvaliacao(disciplina) {
 // ==========================================
 // 5. INFORMAÇÕES
 // ==========================================
-document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { document.getElementById('modal-telefone').style.display='none'; document.getElementById('modal-email').style.display='none'; document.getElementById('modal-nova-falta').style.display='none'; document.getElementById('modal-novo-evento').style.display='none'; }));
+document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { document.getElementById('modal-telefone').style.display='none'; document.getElementById('modal-email').style.display='none'; document.getElementById('modal-nova-falta').style.display='none'; document.getElementById('modal-novo-evento').style.display='none'; document.getElementById('modal-editar-horario').style.display='none'; }));
 document.addEventListener('click', (e) => {
     if (e.target.classList.contains('clickable-contact')) {
         const tipo = e.target.getAttribute('data-type'); const valor = e.target.innerText; if(valor === "-" || valor === "") return;
@@ -337,16 +413,14 @@ async function carregarInfoLeitura() {
                 document.getElementById(id).value = d[key === 'telemovel' ? (id.includes('aluno') ? 'telAluno' : 'telEE') : (key === 'email' ? (id.includes('aluno') ? 'emailAluno' : 'emailEE') : key)] || d[id.includes('aluno') ? key : key + 'EE'] || "";
             });
         }
-    } catch (error) {}
+    } catch (error) { console.error(error); }
 }
 
-document.body.addEventListener('click', async (e) => {
-    if(e.target.closest('#btn-hub-informacoes')) { esconderTudoMenos(viewInformacoes); document.getElementById('info-aluno-display').style.display = 'block'; document.getElementById('info-aluno-edit').style.display = 'none'; document.getElementById('info-ee-display').style.display = 'block'; document.getElementById('info-ee-edit').style.display = 'none'; carregarInfoLeitura(); }
-    if(e.target.closest('#btn-editar-info-aluno')) { document.getElementById('info-aluno-display').style.display='none'; document.getElementById('info-aluno-edit').style.display='block'; }
-    if(e.target.closest('#btn-editar-info-ee')) { document.getElementById('info-ee-display').style.display='none'; document.getElementById('info-ee-edit').style.display='block'; }
-    if(e.target.closest('#btn-cancelar-aluno')) { document.getElementById('info-aluno-display').style.display='block'; document.getElementById('info-aluno-edit').style.display='none'; }
-    if(e.target.closest('#btn-cancelar-ee')) { document.getElementById('info-ee-display').style.display='block'; document.getElementById('info-ee-edit').style.display='none'; }
-});
+document.getElementById('btn-hub-informacoes')?.addEventListener('click', () => { esconderTudoMenos(viewInformacoes); document.getElementById('info-aluno-display').style.display = 'block'; document.getElementById('info-aluno-edit').style.display = 'none'; document.getElementById('info-ee-display').style.display = 'block'; document.getElementById('info-ee-edit').style.display = 'none'; carregarInfoLeitura(); });
+document.getElementById('btn-editar-info-aluno')?.addEventListener('click', () => { document.getElementById('info-aluno-display').style.display='none'; document.getElementById('info-aluno-edit').style.display='block'; });
+document.getElementById('btn-editar-info-ee')?.addEventListener('click', () => { document.getElementById('info-ee-display').style.display='none'; document.getElementById('info-ee-edit').style.display='block'; });
+document.getElementById('btn-cancelar-aluno')?.addEventListener('click', () => { document.getElementById('info-aluno-display').style.display='block'; document.getElementById('info-aluno-edit').style.display='none'; });
+document.getElementById('btn-cancelar-ee')?.addEventListener('click', () => { document.getElementById('info-ee-display').style.display='block'; document.getElementById('info-ee-edit').style.display='none'; });
 
 document.getElementById('btn-guardar-aluno')?.addEventListener('click', async (e) => {
     e.currentTarget.innerText = "A gravar...";
@@ -363,7 +437,7 @@ document.getElementById('btn-guardar-ee')?.addEventListener('click', async (e) =
 
 
 // ==========================================
-// 6. PRHF (Recuperações)
+// 6. PRHF 
 // ==========================================
 const selDisc = document.getElementById('prhf-disciplina'); const selMod = document.getElementById('prhf-modulo');
 let optDisc = '<option value="">Disc.</option>'; for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) optDisc += `<option value="${d}">${d}</option>`; } selDisc.innerHTML = optDisc;
@@ -384,9 +458,7 @@ document.getElementById('prhf-file-upload')?.addEventListener('change', (e) => {
 
 let tabAtivaPrhf = 'ativas'; const modalFolha = document.getElementById('modal-prhf-sheet');
 
-if(document.getElementById('btn-hub-prhf')) {
-    document.getElementById('btn-hub-prhf').addEventListener('click', () => { esconderTudoMenos(viewPrhf); tabAtivaPrhf = 'ativas'; document.getElementById('tab-prhf-ativas').classList.add('active'); document.getElementById('tab-prhf-concluidas').classList.remove('active'); carregarListaPRHF(alunoAtualId); });
-}
+document.getElementById('btn-hub-prhf')?.addEventListener('click', () => { esconderTudoMenos(viewPrhf); tabAtivaPrhf = 'ativas'; document.getElementById('tab-prhf-ativas').classList.add('active'); document.getElementById('tab-prhf-concluidas').classList.remove('active'); carregarListaPRHF(alunoAtualId); });
 document.getElementById('tab-prhf-ativas')?.addEventListener('click', (e) => { tabAtivaPrhf = 'ativas'; e.currentTarget.classList.add('active'); document.getElementById('tab-prhf-concluidas').classList.remove('active'); carregarListaPRHF(alunoAtualId); });
 document.getElementById('tab-prhf-concluidas')?.addEventListener('click', (e) => { tabAtivaPrhf = 'concluidas'; e.currentTarget.classList.add('active'); document.getElementById('tab-prhf-ativas').classList.remove('active'); carregarListaPRHF(alunoAtualId); });
 document.getElementById('filtro-prhf-disc')?.addEventListener('change', () => carregarListaPRHF(alunoAtualId));
@@ -518,39 +590,36 @@ document.getElementById('sheet-btn-reverter').addEventListener('click', async (e
 let optFaltasDiscOptionsOnly = "";
 for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) optFaltasDiscOptionsOnly += `<option value="${d}">${d}</option>`; }
 
-if(document.getElementById('btn-hub-faltas')) {
-    document.getElementById('btn-hub-faltas').addEventListener('click', () => { 
-        esconderTudoMenos(viewFaltas); 
-        document.getElementById('tab-faltas-disciplina').classList.add('active'); document.getElementById('tab-faltas-data').classList.remove('active');
-        document.getElementById('faltas-container-disciplina').style.display = 'block'; document.getElementById('faltas-container-data').style.display = 'none';
-        document.getElementById('toolbar-faltas-data').style.display = 'none';
-        
-        document.getElementById('filtro-disc-faltas').innerHTML = '<option value="">Todas as Disc.</option>' + optFaltasDiscOptionsOnly;
-        document.getElementById('nf-disc').innerHTML = '<option value="">Disciplina</option>' + optFaltasDiscOptionsOnly;
-        construirMatrizVisual(document.getElementById('faltas-container-disciplina'), abrirModulosDisciplinaFaltas); 
-    });
-}
-document.getElementById('tab-faltas-disciplina').addEventListener('click', (e) => { 
+document.getElementById('btn-hub-faltas')?.addEventListener('click', () => { 
+    esconderTudoMenos(viewFaltas); 
+    document.getElementById('tab-faltas-disciplina').classList.add('active'); document.getElementById('tab-faltas-data').classList.remove('active');
+    document.getElementById('faltas-container-disciplina').style.display = 'block'; document.getElementById('faltas-container-data').style.display = 'none';
+    document.getElementById('toolbar-faltas-data').style.display = 'none';
+    
+    document.getElementById('filtro-disc-faltas').innerHTML = '<option value="">Todas as Disc.</option>' + optFaltasDiscOptionsOnly;
+    document.getElementById('nf-disc').innerHTML = '<option value="">Disciplina</option>' + optFaltasDiscOptionsOnly;
+    construirMatrizVisual(document.getElementById('faltas-container-disciplina'), abrirModulosDisciplinaFaltas); 
+});
+document.getElementById('tab-faltas-disciplina')?.addEventListener('click', (e) => { 
     e.currentTarget.classList.add('active'); document.getElementById('tab-faltas-data').classList.remove('active'); 
     document.getElementById('faltas-container-disciplina').style.display = 'block'; document.getElementById('faltas-container-data').style.display = 'none'; 
     document.getElementById('toolbar-faltas-data').style.display = 'none';
 });
-document.getElementById('tab-faltas-data').addEventListener('click', (e) => { 
+document.getElementById('tab-faltas-data')?.addEventListener('click', (e) => { 
     e.currentTarget.classList.add('active'); document.getElementById('tab-faltas-disciplina').classList.remove('active'); 
     document.getElementById('faltas-container-disciplina').style.display = 'none'; document.getElementById('faltas-container-data').style.display = 'block'; 
     document.getElementById('toolbar-faltas-data').style.display = 'flex';
     carregarHistoricoFaltas();
 });
 
+document.getElementById('btn-menos-hora')?.addEventListener('click', () => { const input = document.getElementById('nf-horas'); let v = parseInt(input.value) || 1; if(v > 1) input.value = v - 1; });
+document.getElementById('btn-mais-hora')?.addEventListener('click', () => { const input = document.getElementById('nf-horas'); let v = parseInt(input.value) || 1; if(v < 8) input.value = v + 1; });
 document.getElementById('btn-nova-falta')?.addEventListener('click', () => { document.getElementById('modal-nova-falta').style.display = 'flex'; });
 document.getElementById('btn-cancelar-nova-falta')?.addEventListener('click', () => { document.getElementById('modal-nova-falta').style.display = 'none'; });
 
 let modoFaltaAtual = 'simples';
 document.getElementById('tab-falta-simples')?.addEventListener('click', (e) => { modoFaltaAtual = 'simples'; e.currentTarget.classList.add('active'); document.getElementById('tab-falta-multipla').classList.remove('active'); document.getElementById('view-falta-simples').style.display = 'block'; document.getElementById('view-falta-multipla').style.display = 'none'; });
 document.getElementById('tab-falta-multipla')?.addEventListener('click', (e) => { modoFaltaAtual = 'multipla'; e.currentTarget.classList.add('active'); document.getElementById('tab-falta-simples').classList.remove('active'); document.getElementById('view-falta-simples').style.display = 'none'; document.getElementById('view-falta-multipla').style.display = 'block'; });
-
-document.getElementById('btn-menos-hora')?.addEventListener('click', () => { const input = document.getElementById('nf-horas'); let v = parseInt(input.value) || 1; if(v > 1) input.value = v - 1; });
-document.getElementById('btn-mais-hora')?.addEventListener('click', () => { const input = document.getElementById('nf-horas'); let v = parseInt(input.value) || 1; if(v < 8) input.value = v + 1; });
 
 document.getElementById('btn-add-linha-falta')?.addEventListener('click', () => {
     const div = document.createElement('div'); div.className = "falta-linha-multipla";
@@ -578,7 +647,7 @@ document.getElementById('btn-gravar-nova-falta')?.addEventListener('click', asyn
             await addDoc(collection(db, "utilizadores", alunoAtualId, "faltas"), { dataInicio: dInicio, dataFim: dInicio, disciplina: disc, modulo: mod, horas, justificada, criadoEm: new Date().toISOString() });
         } else {
             const dIn = document.getElementById('nfm-data-inicio').value; const dFi = document.getElementById('nfm-data-fim').value || dIn;
-            if(!dIn) return alert("Preenche pelo menos a Data Inicial!");
+            if(!dIn) return alert("Preenche a Data Inicial!");
             const linhas = document.querySelectorAll('.falta-linha-multipla');
             for(let linha of linhas) {
                 const disc = linha.querySelector('.lf-disc').value; const mod = linha.querySelector('.lf-mod').value; const horas = parseInt(linha.querySelector('.lf-horas').value) || 1;
@@ -629,7 +698,7 @@ async function abrirModulosDisciplinaFaltas(disciplina) {
 }
 
 // ==========================================
-// 8. MODO DE ESTUDO ALUNO (POMODORO)
+// 8. MODO DE ESTUDO (POMODORO)
 // ==========================================
 let studyTimer; let tempoRestante = 25 * 60; 
 const elText = document.getElementById('study-timer-text'); const elCircle = document.getElementById('study-timer-circle');
@@ -641,7 +710,7 @@ document.getElementById('btn-start-study')?.addEventListener('click', (e) => {
         elText.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         if(tempoRestante <= 0) {
             clearInterval(studyTimer); elCircle.classList.remove('active'); elText.innerText = "00:00";
-            alert("Foco concluído! +50 XP!");
+            alert("Parabéns! Foco concluído! +50 XP!");
             document.getElementById('btn-stop-study').style.display = 'none'; document.getElementById('btn-start-study').style.display = 'block'; tempoRestante = 25 * 60;
         }
     }, 1000);
