@@ -89,14 +89,11 @@ document.getElementById('btn-voltar-study')?.addEventListener('click', () => esc
 
 document.getElementById('btn-hub-calendario')?.addEventListener('click', () => { document.getElementById('title-cal-turma').innerText = `Calendário - ${turmaAtual}`; esconderTudoMenos(viewClassCalendario); carregarEventosCalendario(); });
 document.getElementById('btn-voltar-cal-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
-
 document.getElementById('btn-hub-horario')?.addEventListener('click', () => { document.getElementById('title-horario-turma').innerText = `Horário - ${turmaAtual}`; esconderTudoMenos(viewClassHorario); carregarHorario(); });
 document.getElementById('btn-voltar-horario-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
-
 document.getElementById('btn-hub-forum')?.addEventListener('click', () => { document.getElementById('title-forum-turma').innerText = `Fóruns - ${turmaAtual}`; esconderTudoMenos(viewClassForum); carregarForuns(); });
 document.getElementById('btn-voltar-forum-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
 document.getElementById('btn-voltar-canais')?.addEventListener('click', () => { document.getElementById('forum-chat-view').style.display = 'none'; document.getElementById('forum-channel-list').style.display = 'block'; });
-
 document.getElementById('btn-hub-estatisticas')?.addEventListener('click', () => { document.getElementById('title-stats-turma').innerText = `Estatísticas - ${turmaAtual}`; esconderTudoMenos(viewClassEstatisticas); calcularEstatisticasTurma(); });
 document.getElementById('btn-voltar-stats-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
 
@@ -142,6 +139,17 @@ async function carregarFotoPerfil() {
         if (docSnap.exists() && docSnap.data().fotoPerfil) { document.getElementById('avatar-img').src = docSnap.data().fotoPerfil; document.getElementById('avatar-img').style.display = 'block'; document.getElementById('avatar-icon').style.display = 'none'; }
     } catch(e){}
 }
+document.getElementById('upload-avatar').addEventListener('change', (e) => {
+    const file = e.target.files[0]; if(!file) return; const reader = new FileReader();
+    reader.onload = (event) => {
+        const img = new Image(); img.onload = () => {
+            const canvas = document.createElement('canvas'); canvas.width = 150; canvas.height = 150; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, 150, 150);
+            const base64 = canvas.toDataURL('image/jpeg', 0.8);
+            updateDoc(doc(db, 'utilizadores', alunoAtualId), { fotoPerfil: base64 });
+            document.getElementById('avatar-img').src = base64; document.getElementById('avatar-img').style.display = 'block'; document.getElementById('avatar-icon').style.display = 'none';
+        }; img.src = event.target.result;
+    }; reader.readAsDataURL(file);
+});
 
 
 // ==========================================
@@ -254,12 +262,9 @@ document.querySelectorAll('.horario-slot').forEach(slot => {
             document.getElementById('ed-horario-disc').innerHTML = opt; document.getElementById('modal-editar-horario').style.display = 'flex';
         } else {
             if(e.currentTarget.querySelector('.slot-event-badge')) {
-                const tituloEvt = e.currentTarget.querySelector('.slot-event-badge').getAttribute('data-titulo');
-                const tipoEvt = e.currentTarget.querySelector('.slot-event-badge').getAttribute('data-tipo');
-                const discEvt = e.currentTarget.querySelector('.slot-event-badge').getAttribute('data-disc');
-                const dReal = slotSelecionado.getAttribute('data-datareal');
-                document.getElementById('mei-titulo').innerText = tituloEvt; document.getElementById('mei-tipo').innerText = tipoEvt.toUpperCase();
-                document.getElementById('mei-data').innerText = dReal; document.getElementById('mei-disc').innerText = discEvt || 'N/A';
+                const badge = e.currentTarget.querySelector('.slot-event-badge');
+                document.getElementById('mei-titulo').innerText = badge.getAttribute('data-titulo'); document.getElementById('mei-tipo').innerText = badge.getAttribute('data-tipo').toUpperCase();
+                document.getElementById('mei-hora').innerText = badge.getAttribute('data-hora') || 'N/A'; document.getElementById('mei-disc').innerText = badge.getAttribute('data-disc') || 'N/A';
                 document.getElementById('modal-evento-info').style.display = 'flex';
             }
         }
@@ -301,7 +306,7 @@ async function carregarHorario() {
             if(slot && disc) { 
                 slot.innerHTML = `<strong>${disc}</strong>`; slot.classList.add('filled'); 
                 const evtEncontrado = eventosTurma.find(e => e.data === dataReal && e.disciplina === disc);
-                if(evtEncontrado) { slot.innerHTML += `<div class="slot-event-badge" data-titulo="${evtEncontrado.titulo}" data-tipo="${evtEncontrado.tipo}" data-disc="${evtEncontrado.disciplina}"><i class="fa-solid fa-star"></i></div>`; }
+                if(evtEncontrado) { slot.innerHTML += `<div class="slot-event-badge" data-titulo="${evtEncontrado.titulo}" data-tipo="${evtEncontrado.tipo}" data-disc="${evtEncontrado.disciplina}" data-hora="${evtEncontrado.hora}"><i class="fa-solid fa-star"></i></div>`; }
             }
         }
     } catch(err){}
@@ -317,15 +322,17 @@ async function calcularEstatisticasTurma() {
     const tabelaAlunos = document.getElementById('tabela-stats-alunos'); tabelaAlunos.innerHTML = '<tr><td colspan="4" class="text-muted center">A compilar bases de dados de notas e faltas...</td></tr>';
     
     try {
-        const qAlunos = query(collection(db, "utilizadores"), where("turma", "==", turmaAtual), where("papel", "==", "aluno"));
+        // Correção de Bypass para evitar erro de Index no Firebase
+        const qAlunos = query(collection(db, "utilizadores"), where("papel", "==", "aluno"));
         const snapshotAlunos = await getDocs(qAlunos);
-        if(snapshotAlunos.empty) { tabelaAlunos.innerHTML = '<tr><td colspan="4" class="text-muted center">Sem alunos.</td></tr>'; return; }
+        const alunosTurma = snapshotAlunos.docs.filter(doc => doc.data().turma === turmaAtual);
+        if(alunosTurma.length === 0) { tabelaAlunos.innerHTML = '<tr><td colspan="4" class="text-muted center">Sem alunos registados nesta turma.</td></tr>'; return; }
         
         let sumGlobalTotal = 0; let countGlobalTotal = 0; let sumSocio = 0; let countSocio = 0; let sumCient = 0; let countCient = 0; let sumTec = 0; let countTec = 0;
         let prhfsAtivosGerais = 0; let hPrhfPlan = 0; let hPrhfCump = 0; let alunosEmRiscoCount = 0; let totalHorasFaltasTurma = 0;
         let listaTrAlunos = [];
 
-        for(let alunoDoc of snapshotAlunos.docs) {
+        for(let alunoDoc of alunosTurma) {
             const aId = alunoDoc.id; const dAluno = alunoDoc.data();
             let sumAluno = 0; let countAluno = 0; let negAluno = 0; let faltasAluno = 0;
 
@@ -336,7 +343,9 @@ async function calcularEstatisticasTurma() {
                     if(val !== 'REP' && !isNaN(val)) { 
                         const vNum = Number(val); sumAluno += vNum; countAluno++; sumGlobalTotal += vNum; countGlobalTotal++;
                         if(vNum < 10) negAluno++;
-                        if(matrizCurso["Sociocultural"][disc]) { sumSocio += vNum; countSocio++; } else if(matrizCurso["Científica"][disc]) { sumCient += vNum; countCient++; } else if(matrizCurso["Técnica"][disc]) { sumTec += vNum; countTec++; }
+                        if(matrizCurso["Sociocultural"] && matrizCurso["Sociocultural"][disc]) { sumSocio += vNum; countSocio++; } 
+                        else if(matrizCurso["Científica"] && matrizCurso["Científica"][disc]) { sumCient += vNum; countCient++; } 
+                        else if(matrizCurso["Técnica"] && matrizCurso["Técnica"][disc]) { sumTec += vNum; countTec++; }
                     } else if (val === 'REP') { negAluno++; }
                 });
                 const faltas = await getDocs(collection(db, "utilizadores", aId, "faltas"));
@@ -366,27 +375,34 @@ async function calcularEstatisticasTurma() {
         document.getElementById('stat-assiduidade').innerText = totalHorasFaltasTurma > 0 ? `-${totalHorasFaltasTurma}h` : '100%';
         tabelaAlunos.innerHTML = listaTrAlunos.length > 0 ? listaTrAlunos.join('') : '<tr><td colspan="4" class="text-muted center">Sem dados.</td></tr>';
 
-    } catch(e) { tabelaAlunos.innerHTML = '<tr><td colspan="4" class="text-muted center" style="color:red;">Erro ao calcular estatísticas.</td></tr>'; }
+    } catch(e) { tabelaAlunos.innerHTML = '<tr><td colspan="4" class="text-muted center" style="color:red;">Erro ao calcular estatísticas.</td></tr>'; console.error(e); }
 }
 
 
 // ==========================================
-// 6. FÓRUM / CANAIS DINÂMICOS
+// 6. FÓRUM / CANAIS DINÂMICOS (Correção e Checkboxes)
 // ==========================================
 document.getElementById('btn-novo-forum')?.addEventListener('click', async () => { 
     document.getElementById('modal-novo-forum').style.display = 'flex'; 
-    const cList = document.getElementById('novo-forum-membros-list'); cList.innerHTML = '<p class="text-muted" style="text-size:0.8rem;">A procurar alunos...</p>';
+    const cList = document.getElementById('novo-forum-membros-list'); cList.innerHTML = '<p class="text-muted" style="font-size:0.8rem; text-align:center;">A procurar alunos...</p>';
     try {
-        const qAlunos = query(collection(db, "utilizadores"), where("turma", "==", turmaAtual), where("papel", "==", "aluno"));
-        const snapshot = await getDocs(qAlunos); let h = '';
-        snapshot.forEach(d => { h += `<label class="membro-checkbox-item"><input type="checkbox" class="cb-membro-forum" value="${d.id}" checked> ${d.data().nome}</label>`; });
-        cList.innerHTML = h;
-    } catch(e) { cList.innerHTML = '<p class="text-danger">Erro.</p>'; }
+        const qAlunos = query(collection(db, "utilizadores"), where("papel", "==", "aluno"));
+        const snapshot = await getDocs(qAlunos); 
+        const alunosTurma = snapshot.docs.filter(d => d.data().turma === turmaAtual);
+        let h = ''; alunosTurma.forEach(d => { h += `<label class="membro-checkbox-item"><input type="checkbox" class="cb-membro-forum" value="${d.id}" checked> ${d.data().nome}</label>`; });
+        cList.innerHTML = h || '<p class="text-muted" style="font-size:0.8rem; text-align:center;">Sem alunos registados.</p>';
+    } catch(e) { cList.innerHTML = '<p class="text-danger">Erro ao carregar alunos.</p>'; }
 });
 document.getElementById('btn-cancelar-forum')?.addEventListener('click', () => { document.getElementById('modal-novo-forum').style.display = 'none'; });
 
+document.getElementById('btn-selecionar-todos-forum')?.addEventListener('click', () => {
+    const cbs = document.querySelectorAll('.cb-membro-forum');
+    const todosMarcados = Array.from(cbs).every(cb => cb.checked);
+    cbs.forEach(cb => cb.checked = !todosMarcados);
+});
+
 document.getElementById('novo-forum-tipo')?.addEventListener('change', (e) => {
-    document.getElementById('novo-forum-expira').style.display = e.target.value === 'temporario' ? 'block' : 'none';
+    document.getElementById('box-forum-expira').style.display = e.target.value === 'temporario' ? 'block' : 'none';
 });
 
 document.getElementById('btn-gravar-forum')?.addEventListener('click', async (e) => {
@@ -408,7 +424,7 @@ async function carregarForuns() {
     const container = document.getElementById('lista-canais-forum'); container.innerHTML = '<p class="text-muted" style="text-align:center;">A carregar canais...</p>';
     try {
         const res = await getDocs(query(collection(db, "turmas", turmaAtual, "foruns")));
-        if(res.empty) { container.innerHTML = '<p class="text-muted" style="text-align:center;">Sem fóruns criados para esta turma.</p>'; return; }
+        if(res.empty) { container.innerHTML = '<p class="text-muted" style="text-align:center;">Ainda não existem fóruns criados para esta turma.</p>'; return; }
         let html = '';
         res.forEach(docSnap => {
             const f = docSnap.data(); const icon = f.tipo === 'permanente' ? 'fa-comments' : 'fa-stopwatch';
@@ -419,12 +435,7 @@ async function carregarForuns() {
             const fData = JSON.parse(e.currentTarget.getAttribute('data-json'));
             forumAtivoId = e.currentTarget.getAttribute('data-id');
             document.getElementById('chat-active-title').innerText = fData.nome;
-            
-            // Gravar infos no Modal
-            document.getElementById('mif-nome').innerText = fData.nome;
-            document.getElementById('mif-tipo').innerText = fData.tipo.toUpperCase() + (fData.expiraEm ? ` (até ${fData.expiraEm})` : '');
-            document.getElementById('mif-membros').innerText = fData.membros.length + " aluno(s)";
-            
+            document.getElementById('mif-nome').innerText = fData.nome; document.getElementById('mif-tipo').innerText = fData.tipo.toUpperCase() + (fData.expiraEm ? ` (até ${fData.expiraEm})` : ''); document.getElementById('mif-membros').innerText = fData.membros.length + " aluno(s)";
             document.getElementById('forum-channel-list').style.display = 'none'; document.getElementById('forum-chat-view').style.display = 'flex';
             iniciarChat(forumAtivoId);
         }));
@@ -433,7 +444,6 @@ async function carregarForuns() {
 
 document.getElementById('btn-info-canal')?.addEventListener('click', () => document.getElementById('modal-info-forum').style.display = 'flex');
 
-// Chat Real-Time Simplificado
 let chatUnsubscribe = null;
 function iniciarChat(fId) {
     const chatContainer = document.getElementById('chat-messages-container'); chatContainer.innerHTML = '';
@@ -485,17 +495,22 @@ async function abrirModulosDisciplinaAvaliacao(disciplina) {
     const notasMapa = {}; try { const qNotas = await getDocs(collection(db, "utilizadores", alunoAtualId, "notas")); qNotas.forEach(d => { if (d.data().disciplina === disciplina) { notasMapa[d.data().modulo] = d.data().nota; notasMapa[d.data().modulo + "_motivo"] = d.data().motivoRep; } }); } catch(e){}
     let modulosArray = []; for (const comp of Object.values(matrizCurso)) { if (comp[disciplina]) modulosArray = Object.keys(comp[disciplina]); }
     let gridBtns = ""; for(let i=10; i<=20; i++) { gridBtns += `<button class="grade-btn" data-val="${i}">${i}</button>`; } gridBtns += `<button class="grade-btn rep" data-val="REP">REP</button>`;
+
     let html = "";
     modulosArray.forEach(mod => {
         const nEx = notasMapa[mod] !== undefined ? notasMapa[mod] : "SN"; let classeBadge = ""; if(nEx === "SN") classeBadge = "sn"; else if(nEx === "REP") classeBadge = "rep";
         const txtMotivo = (nEx === "REP" && notasMapa[mod+"_motivo"]) ? `<div style="font-size:0.8rem; color:var(--text-muted); margin-top:5px;"><i>Motivo: ${notasMapa[mod+"_motivo"]}</i></div>` : "";
-        html += `<div class="modulo-avaliar-item" style="display:flex; flex-direction:column;"><div class="mod-view" id="view-${disciplina}-${mod}" style="display:flex; justify-content:space-between; width:100%; align-items:center;"><div><strong>${mod}</strong>${txtMotivo}</div><div style="display:flex; align-items:center; gap:15px;"><span class="nota-badge ${classeBadge}" id="badge-${disciplina}-${mod}">${nEx}</span><button class="secondary-btn small-btn btn-abrir-edicao-nota" data-mod="${mod}"><i class="fa-solid fa-pen"></i></button></div></div><div class="mod-edit" id="edit-${disciplina}-${mod}" style="display:none; flex-direction:column; width:100%;"><div class="grade-grid" id="grid-${disciplina}-${mod}">${gridBtns}</div><div id="rep-reason-box-${disciplina}-${mod}" style="display:none; width:100%; margin-bottom:10px;"><input type="text" id="input-reason-${disciplina}-${mod}" placeholder="Motivo do REP (Opc. Ex: Falta de Teste)" style="margin:0; padding:8px; font-size:0.9rem;"></div><div style="display:flex; gap:10px;"><button class="primary-btn small-btn btn-gravar-nota" data-disc="${disciplina}" data-mod="${mod}" style="flex:1;">OK (Gravar)</button><button class="secondary-btn small-btn btn-fechar-edicao-nota" data-mod="${mod}" style="flex:1;">Cancelar</button></div></div></div>`;
+        html += `<div class="modulo-avaliar-item" style="display:flex; flex-direction:column;"><div class="mod-view" id="view-${disciplina}-${mod}" style="display:flex; justify-content:space-between; width:100%; align-items:center;"><div><strong>${mod}</strong>${txtMotivo}</div><div style="display:flex; align-items:center; gap:15px;"><span class="nota-badge ${classeBadge}" id="badge-${disciplina}-${mod}">${nEx}</span><button class="secondary-btn small-btn btn-abrir-edicao-nota" data-mod="${mod}"><i class="fa-solid fa-pen"></i></button></div></div><div class="mod-edit" id="edit-${disciplina}-${mod}" style="display:none; flex-direction:column; width:100%;"><div class="grade-grid" id="grid-${disciplina}-${mod}">${gridBtns}</div><div id="rep-reason-box-${disciplina}-${mod}" style="display:none; width:100%; margin-bottom:10px;"><input type="text" id="input-reason-${disciplina}-${mod}" placeholder="Motivo do REP" style="margin:0; padding:8px; font-size:0.9rem;"></div><div style="display:flex; gap:10px;"><button class="primary-btn small-btn btn-gravar-nota" data-disc="${disciplina}" data-mod="${mod}" style="flex:1;">OK (Gravar)</button><button class="secondary-btn small-btn btn-fechar-edicao-nota" data-mod="${mod}" style="flex:1;">Cancelar</button></div></div></div>`;
     });
     listaModulosUI.innerHTML = html;
     listaModulosUI.querySelectorAll('.btn-abrir-edicao-nota').forEach(b => b.addEventListener('click', (e) => { const m=e.currentTarget.getAttribute('data-mod'); document.getElementById(`view-${disciplina}-${m}`).style.display='none'; document.getElementById(`edit-${disciplina}-${m}`).style.display='flex'; }));
     listaModulosUI.querySelectorAll('.btn-fechar-edicao-nota').forEach(b => b.addEventListener('click', (e) => { const m=e.currentTarget.getAttribute('data-mod'); document.getElementById(`view-${disciplina}-${m}`).style.display='flex'; document.getElementById(`edit-${disciplina}-${m}`).style.display='none'; }));
     let notaSelecionadaTemporaria = {};
-    listaModulosUI.querySelectorAll('.grade-btn').forEach(btn => { btn.addEventListener('click', (e) => { const gridPai = e.currentTarget.parentElement; gridPai.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('selected')); e.currentTarget.classList.add('selected'); const modId = gridPai.id.split('-')[2]; const discId = gridPai.id.split('-')[1]; const v = e.currentTarget.getAttribute('data-val'); notaSelecionadaTemporaria[modId] = v; document.getElementById(`rep-reason-box-${discId}-${modId}`).style.display = v === "REP" ? "block" : "none"; }); });
+    listaModulosUI.querySelectorAll('.grade-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const gridPai = e.currentTarget.parentElement; gridPai.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('selected')); e.currentTarget.classList.add('selected'); const modId = gridPai.id.split('-')[2]; const discId = gridPai.id.split('-')[1]; const v = e.currentTarget.getAttribute('data-val'); notaSelecionadaTemporaria[modId] = v; document.getElementById(`rep-reason-box-${discId}-${modId}`).style.display = v === "REP" ? "block" : "none";
+        });
+    });
     listaModulosUI.querySelectorAll('.btn-gravar-nota').forEach(b => b.addEventListener('click', async (e) => {
         const d = e.currentTarget.getAttribute('data-disc'); const m = e.currentTarget.getAttribute('data-mod'); const v = notaSelecionadaTemporaria[m];
         if(!v) return; const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ...';
@@ -507,7 +522,7 @@ async function abrirModulosDisciplinaAvaliacao(disciplina) {
     }));
 }
 
-// INFORMAÇÕES (MANTIDO COMPLETO)
+// INFORMAÇÕES
 document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { document.getElementById('modal-telefone').style.display='none'; document.getElementById('modal-email').style.display='none'; document.getElementById('modal-nova-falta').style.display='none'; document.getElementById('modal-alterar-falta').style.display='none'; document.getElementById('modal-novo-evento').style.display='none'; document.getElementById('modal-editar-horario').style.display='none'; document.getElementById('modal-novo-forum').style.display='none'; document.getElementById('modal-info-forum').style.display='none'; document.getElementById('modal-evento-info').style.display='none';}));
 document.addEventListener('click', (e) => {
     if (e.target.classList.contains('clickable-contact')) {
