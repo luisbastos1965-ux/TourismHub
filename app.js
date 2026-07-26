@@ -27,6 +27,7 @@ const loginScreen = document.getElementById('login-screen'); const appContent = 
 const btnLoginManual = document.getElementById('btn-login-manual'); const btnLogout = document.getElementById('btn-logout');
 const errorMsg = document.getElementById('login-error'); const bottomNav = document.querySelector('.bottom-nav');
 const painelAluno = document.getElementById('student-dashboard'); const painelAdmin = document.getElementById('admin-dashboard');
+const classHubView = document.getElementById('class-hub-view'); // O Novo Hub da Turma
 const classView = document.getElementById('class-view'); const studentDetailView = document.getElementById('student-detail-view');
 const viewAvaliacoes = document.getElementById('view-avaliacoes'); const viewDisciplinaModulos = document.getElementById('view-disciplina-modulos');
 const viewInformacoes = document.getElementById('view-informacoes'); const viewPrhf = document.getElementById('view-prhf');
@@ -36,7 +37,7 @@ let alunoAtualId = ""; let turmaAtual = ""; let nomePessoaContactoModal = ""; le
 let pdfBase64Temporario = ""; let pdfNomeTemporario = "";
 
 function esconderTudoMenos(ecraAtivo) {
-    [classView, studentDetailView, viewAvaliacoes, viewDisciplinaModulos, viewInformacoes, viewPrhf, viewFaltas, viewFaltasModulos].forEach(el => el.style.display = 'none');
+    [classHubView, classView, studentDetailView, viewAvaliacoes, viewDisciplinaModulos, viewInformacoes, viewPrhf, viewFaltas, viewFaltasModulos].forEach(el => { if(el) el.style.display = 'none'; });
     if(ecraAtivo) ecraAtivo.style.display = 'block';
 }
 
@@ -66,7 +67,8 @@ btnLoginManual.addEventListener('click', () => {
 btnLogout.addEventListener('click', () => signOut(auth));
 
 // 2. Navegação Básica e Turmas
-document.getElementById('btn-voltar-turmas')?.addEventListener('click', () => { esconderTudoMenos(null); painelAdmin.style.display = 'block'; });
+document.getElementById('btn-voltar-turmas-hub')?.addEventListener('click', () => { esconderTudoMenos(null); painelAdmin.style.display = 'block'; });
+document.getElementById('btn-voltar-class-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
 document.getElementById('btn-voltar-lista')?.addEventListener('click', () => esconderTudoMenos(classView));
 document.getElementById('btn-voltar-hub-avaliacoes')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
 document.getElementById('btn-voltar-disciplinas')?.addEventListener('click', () => esconderTudoMenos(viewAvaliacoes));
@@ -78,9 +80,22 @@ document.getElementById('btn-voltar-faltas-disc')?.addEventListener('click', () 
 document.querySelectorAll('.turma-card-large').forEach(botao => {
     botao.addEventListener('click', () => {
         turmaAtual = botao.getAttribute('data-turma'); 
-        document.getElementById('class-title').innerHTML = `<i class="fa-solid ${turmaAtual === 'TUR' ? 'fa-globe' : 'fa-users'}"></i> Turma ${turmaAtual}`;
-        painelAdmin.style.display = 'none'; esconderTudoMenos(classView); carregarAlunos(turmaAtual);
+        painelAdmin.style.display = 'none'; 
+        if(turmaAtual === 'TUR') {
+            document.getElementById('class-title').innerHTML = `<i class="fa-solid fa-globe"></i> Turma TUR`;
+            esconderTudoMenos(classView); carregarAlunos('TUR');
+        } else {
+            document.getElementById('class-hub-title').innerHTML = `Turma ${turmaAtual}`;
+            esconderTudoMenos(classHubView); // Vai para o novo Hub da Turma
+        }
     });
+});
+
+// Botão "Lista de Alunos" dentro do Hub da Turma
+document.getElementById('btn-hub-alunos')?.addEventListener('click', () => {
+    document.getElementById('class-title').innerHTML = `<i class="fa-solid fa-users"></i> Turma ${turmaAtual}`;
+    esconderTudoMenos(classView);
+    carregarAlunos(turmaAtual);
 });
 
 async function carregarAlunos(turmaEscolhida) {
@@ -123,7 +138,6 @@ async function carregarFotoPerfil() {
         }
     } catch(e){}
 }
-
 document.getElementById('upload-avatar').addEventListener('change', (e) => {
     const file = e.target.files[0]; if(!file) return; const reader = new FileReader();
     reader.onload = (event) => {
@@ -136,7 +150,7 @@ document.getElementById('upload-avatar').addEventListener('change', (e) => {
     }; reader.readAsDataURL(file);
 });
 
-// 3. AVALIAÇÕES (Grelha c/ Motivos)
+// 3. AVALIAÇÕES (Grelha e Pauta Global)
 document.getElementById('btn-hub-avaliacoes')?.addEventListener('click', () => { esconderTudoMenos(viewAvaliacoes); construirMatrizVisual(document.getElementById('matriz-disciplinas-container'), abrirModulosDisciplinaAvaliacao); });
 function construirMatrizVisual(containerEl, funcaoClique) {
     let html = "";
@@ -148,6 +162,36 @@ function construirMatrizVisual(containerEl, funcaoClique) {
     containerEl.innerHTML = html;
     containerEl.querySelectorAll('.subject-btn').forEach(btn => btn.addEventListener('click', (e) => funcaoClique(e.currentTarget.getAttribute('data-disc'))));
 }
+
+// Lógica da Pauta Global
+document.getElementById('btn-pauta-global')?.addEventListener('click', async () => {
+    document.getElementById('modal-pauta-global').style.display = 'flex';
+    const container = document.getElementById('pauta-global-content');
+    container.innerHTML = '<p class="text-muted" style="text-align:center;">A compilar notas...</p>';
+    
+    try {
+        const notasDb = await getDocs(collection(db, "utilizadores", alunoAtualId, "notas"));
+        const mapNotas = {}; notasDb.forEach(d => { const dt = d.data(); mapNotas[`${dt.disciplina}_${dt.modulo}`] = dt.nota; });
+
+        let html = '';
+        for (const [nomeComponente, disciplinas] of Object.entries(matrizCurso)) {
+            html += `<div class="pauta-global-componente"><div class="pauta-global-header">${nomeComponente}</div>`;
+            for (const [nomeDisc, modulos] of Object.entries(disciplinas)) {
+                html += `<div class="pauta-global-disc"><div class="pauta-global-disc-title">${nomeDisc}</div><div class="pauta-global-notas">`;
+                for(const mod of Object.keys(modulos)) {
+                    const nota = mapNotas[`${nomeDisc}_${mod}`] || 'SN';
+                    let cor = "sn"; if(nota !== 'SN' && nota !== 'REP' && nota >= 10) cor = "positiva"; else if(nota === 'REP' || nota < 10) cor = "negativa";
+                    html += `<div class="pg-nota-item"><span>${mod}</span><span class="pg-nota-val ${cor}">${nota}</span></div>`;
+                }
+                html += `</div></div>`;
+            }
+            html += `</div>`;
+        }
+        container.innerHTML = html;
+    } catch(err) { container.innerHTML = '<p class="text-muted" style="color:var(--danger-red); text-align:center;">Erro ao carregar a pauta.</p>'; }
+});
+document.getElementById('btn-close-pauta')?.addEventListener('click', () => document.getElementById('modal-pauta-global').style.display = 'none');
+
 
 async function abrirModulosDisciplinaAvaliacao(disciplina) {
     esconderTudoMenos(viewDisciplinaModulos); document.getElementById('titulo-disciplina').innerText = disciplina;
@@ -259,6 +303,7 @@ document.getElementById('btn-guardar-ee')?.addEventListener('click', async (e) =
     } catch(err) {} e.currentTarget.innerText = "Guardar";
 });
 
+
 // 5. PRHF (Upload de PDF e Gestão Manual das Horas)
 const selDisc = document.getElementById('prhf-disciplina'); const selMod = document.getElementById('prhf-modulo');
 let optDisc = '<option value="">Disc.</option>'; for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) optDisc += `<option value="${d}">${d}</option>`; } selDisc.innerHTML = optDisc;
@@ -272,7 +317,7 @@ selDisc.addEventListener('change', (e) => {
 
 document.getElementById('prhf-file-upload').addEventListener('change', (e) => {
     const file = e.target.files[0]; if(!file) return;
-    if(file.size > 1048576) { alert("Ficheiro demasiado grande! (Limite 1MB)"); return; } 
+    if(file.size > 1048576) { alert("Ficheiro demasiado grande! (Limite 1MB para testes)"); return; } 
     pdfNomeTemporario = file.name;
     document.getElementById('prhf-file-name').innerText = pdfNomeTemporario;
     const reader = new FileReader(); reader.onload = (ev) => { pdfBase64Temporario = ev.target.result; }; reader.readAsDataURL(file);
@@ -292,7 +337,9 @@ document.getElementById('btn-guardar-prhf').addEventListener('click', async (e) 
     const isTerminado = document.getElementById('prhf-modulo-terminado').checked;
     if(!disc || !mod || !prazo || !desc || !htInput) return alert("Preenche todos os campos!");
     
-    const hT = parseInt(htInput); const hP = hT > 4 ? Math.ceil(hT * 0.3) : 0; const hN = hT - hP;
+    const hT = parseInt(htInput); 
+    const hP = hT > 4 ? Math.ceil(hT * 0.3) : 0; 
+    const hN = hT - hP;
 
     const btnRef = e.currentTarget; btnRef.innerText = "A gravar...";
     try {
@@ -316,7 +363,8 @@ async function carregarListaPRHF(idAluno) {
             if (filtroDisc !== "" && data.disciplina !== filtroDisc) return; 
             if ((tabAtiva === 'ativas' && data.status === 'ativa') || (tabAtiva === 'concluidas' && data.status === 'concluida')) {
                 prhfsMemoria.push(data); 
-                let classeCor = 'concluida'; if(data.status === 'ativa') classeCor = data.moduloTerminado ? 'ativa-terminado' : 'ativa-decorrer';
+                let classeCor = 'concluida';
+                if(data.status === 'ativa') classeCor = data.moduloTerminado ? 'ativa-terminado' : 'ativa-decorrer';
                 const sM = (data.modulo||"").includes('M') ? data.modulo : 'M'+data.modulo; 
                 html += `<div class="prhf-mini-card ${classeCor}" data-id="${data.id}"><strong>${data.disciplina}_${sM}</strong><i class="fa-solid fa-chevron-right" style="color:var(--text-muted); font-size:0.8rem;"></i></div>`;
             }
@@ -395,6 +443,7 @@ function abrirFolhaPRHF(id) {
     desenharRegistosManuais(p); modalFolha.style.display = 'flex';
 }
 document.querySelector('.btn-close-paper').addEventListener('click', () => modalFolha.style.display = 'none');
+
 document.getElementById('sheet-btn-toggle-manual').addEventListener('click', () => { const box = document.getElementById('manual-presence-box'); box.style.display = box.style.display === 'none' ? 'block' : 'none'; });
 
 document.getElementById('btn-save-manual-pres').addEventListener('click', async (e) => {
@@ -425,7 +474,7 @@ document.getElementById('sheet-btn-reverter').addEventListener('click', async (e
     try { await updateDoc(doc(db, "utilizadores", alunoAtualId, "prhfs", idPrhfAtivo), { status: 'ativa' }); modalFolha.style.display = 'none'; carregarListaPRHF(alunoAtualId); } catch(err){ e.currentTarget.innerText = "Reverter para Ativa"; }
 });
 
-// 6. MOTOR DE FALTAS (Esqueleto Pronto)
+// 6. MOTOR DE FALTAS
 if(document.getElementById('btn-hub-faltas')) {
     document.getElementById('btn-hub-faltas').addEventListener('click', () => { 
         esconderTudoMenos(viewFaltas); 
