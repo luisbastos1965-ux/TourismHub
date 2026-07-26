@@ -302,3 +302,43 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .pg-nota-val.sn { color: var(--text-muted); }
 .pg-nota-val.positiva { color: var(--primary-green); }
 .pg-nota-val.negativa { color: var(--danger-red); }
+
+/* =========================================
+   MODAL: NOVA FALTA
+========================================= */
+.falta-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+.falta-form-full { grid-column: span 2; }
+.falta-checkbox-group { display: flex; align-items: center; gap: 10px; background: var(--bg-dark); padding: 12px; border-radius: 8px; border: 1px solid #333; cursor: pointer; }
+.falta-checkbox-group input { width: 20px; height: 20px; margin: 0; accent-color: var(--primary-green); cursor: pointer;}
+
+/* =========================================
+   GAMIFICAÇÃO & PAINEL DO ALUNO
+========================================= */
+.student-welcome-header { margin-bottom: 20px; }
+.student-welcome-header h2 { font-size: 1.6rem; color: var(--primary-green); margin-bottom: 5px; }
+.student-welcome-header p { color: var(--text-muted); font-size: 0.95rem; }
+
+.xp-card { background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%); border: 1px solid #444; border-radius: 15px; padding: 20px; margin-bottom: 25px; position: relative; overflow: hidden; }
+.xp-card-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; }
+.xp-level { font-size: 2.2rem; font-weight: bold; color: var(--warning-yellow); line-height: 1; }
+.xp-title { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+.xp-points { font-size: 1.2rem; font-weight: bold; color: white; }
+
+.xp-bar-bg { height: 12px; background-color: #111; border-radius: 6px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
+.xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary-green) 0%, var(--warning-yellow) 100%); transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); }
+
+.lms-action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-bottom: 25px; }
+.lms-btn { background: var(--bg-card); border: 1px solid #333; border-radius: 12px; padding: 20px 10px; display: flex; flex-direction: column; align-items: center; gap: 12px; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; }
+.lms-btn i { font-size: 2rem; }
+.lms-btn:hover { transform: translateY(-3px); border-color: var(--primary-green); }
+.lms-btn.study { border-color: #8a2be2; color: #8a2be2; }
+.lms-btn.study:hover { background-color: rgba(138, 43, 226, 0.1); }
+.lms-btn.forum { border-color: #0099ff; color: #0099ff; }
+.lms-btn.forum:hover { background-color: rgba(0, 153, 255, 0.1); }
+
+/* --- MODO DE ESTUDO --- */
+.study-mode-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; text-align: center; }
+.timer-circle { width: 220px; height: 220px; border-radius: 50%; border: 8px solid #333; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 30px; position: relative; box-shadow: 0 0 30px rgba(138, 43, 226, 0.2); transition: border-color 0.5s; }
+.timer-circle.active { border-color: #8a2be2; box-shadow: 0 0 50px rgba(138, 43, 226, 0.5); }
+.timer-time { font-size: 4rem; font-weight: bold; color: white; line-height: 1; }
+.timer-label { font-size: 1rem; color: var(--text-muted); margin-top: 5px; }
