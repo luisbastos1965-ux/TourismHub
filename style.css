@@ -342,3 +342,43 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .timer-circle.active { border-color: #8a2be2; box-shadow: 0 0 50px rgba(138, 43, 226, 0.5); }
 .timer-time { font-size: 4rem; font-weight: bold; color: white; line-height: 1; }
 .timer-label { font-size: 1rem; color: var(--text-muted); margin-top: 5px; }
+
+/* =========================================
+   NOVAS ÁREAS: HUB DA TURMA (Admin)
+========================================= */
+
+/* --- ESTATÍSTICAS --- */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-bottom: 20px; }
+.stat-card { background-color: var(--bg-card); border: 1px solid #333; border-radius: 12px; padding: 20px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;}
+.stat-card i { font-size: 2rem; color: var(--primary-green); margin-bottom: 10px; }
+.stat-value { font-size: 1.8rem; font-weight: bold; color: white; line-height: 1.2; }
+.stat-label { font-size: 0.85rem; color: var(--text-muted); margin-top: 5px; }
+
+/* --- FÓRUM / CHAT --- */
+.forum-container { display: flex; flex-direction: column; height: 65vh; background: var(--bg-card); border: 1px solid #333; border-radius: 12px; overflow: hidden; }
+.forum-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+.chat-bubble { max-width: 80%; padding: 12px 15px; border-radius: 15px; position: relative; font-size: 0.95rem; line-height: 1.4;}
+.chat-bubble.admin { align-self: flex-end; background-color: rgba(0, 204, 136, 0.15); border: 1px solid var(--primary-green); color: white; border-bottom-right-radius: 2px;}
+.chat-bubble.student { align-self: flex-start; background-color: var(--bg-dark); border: 1px solid #444; color: white; border-bottom-left-radius: 2px;}
+.chat-meta { display: block; font-size: 0.75rem; color: var(--text-muted); margin-top: 5px; text-align: right; }
+.forum-input-area { display: flex; gap: 10px; padding: 15px; background: #1a1a1a; border-top: 1px solid #333; }
+.forum-input-area input { margin: 0; flex: 1; border-radius: 20px; padding: 10px 15px; }
+.forum-send-btn { background: var(--primary-green); color: var(--bg-dark); border: none; border-radius: 50%; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 1.2rem; transition: 0.2s;}
+.forum-send-btn:hover { background: var(--primary-hover); transform: scale(1.05); }
+
+/* --- CALENDÁRIO --- */
+.calendar-event-card { display: flex; background: var(--bg-card); border: 1px solid #333; border-left: 4px solid var(--primary-green); border-radius: 8px; margin-bottom: 12px; overflow: hidden; align-items: stretch; }
+.calendar-date-box { background: rgba(0,0,0,0.2); padding: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 80px; border-right: 1px solid #333;}
+.calendar-date-box .day { font-size: 1.5rem; font-weight: bold; color: white; line-height: 1;}
+.calendar-date-box .month { font-size: 0.85rem; color: var(--primary-green); text-transform: uppercase; font-weight: bold;}
+.calendar-info { padding: 15px; flex: 1; }
+.calendar-info h4 { margin-bottom: 5px; color: white; font-size: 1.1rem;}
+.calendar-info p { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0;}
+
+/* --- HORÁRIO GRELHA --- */
+.horario-grid { display: grid; grid-template-columns: 60px repeat(5, 1fr); gap: 5px; overflow-x: auto; padding-bottom: 10px; }
+.horario-header { background: #222; text-align: center; padding: 10px 5px; font-size: 0.8rem; font-weight: bold; color: var(--primary-green); border-radius: 4px; }
+.horario-time { background: transparent; text-align: center; padding: 10px 0; font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; justify-content: center;}
+.horario-slot { background: var(--bg-card); border: 1px solid #333; border-radius: 4px; min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: 0.8rem; padding: 5px; transition: 0.2s; cursor: pointer;}
+.horario-slot:hover { border-color: var(--primary-green); }
+.horario-slot.filled { background: rgba(0, 204, 136, 0.1); border-color: var(--primary-green); color: white; }
