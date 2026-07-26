@@ -16,7 +16,6 @@ body { background-color: var(--bg-dark); color: var(--text-light); height: 100vh
 .danger-btn { width: 100%; background-color: transparent; color: var(--danger-red); border: 1px solid var(--danger-red); padding: 12px; border-radius: 8px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s;}
 .danger-btn:hover { background-color: rgba(255, 77, 77, 0.1); }
 .small-btn { width: auto; padding: 8px 15px; font-size: 0.9rem; }
-
 input, select { width: 100%; padding: 12px; margin-bottom: 15px; background-color: var(--bg-dark); border: 1px solid #333; border-radius: 8px; color: var(--text-light); font-size: 1rem; }
 input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .text-muted { color: var(--text-muted); }
@@ -26,7 +25,6 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 ========================================= */
 .student-welcome-header { margin-bottom: 20px; }
 .student-welcome-header h2 { font-size: 1.6rem; color: var(--primary-green); margin-bottom: 5px; }
-.student-welcome-header p { color: var(--text-muted); font-size: 0.95rem; }
 .xp-card { background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%); border: 1px solid #444; border-radius: 15px; padding: 20px; margin-bottom: 25px; position: relative; overflow: hidden; }
 .xp-card-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; }
 .xp-level { font-size: 2.2rem; font-weight: bold; color: var(--warning-yellow); line-height: 1; }
@@ -39,9 +37,7 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .lms-btn i { font-size: 2rem; }
 .lms-btn:hover { transform: translateY(-3px); border-color: var(--primary-green); }
 .lms-btn.study { border-color: #8a2be2; color: #8a2be2; }
-.lms-btn.study:hover { background-color: rgba(138, 43, 226, 0.1); }
 .lms-btn.forum { border-color: #0099ff; color: #0099ff; }
-.lms-btn.forum:hover { background-color: rgba(0, 153, 255, 0.1); }
 .study-mode-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; text-align: center; }
 .timer-circle { width: 220px; height: 220px; border-radius: 50%; border: 8px solid #333; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 30px; position: relative; box-shadow: 0 0 30px rgba(138, 43, 226, 0.2); transition: border-color 0.5s; }
 .timer-circle.active { border-color: #8a2be2; box-shadow: 0 0 50px rgba(138, 43, 226, 0.5); }
@@ -73,13 +69,11 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .turma-card-large:hover { transform: scale(1.02); border-color: var(--primary-green); box-shadow: 0 8px 20px rgba(0, 204, 136, 0.15); }
 .tc-icon { font-size: 3rem; color: var(--primary-green); }
 .tc-info h3 { font-size: 2rem; }
-
 .class-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
 .students-list-container { background-color: var(--bg-card); border: 1px solid #333; border-radius: 12px; padding: 20px; }
 .students-list { list-style: none; padding: 0; margin: 0; }
 .student-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #333; }
 .student-item:last-child { border-bottom: none; }
-.student-info { display: flex; flex-direction: column; gap: 3px; }
 .student-info strong { font-size: 1.1rem; }
 .student-info span { font-size: 0.85rem; color: var(--text-muted); }
 .list-avatar { width: 45px; height: 45px; border-radius: 50%; background-color: var(--primary-green); display: flex; justify-content: center; align-items: center; color: white; object-fit: cover; flex-shrink: 0; }
@@ -124,7 +118,7 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .pg-nota-val.negativa { color: var(--danger-red); }
 
 /* =========================================
-   FALTAS E BARRA DE FERRAMENTAS
+   FALTAS 
 ========================================= */
 .falta-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
 .falta-tab-btn { flex: 1; padding: 12px; background-color: var(--bg-dark); color: var(--text-muted); border: 1px solid #333; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
@@ -185,7 +179,7 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .week-nav-bar button:hover { border-color: var(--primary-green); color: var(--primary-green); }
 #week-display { font-weight: bold; color: var(--primary-green); font-size: 0.95rem; }
 
-.horario-grid { display: grid; grid-template-columns: 55px repeat(5, 1fr); gap: 4px; overflow-x: auto; padding-bottom: 10px; }
+.horario-grid { display: grid; grid-template-columns: 55px repeat(5, minmax(0, 1fr)); gap: 4px; padding-bottom: 10px; }
 .horario-header { background: #222; text-align: center; padding: 8px 2px; font-size: 0.75rem; font-weight: bold; color: var(--primary-green); border-radius: 4px; display: flex; flex-direction: column;}
 .horario-header span { color: white; font-size: 0.9rem; margin-top: 2px;}
 .horario-time { background: transparent; text-align: center; padding: 10px 0; font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; justify-content: center;}
@@ -194,12 +188,12 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .horario-slot.edit-mode { border-color: var(--warning-yellow); animation: pulseBorder 1.5s infinite; }
 @keyframes pulseBorder { 0% { box-shadow: 0 0 0 0 rgba(255, 204, 0, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(255, 204, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 204, 0, 0); } }
 
-/* A ESTRELA DE EVENTO NO HORÁRIO */
+/* Estrela Dourada do Evento no Horário */
 .slot-event-badge { position: absolute; top: -5px; right: -5px; background: var(--danger-red); color: white; width: 22px; height: 22px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 0.7rem; box-shadow: 0 2px 5px rgba(0,0,0,0.5); z-index: 10; animation: blinkEvent 2s infinite; border: 2px solid var(--bg-dark);}
 @keyframes blinkEvent { 0% { transform: scale(1); } 50% { transform: scale(1.15); background: var(--warning-yellow); } 100% { transform: scale(1); } }
 
 /* =========================================
-   FÓRUM E CANAIS
+   FÓRUM E CANAIS (WhatsApp Mode)
 ========================================= */
 .forum-canais-grid { display: flex; flex-direction: column; gap: 10px; }
 .canal-card { background: var(--bg-card); border: 1px solid #333; border-radius: 10px; padding: 15px; display: flex; align-items: center; gap: 15px; cursor: pointer; transition: 0.2s; }
@@ -209,13 +203,19 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .canal-info p { font-size: 0.85rem; color: var(--text-muted); margin: 0; }
 .icon-btn { background: none; border: none; color: var(--text-muted); font-size: 1.2rem; padding: 8px; cursor: pointer; transition: 0.2s; }
 .icon-btn:hover { color: var(--primary-green); transform: scale(1.1); }
-.forum-container { display: flex; flex-direction: column; height: 65vh; background: var(--bg-card); border: 1px solid #333; border-radius: 12px; overflow: hidden; }
+
+/* Caixa de Seleção de Alunos no Modal Fórum */
+.forum-membros-list { max-height: 150px; overflow-y: auto; background: #111; border: 1px solid #333; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;}
+.membro-checkbox-item { display: flex; align-items: center; gap: 10px; color: var(--text-light); font-size: 0.9rem; cursor: pointer;}
+.membro-checkbox-item input { width: 18px; height: 18px; margin: 0; accent-color: var(--primary-green);}
+
+.forum-container { display: flex; flex-direction: column; height: 75vh; background: var(--bg-card); border: 1px solid #333; border-radius: 12px; overflow: hidden; }
 .forum-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
-.chat-bubble { max-width: 80%; padding: 12px 15px; border-radius: 15px; position: relative; font-size: 0.95rem; line-height: 1.4;}
+.chat-bubble { max-width: 80%; padding: 12px 15px; border-radius: 15px; position: relative; font-size: 0.95rem; line-height: 1.4; word-wrap: break-word;}
 .chat-bubble.admin { align-self: flex-end; background-color: rgba(0, 204, 136, 0.15); border: 1px solid var(--primary-green); color: white; border-bottom-right-radius: 2px;}
 .chat-bubble.student { align-self: flex-start; background-color: var(--bg-dark); border: 1px solid #444; color: white; border-bottom-left-radius: 2px;}
 .chat-meta { display: block; font-size: 0.75rem; color: var(--text-muted); margin-top: 5px; text-align: right; }
-.forum-input-area { display: flex; gap: 10px; padding: 15px; background: #1a1a1a; border-top: 1px solid #333; }
+.forum-input-area { display: flex; gap: 8px; padding: 10px; background: #1a1a1a; border-top: 1px solid #333; align-items: center; }
 .forum-input-area input { margin: 0; flex: 1; border-radius: 20px; padding: 10px 15px; }
 .forum-send-btn { background: var(--primary-green); color: var(--bg-dark); border: none; border-radius: 50%; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 1.2rem; transition: 0.2s;}
 
@@ -227,6 +227,7 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .stat-card i { font-size: 2rem; color: var(--primary-green); margin-bottom: 10px; }
 .stat-value { font-size: 1.8rem; font-weight: bold; color: white; line-height: 1.2; }
 .stat-label { font-size: 0.85rem; color: var(--text-muted); margin-top: 5px; }
+.stat-sub-info { font-size: 0.8rem; color: #777; margin-top: 5px; border-top: 1px dashed #333; padding-top: 5px; width: 100%;}
 
 .table-container { width: 100%; overflow-x: auto; background: var(--bg-card); border: 1px solid #333; border-radius: 12px; margin-bottom: 25px; }
 .styled-table { width: 100%; border-collapse: collapse; text-align: left; }
