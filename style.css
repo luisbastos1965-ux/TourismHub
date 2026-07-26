@@ -448,3 +448,41 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .faltas-toolbar button { flex: 1; display: flex; justify-content: center; align-items: center; gap: 8px; padding: 10px; border-radius: 6px; border: 1px solid #444; background: var(--bg-dark); color: var(--text-light); cursor: pointer; transition: 0.2s; font-weight: bold; }
 .faltas-toolbar button:hover { border-color: var(--primary-green); color: var(--primary-green); }
 .falta-linha-multipla { display: flex; gap: 5px; margin-bottom: 5px; align-items: center; background: #111; padding: 5px; border-radius: 6px; border: 1px solid #333;}
+
+/* Divisor do Calendário */
+.calendar-divider {
+    text-align: center;
+    margin: 30px 0 15px 0;
+    position: relative;
+}
+.calendar-divider::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    border-top: 1px dashed #555;
+    z-index: 1;
+}
+.calendar-divider span {
+    background-color: var(--bg-dark);
+    padding: 0 15px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    position: relative;
+    z-index: 2;
+}
+
+/* Edição do Horário */
+.horario-slot.edit-mode {
+    border-color: var(--warning-yellow);
+    animation: pulseBorder 1.5s infinite;
+}
+@keyframes pulseBorder {
+    0% { box-shadow: 0 0 0 0 rgba(255, 204, 0, 0.4); }
+    70% { box-shadow: 0 0 0 6px rgba(255, 204, 0, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 204, 0, 0); }
+}
