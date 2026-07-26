@@ -13,10 +13,7 @@
     <div id="login-screen" class="login-container" style="display: none;">
         <div class="login-box">
             <h2><i class="fa-solid fa-graduation-cap"></i> Turma PRO</h2>
-            <div class="input-group">
-                <input type="text" id="login-username" placeholder="Nº de Aluno (ex: a1234)">
-                <input type="password" id="login-password" placeholder="Palavra-passe">
-            </div>
+            <div class="input-group"><input type="text" id="login-username" placeholder="Nº de Aluno"><input type="password" id="login-password" placeholder="Palavra-passe"></div>
             <p id="login-error" class="error-msg" style="display: none;">Credenciais inválidas.</p>
             <button id="btn-login-manual" class="primary-btn">Entrar</button>
         </div>
@@ -25,70 +22,46 @@
     <div id="app-content" style="display: none;">
         <header class="app-header">
             <div class="logo"><i class="fa-solid fa-graduation-cap"></i> Turma PRO</div>
-            <div class="user-profile">
-                <span id="header-user-name">A carregar...</span>
-                <button id="btn-logout" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
-            </div>
+            <div class="user-profile"><span id="header-user-name">A carregar...</span><button id="btn-logout" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i> Sair</button></div>
         </header>
 
         <main class="app-content">
-            <!-- PAINEL DO ALUNO (GAMIFICADO) -->
+            <!-- ALUNO -->
             <div id="student-dashboard" style="display: none;">
-                <div class="student-welcome-header">
-                    <h2 id="lms-welcome-name">Olá, Aluno!</h2>
-                    <p>Pronto para subir de nível hoje?</p>
-                </div>
-                
+                <div class="student-welcome-header"><h2 id="lms-welcome-name">Olá, Aluno!</h2><p>Pronto para subir de nível hoje?</p></div>
                 <div class="xp-card">
-                    <div class="xp-card-header">
-                        <div>
-                            <div class="xp-title">O teu Nível</div>
-                            <div class="xp-level">5 <span style="font-size:1rem; color:white; font-weight:normal;">/ Estudante Focado</span></div>
-                        </div>
-                        <div class="xp-points">1250 <span style="color:var(--text-muted); font-size:0.8rem;">XP</span></div>
-                    </div>
+                    <div class="xp-card-header"><div><div class="xp-title">O teu Nível</div><div class="xp-level">5 <span style="font-size:1rem; color:white; font-weight:normal;">/ Estudante Focado</span></div></div><div class="xp-points">1250 <span style="color:var(--text-muted); font-size:0.8rem;">XP</span></div></div>
                     <div class="xp-bar-bg"><div class="xp-bar-fill" style="width: 65%;"></div></div>
-                    <p style="text-align:right; font-size:0.75rem; margin-top:5px; color:var(--text-muted);">Faltam 250 XP para o Nível 6</p>
                 </div>
-
                 <div class="lms-action-grid">
                     <button class="lms-btn study" id="btn-open-study-mode"><i class="fa-solid fa-stopwatch"></i><span>Modo de Estudo</span></button>
                     <button class="lms-btn forum"><i class="fa-regular fa-comments"></i><span>Fórum da Turma</span></button>
                     <button class="lms-btn"><i class="fa-regular fa-calendar-check"></i><span>Calendário</span></button>
                     <button class="lms-btn" id="btn-lms-meu-perfil" style="border-color:var(--primary-green); color:var(--primary-green);"><i class="fa-solid fa-user-astronaut"></i><span>O Meu Perfil</span></button>
                 </div>
-                <section class="card warning-card"><h3><i class="fa-solid fa-bullhorn"></i> Último Aviso</h3><p>Reunião de Pais agendada para sexta-feira às 18h30.</p></section>
             </div>
 
-            <!-- MODO DE ESTUDO -->
             <div id="view-study-mode" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-study" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button><h2 class="section-title">Modo de Estudo</h2></div>
                 <div class="study-mode-container">
-                    <p class="text-muted" style="margin-bottom: 20px;">Foca-te durante 25 minutos e ganha <strong style="color:var(--warning-yellow);">+50 XP</strong>!</p>
-                    <div class="timer-circle" id="study-timer-circle">
-                        <div class="timer-time" id="study-timer-text">25:00</div>
-                        <div class="timer-label">Minutos Restantes</div>
-                    </div>
+                    <div class="timer-circle" id="study-timer-circle"><div class="timer-time" id="study-timer-text">25:00</div><div class="timer-label">Minutos Restantes</div></div>
                     <button id="btn-start-study" class="primary-btn" style="background-color: #8a2be2; width: 220px; font-size: 1.2rem;"><i class="fa-solid fa-play"></i> Iniciar Foco</button>
                     <button id="btn-stop-study" class="danger-btn" style="display: none; width: 220px; margin-top: 15px;"><i class="fa-solid fa-stop"></i> Desistir</button>
                 </div>
             </div>
 
-            <!-- PAINEL DO ADMIN (TURMAS) -->
+            <!-- ADMIN -->
             <div id="admin-dashboard" style="display: none;">
                 <div class="dashboard-header"><h2>As Minhas Turmas</h2></div>
                 <div class="turmas-grid-large">
                     <button class="turma-card-large" data-turma="10T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>10T</h3></div></button>
                     <button class="turma-card-large" data-turma="11T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>11T</h3></div></button>
                     <button class="turma-card-large" data-turma="12T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>12T</h3></div></button>
-                    <button class="turma-card-large" data-turma="TUR" style="border-left-color: var(--text-muted);">
-                        <div class="tc-icon" style="color: var(--text-muted);"><i class="fa-solid fa-globe"></i></div>
-                        <div class="tc-info"><h3 style="color: var(--text-muted);">TUR</h3><p style="font-size: 0.85rem; color: #777;">Visão Global</p></div>
-                    </button>
+                    <button class="turma-card-large" data-turma="TUR" style="border-left-color: var(--text-muted);"><div class="tc-icon" style="color: var(--text-muted);"><i class="fa-solid fa-globe"></i></div><div class="tc-info"><h3 style="color: var(--text-muted);">TUR</h3><p style="font-size: 0.85rem; color: #777;">Visão Global</p></div></button>
                 </div>
             </div>
 
-            <!-- NOVO: HUB DA TURMA -->
+            <!-- HUB DA TURMA -->
             <div id="class-hub-view" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-turmas-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turmas</button><h2 id="class-hub-title" class="section-title">Turma X</h2></div>
                 <div class="admin-hub-grid">
@@ -100,39 +73,45 @@
                 </div>
             </div>
 
-            <!-- NOVAS VISTAS DO HUB DA TURMA -->
+            <!-- CALENDÁRIO -->
             <div id="view-class-calendario" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-cal-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-cal-turma">Calendário</h2></div>
-                <button class="primary-btn" style="margin-bottom: 20px;"><i class="fa-solid fa-plus"></i> Adicionar Avaliação / Evento</button>
-                <h3 style="margin-bottom: 15px; color: var(--primary-green); font-size: 1rem;">Próximas Semanas</h3>
-                <div class="calendar-event-card"><div class="calendar-date-box"><span class="day">14</span><span class="month">Nov</span></div><div class="calendar-info"><h4>Frequência Escrita</h4><p><i class="fa-solid fa-book"></i> PORT - M2 | 09:00 - 10:30</p></div></div>
-                <div class="calendar-event-card"><div class="calendar-date-box"><span class="day">22</span><span class="month">Nov</span></div><div class="calendar-info"><h4>Entrega Trabalho Prático</h4><p><i class="fa-solid fa-laptop-code"></i> TIC - M1 | Até às 23:59</p></div></div>
+                <button id="btn-abrir-modal-evento" class="primary-btn" style="margin-bottom: 20px;"><i class="fa-solid fa-plus"></i> Adicionar Avaliação / Evento</button>
+                <h3 style="margin-bottom: 15px; color: var(--primary-green); font-size: 1rem;">Eventos e Testes</h3>
+                <div id="lista-calendario-container">
+                    <!-- Gerado por JS com as cores inteligentes -->
+                </div>
             </div>
 
+            <!-- HORÁRIO REAL DA ESCOLA -->
             <div id="view-class-horario" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-horario-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-horario-turma">Horário</h2></div>
                 <div class="card" style="padding: 10px;">
                     <div class="horario-grid">
                         <div></div><div class="horario-header">SEG</div><div class="horario-header">TER</div><div class="horario-header">QUA</div><div class="horario-header">QUI</div><div class="horario-header">SEX</div>
-                        <div class="horario-time">08:30<br>10:00</div><div class="horario-slot filled"><strong>PORT</strong><span>Sala 12</span></div><div class="horario-slot">Livre</div><div class="horario-slot filled"><strong>MAT</strong><span>Sala 15</span></div><div class="horario-slot filled" style="border-color:var(--warning-yellow);"><strong>TIC</strong><span>Sala Info</span></div><div class="horario-slot filled"><strong>EF</strong><span>Pav.</span></div>
+                        
+                        <div class="horario-time">08:30<br>09:30</div><div class="horario-slot filled">PORT</div><div class="horario-slot"></div><div class="horario-slot filled">MAT</div><div class="horario-slot"></div><div class="horario-slot filled">EF</div>
+                        <div class="horario-time">09:35<br>10:35</div><div class="horario-slot filled">PORT</div><div class="horario-slot filled">ING</div><div class="horario-slot filled">MAT</div><div class="horario-slot"></div><div class="horario-slot filled">EF</div>
+                        <div class="horario-time">10:50<br>11:50</div><div class="horario-slot"></div><div class="horario-slot filled">ING</div><div class="horario-slot"></div><div class="horario-slot filled">TIC</div><div class="horario-slot"></div>
+                        <div class="horario-time">11:55<br>12:55</div><div class="horario-slot filled">GEO</div><div class="horario-slot"></div><div class="horario-slot filled">HCA</div><div class="horario-slot filled">TIC</div><div class="horario-slot"></div>
+                        
+                        <div class="horario-linha-almoco">ALMOÇO</div>
+                        
+                        <div class="horario-time">14:05<br>15:05</div><div class="horario-slot filled">CF</div><div class="horario-slot"></div><div class="horario-slot filled">OTET</div><div class="horario-slot"></div><div class="horario-slot filled">TIAT</div>
+                        <div class="horario-time">15:15<br>16:15</div><div class="horario-slot filled">CF</div><div class="horario-slot filled">TCAT</div><div class="horario-slot filled">OTET</div><div class="horario-slot"></div><div class="horario-slot filled">TIAT</div>
+                        <div class="horario-time">16:20<br>17:20</div><div class="horario-slot"></div><div class="horario-slot filled">TCAT</div><div class="horario-slot"></div><div class="horario-slot"></div><div class="horario-slot"></div>
                     </div>
-                    <p class="text-muted" style="text-align:center; font-size:0.8rem; margin-top:15px;">Interface em preparação para receber os dados do Excel.</p>
                 </div>
             </div>
 
+            <!-- FÓRUM E ESTATÍSTICAS -->
             <div id="view-class-forum" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-forum-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-forum-turma">Fórum Principal</h2></div>
                 <div class="forum-container">
                     <div class="forum-messages">
-                        <div class="chat-bubble admin"><strong>Aviso Importante!</strong><br>Pessoal, não se esqueçam que amanhã a aula de TIC vai ser na sala de informática 2 devido a reparações na sala habitual.<span class="chat-meta">Diretor de Turma • Ontem, 16:30</span></div>
-                        <div class="chat-bubble student">Professor, o trabalho prático é para ser entregue em PDF ou Word?<span class="chat-meta">João Silva • Hoje, 09:15</span></div>
-                        <div class="chat-bubble admin">Sempre em formato PDF para evitar desformatações no documento.<span class="chat-meta">Diretor de Turma • Hoje, 10:05</span></div>
+                        <div class="chat-bubble admin"><strong>Aviso Importante!</strong><br>Amanhã a aula será na sala 12.<span class="chat-meta">DT • Ontem</span></div>
                     </div>
-                    <div class="forum-input-area">
-                        <button class="secondary-btn" style="width:auto; border:none; color:var(--primary-green); padding:10px;"><i class="fa-solid fa-paperclip"></i></button>
-                        <input type="text" placeholder="Escreve uma mensagem para a turma..." id="input-forum">
-                        <button class="forum-send-btn"><i class="fa-solid fa-paper-plane"></i></button>
-                    </div>
+                    <div class="forum-input-area"><input type="text" placeholder="Escreve uma mensagem..." id="input-forum"><button class="forum-send-btn"><i class="fa-solid fa-paper-plane"></i></button></div>
                 </div>
             </div>
 
@@ -140,29 +119,21 @@
                 <div class="class-header"><button id="btn-voltar-stats-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-stats-turma">Estatísticas</h2></div>
                 <div class="stats-grid">
                     <div class="stat-card"><i class="fa-solid fa-graduation-cap"></i><div class="stat-value">14.5</div><div class="stat-label">Média da Turma</div></div>
-                    <div class="stat-card"><i class="fa-solid fa-user-check"></i><div class="stat-value" style="color:var(--success-green);">94%</div><div class="stat-label">Taxa Assiduidade</div></div>
+                    <div class="stat-card"><i class="fa-solid fa-user-check"></i><div class="stat-value" style="color:var(--success-green);">94%</div><div class="stat-label">Assiduidade</div></div>
                     <div class="stat-card"><i class="fa-solid fa-file-medical"></i><div class="stat-value" style="color:var(--warning-yellow);">8</div><div class="stat-label">PRHF Ativos</div></div>
-                    <div class="stat-card"><i class="fa-solid fa-triangle-exclamation"></i><div class="stat-value" style="color:var(--danger-red);">2</div><div class="stat-label">Alunos em Risco</div></div>
                 </div>
-                <div class="card"><h3 style="margin-bottom: 15px; font-size: 1rem;"><i class="fa-solid fa-chart-column"></i> Aproveitamento por Disciplina</h3><div style="height: 150px; display:flex; align-items:center; justify-content:center; background:var(--bg-dark); border-radius:8px; border:1px dashed #444;"><p class="text-muted"><i class="fa-solid fa-chart-pie"></i> Espaço para Gráficos Dinâmicos</p></div></div>
             </div>
 
-            <!-- VISTA DA TURMA (Lista de Alunos) -->
+            <!-- ALUNOS DA TURMA E DETALHE -->
             <div id="class-view" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-class-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button><h2 id="class-title" class="section-title">Lista de Alunos</h2></div>
                 <div class="students-list-container"><p class="text-muted">A carregar...</p></div>
             </div>
 
-            <!-- CENTRO DE COMANDO DO ALUNO -->
             <div id="student-detail-view" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-lista" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
                 <div class="student-profile-header">
-                    <div class="profile-avatar">
-                        <img id="avatar-img" src="" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:50%;">
-                        <i class="fa-solid fa-user" id="avatar-icon"></i>
-                        <label for="upload-avatar" class="edit-avatar-btn"><i class="fa-solid fa-camera"></i></label>
-                        <input type="file" id="upload-avatar" accept="image/*" style="display:none;">
-                    </div>
+                    <div class="profile-avatar"><img id="avatar-img" src="" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:50%;"><i class="fa-solid fa-user" id="avatar-icon"></i><label for="upload-avatar" class="edit-avatar-btn"><i class="fa-solid fa-camera"></i></label><input type="file" id="upload-avatar" accept="image/*" style="display:none;"></div>
                     <h2 id="detail-student-name">Nome</h2><p id="detail-student-number" class="text-muted">a0000</p>
                 </div>
                 <h3 class="hub-section-title">Gestão Pedagógica</h3>
@@ -176,7 +147,7 @@
                 </div>
             </div>
 
-            <!-- AVALIAÇÕES -->
+            <!-- AVALIAÇÕES E FALTAS -->
             <div id="view-avaliacoes" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-hub-avaliacoes" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Avaliações</h2></div>
                 <button id="btn-pauta-global" class="primary-btn" style="margin-bottom: 25px; background-color: transparent; border: 1px solid var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-table-list"></i> Consultar Pauta Global</button>
@@ -187,7 +158,6 @@
                 <div class="card" style="padding: 10px 20px;"><div id="lista-modulos-disciplina"></div></div>
             </div>
 
-            <!-- FALTAS -->
             <div id="view-faltas" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-hub-faltas" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Registo de Faltas</h2></div>
                 <div class="falta-tabs"><button class="falta-tab-btn active" id="tab-faltas-disciplina">Por Disciplina</button><button class="falta-tab-btn" id="tab-faltas-data">Por Data</button></div>
@@ -216,25 +186,13 @@
                 <div class="class-header"><button id="btn-voltar-hub-info" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Informações e Contactos</h2></div>
                 <div class="card">
                     <h3 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-user"></i> Dados do Aluno</h3>
-                    <div id="info-aluno-display">
-                        <div class="data-display-group"><span class="data-label">Idade</span><span class="data-value" id="display-aluno-idade">-</span></div><div class="data-display-group"><span class="data-label">Telemóvel</span><span class="data-value clickable-contact" data-type="tel" id="display-aluno-tel">-</span></div><div class="data-display-group"><span class="data-label">Email</span><span class="data-value clickable-contact" data-type="email" id="display-aluno-email">-</span></div><div class="data-display-group"><span class="data-label">Morada</span><span class="data-value" id="display-aluno-morada">-</span></div>
-                        <div class="action-buttons-row"><button class="secondary-btn small-btn" id="btn-editar-info-aluno"><i class="fa-solid fa-pen"></i> Editar</button></div>
-                    </div>
-                    <div id="info-aluno-edit" style="display: none;">
-                        <div class="info-grid"><input type="number" id="info-aluno-idade" placeholder="Idade"><input type="tel" id="info-aluno-telemovel" placeholder="Telemóvel"><input type="email" id="info-aluno-email" placeholder="Email do Aluno"><input type="text" id="info-aluno-morada" placeholder="Morada"></div>
-                        <div class="action-buttons-row"><button id="btn-guardar-aluno" class="primary-btn small-btn">Guardar</button><button id="btn-cancelar-aluno" class="secondary-btn small-btn">Cancelar</button></div>
-                    </div>
+                    <div id="info-aluno-display"><div class="data-display-group"><span class="data-label">Idade</span><span class="data-value" id="display-aluno-idade">-</span></div><div class="data-display-group"><span class="data-label">Telemóvel</span><span class="data-value clickable-contact" data-type="tel" id="display-aluno-tel">-</span></div><div class="data-display-group"><span class="data-label">Email</span><span class="data-value clickable-contact" data-type="email" id="display-aluno-email">-</span></div><div class="data-display-group"><span class="data-label">Morada</span><span class="data-value" id="display-aluno-morada">-</span></div><div class="action-buttons-row"><button class="secondary-btn small-btn" id="btn-editar-info-aluno"><i class="fa-solid fa-pen"></i> Editar</button></div></div>
+                    <div id="info-aluno-edit" style="display: none;"><div class="info-grid"><input type="number" id="info-aluno-idade" placeholder="Idade"><input type="tel" id="info-aluno-telemovel" placeholder="Telemóvel"><input type="email" id="info-aluno-email" placeholder="Email do Aluno"><input type="text" id="info-aluno-morada" placeholder="Morada"></div><div class="action-buttons-row"><button id="btn-guardar-aluno" class="primary-btn small-btn">Guardar</button><button id="btn-cancelar-aluno" class="secondary-btn small-btn">Cancelar</button></div></div>
                 </div>
                 <div class="card">
                     <h3 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-user-tie"></i> Encarregado de Educação</h3>
-                    <div id="info-ee-display">
-                        <div class="data-display-group"><span class="data-label">Nome</span><span class="data-value" id="display-ee-nome">-</span></div><div class="data-display-group"><span class="data-label">Filiação</span><span class="data-value" id="display-ee-filiacao">-</span></div><div class="data-display-group"><span class="data-label">Telemóvel</span><span class="data-value clickable-contact" data-type="tel" id="display-ee-tel">-</span></div><div class="data-display-group"><span class="data-label">Email</span><span class="data-value clickable-contact" data-type="email" id="display-ee-email">-</span></div>
-                        <div class="action-buttons-row"><button class="secondary-btn small-btn" id="btn-editar-info-ee"><i class="fa-solid fa-pen"></i> Editar</button></div>
-                    </div>
-                    <div id="info-ee-edit" style="display: none;">
-                        <div class="info-grid"><input type="text" id="info-ee-nome" placeholder="Nome Completo"><input type="text" id="info-ee-filiacao" placeholder="Filiação"><input type="tel" id="info-ee-telemovel" placeholder="Telemóvel"><input type="email" id="info-ee-email" placeholder="Email do E.E."></div>
-                        <div class="action-buttons-row"><button id="btn-guardar-ee" class="primary-btn small-btn">Guardar</button><button id="btn-cancelar-ee" class="secondary-btn small-btn">Cancelar</button></div>
-                    </div>
+                    <div id="info-ee-display"><div class="data-display-group"><span class="data-label">Nome</span><span class="data-value" id="display-ee-nome">-</span></div><div class="data-display-group"><span class="data-label">Filiação</span><span class="data-value" id="display-ee-filiacao">-</span></div><div class="data-display-group"><span class="data-label">Telemóvel</span><span class="data-value clickable-contact" data-type="tel" id="display-ee-tel">-</span></div><div class="data-display-group"><span class="data-label">Email</span><span class="data-value clickable-contact" data-type="email" id="display-ee-email">-</span></div><div class="action-buttons-row"><button class="secondary-btn small-btn" id="btn-editar-info-ee"><i class="fa-solid fa-pen"></i> Editar</button></div></div>
+                    <div id="info-ee-edit" style="display: none;"><div class="info-grid"><input type="text" id="info-ee-nome" placeholder="Nome Completo"><input type="text" id="info-ee-filiacao" placeholder="Filiação"><input type="tel" id="info-ee-telemovel" placeholder="Telemóvel"><input type="email" id="info-ee-email" placeholder="Email do E.E."></div><div class="action-buttons-row"><button id="btn-guardar-ee" class="primary-btn small-btn">Guardar</button><button id="btn-cancelar-ee" class="secondary-btn small-btn">Cancelar</button></div></div>
                 </div>
             </div>
 
@@ -244,23 +202,12 @@
                 <div class="card" style="margin-bottom: 20px;">
                     <h3 style="margin-bottom: 15px;"><i class="fa-solid fa-plus"></i> Novo PRHF</h3>
                     <div class="input-row"><select id="prhf-disciplina"><option value="">Disc.</option></select><select id="prhf-modulo"><option value="">Mod.</option></select></div>
-                    <div class="input-row">
-                        <input type="number" id="prhf-horas" placeholder="Total Horas">
-                        <div style="display:flex; align-items:center; width:100%; gap:5px; margin-bottom:15px; background-color:var(--bg-dark); border:1px solid #333; border-radius:8px; padding-left:10px;"><span style="color:var(--text-muted); font-size:0.85rem; white-space:nowrap;">Data Lim.:</span><input type="date" id="prhf-prazo" style="margin-bottom:0; border:none; padding:10px;"></div>
-                    </div>
+                    <div class="input-row"><input type="number" id="prhf-horas" placeholder="Total Horas"><div style="display:flex; align-items:center; width:100%; gap:5px; margin-bottom:15px; background-color:var(--bg-dark); border:1px solid #333; border-radius:8px; padding-left:10px;"><span style="color:var(--text-muted); font-size:0.85rem; white-space:nowrap;">Data Lim.:</span><input type="date" id="prhf-prazo" style="margin-bottom:0; border:none; padding:10px;"></div></div>
                     <div class="input-row" style="margin-bottom:15px;"><label style="display:flex; align-items:center; gap:10px; font-size:0.9rem; color:var(--text-light);"><input type="checkbox" id="prhf-modulo-terminado" style="width:auto; margin:0;"> O Módulo já terminou?</label></div>
                     <textarea id="prhf-descricao" class="input-field" placeholder="Descreve a tarefa..."></textarea>
-                    
-                    <div style="display:flex; flex-direction:column; margin-top:10px; margin-bottom:15px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:0.9rem; color:var(--text-muted);">Anexos:</span>
-                            <label for="prhf-file-upload" class="secondary-btn small-btn" style="margin:0;"><i class="fa-solid fa-paperclip"></i> Anexar PDF</label><input type="file" id="prhf-file-upload" style="display:none;" accept=".pdf,.doc,.docx">
-                        </div>
-                        <span id="prhf-file-name" class="file-name-display"></span>
-                    </div>
+                    <div style="display:flex; flex-direction:column; margin-top:10px; margin-bottom:15px;"><div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:0.9rem; color:var(--text-muted);">Anexos:</span><label for="prhf-file-upload" class="secondary-btn small-btn" style="margin:0;"><i class="fa-solid fa-paperclip"></i> Anexar PDF</label><input type="file" id="prhf-file-upload" style="display:none;" accept=".pdf,.doc,.docx"></div><span id="prhf-file-name" class="file-name-display"></span></div>
                     <button id="btn-guardar-prhf" class="primary-btn">Processar e Gravar</button>
                 </div>
-                
                 <div class="section-container">
                     <div class="tabs-container"><button class="tab-btn active" id="tab-prhf-ativas">Ativas</button><button class="tab-btn" id="tab-prhf-concluidas">Concluídas</button></div>
                     <div style="margin-bottom:15px;"><select id="filtro-prhf-disc" style="margin:0; padding:8px;"><option value="">Todas as Disciplinas</option></select></div>
@@ -277,11 +224,10 @@
         </nav>
     </div>
 
-    <!-- MODALS GERAIS (Telefone, Email) -->
+    <!-- MODALS -->
     <div id="modal-telefone" class="modal-overlay bottom"><div class="action-sheet"><h3>Opções de Contacto</h3><a id="action-ligar" href="#" class="primary-btn"><i class="fa-solid fa-phone"></i> Ligar Diretamente</a><button id="action-guardar-vcard" class="secondary-btn"><i class="fa-solid fa-user-plus"></i> Guardar Contacto</button><button class="danger-btn btn-fechar-modal">Cancelar</button></div></div>
     <div id="modal-email" class="modal-overlay bottom"><div class="action-sheet"><h3>Opções de Email</h3><a id="action-enviar-email" href="#" class="primary-btn"><i class="fa-solid fa-envelope"></i> Escrever Email</a><button class="danger-btn btn-fechar-modal">Cancelar</button></div></div>
 
-    <!-- MODAL FOLHA PRHF -->
     <div id="modal-prhf-sheet" class="modal-overlay">
         <div class="paper-sheet">
             <button class="btn-close-paper"><i class="fa-solid fa-xmark"></i></button>
@@ -307,7 +253,6 @@
         </div>
     </div>
 
-    <!-- MODAL PAUTA GLOBAL -->
     <div id="modal-pauta-global" class="modal-overlay">
         <div class="paper-sheet" style="max-width: 600px; width: 95%; max-height: 85vh; overflow-y: auto;">
             <button id="btn-close-pauta" class="btn-close-paper"><i class="fa-solid fa-xmark"></i></button>
@@ -316,25 +261,50 @@
         </div>
     </div>
 
-    <!-- MODAL NOVA FALTA -->
+    <!-- NOVO MODAL: ADICIONAR EVENTO / AVALIAÇÃO -->
+    <div id="modal-novo-evento" class="modal-overlay">
+        <div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto;">
+            <h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-calendar-plus"></i> Novo Evento / Teste</h3>
+            <div class="falta-form-grid">
+                <div class="falta-form-full"><input type="text" id="ev-titulo" placeholder="Título (ex: Frequência PORT)" style="margin:0;"></div>
+                <div class="falta-form-full"><select id="ev-tipo" style="margin:0;"><option value="teste">Teste / Frequência</option><option value="avaliacao">Avaliação / Trabalho</option></select></div>
+                <div><input type="date" id="ev-data" style="margin:0;"></div>
+                <div><input type="time" id="ev-hora" style="margin:0;" value="09:00"></div>
+                <div class="falta-form-full"><select id="ev-disc" style="margin:0;"><option value="">Disciplina</option></select></div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <button id="btn-gravar-evento" class="primary-btn" style="flex:1;">Criar Evento</button>
+                <button id="btn-cancelar-evento" class="danger-btn" style="flex:1;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL NOVA FALTA (C/ Intervalo de Dias e Horas Funcionais) -->
     <div id="modal-nova-falta" class="modal-overlay">
         <div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto;">
             <h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-plus"></i> Registar Nova Falta</h3>
             <div class="falta-form-grid">
-                <div class="falta-form-full"><input type="date" id="nf-data" style="margin:0;"></div>
-                <div><select id="nf-disc" style="margin:0;"><option value="">Disciplina</option></select></div>
-                <div><select id="nf-mod" style="margin:0;"><option value="">Módulo</option></select></div>
-                <div class="falta-form-full" style="display:flex; gap:10px; align-items:center;">
-                    <span class="text-muted">Horas:</span>
-                    <button class="secondary-btn small-btn" style="width:40px;">-</button>
-                    <input type="number" id="nf-horas" value="1" min="1" max="8" style="margin:0; text-align:center; width:60px;">
-                    <button class="primary-btn small-btn" style="width:40px;">+</button>
+                <div class="falta-form-full">
+                    <label class="text-muted" style="font-size:0.8rem; display:block; margin-bottom:3px;">Data Inicial:</label>
+                    <input type="date" id="nf-data-inicio" style="margin:0;">
                 </div>
                 <div class="falta-form-full">
+                    <label class="text-muted" style="font-size:0.8rem; display:block; margin-bottom:3px;">Data Final (Se forem vários dias):</label>
+                    <input type="date" id="nf-data-fim" style="margin:0;">
+                </div>
+                <div><select id="nf-disc" style="margin:0;"><option value="">Disciplina</option></select></div>
+                <div><select id="nf-mod" style="margin:0;"><option value="">Módulo</option></select></div>
+                <div class="falta-form-full" style="display:flex; gap:10px; align-items:center; justify-content:center; margin-top:5px;">
+                    <span class="text-muted">Horas:</span>
+                    <button id="btn-menos-hora" class="secondary-btn small-btn" style="width:40px;">-</button>
+                    <input type="number" id="nf-horas" value="1" min="1" max="8" style="margin:0; text-align:center; width:60px;">
+                    <button id="btn-mais-hora" class="primary-btn small-btn" style="width:40px;">+</button>
+                </div>
+                <div class="falta-form-full" style="margin-top:5px;">
                     <label class="falta-checkbox-group"><input type="checkbox" id="nf-justificada"><span>Falta Justificada?</span></label>
                 </div>
             </div>
-            <div style="display:flex; gap:10px; margin-top:10px;">
+            <div style="display:flex; gap:10px; margin-top:15px;">
                 <button id="btn-gravar-nova-falta" class="primary-btn" style="flex:1;">Registar</button>
                 <button id="btn-cancelar-nova-falta" class="danger-btn" style="flex:1;">Cancelar</button>
             </div>
