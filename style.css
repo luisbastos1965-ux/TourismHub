@@ -382,3 +382,34 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .horario-slot { background: var(--bg-card); border: 1px solid #333; border-radius: 4px; min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: 0.8rem; padding: 5px; transition: 0.2s; cursor: pointer;}
 .horario-slot:hover { border-color: var(--primary-green); }
 .horario-slot.filled { background: rgba(0, 204, 136, 0.1); border-color: var(--primary-green); color: white; }
+
+/* --- Cores dos Eventos do Calendário --- */
+.calendar-event-card.concluido { border-left-color: var(--success-green); opacity: 0.75; }
+.calendar-event-card.teste { border-left-color: #ffaa00; }
+.calendar-event-card.avaliacao { border-left-color: #00d2ff; }
+
+.badge-tipo-evento {
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 4px;
+}
+.badge-tipo-evento.teste { background-color: rgba(255, 170, 0, 0.2); color: #ffaa00; }
+.badge-tipo-evento.avaliacao { background-color: rgba(0, 210, 255, 0.2); color: #00d2ff; }
+.badge-tipo-evento.concluido { background-color: rgba(40, 167, 69, 0.2); color: var(--success-green); }
+
+/* --- Horário Real --- */
+.horario-grid { display: grid; grid-template-columns: 80px repeat(5, 1fr); gap: 4px; }
+.horario-linha-almoco {
+    grid-column: span 6;
+    background: #1a1a1a;
+    text-align: center;
+    padding: 8px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: var(--text-muted);
+    border-radius: 4px;
+    border: 1px dashed #444;
+}
