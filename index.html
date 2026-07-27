@@ -13,25 +13,35 @@
     <div id="login-screen" class="login-container" style="display: none;">
         <div class="login-box">
             <h2><i class="fa-solid fa-graduation-cap"></i> Turma PRO</h2>
-            <div class="input-group"><input type="text" id="login-username" placeholder="Nº de Aluno"><input type="password" id="login-password" placeholder="Palavra-passe"></div>
+            <div class="input-group"><input type="text" id="login-username" placeholder="Nº de Utilizador"><input type="password" id="login-password" placeholder="Palavra-passe"></div>
             <p id="login-error" class="error-msg" style="display: none;">Credenciais inválidas.</p>
             <button id="btn-login-manual" class="primary-btn">Entrar</button>
         </div>
     </div>
 
     <div id="app-content" style="display: none;">
-        <!-- CABEÇALHO COM O PASSAPORTE ESCOLAR -->
-        <header class="app-header">
+        
+        <!-- CABEÇALHO EXCLUSIVO STAFF (ADMIN / DT) -->
+        <header id="header-staff" class="app-header" style="display: none;">
+            <div class="logo"><i class="fa-solid fa-graduation-cap"></i> Turma PRO</div>
+            <div class="user-profile">
+                <span id="header-user-name-staff">A carregar...</span>
+                <button id="btn-logout-staff" class="logout-btn" style="margin-left: 15px;" title="Sair"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
+            </div>
+        </header>
+
+        <!-- CABEÇALHO EXCLUSIVO DO ALUNO (COM PASSAPORTE) -->
+        <header id="header-aluno" class="app-header" style="display: none;">
             <div class="logo"><i class="fa-solid fa-graduation-cap"></i> Turma PRO</div>
             <div style="display:flex; align-items:center;">
                 <button id="btn-abrir-passaporte" class="header-passaporte-btn">
                     <div class="header-user-info">
-                        <span id="header-user-name" class="header-user-name">A carregar...</span>
+                        <span id="header-user-name-aluno">A carregar...</span>
                         <span id="header-user-tag" class="header-user-tag">Passaporte</span>
                     </div>
                     <div class="header-avatar" id="header-avatar-circle"><i class="fa-solid fa-user"></i></div>
                 </button>
-                <button id="btn-logout" class="logout-btn" style="margin-left: 15px;" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button>
+                <button id="btn-logout-aluno" class="logout-btn" style="margin-left: 15px;" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button>
             </div>
         </header>
 
@@ -70,7 +80,6 @@
                 </div>
             </div>
 
-            <!-- CADERNETA DO ALUNO -->
             <div id="view-aluno-caderneta" style="display: none;">
                 <div class="class-header"><h2 class="section-title">A Minha Caderneta</h2></div>
                 <div class="tabs-container" style="margin-bottom: 20px;">
@@ -81,7 +90,6 @@
                 <div id="aluno-caderneta-content"><p class="text-muted" style="text-align:center;">A carregar dados...</p></div>
             </div>
 
-            <!-- AGENDA DO ALUNO -->
             <div id="view-aluno-agenda" style="display: none;">
                 <div class="class-header"><h2 class="section-title">Agenda e Horário</h2></div>
                 <div class="tabs-container" style="margin-bottom: 20px;">
@@ -91,7 +99,6 @@
                 <div id="aluno-agenda-content"><p class="text-muted" style="text-align:center;">A carregar agenda...</p></div>
             </div>
 
-            <!-- FÓRUM DO ALUNO -->
             <div id="view-aluno-forum" style="display: none;">
                 <div class="class-header"><h2 class="section-title">Fóruns da Turma</h2></div>
                 <div id="aluno-forum-channel-list"><p class="text-muted" style="text-align:center;">A procurar os teus canais...</p></div>
@@ -110,7 +117,6 @@
                 </div>
             </div>
 
-            <!-- PASSAPORTE ESCOLAR (FCT/PAP) -->
             <div id="view-aluno-passaporte" style="display: none;">
                 <div class="class-header"><h2 class="section-title"><i class="fa-solid fa-passport"></i> Passaporte Escolar</h2></div>
                 <h3 style="color: var(--primary-green); font-size: 1rem; margin-bottom: 15px;"><i class="fa-solid fa-medal"></i> Medalhas e Conquistas</h3>
@@ -268,8 +274,16 @@
             <div id="view-faltas" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-hub-faltas" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Registo de Faltas</h2></div>
                 <div class="falta-tabs"><button class="falta-tab-btn active" id="tab-faltas-disciplina">Por Disciplina</button><button class="falta-tab-btn" id="tab-faltas-data">Por Data</button></div>
-                <div class="faltas-toolbar" id="toolbar-faltas-data" style="display:none;"><button id="btn-nova-falta"><i class="fa-solid fa-plus"></i> Nova</button><button id="btn-alterar-falta"><i class="fa-solid fa-pen"></i> Alterar</button><button id="btn-justificar-falta" class="just-btn"><i class="fa-solid fa-file-signature"></i> Justif. Rápida</button><button id="btn-eliminar-falta" class="del-btn"><i class="fa-solid fa-trash"></i> Eliminar</button></div>
+                
+                <div class="faltas-toolbar" id="toolbar-faltas-data" style="display:none;">
+                    <button id="btn-nova-falta"><i class="fa-solid fa-plus"></i> Nova</button>
+                    <button id="btn-alterar-falta"><i class="fa-solid fa-pen"></i> Alterar</button>
+                    <button id="btn-justificar-falta" class="just-btn"><i class="fa-solid fa-file-signature"></i> Justif. Rápida</button>
+                    <button id="btn-eliminar-falta" class="del-btn"><i class="fa-solid fa-trash"></i> Eliminar</button>
+                </div>
+                
                 <div id="faltas-container-disciplina"></div>
+                
                 <div id="faltas-container-data" style="display:none;">
                     <div style="display:flex; gap:10px; margin-bottom:15px; align-items:center;">
                         <select id="filtro-mes-faltas" style="margin:0; flex:1;"><option value="">Mês (Todos)</option><option value="09">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option><option value="01">Janeiro</option><option value="02">Fevereiro</option><option value="03">Março</option><option value="04">Abril</option><option value="05">Maio</option><option value="06">Junho</option><option value="07">Julho</option></select>
@@ -320,7 +334,7 @@
             </div>
         </main>
         
-        <!-- BARRA INFERIOR (O ROUTER) -->
+        <!-- BARRA INFERIOR ALUNO -->
         <nav class="bottom-nav" id="student-bottom-nav">
             <a href="#" class="nav-item active" data-target="student-dashboard"><i class="fa-solid fa-house"></i><span>Início</span></a>
             <a href="#" class="nav-item" data-target="view-aluno-caderneta"><i class="fa-solid fa-book"></i><span>Caderneta</span></a>
@@ -405,12 +419,13 @@
                     <input type="date" id="novo-forum-expira" style="margin:0;">
                 </div>
             </div>
-            
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
                 <label class="text-muted" style="font-size:0.85rem; display:block;">Selecionar Membros:</label>
                 <button id="btn-selecionar-todos-forum" class="secondary-btn small-btn" style="padding:4px 8px; border:none; color:var(--primary-green);">Inverter Seleção</button>
             </div>
-            <div id="novo-forum-membros-list" class="forum-membros-list"><p class="text-muted" style="font-size:0.8rem; text-align:center;">A carregar alunos...</p></div>
+            <div id="novo-forum-membros-list" class="forum-membros-list">
+                <p class="text-muted" style="font-size:0.8rem; text-align:center;">A carregar alunos...</p>
+            </div>
             <div style="display:flex; gap:10px;"><button id="btn-gravar-forum" class="primary-btn" style="flex:1;">Criar</button><button id="btn-cancelar-forum" class="danger-btn" style="flex:1;">Cancelar</button></div>
         </div>
     </div>
