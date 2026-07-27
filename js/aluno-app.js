@@ -586,43 +586,40 @@ async function carregarSumariosAluno() {
 // ==========================================
 // 9. NOTIFICAÇÕES PUSH
 // ==========================================
-import { messaging, VAPID_KEY, getToken, onMessage } from "./firebase.js";
-
 async function pedirPermissaoNotificacoes() {
     try {
-        console.log("A pedir permissão para notificações...");
+        console.log("A tentar pedir permissão...");
         const permission = await Notification.requestPermission();
         
         if (permission === 'granted') {
             console.log("Permissão concedida! A gerar token...");
-            // Gera o bilhete único deste telemóvel
             const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY });
             
             if (currentToken) {
-                console.log("O teu Token de Notificação é:", currentToken);
-                // Guardamos este token no perfil do aluno na base de dados para sabermos para onde enviar mensagens!
+                console.log("🔑 O teu Token de Notificação é:", currentToken);
                 await updateDoc(doc(db, "utilizadores", myUserId), {
                     tokenNotificacao: currentToken
                 });
+                console.log("Token guardado na base de dados com sucesso!");
             } else {
-                console.log("Nenhum token gerado. Precisa de permissões.");
+                console.warn("Nenhum token gerado. Verifica a VAPID_KEY.");
             }
         } else {
-            console.log("Permissão negada pelo utilizador.");
+            console.warn("O utilizador bloqueou as notificações.");
         }
     } catch (error) {
-        console.error("Erro ao ativar notificações:", error);
+        console.error("🚨 Erro fatal ao ativar notificações:", error);
     }
 }
 
-// Escutar notificações quando o aluno TEM a app aberta no ecrã
-onMessage(messaging, (payload) => {
-    console.log("Mensagem recebida com a app aberta: ", payload);
-    // Dispara um alerta nativo simples no browser para ele ver a mensagem
-    alert(`NOVA NOTIFICAÇÃO:\n\n${payload.notification.title}\n${payload.notification.body}`);
-});
+// Escutar notificações quando a app está aberta no ecrã
+if(typeof onMessage !== "undefined" && messaging) {
+    onMessage(messaging, (payload) => {
+        alert(`NOVA NOTIFICAÇÃO:\n\n${payload.notification.title}\n${payload.notification.body}`);
+    });
+}
 
-// Assim que os dados do aluno carregam e sabemos quem ele é, pedimos a permissão
+// Chamar a função 4 segundos após o ecrã carregar
 setTimeout(() => {
     if(myUserId) pedirPermissaoNotificacoes();
-}, 4000); // Espera 4 segundos depois do login para não ser agressivo
+}, 4000);
