@@ -149,3 +149,116 @@ function iniciarChatAluno(turmaId, fId, nomeAluno) {
         try { await addDoc(collection(db, "turmas", turmaId, "foruns", fId, "mensagens"), { remetente: userNameCortado, texto: txt, timestamp: Date.now() }); inp.value = ''; } catch(e){}
     };
 }
+
+// ==========================================
+// 4. AGENDA DO ALUNO (Calendário e Horário)
+// ==========================================
+export async function carregarAgendaAluno(turmaId) {
+    const content = document.getElementById('aluno-agenda-content');
+    
+    document.getElementById('tab-aluno-eventos').onclick = () => renderEventosAluno(turmaId, content);
+    document.getElementById('tab-aluno-horario').onclick = () => renderHorarioAluno(turmaId, content);
+    
+    // Inicia pela aba de Eventos
+    document.querySelectorAll('#view-aluno-agenda .tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-aluno-eventos').classList.add('active');
+    renderEventosAluno(turmaId, content);
+}
+
+async function renderEventosAluno(turmaId, container) {
+    container.innerHTML = '<p class="text-muted" style="text-align:center;">A procurar avaliações...</p>';
+    try {
+        const res = await getDocs(query(collection(db, "turmas", turmaId, "eventos")));
+        if(res.empty) { container.innerHTML = '<p class="text-muted" style="text-align:center;">Não tens avaliações ou eventos agendados.</p>'; return; }
+
+        let evs = []; res.forEach(d => evs.push(d.data()));
+        const hoje = new Date().toISOString().split('T')[0];
+        
+        const futuros = evs.filter(e => e.data >= hoje).sort((a,b) => a.data.localeCompare(b.data));
+        if(futuros.length === 0) { container.innerHTML = '<p class="text-muted" style="text-align:center;">A tua agenda está limpa! 😎</p>'; return; }
+
+        let html = ''; const mesArr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        futuros.forEach(ev => {
+            let classeCard = "outro"; let badgeClass = "outro"; let badgeTexto = "OUTRO EVENTO";
+            if(ev.tipo === 'teste') { classeCard = "teste"; badgeClass = "teste"; badgeTexto = "TESTE / FREQUÊNCIA"; } 
+            else if (ev.tipo === 'avaliacao') { classeCard = "avaliacao"; badgeClass = "avaliacao"; badgeTexto = "AVALIAÇÃO / TRABALHO"; }
+            
+            const dp = ev.data.split('-'); const mesStr = mesArr[parseInt(dp[1])-1]; const diaStr = dp[2];
+            const pDisc = ev.disciplina ? `<p><i class="fa-solid fa-book"></i> ${ev.disciplina} | ${ev.hora || '09:00'}</p>` : `<p><i class="fa-regular fa-clock"></i> ${ev.hora || '09:00'}</p>`;
+            
+            html += `<div class="calendar-event-card ${classeCard}"><div class="calendar-date-box"><span class="day">${diaStr}</span><span class="month">${mesStr}</span></div><div class="calendar-info"><span class="badge-tipo-evento ${badgeClass}">${badgeTexto}</span><h4>${ev.titulo}</h4>${pDisc}</div></div>`;
+        });
+        container.innerHTML = html;
+    } catch(e) { container.innerHTML = '<p class="text-danger">Erro ao carregar calendário.</p>'; }
+}
+
+async function renderHorarioAluno(turmaId, container) {
+    // Reutilizamos a estrutura visual da grelha, mas gerada dinamicamente para o aluno
+    container.innerHTML = `
+        <div class="card" style="padding: 10px;">
+            <p class="text-muted" style="text-align:center; font-size:0.85rem; margin-bottom:10px;">Horário Base da Turma</p>
+            <div class="horario-grid" id="grid-horario-aluno">
+                <div></div>
+                <div class="horario-header">SEG</div><div class="horario-header">TER</div><div class="horario-header">QUA</div><div class="horario-header">QUI</div><div class="horario-header">SEX</div>
+            </div>
+        </div>`;
+
+    const grid = document.getElementById('grid-horario-aluno');
+    const horasLables = ["08:30<br>09:30", "09:35<br>10:35", "10:50<br>11:50", "11:55<br>12:55", "13:00<br>14:00", "14:05<br>15:05", "15:15<br>16:15", "16:20<br>17:20"];
+    const horasIds = ["1", "2", "3", "4", "1300", "5", "6", "7"];
+    const diasUIAbrv = ['seg', 'ter', 'qua', 'qui', 'sex'];
+
+    try {
+        const docSnap = await getDoc(doc(db, "turmas", turmaId));
+        let horarioBase = {}; if(docSnap.exists() && docSnap.data().horario) horarioBase = docSnap.data().horario;
+
+        // Construir a grelha de leitura
+        for (let i = 0; i < horasIds.length; i++) {
+            grid.innerHTML += `<div class="horario-time">${horasLables[i]}</div>`;
+            for (let d = 0; d < diasUIAbrv.length; d++) {
+                const dia = diasUIAbrv[d];
+                const hora = horasIds[i];
+                // Procurar se na chave "seg_1" existe algo (como não temos a data real aqui, lemos as chaves genéricas que o admin criou primeiro)
+                // Se a chave estiver no formato YYYY-MM-DD_hora, teríamos de usar o motor de data real. Para o horário base (sempre visível), usamos o default.
+                
+                // Lógica de compatibilidade: procura a disciplina que mais se repete nesta hora/dia ou a versão mais recente
+                let disc = "";
+                for (const key in horarioBase) {
+                    if (key.endsWith(`_${hora}`) && (key.startsWith(dia) || new Date(key.split('_')[0]).getDay() === d+1)) {
+                        disc = horarioBase[key];
+                    }
+                }
+                
+                if(disc) {
+                    grid.innerHTML += `<div class="horario-slot filled" style="cursor:default;"><strong>${disc}</strong></div>`;
+                } else {
+                    grid.innerHTML += `<div class="horario-slot" style="cursor:default;"></div>`;
+                }
+            }
+        }
+    } catch(e) { console.log(e); }
+}
+
+
+// ==========================================
+// 5. PASSAPORTE ESCOLAR (FCT/PAP)
+// ==========================================
+export async function carregarPassaporteAluno(alunoId) {
+    // Aqui no futuro vamos ler da base de dados as conquistas e os dados da FCT/PAP do aluno.
+    // Por enquanto, atualizamos dinamicamente com os dados do perfil dele.
+    
+    try {
+        const docSnap = await getDoc(doc(db, "utilizadores", alunoId));
+        if (docSnap.exists()) {
+            const dados = docSnap.data();
+            
+            // Exemplo de preenchimento dinâmico (caso existam os campos)
+            if(dados.fctHoras) {
+                // Atualizar a barra de progresso da FCT
+            }
+            if(dados.papTema) {
+                // Atualizar o tema da PAP
+            }
+        }
+    } catch(e) { console.error("Erro ao carregar passaporte", e); }
+}
