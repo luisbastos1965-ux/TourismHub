@@ -1,10 +1,11 @@
-// IMPORTAÇÃO MODULAR
+// IMPORTAÇÃO MODULAR DA BASE DE DADOS E CÉREBRO DO ALUNO
 import { auth, db } from "./js/firebase.js";
 import { carregarDashboardAluno, carregarCadernetaAluno, carregarForunsAluno } from "./js/aluno.js";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, addDoc, deleteDoc, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 window.addEventListener('beforeunload', (e) => { e.preventDefault(); e.returnValue = ''; });
+window.userRole = null; // Guardar role globalmente
 
 const matrizCurso = {
     "Sociocultural": { "PORT": {"M1": 27, "M2": 24, "M3": 27}, "ING": {"M1": 24, "M2": 24, "M3": 24}, "AI": {"M1": 30, "M2": 30}, "EF": {"M1": 20, "M2": 20, "M3": 20, "M4": 20, "M5": 20}, "TIC": {"M1": 24, "M2": 24, "M3": 27, "M4": 24} },
@@ -13,7 +14,7 @@ const matrizCurso = {
 };
 
 const loginScreen = document.getElementById('login-screen'); const appContent = document.getElementById('app-content');
-const btnLoginManual = document.getElementById('btn-login-manual'); const btnLogout = document.getElementById('btn-logout');
+const btnLoginManual = document.getElementById('btn-login-manual');
 
 const painelAluno = document.getElementById('student-dashboard'); const viewStudyMode = document.getElementById('view-study-mode');
 const painelAdmin = document.getElementById('admin-dashboard'); const classHubView = document.getElementById('class-hub-view'); 
@@ -35,28 +36,59 @@ function esconderTudoMenos(ecraAtivo) {
         viewInformacoes, viewPrhf, viewFaltas, viewFaltasModulos, painelAluno, viewStudyMode, 
         viewClassCalendario, viewClassHorario, viewClassForum, viewClassEstatisticas,
         document.getElementById('view-aluno-caderneta'), document.getElementById('view-aluno-agenda'),
-        document.getElementById('view-aluno-forum'), document.getElementById('view-aluno-passaporte')
+        document.getElementById('view-aluno-forum'), document.getElementById('view-aluno-passaporte'),
+        painelAdmin
     ].forEach(el => { if(el) el.style.display = 'none'; });
     if(ecraAtivo) ecraAtivo.style.display = 'block';
 }
 
-// 1. Autenticação 
+// 1. Autenticação e Separação de Papéis (Roles)
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         const userId = user.email.split('@')[0];
         try {
             const docSnap = await getDoc(doc(db, "utilizadores", userId));
             if (docSnap.exists()) {
-                const dados = docSnap.data(); myUserName = dados.nome.split(' ')[0];
-                document.getElementById('header-user-name').innerText = `Olá, ${myUserName} (${dados.papel.toUpperCase()})`;
+                const dados = docSnap.data(); 
+                myUserName = dados.nome.split(' ')[0];
+                window.userRole = dados.papel;
+                
                 if(dados.papel === 'admin') { 
-                    painelAdmin.style.display = 'block'; bottomNav.style.display = 'none'; esconderTudoMenos(null); 
-                } else { 
-                    painelAdmin.style.display = 'none'; bottomNav.style.display = 'flex'; esconderTudoMenos(painelAluno); 
-                    alunoAtualId = userId; turmaAtual = dados.turma;
+                    // MUNDO DO ADMIN (Acesso Global)
+                    document.getElementById('header-staff').style.display = 'flex';
+                    document.getElementById('header-aluno').style.display = 'none';
+                    document.getElementById('header-user-name-staff').innerText = `Olá, ${myUserName} (ADMIN)`;
+                    
+                    bottomNav.style.display = 'none'; 
+                    esconderTudoMenos(painelAdmin); 
+                } 
+                else if(dados.papel === 'dt') {
+                    // MUNDO DO DIRETOR DE TURMA (Acesso Restrito à sua Turma)
+                    document.getElementById('header-staff').style.display = 'flex';
+                    document.getElementById('header-aluno').style.display = 'none';
+                    document.getElementById('header-user-name-staff').innerText = `Olá, ${myUserName} (DT)`;
+                    
+                    turmaAtual = dados.turma; // Turma definida na BD para o DT
+                    document.getElementById('class-hub-title').innerHTML = `Turma ${turmaAtual}`;
+                    document.getElementById('btn-voltar-turmas-hub').style.display = 'none'; // DT não recua para o menu geral
+                    
+                    bottomNav.style.display = 'none';
+                    esconderTudoMenos(classHubView); // Entra diretamente no Hub da Turma
+                }
+                else { 
+                    // MUNDO DO ALUNO
+                    document.getElementById('header-staff').style.display = 'none';
+                    document.getElementById('header-aluno').style.display = 'flex';
+                    document.getElementById('header-user-name-aluno').innerText = myUserName;
+                    
+                    bottomNav.style.display = 'flex'; 
+                    esconderTudoMenos(painelAluno); 
+                    alunoAtualId = userId; 
+                    turmaAtual = dados.turma;
                     carregarDashboardAluno(userId, dados.turma, dados.nome);
                 }
-                loginScreen.style.display = 'none'; appContent.style.display = 'block'; 
+                loginScreen.style.display = 'none'; 
+                appContent.style.display = 'block'; 
             }
         } catch (e) { console.error(e); }
     } else { loginScreen.style.display = 'flex'; appContent.style.display = 'none'; }
@@ -66,7 +98,8 @@ btnLoginManual.addEventListener('click', () => {
     const user = document.getElementById('login-username').value.trim().toLowerCase();
     signInWithEmailAndPassword(auth, user + "@turmapro.com", document.getElementById('login-password').value).then(() => document.getElementById('login-error').style.display = 'none').catch(() => { document.getElementById('login-error').style.display = 'block'; document.getElementById('login-error').innerText = "Credenciais inválidas."; });
 });
-btnLogout.addEventListener('click', () => signOut(auth));
+document.getElementById('btn-logout-staff')?.addEventListener('click', () => signOut(auth));
+document.getElementById('btn-logout-aluno')?.addEventListener('click', () => signOut(auth));
 
 // 2. Navegação Inferior do Aluno
 document.querySelectorAll('.bottom-nav .nav-item').forEach(link => {
@@ -96,8 +129,11 @@ document.getElementById('btn-abrir-passaporte')?.addEventListener('click', () =>
     esconderTudoMenos(document.getElementById('view-aluno-passaporte'));
 });
 
-// NAVEGAÇÃO GERAL ADMIN
-document.getElementById('btn-voltar-turmas-hub')?.addEventListener('click', () => { esconderTudoMenos(null); painelAdmin.style.display = 'block'; });
+// NAVEGAÇÃO GERAL ADMIN/DT
+document.getElementById('btn-voltar-turmas-hub')?.addEventListener('click', () => { 
+    if(window.userRole === 'dt') return; // Segurança extra
+    esconderTudoMenos(painelAdmin); 
+});
 document.getElementById('btn-voltar-class-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
 document.getElementById('btn-voltar-lista')?.addEventListener('click', () => esconderTudoMenos(classView));
 document.getElementById('btn-voltar-hub-avaliacoes')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
@@ -126,7 +162,7 @@ document.getElementById('btn-voltar-stats-hub')?.addEventListener('click', () =>
 
 document.querySelectorAll('.turma-card-large').forEach(botao => {
     botao.addEventListener('click', () => {
-        turmaAtual = botao.getAttribute('data-turma'); painelAdmin.style.display = 'none'; 
+        turmaAtual = botao.getAttribute('data-turma'); 
         if(turmaAtual === 'TUR') { document.getElementById('class-title').innerHTML = `<i class="fa-solid fa-globe"></i> Turma TUR`; esconderTudoMenos(classView); carregarAlunos('TUR'); } 
         else { document.getElementById('class-hub-title').innerHTML = `Turma ${turmaAtual}`; esconderTudoMenos(classHubView); }
     });
@@ -166,17 +202,6 @@ async function carregarFotoPerfil() {
         if (docSnap.exists() && docSnap.data().fotoPerfil) { document.getElementById('avatar-img').src = docSnap.data().fotoPerfil; document.getElementById('avatar-img').style.display = 'block'; document.getElementById('avatar-icon').style.display = 'none'; }
     } catch(e){}
 }
-document.getElementById('upload-avatar').addEventListener('change', (e) => {
-    const file = e.target.files[0]; if(!file) return; const reader = new FileReader();
-    reader.onload = (event) => {
-        const img = new Image(); img.onload = () => {
-            const canvas = document.createElement('canvas'); canvas.width = 150; canvas.height = 150; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, 150, 150);
-            const base64 = canvas.toDataURL('image/jpeg', 0.8);
-            updateDoc(doc(db, 'utilizadores', alunoAtualId), { fotoPerfil: base64 });
-            document.getElementById('avatar-img').src = base64; document.getElementById('avatar-img').style.display = 'block'; document.getElementById('avatar-icon').style.display = 'none';
-        }; img.src = event.target.result;
-    }; reader.readAsDataURL(file);
-});
 
 
 // ==========================================
@@ -383,7 +408,7 @@ async function calcularEstatisticasTurma() {
                     hPrhfPlan += (dataP.horasPresenciais || 0);
                     if(dataP.registosManuais) { dataP.registosManuais.forEach(r => hPrhfCump += r.horas); }
                 });
-            } catch(subErr) {}
+            } catch(subErr) { }
 
             if(negAluno >= 3) alunosEmRiscoCount++;
             const medInd = countAluno > 0 ? (sumAluno/countAluno).toFixed(1) : '-';
@@ -515,7 +540,7 @@ async function abrirModulosDisciplinaAvaliacao(disciplina) {
     modulosArray.forEach(mod => {
         const nEx = notasMapa[mod] !== undefined ? notasMapa[mod] : "SN"; let classeBadge = ""; if(nEx === "SN") classeBadge = "sn"; else if(nEx === "REP") classeBadge = "rep";
         const txtMotivo = (nEx === "REP" && notasMapa[mod+"_motivo"]) ? `<div style="font-size:0.8rem; color:var(--text-muted); margin-top:5px;"><i>Motivo: ${notasMapa[mod+"_motivo"]}</i></div>` : "";
-        html += `<div class="modulo-avaliar-item" style="display:flex; flex-direction:column;"><div class="mod-view" id="view-${disciplina}-${mod}" style="display:flex; justify-content:space-between; width:100%; align-items:center;"><div><strong>${mod}</strong>${txtMotivo}</div><div style="display:flex; align-items:center; gap:15px;"><span class="nota-badge ${classeBadge}" id="badge-${disciplina}-${mod}">${nEx}</span><button class="secondary-btn small-btn btn-abrir-edicao-nota" data-mod="${mod}"><i class="fa-solid fa-pen"></i></button></div></div><div class="mod-edit" id="edit-${disciplina}-${mod}" style="display:none; flex-direction:column; width:100%;"><div class="grade-grid" id="grid-${disciplina}-${mod}">${gridBtns}</div><div id="rep-reason-box-${disciplina}-${mod}" style="display:none; width:100%; margin-bottom:10px;"><input type="text" id="input-reason-${disciplina}-${mod}" placeholder="Motivo do REP" style="margin:0; padding:8px; font-size:0.9rem;"></div><div style="display:flex; gap:10px;"><button class="primary-btn small-btn btn-gravar-nota" data-disc="${disciplina}" data-mod="${mod}" style="flex:1;">OK (Gravar)</button><button class="secondary-btn small-btn btn-fechar-edicao-nota" data-mod="${mod}" style="flex:1;">Cancelar</button></div></div></div>`;
+        html += `<div class="modulo-avaliar-item" style="display:flex; flex-direction:column;"><div class="mod-view" id="view-${disciplina}-${mod}" style="display:flex; justify-content:space-between; width:100%; align-items:center;"><div><strong>${mod}</strong>${txtMotivo}</div><div style="display:flex; align-items:center; gap:15px;"><span class="nota-badge ${classeBadge}" id="badge-${disciplina}-${mod}">${nEx}</span><button class="secondary-btn small-btn btn-abrir-edicao-nota" data-mod="${mod}"><i class="fa-solid fa-pen"></i></button></div></div><div class="mod-edit" id="edit-${disciplina}-${mod}" style="display:none; flex-direction:column; width:100%;"><div class="grade-grid" id="grid-${disciplina}-${mod}">${gridBtns}</div><div id="rep-reason-box-${disciplina}-${mod}" style="display:none; width:100%; margin-bottom:10px;"><input type="text" id="input-reason-${disciplina}-${mod}" placeholder="Motivo do REP (Opc. Ex: Falta de Teste)" style="margin:0; padding:8px; font-size:0.9rem;"></div><div style="display:flex; gap:10px;"><button class="primary-btn small-btn btn-gravar-nota" data-disc="${disciplina}" data-mod="${mod}" style="flex:1;">OK (Gravar)</button><button class="secondary-btn small-btn btn-fechar-edicao-nota" data-mod="${mod}" style="flex:1;">Cancelar</button></div></div></div>`;
     });
     listaModulosUI.innerHTML = html;
     listaModulosUI.querySelectorAll('.btn-abrir-edicao-nota').forEach(b => b.addEventListener('click', (e) => { const m=e.currentTarget.getAttribute('data-mod'); document.getElementById(`view-${disciplina}-${m}`).style.display='none'; document.getElementById(`edit-${disciplina}-${m}`).style.display='flex'; }));
@@ -681,8 +706,7 @@ document.getElementById('sheet-btn-reverter')?.addEventListener('click', async (
     try { await updateDoc(doc(db, "utilizadores", alunoAtualId, "prhfs", idPrhfAtivo), { status: 'ativa' }); modalFolha.style.display = 'none'; carregarListaPRHF(alunoAtualId); } catch(err){ e.currentTarget.innerText = "Reverter para Ativa"; }
 });
 
-
-// FALTAS ADMIN (MANTIDO COMPLETO)
+// FALTAS ADMIN
 let optFaltasDiscOptionsOnly = ""; let faltasMemoria = [];
 for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) optFaltasDiscOptionsOnly += `<option value="${d}">${d}</option>`; }
 
