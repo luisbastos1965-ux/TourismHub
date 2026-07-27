@@ -52,7 +52,7 @@
                 <div class="students-list-container"><p class="text-muted">A carregar...</p></div>
             </div>
 
-            <!-- PERFIL DO ALUNO (COM O NOVO BOTÃO DE CHAT EE) -->
+            <!-- PERFIL DO ALUNO -->
             <div id="student-detail-view" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-lista" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
                 <div class="student-profile-header">
@@ -64,25 +64,23 @@
                     <button class="hub-card" id="btn-hub-avaliacoes"><i class="fa-solid fa-star"></i><span>Avaliações</span></button>
                     <button class="hub-card" id="btn-hub-faltas"><i class="fa-solid fa-user-clock"></i><span>Gerir Faltas</span></button>
                     <button class="hub-card" id="btn-hub-prhf"><i class="fa-solid fa-file-medical"></i><span>Planos PRHF</span></button>
-                    <!-- NOVO BOTÃO DE MENSAGENS COM O EE -->
                     <button class="hub-card" id="btn-hub-chat-ee" style="border-color: var(--warning-yellow);">
                         <i class="fa-solid fa-envelope" style="color: var(--warning-yellow);"></i>
                         <span>Mensagens EE</span>
                     </button>
-                </div>
-            </div>
                     <!-- NOVO BOTÃO: FCT & PAP -->
                     <button class="hub-card" id="btn-hub-fct-pap" style="border-color: #9b59b6;">
                         <i class="fa-solid fa-briefcase" style="color: #9b59b6;"></i>
                         <span>FCT & PAP</span>
                     </button>
-            
-            <!-- MÓDULOS DE AVALIAÇÕES, FALTAS, ESTATÍSTICAS E FÓRUM -->
+                </div>
+            </div>
+
+            <!-- MÓDULOS DE AVALIAÇÕES, FALTAS ESTATÍSTICAS E FÓRUM -->
             <div id="view-avaliacoes" style="display: none;"><div class="class-header"><button id="btn-voltar-hub-avaliacoes" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Avaliações</h2></div><button id="btn-pauta-global" class="primary-btn" style="margin-bottom: 25px; background-color: transparent; border: 1px solid var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-table-list"></i> Consultar Pauta Global</button><div id="matriz-disciplinas-container"></div></div>
             <div id="view-disciplina-modulos" style="display: none;"><div class="class-header"><button id="btn-voltar-disciplinas" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button><h2 id="titulo-disciplina" class="section-title">PORT</h2></div><div class="card" style="padding: 10px 20px;"><div id="lista-modulos-disciplina"></div></div></div>
             <div id="view-faltas" style="display: none;"><div class="class-header"><button id="btn-voltar-hub-faltas" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Registo de Faltas</h2></div><div class="falta-tabs"><button class="falta-tab-btn active" id="tab-faltas-disciplina">Por Disciplina</button><button class="falta-tab-btn" id="tab-faltas-data">Por Data</button></div><div class="faltas-toolbar" id="toolbar-faltas-data" style="display:none;"><button id="btn-nova-falta"><i class="fa-solid fa-plus"></i> Nova</button><button id="btn-alterar-falta"><i class="fa-solid fa-pen"></i> Alterar</button><button id="btn-justificar-falta" class="just-btn"><i class="fa-solid fa-file-signature"></i> Justif. Rápida</button><button id="btn-eliminar-falta" class="del-btn"><i class="fa-solid fa-trash"></i> Eliminar</button></div><div id="faltas-container-disciplina"></div><div id="faltas-container-data" style="display:none;"><div style="display:flex; gap:10px; margin-bottom:15px; align-items:center;"><select id="filtro-mes-faltas" style="margin:0; flex:1;"><option value="">Mês (Todos)</option><option value="09">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option><option value="01">Janeiro</option><option value="02">Fevereiro</option><option value="03">Março</option><option value="04">Abril</option><option value="05">Maio</option><option value="06">Junho</option><option value="07">Julho</option></select><select id="filtro-disc-faltas" style="margin:0; flex:1;"><option value="">Todas</option></select><select id="filtro-just-faltas" style="margin:0; flex:1;"><option value="">Todas</option><option value="justificada">Just.</option><option value="injustificada">Injust.</option></select><button id="btn-refresh-faltas" class="secondary-btn" style="margin:0; width:auto; padding:12px;"><i class="fa-solid fa-rotate-right"></i></button></div><div id="lista-historico-faltas-container"><p class="text-muted" style="text-align:center; margin-top:20px;">Sem faltas.</p></div></div></div>
             <div id="view-faltas-modulos" style="display: none;"><div class="class-header"><button id="btn-voltar-faltas-disc" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button><h2 id="titulo-falta-disciplina" class="section-title">PORT</h2></div><div class="card" style="padding: 10px 20px;"><div id="lista-faltas-disciplina"></div></div></div>
-            
             <div id="view-informacoes" style="display: none;"><div class="class-header"><button id="btn-voltar-hub-info" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Informações</h2></div><div class="card"><h3 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-user"></i> Aluno</h3><div id="info-aluno-display"><div class="data-display-group"><span class="data-label">Idade</span><span class="data-value" id="display-aluno-idade">-</span></div><div class="data-display-group"><span class="data-label">Telemóvel</span><span class="data-value clickable-contact" data-type="tel" id="display-aluno-tel">-</span></div><div class="data-display-group"><span class="data-label">Email</span><span class="data-value clickable-contact" data-type="email" id="display-aluno-email">-</span></div><div class="data-display-group"><span class="data-label">Morada</span><span class="data-value" id="display-aluno-morada">-</span></div></div></div></div>
 
             <div id="view-class-calendario" style="display: none;"><div class="class-header"><button id="btn-voltar-cal-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-cal-turma">Calendário</h2></div><div style="display:flex; gap:10px; margin-bottom: 20px;"><button id="btn-abrir-modal-evento" class="primary-btn" style="flex:1;"><i class="fa-solid fa-plus"></i> Novo Evento</button><button id="btn-refresh-calendario" class="secondary-btn" style="width:auto; padding:12px 20px;"><i class="fa-solid fa-rotate-right"></i></button></div><div id="lista-calendario-container"><p class="text-muted">A carregar...</p></div></div>
@@ -90,41 +88,14 @@
             <div id="view-class-forum" style="display: none;"><div class="class-header"><button id="btn-voltar-forum-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-forum-turma">Fóruns da Turma</h2></div><div id="forum-channel-list"><button id="btn-novo-forum" class="primary-btn" style="margin-bottom: 15px;"><i class="fa-solid fa-plus"></i> Criar Novo Canal</button><div class="forum-canais-grid" id="lista-canais-forum"><p class="text-muted" style="text-align:center;">A carregar canais...</p></div></div><div id="forum-chat-view" style="display:none; flex-direction:column; height:75vh; background:var(--bg-card); border-radius:12px; border:1px solid #333; overflow:hidden;"><div style="background:#222; padding:15px; display:flex; align-items:center; gap:10px; border-bottom:1px solid #333;"><button id="btn-voltar-canais" class="secondary-btn small-btn" style="padding:5px 10px; width:auto; border:none;"><i class="fa-solid fa-arrow-left"></i></button><h3 id="chat-active-title" style="color:var(--primary-green); font-size:1.1rem; margin:0; flex:1;">...</h3></div><div class="forum-messages" id="chat-messages-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:15px;"></div><div class="forum-input-area" style="background:#1a1a1a; padding:10px; border-top:1px solid #333; display:flex; gap:8px; align-items:center;"><input type="text" id="input-forum-msg" placeholder="Escreve aqui..." style="margin:0; flex:1; border-radius:20px; padding:10px 15px;"><button id="btn-send-msg" class="forum-send-btn" style="width:40px; height:40px;"><i class="fa-solid fa-paper-plane"></i></button></div></div></div>
             <div id="view-class-estatisticas" style="display: none;"><div class="class-header"><button id="btn-voltar-stats-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-stats-turma">Estatísticas Reais</h2></div><h3 style="margin-bottom: 15px; color: var(--primary-green); font-size: 1rem;"><i class="fa-solid fa-chart-pie"></i> Visão Global</h3><div class="stats-grid"><div class="stat-card"><i class="fa-solid fa-graduation-cap"></i><div class="stat-value" id="stat-media-turma">...</div><div class="stat-label">Média Global</div></div><div class="stat-card"><i class="fa-solid fa-user-clock"></i><div class="stat-value" id="stat-faltas-totais" style="color:var(--danger-red);">...</div><div class="stat-label">Faltas Totais (h)</div></div></div></div>
 
-            <!-- CAIXA DE ENTRADA DE JUSTIFICAÇÕES (ADMIN) -->
-            <div id="view-validar-justificacoes" style="display: none;">
-                <div class="class-header">
-                    <button id="btn-voltar-justificacoes-hub" class="secondary-btn small-btn">
-                        <i class="fa-solid fa-arrow-left"></i> Turma
-                    </button>
-                    <h2 class="section-title">Validar Justificações</h2>
-                </div>
-                
-                <div id="lista-justificacoes-pendentes">
-                    <p class="text-muted" style="text-align:center; margin-top:20px;">A procurar atestados enviados pelos Encarregados de Educação...</p>
-                </div>
-            </div>
-            
+            <div id="view-validar-justificacoes" style="display: none;"><div class="class-header"><button id="btn-voltar-justificacoes-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title">Validar Justificações</h2></div><div id="lista-justificacoes-pendentes"><p class="text-muted" style="text-align:center; margin-top:20px;">A procurar atestados...</p></div></div>
         </main>
     </div>
 
-    <!-- MODAIS DO ADMIN (incluindo o de ver o Atestado e o novo do CHAT EE) -->
-    <div id="modal-ver-atestado" class="modal-overlay">
-        <div class="action-sheet" style="border-radius: 12px; max-width: 500px; margin: auto; max-height: 90vh; display: flex; flex-direction: column;">
-            <h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:10px;"><i class="fa-solid fa-file-medical"></i> Atestado Médico</h3>
-            <p id="txt-atestado-detalhe" style="font-size:0.9rem; color:var(--text-muted); margin-bottom:15px;"></p>
-            <div style="flex:1; overflow:auto; background:#111; border-radius:8px; display:flex; justify-content:center; align-items:center; min-height:200px; margin-bottom:15px;">
-                <img id="img-atestado-preview" src="" style="max-width:100%; height:auto; display:none; border-radius:4px;">
-                <iframe id="pdf-atestado-preview" src="" style="width:100%; height:300px; display:none; border:none; border-radius:4px;"></iframe>
-            </div>
-            <div style="display:flex; gap:10px;">
-                <button id="btn-aprovar-atestado" class="primary-btn" style="flex:1; background-color: var(--success-green);"><i class="fa-solid fa-check"></i> Aprovar Falta</button>
-                <button id="btn-rejeitar-atestado" class="danger-btn" style="flex:1;"><i class="fa-solid fa-xmark"></i> Rejeitar</button>
-            </div>
-            <button class="secondary-btn btn-fechar-modal" style="margin-top:10px;">Cancelar</button>
-        </div>
-    </div>
+    <!-- MODAIS GLOBAIS ADMIN -->
+    <div id="modal-ver-atestado" class="modal-overlay"><div class="action-sheet" style="border-radius: 12px; max-width: 500px; margin: auto; max-height: 90vh; display: flex; flex-direction: column;"><h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:10px;"><i class="fa-solid fa-file-medical"></i> Atestado Médico</h3><p id="txt-atestado-detalhe" style="font-size:0.9rem; color:var(--text-muted); margin-bottom:15px;"></p><div style="flex:1; overflow:auto; background:#111; border-radius:8px; display:flex; justify-content:center; align-items:center; min-height:200px; margin-bottom:15px;"><img id="img-atestado-preview" src="" style="max-width:100%; height:auto; display:none; border-radius:4px;"><iframe id="pdf-atestado-preview" src="" style="width:100%; height:300px; display:none; border:none; border-radius:4px;"></iframe></div><div style="display:flex; gap:10px;"><button id="btn-aprovar-atestado" class="primary-btn" style="flex:1; background-color: var(--success-green);"><i class="fa-solid fa-check"></i> Aprovar Falta</button><button id="btn-rejeitar-atestado" class="danger-btn" style="flex:1;"><i class="fa-solid fa-xmark"></i> Rejeitar</button></div><button class="secondary-btn btn-fechar-modal" style="margin-top:10px;">Cancelar</button></div></div>
 
-    <!-- MODAL: CHAT COM O EE (LADO DO ADMIN) -->
+    <!-- MODAL: CHAT COM O EE -->
     <div id="modal-dt-chat-ee" class="modal-overlay">
         <div class="action-sheet" style="border-radius: 12px; max-width: 500px; margin: auto; height: 80vh; display: flex; flex-direction: column; padding: 0;">
             <div style="background:#222; padding:15px; display:flex; align-items:center; gap:10px; border-bottom:1px solid #333; border-radius: 12px 12px 0 0;">
@@ -136,6 +107,35 @@
                 <input type="text" id="dt-chat-ee-input" placeholder="Escreva a resposta..." style="margin:0; flex:1; border-radius:20px; padding:10px 15px;">
                 <button id="btn-dt-chat-ee-send" class="forum-send-btn" style="width:40px; height:40px; background-color: var(--warning-yellow); color: black;"><i class="fa-solid fa-paper-plane"></i></button>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL: GESTÃO FCT & PAP (ADMIN) -->
+    <div id="modal-dt-fct-pap" class="modal-overlay">
+        <div class="action-sheet" style="border-radius: 12px; max-width: 500px; margin: auto; max-height: 90vh; overflow-y: auto;">
+            <h3 style="color:#9b59b6; font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-briefcase"></i> Gestão FCT e PAP</h3>
+            
+            <h4 style="color:var(--text-light); margin-bottom:10px; font-size:1rem;"><i class="fa-solid fa-building"></i> FCT (Estágio)</h4>
+            <div class="input-row"><input type="text" id="dt-fct-entidade" placeholder="Entidade / Empresa"></div>
+            <div class="input-row" style="display:flex; gap:10px; align-items:center;">
+                <div style="flex:1;"><label style="font-size:0.8rem; color:var(--text-muted);">Horas Realizadas</label><input type="number" id="dt-fct-horas-feitas" placeholder="Ex: 150" style="margin-bottom:0;"></div>
+                <div style="flex:1;"><label style="font-size:0.8rem; color:var(--text-muted);">Total de Horas</label><input type="number" id="dt-fct-horas-totais" placeholder="Ex: 400" value="400" style="margin-bottom:0;"></div>
+            </div>
+
+            <hr style="border-color:#333; margin: 20px 0;">
+
+            <h4 style="color:var(--text-light); margin-bottom:10px; font-size:1rem;"><i class="fa-solid fa-laptop-code"></i> PAP (Projeto)</h4>
+            <div class="input-row"><input type="text" id="dt-pap-tema" placeholder="Tema do Projeto" style="margin-bottom:10px;"></div>
+            
+            <div id="dt-pap-anexo-box" style="background:var(--bg-dark); padding:15px; border-radius:8px; border:1px dashed #555; text-align:center; margin-bottom:15px;">
+                <p id="dt-pap-status-txt" style="font-size:0.9rem; margin-bottom:10px;">A verificar anexo...</p>
+                <a id="btn-dt-baixar-pap" href="#" download="Anteprojeto_PAP.pdf" class="secondary-btn small-btn" style="display:none; margin:0 auto; width:fit-content; color:var(--success-green); border-color:var(--success-green);"><i class="fa-solid fa-download"></i> Descarregar Ficheiro</a>
+            </div>
+
+            <div style="display:flex; gap:10px;">
+                <button id="btn-gravar-fct-pap" class="primary-btn" style="flex:1; background-color: #9b59b6;"><i class="fa-solid fa-check"></i> Guardar</button>
+            </div>
+            <button class="secondary-btn btn-fechar-modal" style="margin-top:10px; width:100%;">Cancelar</button>
         </div>
     </div>
     
