@@ -631,3 +631,155 @@ document.getElementById('btn-gravar-fct-pap')?.addEventListener('click', async (
         setTimeout(() => btnRef.innerHTML = textOrig, 2000);
     }
 });
+
+// ==========================================
+// SUMÁRIOS E MATERIAIS DE AULA (DT / ADMIN)
+// ==========================================
+const viewSumarios = document.getElementById('view-sumarios');
+let materialBase64Temporario = "";
+let materialNomeTemporario = "";
+
+// Adicionar a função extra para fechar a nova janela (modal)
+document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { 
+    const mSum = document.getElementById('modal-novo-sumario');
+    if(mSum) mSum.style.display = 'none'; 
+}));
+
+document.getElementById('btn-hub-sumarios')?.addEventListener('click', async () => {
+    // Esconder o Hub Principal e mostrar os Sumários
+    document.getElementById('class-hub-view').style.display = 'none';
+    viewSumarios.style.display = 'block';
+    
+    let optDisc = '<option value="">Todas as Disciplinas</option>';
+    if (typeof matrizCurso !== 'undefined') {
+        for(const comp of Object.values(matrizCurso)) { 
+            for(const d of Object.keys(comp)) optDisc += `<option value="${d}">${d}</option>`; 
+        }
+    }
+    document.getElementById('filtro-sumarios-disc').innerHTML = optDisc;
+    
+    carregarSumariosGestao();
+});
+
+document.getElementById('btn-voltar-sumarios-hub')?.addEventListener('click', () => {
+    viewSumarios.style.display = 'none';
+    document.getElementById('class-hub-view').style.display = 'block';
+});
+
+document.getElementById('filtro-sumarios-disc')?.addEventListener('change', carregarSumariosGestao);
+
+document.getElementById('btn-novo-sumario')?.addEventListener('click', () => {
+    let optDisc = '<option value="">Disciplina</option>';
+    if (typeof matrizCurso !== 'undefined') {
+        for(const comp of Object.values(matrizCurso)) { 
+            for(const d of Object.keys(comp)) optDisc += `<option value="${d}">${d}</option>`; 
+        }
+    }
+    document.getElementById('ns-disc').innerHTML = optDisc;
+    document.getElementById('ns-data').value = new Date().toISOString().split('T')[0];
+    document.getElementById('ns-titulo').value = "";
+    document.getElementById('ns-descricao').value = "";
+    document.getElementById('ns-file-name').innerText = "";
+    document.getElementById('ns-upload-material').value = "";
+    materialBase64Temporario = "";
+    materialNomeTemporario = "";
+    document.getElementById('modal-novo-sumario').style.display = 'flex';
+});
+
+document.getElementById('ns-upload-material')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    if(file.size > 716800) { alert("Ficheiro demasiado grande! O limite é 700KB."); return; }
+    
+    materialNomeTemporario = file.name;
+    document.getElementById('ns-file-name').innerText = materialNomeTemporario;
+    
+    const reader = new FileReader();
+    reader.onload = (ev) => { materialBase64Temporario = ev.target.result; };
+    reader.readAsDataURL(file);
+});
+
+document.getElementById('btn-gravar-sumario')?.addEventListener('click', async (e) => {
+    const data = document.getElementById('ns-data').value;
+    const disc = document.getElementById('ns-disc').value;
+    const titulo = document.getElementById('ns-titulo').value.trim();
+    const desc = document.getElementById('ns-descricao').value.trim();
+    
+    if(!data || !disc || !titulo) return alert("A Data, Disciplina e Título são obrigatórios!");
+    
+    const btnRef = e.currentTarget;
+    btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A publicar...';
+    btnRef.disabled = true;
+
+    // Deteta se está no Admin ou no DT para encontrar a turma certa
+    let turmaParaGravar = typeof turmaAtual !== 'undefined' ? turmaAtual : (typeof minhaTurma !== 'undefined' ? minhaTurma : null);
+    
+    if(!turmaParaGravar) {
+         alert("Erro interno: Turma não identificada.");
+         btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Publicar';
+         btnRef.disabled = false;
+         return;
+    }
+
+    try {
+        await addDoc(collection(db, "turmas", turmaParaGravar, "sumarios"), {
+            data: data,
+            disciplina: disc,
+            titulo: titulo,
+            descricao: desc,
+            anexoNome: materialNomeTemporario,
+            anexoBase64: materialBase64Temporario,
+            professor: typeof myUserName !== 'undefined' ? myUserName : "Direção/DT",
+            criadoEm: new Date().toISOString()
+        });
+        
+        btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Publicado!';
+        setTimeout(() => {
+            document.getElementById('modal-novo-sumario').style.display = 'none';
+            btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Publicar';
+            btnRef.disabled = false;
+            carregarSumariosGestao();
+        }, 1000);
+    } catch(err) {
+        btnRef.innerHTML = "Erro!";
+        setTimeout(() => { btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Publicar'; btnRef.disabled = false; }, 2000);
+    }
+});
+
+async function carregarSumariosGestao() {
+    const container = document.getElementById('lista-sumarios-container');
+    container.innerHTML = '<p class="text-muted" style="text-align:center;">A carregar sumários...</p>';
+    const filtroDisc = document.getElementById('filtro-sumarios-disc').value;
+
+    let turmaParaLer = typeof turmaAtual !== 'undefined' ? turmaAtual : (typeof minhaTurma !== 'undefined' ? minhaTurma : "TUR"); 
+
+    try {
+        const res = await getDocs(query(collection(db, "turmas", turmaParaLer, "sumarios")));
+        if(res.empty) { container.innerHTML = '<p class="text-muted" style="text-align:center;">Nenhum sumário registado nesta turma.</p>'; return; }
+        
+        let sumarios = [];
+        res.forEach(d => sumarios.push({id: d.id, ...d.data()}));
+        
+        if(filtroDisc) sumarios = sumarios.filter(s => s.disciplina === filtroDisc);
+        sumarios.sort((a,b) => b.data.localeCompare(a.data)); 
+
+        if(sumarios.length === 0) { container.innerHTML = '<p class="text-muted" style="text-align:center;">Nenhum sumário para esta disciplina.</p>'; return; }
+
+        let html = '';
+        sumarios.forEach(s => {
+            const anexoBtn = s.anexoBase64 ? `<a href="${s.anexoBase64}" download="${s.anexoNome}" class="secondary-btn small-btn" style="display:inline-block; margin-top:10px; width:auto; padding:5px 10px; border-color:var(--primary-green); color:var(--primary-green);"><i class="fa-solid fa-download"></i> ${s.anexoNome}</a>` : '';
+            html += `
+            <div class="card" style="margin-bottom:15px; border-left: 4px solid var(--primary-green);">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">${s.data} | ${s.disciplina} | Prof. ${s.professor}</span>
+                        <h4 style="margin:5px 0;">${s.titulo}</h4>
+                        ${s.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px;">${s.descricao}</p>` : ''}
+                    </div>
+                </div>
+                ${anexoBtn}
+            </div>`;
+        });
+        container.innerHTML = html;
+    } catch(e) { container.innerHTML = '<p class="text-danger center">Erro ao ler sumários.</p>'; }
+}
