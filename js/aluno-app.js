@@ -1,4 +1,4 @@
-import { auth, db } from "./firebase.js";
+import { auth, db, messaging, VAPID_KEY, getToken, onMessage } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, collection, updateDoc, getDocs, query, addDoc, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
