@@ -115,8 +115,8 @@ document.getElementById('aluno-upload-pap')?.addEventListener('change', (e) => {
     if(!file) return;
     
     // Limite de segurança de tamanho
-    if(file.size > 3145728) { 
-        alert("Ficheiro demasiado grande! O limite é 3MB."); 
+    if(file.size > 716800) { 
+        alert("Ficheiro demasiado grande! O limite nesta versão é 700KB. Tente comprimir o PDF online."); 
         return; 
     }
     
