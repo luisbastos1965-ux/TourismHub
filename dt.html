@@ -30,7 +30,6 @@
                     <button class="hub-card" id="btn-hub-horario"><i class="fa-solid fa-clock"></i><span>Gerir Horário</span></button>
                     <button class="hub-card" id="btn-hub-forum"><i class="fa-regular fa-comments"></i><span>Fórum da Turma</span></button>
                     <button class="hub-card" id="btn-hub-estatisticas"><i class="fa-solid fa-chart-line"></i><span>Estatísticas Reais</span></button>
-                    <!-- NOVO BOTÃO DA CAIXA DE ENTRADA -->
                     <button class="hub-card" id="btn-hub-justificacoes" style="border-color: var(--success-green);">
                         <i class="fa-solid fa-inbox" style="color: var(--success-green);"></i>
                         <span>Validar Faltas</span>
@@ -44,7 +43,7 @@
                 <div class="students-list-container"><p class="text-muted">A carregar...</p></div>
             </div>
 
-            <!-- PERFIL DO ALUNO -->
+            <!-- PERFIL DO ALUNO (COM O NOVO BOTÃO DE CHAT EE) -->
             <div id="student-detail-view" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-lista" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
                 <div class="student-profile-header">
@@ -56,6 +55,11 @@
                     <button class="hub-card" id="btn-hub-avaliacoes"><i class="fa-solid fa-star"></i><span>Lançar Avaliações</span></button>
                     <button class="hub-card" id="btn-hub-faltas"><i class="fa-solid fa-user-clock"></i><span>Gerir Faltas</span></button>
                     <button class="hub-card" id="btn-hub-prhf"><i class="fa-solid fa-file-medical"></i><span>Criar PRHFs</span></button>
+                    <!-- NOVO BOTÃO DE MENSAGENS COM O EE -->
+                    <button class="hub-card" id="btn-hub-chat-ee" style="border-color: var(--warning-yellow);">
+                        <i class="fa-solid fa-envelope" style="color: var(--warning-yellow);"></i>
+                        <span>Mensagens EE</span>
+                    </button>
                 </div>
             </div>
 
@@ -225,7 +229,6 @@
     <div id="modal-email" class="modal-overlay bottom"><div class="action-sheet"><h3>Opções de Email</h3><a id="action-enviar-email" href="#" class="primary-btn"><i class="fa-solid fa-envelope"></i> Escrever Email</a><button class="danger-btn btn-fechar-modal">Cancelar</button></div></div>
 
     <div id="modal-prhf-sheet" class="modal-overlay">
-        <!-- Estrutura do PRHF mantida idêntica -->
         <div class="paper-sheet">
             <button class="btn-close-paper"><i class="fa-solid fa-xmark"></i></button>
             <div class="paper-header"><h2 id="sheet-title">TIC_M3</h2><span id="sheet-status" class="paper-status">ATIVA</span></div>
@@ -278,7 +281,21 @@
         </div>
     </div>
 
-    <!-- O NOVO MOTOR DO DIRETOR DE TURMA -->
+    <!-- MODAL: CHAT COM O EE (LADO DO DT) -->
+    <div id="modal-dt-chat-ee" class="modal-overlay">
+        <div class="action-sheet" style="border-radius: 12px; max-width: 500px; margin: auto; height: 80vh; display: flex; flex-direction: column; padding: 0;">
+            <div style="background:#222; padding:15px; display:flex; align-items:center; gap:10px; border-bottom:1px solid #333; border-radius: 12px 12px 0 0;">
+                <h3 id="dt-chat-ee-title" style="color:var(--warning-yellow); font-size:1.1rem; margin:0; flex:1;"><i class="fa-solid fa-envelope"></i> Chat Família</h3>
+                <button class="icon-btn btn-fechar-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="forum-messages" id="dt-chat-ee-messages" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:15px; background: var(--bg-dark);"></div>
+            <div class="forum-input-area" style="background:#1a1a1a; padding:10px; border-top:1px solid #333; display:flex; gap:8px; align-items:center; border-radius: 0 0 12px 12px;">
+                <input type="text" id="dt-chat-ee-input" placeholder="Escreva a resposta..." style="margin:0; flex:1; border-radius:20px; padding:10px 15px;">
+                <button id="btn-dt-chat-ee-send" class="forum-send-btn" style="width:40px; height:40px; background-color: var(--warning-yellow); color: black;"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="./js/dt-app.js"></script>
 </body>
 </html>
