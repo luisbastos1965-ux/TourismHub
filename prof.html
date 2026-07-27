@@ -3,17 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Turma PRO - Portal do Professor</title>
+    <title>Turma PRO - Professor</title>
     <link rel="icon" type="image/png" href="logo_tur.png">
-    
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div id="app-content">
-        <!-- CABEÇALHO DO PROFESSOR -->
         <header id="header-staff" class="app-header">
-            <div class="logo"><i class="fa-solid fa-graduation-cap"></i> Turma PRO <span style="font-size: 0.7rem; color: var(--primary-green);">| Docente</span></div>
+            <div class="logo"><i class="fa-solid fa-graduation-cap"></i> Turma PRO <span style="font-size: 0.7rem; color: var(--primary-green);">| Professor</span></div>
             <div class="user-profile">
                 <span id="header-user-name-staff">A carregar...</span>
                 <button id="btn-logout-staff" class="logout-btn" style="margin-left: 15px;" title="Sair"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
@@ -21,12 +19,10 @@
         </header>
 
         <main class="app-content">
-            <!-- DASHBOARD: AS TURMAS DO PROFESSOR -->
+            <!-- DASHBOARD: TURMAS DO PROFESSOR -->
             <div id="prof-dashboard">
-                <div class="dashboard-header"><h2>Lecionar Turmas</h2></div>
-                <p class="text-muted" style="margin-bottom: 20px;">Selecione a turma onde vai dar aula:</p>
-                <div class="turmas-grid-large" id="prof-turmas-list">
-                    <!-- Gerado dinamicamente no JS -->
+                <div class="dashboard-header"><h2>As Minhas Turmas</h2></div>
+                <div class="turmas-grid-large">
                     <button class="turma-card-large" data-turma="10T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>10T</h3></div></button>
                     <button class="turma-card-large" data-turma="11T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>11T</h3></div></button>
                     <button class="turma-card-large" data-turma="12T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>12T</h3></div></button>
@@ -34,49 +30,110 @@
             </div>
 
             <!-- HUB DA TURMA PARA O PROFESSOR -->
-            <div id="prof-hub-view" style="display: none;">
-                <div class="class-header"><button id="btn-voltar-turmas-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turmas</button><h2 id="prof-hub-title" class="section-title">Turma X</h2></div>
-                
+            <div id="class-hub-view" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-turmas-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turmas</button><h2 id="class-hub-title" class="section-title">Turma X</h2></div>
                 <div class="admin-hub-grid">
-                    <button class="hub-card" id="btn-prof-faltas"><i class="fa-solid fa-user-check"></i><span>Sumário e Faltas</span></button>
-                    <button class="hub-card" id="btn-prof-avaliacoes"><i class="fa-solid fa-star"></i><span>Lançar Avaliações</span></button>
-                    <button class="hub-card" id="btn-prof-prhf"><i class="fa-solid fa-file-medical"></i><span>Planos PRHF</span></button>
-                    <button class="hub-card" id="btn-prof-forum"><i class="fa-regular fa-comments"></i><span>Fórum da Turma</span></button>
+                    <button class="hub-card" id="btn-hub-alunos"><i class="fa-solid fa-users-viewfinder"></i><span>Lista de Alunos</span></button>
+                    <button class="hub-card" id="btn-hub-calendario"><i class="fa-regular fa-calendar-days"></i><span>Calendário de Testes</span></button>
                 </div>
             </div>
 
-            <!-- LISTA DE ALUNOS (Usada para Faltas e Notas) -->
-            <div id="prof-lista-alunos-view" style="display: none;">
-                <div class="class-header"><button id="btn-voltar-prof-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button><h2 id="prof-action-title" class="section-title">Ação</h2></div>
-                
-                <!-- Barra de Ferramentas (Dinâmica: Faltas vs Notas) -->
-                <div id="prof-toolbar" class="card" style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
-                    <select id="prof-select-disc" style="margin:0; flex:1;"><option value="">A sua Disciplina...</option></select>
-                    <select id="prof-select-mod" style="margin:0; flex:1;"><option value="">Módulo...</option></select>
-                    
-                    <!-- Específico para Faltas -->
-                    <div id="prof-faltas-tools" style="display: none; align-items: center; gap: 10px;">
-                        <input type="number" id="prof-faltas-horas" value="1" min="1" max="8" style="margin:0; width: 60px; text-align: center;" title="Horas de Falta">
-                    </div>
-                </div>
+            <!-- VISTA DE ALUNOS -->
+            <div id="class-view" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-class-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button><h2 class="section-title">Lista de Alunos</h2></div>
+                <div class="students-list-container"><p class="text-muted">A carregar...</p></div>
+            </div>
 
-                <div class="table-container">
-                    <table class="styled-table">
-                        <thead>
-                            <tr>
-                                <th>Aluno</th>
-                                <th class="center" id="th-action-col">Ação</th>
-                            </tr>
-                        </thead>
-                        <tbody id="prof-lista-tabela">
-                            <tr><td colspan="2" class="text-muted center">A carregar alunos...</td></tr>
-                        </tbody>
-                    </table>
+            <!-- PERFIL DO ALUNO (SÓ FERRAMENTAS LETIVAS) -->
+            <div id="student-detail-view" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-lista" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
+                <div class="student-profile-header">
+                    <div class="profile-avatar"><img id="avatar-img" src="" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:50%;"><i class="fa-solid fa-user" id="avatar-icon"></i></div>
+                    <h2 id="detail-student-name">Nome</h2><p id="detail-student-number" class="text-muted">a0000</p>
                 </div>
+                <div class="admin-hub-grid" style="margin-top:20px;">
+                    <button class="hub-card" id="btn-hub-avaliacoes"><i class="fa-solid fa-star"></i><span>Lançar Avaliações</span></button>
+                    <button class="hub-card" id="btn-hub-faltas"><i class="fa-solid fa-user-clock"></i><span>Registar Faltas</span></button>
+                    <button class="hub-card" id="btn-hub-prhf"><i class="fa-solid fa-file-medical"></i><span>Gerir PRHFs</span></button>
+                </div>
+            </div>
+
+            <!-- AVALIAÇÕES E FALTAS -->
+            <div id="view-avaliacoes" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-hub-avaliacoes" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Avaliações</h2></div>
+                <div id="matriz-disciplinas-container"></div>
             </div>
             
-            <!-- (O Fórum e os PRHFs do Professor reutilizam os ecrãs já habituais, mas simplificados) -->
+            <div id="view-disciplina-modulos" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-disciplinas" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button><h2 id="titulo-disciplina" class="section-title">PORT</h2></div>
+                <div class="card" style="padding: 10px 20px;"><div id="lista-modulos-disciplina"></div></div>
+            </div>
+
+            <div id="view-faltas" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-hub-faltas" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Registo de Faltas</h2></div>
+                <button id="btn-nova-falta" class="primary-btn" style="margin-bottom: 20px;"><i class="fa-solid fa-plus"></i> Registar Nova Falta</button>
+                <div id="lista-historico-faltas-container"><p class="text-muted" style="text-align:center; margin-top:20px;">A carregar histórico...</p></div>
+            </div>
+
+            <!-- PRHF -->
+            <div id="view-prhf" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-hub-prhf" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Planos de Recuperação</h2></div>
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px;"><i class="fa-solid fa-plus"></i> Novo PRHF</h3>
+                    <div class="input-row"><select id="prhf-disciplina"><option value="">Disc.</option></select><select id="prhf-modulo"><option value="">Mod.</option></select></div>
+                    <div class="input-row"><input type="number" id="prhf-horas" placeholder="Total Horas"><div style="display:flex; align-items:center; width:100%; gap:5px; margin-bottom:15px; background-color:var(--bg-dark); border:1px solid #333; border-radius:8px; padding-left:10px;"><span style="color:var(--text-muted); font-size:0.85rem; white-space:nowrap;">Data Lim.:</span><input type="date" id="prhf-prazo" style="margin-bottom:0; border:none; padding:10px;"></div></div>
+                    <div class="input-row" style="margin-bottom:15px;"><label style="display:flex; align-items:center; gap:10px; font-size:0.9rem; color:var(--text-light);"><input type="checkbox" id="prhf-modulo-terminado" style="width:auto; margin:0;"> O Módulo já terminou?</label></div>
+                    <textarea id="prhf-descricao" class="input-field" placeholder="Descreve a tarefa..."></textarea>
+                    <button id="btn-guardar-prhf" class="primary-btn">Gravar Plano</button>
+                </div>
+                <div class="section-container">
+                    <div class="tabs-container"><button class="tab-btn active" id="tab-prhf-ativas">Ativas</button><button class="tab-btn" id="tab-prhf-concluidas">Concluídas</button></div>
+                    <div id="lista-prhf-container"></div>
+                </div>
+            </div>
+
+            <!-- CALENDÁRIO (SÓ VER) -->
+            <div id="view-class-calendario" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-cal-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title">Calendário</h2></div>
+                <div id="lista-calendario-container"><p class="text-muted">A carregar...</p></div>
+            </div>
         </main>
+    </div>
+
+    <!-- MODAIS DO PROFESSOR (Registar Falta, Folha do PRHF) -->
+    <div id="modal-nova-falta" class="modal-overlay">
+        <div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto;">
+            <h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-user-clock"></i> Registar Falta</h3>
+            <div class="falta-form-grid">
+                <div class="falta-form-full"><input type="date" id="nf-data" style="margin-bottom:0;"></div>
+                <div><select id="nf-disc" style="margin-bottom:0;"><option value="">Disciplina</option></select></div>
+                <div><select id="nf-mod" style="margin-bottom:0;"><option value="">Módulo</option></select></div>
+                <div class="falta-form-full" style="display:flex; gap:10px; align-items:center; justify-content:center;">
+                    <span class="text-muted">Horas:</span>
+                    <button id="btn-menos-hora" class="secondary-btn small-btn" style="width:40px;">-</button>
+                    <input type="number" id="nf-horas" value="1" min="1" max="8" style="margin:0; text-align:center; width:60px;">
+                    <button id="btn-mais-hora" class="primary-btn small-btn" style="width:40px;">+</button>
+                </div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button id="btn-gravar-nova-falta" class="primary-btn" style="flex:1;">Registar</button>
+                <button class="danger-btn btn-fechar-modal" style="flex:1;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOLHA DO PRHF -->
+    <div id="modal-prhf-sheet" class="modal-overlay">
+        <div class="paper-sheet">
+            <button class="btn-close-paper btn-fechar-modal"><i class="fa-solid fa-xmark"></i></button>
+            <div class="paper-header"><h2 id="sheet-title">Módulo</h2><span id="sheet-status" class="paper-status">ATIVA</span></div>
+            <div class="paper-details">
+                <p><strong>Prazo:</strong> <span id="sheet-prazo">-</span></p>
+                <p><strong>Horas Presenciais:</strong> <span id="sheet-hp">-</span>h</p>
+                <div class="paper-desc" id="sheet-desc">Descrição...</div>
+            </div>
+            <button id="sheet-btn-concluir" class="primary-btn" style="width:100%; margin-top:15px;"><i class="fa-solid fa-check"></i> Marcar como Concluída</button>
+        </div>
     </div>
 
     <script type="module" src="./js/prof-app.js"></script>
