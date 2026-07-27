@@ -35,6 +35,7 @@
                 <div class="admin-hub-grid">
                     <button class="hub-card" id="btn-hub-alunos"><i class="fa-solid fa-users-viewfinder"></i><span>Lista de Alunos</span></button>
                     <button class="hub-card" id="btn-hub-calendario"><i class="fa-regular fa-calendar-days"></i><span>Calendário de Testes</span></button>
+                    <button class="hub-card" id="btn-hub-sumarios"><i class="fa-solid fa-book-open"></i><span>Sumários</span></button>
                 </div>
             </div>
 
@@ -100,6 +101,14 @@
         </main>
     </div>
 
+            <!-- SUMÁRIOS E MATERIAIS -->
+            <div id="view-sumarios" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-sumarios-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title">Sumários e Materiais</h2></div>
+                <button id="btn-novo-sumario" class="primary-btn" style="margin-bottom: 20px;"><i class="fa-solid fa-plus"></i> Registar Sumário</button>
+                <div style="margin-bottom:15px;"><select id="filtro-sumarios-disc" style="margin:0; padding:8px;"><option value="">Todas as Disciplinas</option></select></div>
+                <div id="lista-sumarios-container"><p class="text-muted" style="text-align:center;">A carregar sumários...</p></div>
+            </div>
+    
     <!-- MODAIS DO PROFESSOR (Registar Falta, Folha do PRHF) -->
     <div id="modal-nova-falta" class="modal-overlay">
         <div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto;">
@@ -139,3 +148,26 @@
     <script type="module" src="./js/prof-app.js"></script>
 </body>
 </html>
+
+<!-- MODAL: NOVO SUMÁRIO -->
+    <div id="modal-novo-sumario" class="modal-overlay">
+        <div class="action-sheet" style="border-radius: 12px; max-width: 500px; margin: auto; max-height: 90vh; overflow-y: auto;">
+            <h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-book-open"></i> Novo Sumário</h3>
+            <div class="input-row"><input type="date" id="ns-data" style="margin-bottom:10px;"></div>
+            <div class="input-row"><select id="ns-disc"><option value="">Disciplina</option></select></div>
+            <div class="input-row"><input type="text" id="ns-titulo" placeholder="Título / Tema da Aula" style="margin-bottom:10px;"></div>
+            <textarea id="ns-descricao" class="input-field" placeholder="Descrição do sumário (Opcional)..." style="min-height:80px;"></textarea>
+            
+            <div style="background:var(--bg-dark); padding:15px; border-radius:8px; border:1px dashed #555; text-align:center; margin-bottom:15px;">
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">Anexar Material (Opcional - Máx 700KB)</p>
+                <label for="ns-upload-material" class="secondary-btn small-btn" style="margin:0 auto; width:fit-content;"><i class="fa-solid fa-paperclip"></i> Escolher Ficheiro</label>
+                <input type="file" id="ns-upload-material" style="display:none;" accept=".pdf,.doc,.docx,.ppt,.pptx">
+                <span id="ns-file-name" class="file-name-display" style="display:block; margin-top:10px; font-size:0.8rem; color:var(--success-green);"></span>
+            </div>
+
+            <div style="display:flex; gap:10px;">
+                <button id="btn-gravar-sumario" class="primary-btn" style="flex:1;"><i class="fa-solid fa-check"></i> Publicar</button>
+            </div>
+            <button class="secondary-btn btn-fechar-modal" style="margin-top:10px; width:100%;">Cancelar</button>
+        </div>
+    </div>
