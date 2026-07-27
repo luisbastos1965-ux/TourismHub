@@ -5,12 +5,12 @@ importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging-comp
 
 // 2. Coloca aqui a tua firebaseConfig IGUAL à que tens no teu firebase.js
 const firebaseConfig = {
-  apiKey: "AIzaSy...",
-  authDomain: "turmapro-....firebaseapp.com",
-  projectId: "turmapro-...",
-  storageBucket: "turmapro-....appspot.com",
-  messagingSenderId: "...",
-  appId: "1:..."
+  apiKey: "AIzaSyAUU6riTOuybEamgkPke4UXJwyjMA0nJzU",
+  authDomain: "turmapro-e6358.firebaseapp.com",
+  projectId: "turmapro-e6358",
+  storageBucket: "turmapro-e6358.firebasestorage.app",
+  messagingSenderId: "242512169110",
+  appId: "1:242512169110:web:f94978c0c2a13858a41ab7"
 };
 
 // 3. Inicializar a app no background
