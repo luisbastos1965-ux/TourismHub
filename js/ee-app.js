@@ -1,100 +1,429 @@
 import { auth, db } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, collection, query, getDocs, updateDoc, addDoc, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { doc, getDoc, collection, getDocs, query, addDoc, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-const matrizCurso = {
-    "Sociocultural": { "PORT": {"M1": 27, "M2": 24, "M3": 27}, "ING": {"M1": 24, "M2": 24, "M3": 24}, "AI": {"M1": 30, "M2": 30}, "EF": {"M1": 20, "M2": 20, "M3": 20, "M4": 20, "M5": 20}, "TIC": {"M1": 24, "M2": 24, "M3": 27, "M4": 24} },
-    "Científica": { "GEO": {"M1": 27, "M2": 24}, "HCA": {"M1": 24, "M2": 24, "M3": 27}, "MAT": {"M1": 30, "M2": 30, "M3": 30} },
-    "Técnica": { "CF": {"M1": 30, "M2": 30, "M3": 30}, "TIAT": {"M1": 25, "M2": 25, "M3": 25, "M4": 25}, "TCAT": {"M1": 25, "M2": 25, "M3": 25, "M4": 25}, "OTET": {"M1": 25, "M2": 25, "M3": 25, "M4": 25} }
-};
+let myUserId = "";
+let myUserName = "";
+let educandoId = ""; 
+let educandoTurma = "";
 
-let myUserName = ""; let educandoId = ""; let educandoNome = ""; let faltaSelecionadaId = ""; let comprovativoBase64 = "";
-
+// ==========================================
+// 1. SEGURANÇA E INICIALIZAÇÃO
+// ==========================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        const userId = user.email.split('@')[0];
+        myUserId = user.email.split('@')[0];
         try {
-            const docSnap = await getDoc(doc(db, "utilizadores", userId));
-            if (docSnap.exists() && docSnap.data().papel === 'ee') {
-                const dados = docSnap.data(); myUserName = dados.nome.split(' ')[0]; educandoId = dados.educando; 
-                document.getElementById('ee-welcome-name').innerText = `Bem-vindo(a), ${myUserName}!`;
-                if (educandoId) { await carregarDadosEducando(educandoId); } else { document.getElementById('ee-nome-aluno').innerText = "Nenhum educando associado."; }
-            } else { window.location.href = "index.html"; }
-        } catch (e) { console.error("Erro EE", e); }
-    } else { window.location.href = "index.html"; }
+            const docSnap = await getDoc(doc(db, "utilizadores", myUserId));
+            if (docSnap.exists()) {
+                const dados = docSnap.data();
+                if(dados.papel !== 'ee') {
+                    window.location.href = "index.html"; 
+                    return;
+                }
+                
+                myUserName = dados.nome;
+                educandoId = dados.educandoId; 
+                document.getElementById('header-user-name-ee').innerText = myUserName.split(' ')[0];
+                
+                carregarDadosEducando();
+            }
+        } catch (e) { console.error("Erro ao ler perfil", e); }
+    } else { 
+        window.location.href = "index.html"; 
+    }
 });
 
-document.getElementById('btn-logout-ee')?.addEventListener('click', () => { signOut(auth).then(() => window.location.href = "index.html"); });
-document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { document.getElementById('modal-ee-justificar').style.display = 'none'; document.getElementById('modal-ee-caderneta').style.display = 'none'; document.getElementById('modal-ee-chat').style.display = 'none'; }));
+document.getElementById('btn-logout-ee')?.addEventListener('click', () => {
+    signOut(auth).then(() => window.location.href = "index.html");
+});
 
-async function carregarDadosEducando(idAluno) {
+async function carregarDadosEducando() {
+    if(!educandoId) {
+        document.getElementById('ee-educando-nome').innerText = "Nenhum aluno associado.";
+        return;
+    }
     try {
-        const alunoSnap = await getDoc(doc(db, "utilizadores", idAluno));
-        if (alunoSnap.exists()) { educandoNome = alunoSnap.data().nome; document.getElementById('ee-nome-aluno').innerText = educandoNome; } else { return; }
-        const notasDb = await getDocs(collection(db, "utilizadores", idAluno, "notas")); let sumNotas = 0; let countNotas = 0;
-        notasDb.forEach(n => { const val = n.data().nota; if (val !== 'REP' && !isNaN(val)) { sumNotas += Number(val); countNotas++; } });
-        const media = countNotas > 0 ? (sumNotas / countNotas).toFixed(1) : '--'; const elMedia = document.getElementById('ee-media-aluno'); elMedia.innerText = media; if(media !== '--' && Number(media) < 10) elMedia.style.color = "var(--danger-red)";
-        const faltasDb = await getDocs(collection(db, "utilizadores", idAluno, "faltas")); let totalFInjustificadas = 0;
-        faltasDb.forEach(f => { if (!f.data().justificada) totalFInjustificadas += f.data().horas; }); document.getElementById('ee-faltas-aluno').innerText = totalFInjustificadas;
-    } catch (e) { console.error(e); }
+        const docSnap = await getDoc(doc(db, "utilizadores", educandoId));
+        if (docSnap.exists()) {
+            const d = docSnap.data();
+            educandoTurma = d.turma;
+            document.getElementById('ee-educando-nome').innerText = `${d.nome} (Turma ${d.turma})`;
+        }
+    } catch(e) {}
 }
 
-// JUSTIFICAR FALTAS (CÓDIGO ORIGINAL MANTIDO)
-document.getElementById('btn-ee-justificacoes')?.addEventListener('click', () => { document.getElementById('modal-ee-justificar').style.display = 'flex'; document.getElementById('ee-form-anexo').style.display = 'none'; carregarFaltasInjustificadas(); });
-async function carregarFaltasInjustificadas() { const container = document.getElementById('ee-lista-faltas-injustificadas'); container.innerHTML = '<p class="text-muted center">A procurar...</p>'; if(!educandoId) return; try { const res = await getDocs(collection(db, "utilizadores", educandoId, "faltas")); let faltas = []; res.forEach(d => { const f = d.data(); if (!f.justificada && !f.comprovativoEnviado) { f.id = d.id; faltas.push(f); } }); if (faltas.length === 0) { container.innerHTML = '<p class="text-muted center" style="color:var(--success-green);">Todas as faltas estão justificadas! 🎉</p>'; return; } faltas.sort((a,b) => b.dataInicio.localeCompare(a.dataInicio)); let html = ''; faltas.forEach(f => { html += `<div class="alert-card" style="margin-bottom:10px; cursor:pointer;" id="card-falta-${f.id}"><div class="alert-icon" style="color:var(--danger-red); background:rgba(255,77,77,0.1);"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="alert-info" style="flex:1;"><h4 style="font-size:0.95rem;">${f.dataInicio} (${f.horas}h)</h4><span>${f.disciplina} - ${f.modulo}</span></div><button class="secondary-btn small-btn btn-selecionar-falta" data-id="${f.id}" data-desc="${f.dataInicio} | ${f.disciplina}" style="width:auto; padding:5px 10px;">Selecionar</button></div>`; }); container.innerHTML = html; container.querySelectorAll('.btn-selecionar-falta').forEach(btn => { btn.addEventListener('click', (e) => { faltaSelecionadaId = e.currentTarget.getAttribute('data-id'); const desc = e.currentTarget.getAttribute('data-desc'); container.querySelectorAll('.alert-card').forEach(c => c.style.borderColor = 'transparent'); document.getElementById(`card-falta-${faltaSelecionadaId}`).style.borderColor = '#0099ff'; document.getElementById('ee-falta-selecionada-txt').innerText = desc; document.getElementById('ee-form-anexo').style.display = 'block'; document.getElementById('ee-upload-atestado').value = ""; document.getElementById('ee-atestado-nome').innerText = ""; comprovativoBase64 = ""; }); }); } catch(err) { container.innerHTML = '<p class="text-danger center">Erro ao carregar faltas.</p>'; } }
-document.getElementById('ee-upload-atestado')?.addEventListener('change', (e) => { const file = e.target.files[0]; if(!file) return; if(file.size > 716800) { alert("Ficheiro demasiado grande! Tente tirar uma foto com menos resolução ou cortar a imagem.."); return; } document.getElementById('ee-atestado-nome').innerText = "Ficheiro anexado: " + file.name; document.getElementById('ee-atestado-nome').style.color = "var(--success-green)"; const reader = new FileReader(); reader.onload = (ev) => { comprovativoBase64 = ev.target.result; }; reader.readAsDataURL(file); });
-document.getElementById('btn-ee-enviar-justificacao')?.addEventListener('click', async (e) => { if(!faltaSelecionadaId) return alert("Selecione uma falta primeiro."); if(!comprovativoBase64) return alert("Tem de anexar uma fotografia ou PDF do atestado."); const btnRef = e.currentTarget; const originalText = btnRef.innerHTML; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A enviar...'; try { await updateDoc(doc(db, "utilizadores", educandoId, "faltas", faltaSelecionadaId), { comprovativoEnviado: true, anexoJustificacao: comprovativoBase64, dataEnvioJustificacao: new Date().toISOString() }); btnRef.style.backgroundColor = "var(--success-green)"; btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Enviado com Sucesso!'; setTimeout(() => { document.getElementById('ee-form-anexo').style.display = 'none'; btnRef.style.backgroundColor = "#0099ff"; btnRef.innerHTML = originalText; carregarFaltasInjustificadas(); }, 1500); } catch(err) { btnRef.innerHTML = "Erro ao enviar!"; setTimeout(() => btnRef.innerHTML = originalText, 2000); } });
-
-// VER CADERNETA (CÓDIGO ORIGINAL MANTIDO)
-document.getElementById('btn-ee-caderneta')?.addEventListener('click', async () => { if(!educandoId) return alert("Nenhum educando associado."); document.getElementById('modal-ee-caderneta').style.display = 'flex'; const container = document.getElementById('ee-caderneta-content'); container.innerHTML = '<p class="text-muted" style="text-align:center;">A compilar notas da pauta...</p>'; try { const notasDb = await getDocs(collection(db, "utilizadores", educandoId, "notas")); const mapNotas = {}; notasDb.forEach(d => { mapNotas[`${d.data().disciplina}_${d.data().modulo}`] = d.data().nota; }); let html = ''; for (const [comp, disciplinas] of Object.entries(matrizCurso)) { html += `<div class="pauta-global-componente"><div class="pauta-global-header">${comp}</div>`; for (const [nomeDisc, modulos] of Object.entries(disciplinas)) { html += `<div class="pauta-global-disc"><div class="pauta-global-disc-title">${nomeDisc}</div><div class="pauta-global-notas">`; for(const mod of Object.keys(modulos)) { const nota = mapNotas[`${nomeDisc}_${mod}`] || 'SN'; let cor = "sn"; if(nota !== 'SN' && nota !== 'REP' && nota >= 10) cor = "positiva"; else if(nota === 'REP' || nota < 10) cor = "negativa"; html += `<div class="pg-nota-item"><span>${mod}</span><span class="pg-nota-val ${cor}">${nota}</span></div>`; } html += `</div></div>`; } html += `</div>`; } container.innerHTML = html; } catch(err) { container.innerHTML = '<p class="text-danger center">Erro ao carregar a pauta.</p>'; } });
-
 // ==========================================
-// MÓDULO NOVO: CHAT DIRETO COM O DT
+// 2. NAVEGAÇÃO DA BARRA INFERIOR E DASHBOARD
 // ==========================================
-let chatUnsubscribeEE = null;
+const navItems = document.querySelectorAll('.nav-item');
+const views = [
+    document.getElementById('ee-dashboard'),
+    document.getElementById('view-ee-caderneta'),
+    document.getElementById('view-ee-agenda'),
+    document.getElementById('view-ee-chat'),
+    document.getElementById('view-ee-justificar')
+];
 
-document.getElementById('btn-ee-mensagens')?.addEventListener('click', () => {
-    if(!educandoId) return alert("Nenhum educando associado.");
-    document.getElementById('modal-ee-chat').style.display = 'flex';
+function esconderTodasAsVistas() {
+    views.forEach(v => { if(v) v.style.display = 'none'; });
+}
+
+navItems.forEach(item => {
+    item.addEventListener('click', (e) => {
+        e.preventDefault();
+        navItems.forEach(nav => nav.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        
+        esconderTodasAsVistas();
+        const targetId = e.currentTarget.getAttribute('data-target');
+        const targetView = document.getElementById(targetId);
+        if(targetView) targetView.style.display = 'flex' || 'block'; // Tratar display flex do chat
+        
+        if(targetId === 'view-ee-chat') { targetView.style.display = 'flex'; }
+        else if (targetView) { targetView.style.display = 'block'; }
+    });
+});
+
+document.getElementById('btn-open-chat-dt')?.addEventListener('click', () => {
+    navItems.forEach(nav => nav.classList.remove('active'));
+    esconderTodasAsVistas();
+    document.getElementById('view-ee-chat').style.display = 'flex';
     iniciarChatEE();
 });
 
-function iniciarChatEE() {
-    const chatContainer = document.getElementById('ee-chat-messages');
-    chatContainer.innerHTML = '';
-    if(chatUnsubscribeEE) chatUnsubscribeEE();
+document.getElementById('btn-open-justificar')?.addEventListener('click', () => {
+    navItems.forEach(nav => nav.classList.remove('active'));
+    esconderTodasAsVistas();
+    document.getElementById('view-ee-justificar').style.display = 'block';
+    carregarAtestadosEE();
+});
 
-    // Lê as mensagens da pasta confidencial deste aluno
-    chatUnsubscribeEE = onSnapshot(query(collection(db, "utilizadores", educandoId, "chat_dt"), orderBy("timestamp")), (snapshot) => {
+document.getElementById('btn-voltar-chat-ee')?.addEventListener('click', () => {
+    navItems.forEach(nav => nav.classList.remove('active'));
+    document.querySelector('.nav-item[data-target="ee-dashboard"]').classList.add('active');
+    esconderTodasAsVistas();
+    document.getElementById('ee-dashboard').style.display = 'block';
+});
+
+document.getElementById('btn-voltar-justificar')?.addEventListener('click', () => {
+    navItems.forEach(nav => nav.classList.remove('active'));
+    document.querySelector('.nav-item[data-target="ee-dashboard"]').classList.add('active');
+    esconderTodasAsVistas();
+    document.getElementById('ee-dashboard').style.display = 'block';
+});
+
+// ==========================================
+// 3. CHAT EE <-> DT
+// ==========================================
+let chatUnsubscribeEE = null;
+
+function iniciarChatEE() {
+    const chatContainer = document.getElementById('ee-chat-messages-container');
+    chatContainer.innerHTML = '<p class="text-muted center">A carregar...</p>';
+    if(!educandoId) return;
+
+    if(chatUnsubscribeEE) chatUnsubscribeEE();
+    
+    chatUnsubscribeEE = onSnapshot(query(collection(db, "utilizadores", educandoId, "chatEE"), orderBy("timestamp")), (snapshot) => {
         let html = '';
         snapshot.forEach(doc => {
             const msg = doc.data();
-            const isMe = msg.autor === 'ee';
-            // Se for do EE (Eu), usa a classe admin (fundo verde na direita), senão usa student (fundo escuro na esquerda)
-            const classe = isMe ? 'admin' : 'student'; 
-            html += `<div class="chat-bubble ${classe}">
-                        <strong>${isMe ? 'Tu' : 'Diretor(a) de Turma'}</strong><br>
-                        ${msg.texto}
-                        <span class="chat-meta">${new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                     </div>`;
+            const isMe = msg.remetente === myUserId;
+            const classe = isMe ? 'student' : 'admin'; // Reutilizando classes CSS, 'student' fica à direita
+            
+            html += `
+            <div class="chat-bubble ${classe}">
+                <strong>${isMe ? 'Eu' : 'Diretor(a) de Turma'}</strong><br>
+                ${msg.texto}
+                <span class="chat-meta">${new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+            </div>`;
         });
+        
+        if(html === '') {
+            html = '<p class="text-muted center" style="margin-top:20px;">Envie uma mensagem para iniciar a conversa.</p>';
+        }
+        
         chatContainer.innerHTML = html;
         chatContainer.scrollTop = chatContainer.scrollHeight;
     });
 }
 
-document.getElementById('btn-ee-chat-send')?.addEventListener('click', async () => {
-    const inp = document.getElementById('ee-chat-input');
+document.getElementById('btn-ee-send-msg')?.addEventListener('click', async () => {
+    const inp = document.getElementById('ee-input-chat-msg');
     const txt = inp.value.trim();
     if(!txt || !educandoId) return;
     
     try {
-        await addDoc(collection(db, "utilizadores", educandoId, "chat_dt"), {
-            remetente: myUserName,
-            autor: 'ee',
+        await addDoc(collection(db, "utilizadores", educandoId, "chatEE"), {
+            remetente: myUserId,
             texto: txt,
             timestamp: Date.now()
         });
         inp.value = '';
-    } catch(e) { console.error("Erro a enviar mensagem", e); }
+    } catch(e) {}
+});
+
+// ==========================================
+// 4. JUSTIFICAR FALTAS (Atestados Médicos)
+// ==========================================
+let atestadoBase64 = "";
+
+document.getElementById('ee-upload-atestado')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    
+    if(file.size > 716800) { 
+        alert("Ficheiro demasiado grande! Tente tirar uma foto com menos resolução."); 
+        return; 
+    }
+    
+    document.getElementById('ee-atestado-file-name').innerText = file.name;
+    document.getElementById('btn-ee-enviar-atestado').style.display = 'block';
+
+    const reader = new FileReader();
+    reader.onload = (ev) => { atestadoBase64 = ev.target.result; };
+    reader.readAsDataURL(file);
+});
+
+document.getElementById('btn-ee-enviar-atestado')?.addEventListener('click', async (e) => {
+    if(!atestadoBase64 || !educandoId) return;
+    const obs = document.getElementById('ee-atestado-obs').value.trim();
+    
+    const btnRef = e.currentTarget;
+    btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A enviar...';
+    btnRef.disabled = true;
+
+    try {
+        await addDoc(collection(db, "utilizadores", educandoId, "atestados"), {
+            ficheiroBase64: atestadoBase64,
+            observacoes: obs,
+            status: "pendente",
+            dataEnvio: new Date().toISOString()
+        });
+        
+        btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Enviado!';
+        setTimeout(() => {
+            document.getElementById('ee-atestado-file-name').innerText = "";
+            document.getElementById('ee-atestado-obs').value = "";
+            atestadoBase64 = "";
+            btnRef.style.display = 'none';
+            btnRef.disabled = false;
+            btnRef.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar para Análise';
+            carregarAtestadosEE();
+        }, 2000);
+    } catch(err) {
+        btnRef.innerHTML = "Erro ao enviar!";
+        setTimeout(() => { btnRef.disabled = false; btnRef.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar para Análise'; }, 2000);
+    }
+});
+
+async function carregarAtestadosEE() {
+    const container = document.getElementById('ee-lista-atestados-container');
+    container.innerHTML = '<p class="text-muted" style="text-align:center;">A carregar...</p>';
+    if(!educandoId) return;
+
+    try {
+        const res = await getDocs(query(collection(db, "utilizadores", educandoId, "atestados")));
+        if(res.empty) { container.innerHTML = '<p class="text-muted" style="text-align:center;">Nenhum comprovativo enviado.</p>'; return; }
+        
+        let arr = [];
+        res.forEach(d => arr.push(d.data()));
+        arr.sort((a,b) => b.dataEnvio.localeCompare(a.dataEnvio)); 
+
+        let html = '';
+        arr.forEach(a => {
+            let corStatus = 'var(--warning-yellow)';
+            let txtStatus = 'Em Análise';
+            
+            if(a.status === 'aprovado') { corStatus = 'var(--success-green)'; txtStatus = 'Aprovado'; }
+            if(a.status === 'rejeitado') { corStatus = 'var(--danger-red)'; txtStatus = 'Rejeitado'; }
+            
+            const dataF = a.dataEnvio.split('T')[0];
+            
+            html += `
+            <div class="card" style="margin-bottom:10px; border-left: 4px solid ${corStatus}; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <strong>Enviado a ${dataF}</strong><br>
+                    <span style="font-size:0.8rem; color:var(--text-muted);">${a.observacoes || 'Sem observações'}</span>
+                </div>
+                <span style="font-size:0.8rem; font-weight:bold; color:${corStatus};">${txtStatus}</span>
+            </div>`;
+        });
+        container.innerHTML = html;
+    } catch(e) { container.innerHTML = '<p class="text-danger center">Erro.</p>'; }
+}
+
+// ==========================================
+// 5. CADERNETA (Notas, Faltas, PRHFs, Comportamento)
+// ==========================================
+const tabNotas = document.getElementById('tab-ee-notas');
+const tabFaltas = document.getElementById('tab-ee-faltas');
+const tabPrhfs = document.getElementById('tab-ee-prhfs');
+const tabComportamento = document.getElementById('tab-ee-comportamento');
+const cadernetaContent = document.getElementById('ee-caderneta-content');
+
+tabNotas?.addEventListener('click', (e) => { 
+    ativarTab(e.currentTarget, ['tab-ee-faltas', 'tab-ee-prhfs', 'tab-ee-comportamento']); 
+    carregarNotasEE(); 
+});
+tabFaltas?.addEventListener('click', (e) => { 
+    ativarTab(e.currentTarget, ['tab-ee-notas', 'tab-ee-prhfs', 'tab-ee-comportamento']); 
+    carregarFaltasEE(); 
+});
+tabPrhfs?.addEventListener('click', (e) => { 
+    ativarTab(e.currentTarget, ['tab-ee-notas', 'tab-ee-faltas', 'tab-ee-comportamento']); 
+    carregarPrhfsEE(); 
+});
+tabComportamento?.addEventListener('click', (e) => { 
+    ativarTab(e.currentTarget, ['tab-ee-notas', 'tab-ee-faltas', 'tab-ee-prhfs']); 
+    carregarComportamentoEE(); 
+});
+
+document.querySelector('.nav-item[data-target="view-ee-caderneta"]')?.addEventListener('click', () => {
+    ativarTab(tabNotas, ['tab-ee-faltas', 'tab-ee-prhfs', 'tab-ee-comportamento']);
+    carregarNotasEE();
+});
+
+function ativarTab(tabAtiva, tabsInativasIds) {
+    if(!tabAtiva) return;
+    tabAtiva.classList.add('active');
+    tabsInativasIds.forEach(id => document.getElementById(id)?.classList.remove('active'));
+    cadernetaContent.innerHTML = '<p class="text-muted" style="text-align:center;">A carregar...</p>';
+}
+
+async function carregarNotasEE() {
+    if(!educandoId) return;
+    try {
+        const notasDb = await getDocs(collection(db, "utilizadores", educandoId, "notas"));
+        if(notasDb.empty) { cadernetaContent.innerHTML = '<p class="text-muted" style="text-align:center;">Sem notas lançadas.</p>'; return; }
+        
+        let html = '<div class="stats-grid" style="grid-template-columns: 1fr;">';
+        notasDb.forEach(d => {
+            const nota = d.data();
+            const cor = (nota.nota === 'REP' || Number(nota.nota) < 10) ? 'var(--danger-red)' : 'var(--success-green)';
+            html += `
+            <div class="card" style="display:flex; justify-content:space-between; align-items:center; border-left: 4px solid ${cor};">
+                <div><strong>${nota.disciplina}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">Módulo ${nota.modulo}</span></div>
+                <div style="font-size:1.4rem; font-weight:bold; color:${cor};">${nota.nota}</div>
+            </div>`;
+        });
+        cadernetaContent.innerHTML = html + '</div>';
+    } catch(e) { cadernetaContent.innerHTML = '<p class="text-danger center">Erro.</p>'; }
+}
+
+async function carregarFaltasEE() {
+    if(!educandoId) return;
+    try {
+        const faltasDb = await getDocs(collection(db, "utilizadores", educandoId, "faltas"));
+        if(faltasDb.empty) { cadernetaContent.innerHTML = '<div style="text-align:center; padding:30px;"><i class="fa-solid fa-check-circle" style="font-size:3rem; color:var(--success-green); margin-bottom:15px;"></i><p class="text-muted">Sem faltas registadas.</p></div>'; return; }
+        
+        let faltasArr = [];
+        faltasDb.forEach(d => { faltasArr.push(d.data()); });
+        faltasArr.sort((a,b) => b.dataInicio.localeCompare(a.dataInicio)); 
+
+        let html = '';
+        faltasArr.forEach(f => {
+            const statusColor = f.justificada ? 'var(--success-green)' : 'var(--danger-red)';
+            const statusTxt = f.justificada ? 'Justificada' : (f.comprovativoEnviado ? 'Em Análise (DT)' : 'Injustificada');
+            html += `
+            <div class="card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                <div><strong>${f.disciplina}</strong> (${f.horas}h)<br><span style="font-size:0.8rem; color:var(--text-muted);">${f.dataInicio}</span></div>
+                <span style="font-size:0.8rem; font-weight:bold; color:${statusColor}; padding:5px 10px; background:rgba(255,255,255,0.05); border-radius:12px;">${statusTxt}</span>
+            </div>`;
+        });
+        cadernetaContent.innerHTML = html;
+    } catch(e) { cadernetaContent.innerHTML = '<p class="text-danger center">Erro.</p>'; }
+}
+
+async function carregarPrhfsEE() {
+    if(!educandoId) return;
+    try {
+        const prhfsDb = await getDocs(collection(db, "utilizadores", educandoId, "prhfs"));
+        if(prhfsDb.empty) { cadernetaContent.innerHTML = '<p class="text-muted" style="text-align:center;">Sem PRHFs atribuídos.</p>'; return; }
+        
+        let html = '';
+        prhfsDb.forEach(d => {
+            const p = d.data();
+            const cor = p.status === 'concluida' ? 'var(--success-green)' : 'var(--warning-yellow)';
+            html += `
+            <div class="card" style="margin-bottom:10px; border-left: 4px solid ${cor};">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                    <strong>${p.disciplina} (Mod. ${p.modulo})</strong>
+                    <span style="color:${cor}; font-size:0.85rem; font-weight:bold;">${p.status.toUpperCase()}</span>
+                </div>
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">${p.descricao}</p>
+                <div style="font-size:0.8rem;">Data Limite: <strong>${p.prazo}</strong> | Presenciais: <strong>${p.horasPresenciais}h</strong></div>
+            </div>`;
+        });
+        cadernetaContent.innerHTML = html;
+    } catch(e) { cadernetaContent.innerHTML = '<p class="text-danger center">Erro.</p>'; }
+}
+
+async function carregarComportamentoEE() {
+    if(!educandoId) return;
+    try {
+        const res = await getDocs(query(collection(db, "utilizadores", educandoId, "ocorrencias")));
+        if(res.empty) { 
+            cadernetaContent.innerHTML = '<p class="text-muted" style="text-align:center;">Sem registos disciplinares ou de mérito.</p>'; 
+            return; 
+        }
+        
+        let regs = []; 
+        res.forEach(d => regs.push(d.data())); 
+        regs.sort((a,b) => b.data.localeCompare(a.data)); 
+        
+        let html = '';
+        regs.forEach(r => {
+            const cor = r.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)';
+            const ic = r.tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>';
+            html += `
+            <div class="card" style="margin-bottom:10px; border-left: 4px solid ${cor};">
+                <div style="display:flex; align-items:center; gap:8px; color:${cor}; margin-bottom:5px;">
+                    ${ic} <strong>${r.titulo}</strong>
+                </div>
+                <span style="font-size:0.75rem; color:var(--text-muted);">Data: ${r.data} | Prof. ${r.autor}</span>
+                ${r.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px; background:rgba(0,0,0,0.2); padding:8px; border-radius:6px;">${r.descricao}</p>` : ''}
+            </div>`;
+        });
+        cadernetaContent.innerHTML = html;
+    } catch(e) { cadernetaContent.innerHTML = '<p class="text-danger center">Erro ao carregar dados.</p>'; }
+}
+
+// ==========================================
+// 6. AGENDA (VISUALIZAÇÃO DO EE)
+// ==========================================
+document.querySelector('.nav-item[data-target="view-ee-agenda"]')?.addEventListener('click', async () => {
+    const container = document.getElementById('ee-agenda-content');
+    container.innerHTML = '<p class="text-muted center">A carregar calendário escolar...</p>';
+    if(!educandoTurma) return;
+
+    try {
+        const evDb = await getDocs(collection(db, "turmas", educandoTurma, "eventos"));
+        if(evDb.empty) { container.innerHTML = '<p class="text-muted center">Sem eventos agendados.</p>'; return; }
+        
+        let evArr = [];
+        evDb.forEach(d => evArr.push(d.data()));
+        
+        const hoje = new Date().toISOString().split('T')[0];
+        const futuros = evArr.filter(e => e.data >= hoje).sort((a,b) => a.data.localeCompare(b.data));
+        
+        if(futuros.length === 0) { container.innerHTML = '<p class="text-muted center">Sem eventos futuros.</p>'; return; }
+
+        let html = '';
+        futuros.forEach(ev => {
+            html += `
+            <div class="card" style="margin-bottom:10px; display:flex; gap:15px; align-items:center;">
+                <div style="background:var(--bg-dark); padding:10px; border-radius:8px; text-align:center; min-width:60px;">
+                    <div style="color:var(--primary-green); font-weight:bold; font-size:1.2rem;">${ev.data.split('-')[2]}</div>
+                    <div style="font-size:0.75rem; text-transform:uppercase;">${ev.data.split('-')[1]}</div>
+                </div>
+                <div>
+                    <h4 style="margin:0; font-size:1rem;">${ev.titulo}</h4>
+                    <span style="font-size:0.85rem; color:var(--text-muted);"><i class="fa-regular fa-clock"></i> ${ev.hora} | ${ev.tipo.toUpperCase()}</span>
+                </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+    } catch(e) { container.innerHTML = '<p class="text-danger center">Erro.</p>'; }
 });
