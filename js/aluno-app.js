@@ -582,3 +582,47 @@ async function carregarSumariosAluno() {
         container.innerHTML = html;
     } catch(e) { container.innerHTML = '<p class="text-danger center">Erro ao carregar os dados.</p>'; }
 }
+
+// ==========================================
+// 9. NOTIFICAÇÕES PUSH
+// ==========================================
+import { messaging, VAPID_KEY, getToken, onMessage } from "./firebase.js";
+
+async function pedirPermissaoNotificacoes() {
+    try {
+        console.log("A pedir permissão para notificações...");
+        const permission = await Notification.requestPermission();
+        
+        if (permission === 'granted') {
+            console.log("Permissão concedida! A gerar token...");
+            // Gera o bilhete único deste telemóvel
+            const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY });
+            
+            if (currentToken) {
+                console.log("O teu Token de Notificação é:", currentToken);
+                // Guardamos este token no perfil do aluno na base de dados para sabermos para onde enviar mensagens!
+                await updateDoc(doc(db, "utilizadores", myUserId), {
+                    tokenNotificacao: currentToken
+                });
+            } else {
+                console.log("Nenhum token gerado. Precisa de permissões.");
+            }
+        } else {
+            console.log("Permissão negada pelo utilizador.");
+        }
+    } catch (error) {
+        console.error("Erro ao ativar notificações:", error);
+    }
+}
+
+// Escutar notificações quando o aluno TEM a app aberta no ecrã
+onMessage(messaging, (payload) => {
+    console.log("Mensagem recebida com a app aberta: ", payload);
+    // Dispara um alerta nativo simples no browser para ele ver a mensagem
+    alert(`NOVA NOTIFICAÇÃO:\n\n${payload.notification.title}\n${payload.notification.body}`);
+});
+
+// Assim que os dados do aluno carregam e sabemos quem ele é, pedimos a permissão
+setTimeout(() => {
+    if(myUserId) pedirPermissaoNotificacoes();
+}, 4000); // Espera 4 segundos depois do login para não ser agressivo
