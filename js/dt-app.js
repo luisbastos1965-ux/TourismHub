@@ -1,606 +1,301 @@
-import { auth, db } from "./firebase.js";
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, addDoc, deleteDoc, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Turma PRO - Direção de Turma</title>
+    <link rel="icon" type="image/png" href="logo_tur.png">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="app-content">
+        <header id="header-staff" class="app-header">
+            <div class="logo"><i class="fa-solid fa-graduation-cap"></i> Turma PRO</div>
+            <div class="user-profile">
+                <span id="header-user-name-staff">A carregar...</span>
+                <button id="btn-logout-staff" class="logout-btn" style="margin-left: 15px;" title="Sair"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
+            </div>
+        </header>
 
-const matrizCurso = {
-    "Sociocultural": { "PORT": {"M1": 27, "M2": 24, "M3": 27}, "ING": {"M1": 24, "M2": 24, "M3": 24}, "AI": {"M1": 30, "M2": 30}, "EF": {"M1": 20, "M2": 20, "M3": 20, "M4": 20, "M5": 20}, "TIC": {"M1": 24, "M2": 24, "M3": 27, "M4": 24} },
-    "Científica": { "GEO": {"M1": 27, "M2": 24}, "HCA": {"M1": 24, "M2": 24, "M3": 27}, "MAT": {"M1": 30, "M2": 30, "M3": 30} },
-    "Técnica": { "CF": {"M1": 30, "M2": 30, "M3": 30}, "TIAT": {"M1": 25, "M2": 25, "M3": 25, "M4": 25}, "TCAT": {"M1": 25, "M2": 25, "M3": 25, "M4": 25}, "OTET": {"M1": 25, "M2": 25, "M3": 25, "M4": 25} }
-};
+        <main class="app-content">
+            <!-- HUB PRINCIPAL DA TURMA DO DT -->
+            <div id="class-hub-view">
+                <div class="class-header">
+                    <h2 id="class-hub-title" class="section-title">A Minha Turma</h2>
+                </div>
+                <div class="admin-hub-grid">
+                    <button class="hub-card" id="btn-hub-alunos"><i class="fa-solid fa-users-viewfinder"></i><span>Lista de Alunos</span></button>
+                    <button class="hub-card" id="btn-hub-calendario"><i class="fa-regular fa-calendar-days"></i><span>Calendário (Testes)</span></button>
+                    <button class="hub-card" id="btn-hub-horario"><i class="fa-solid fa-clock"></i><span>Gerir Horário</span></button>
+                    <button class="hub-card" id="btn-hub-forum"><i class="fa-regular fa-comments"></i><span>Fórum da Turma</span></button>
+                    <button class="hub-card" id="btn-hub-estatisticas"><i class="fa-solid fa-chart-line"></i><span>Estatísticas Reais</span></button>
+                    <button class="hub-card" id="btn-hub-justificacoes" style="border-color: var(--success-green);">
+                        <i class="fa-solid fa-inbox" style="color: var(--success-green);"></i>
+                        <span>Validar Faltas</span>
+                    </button>
+                </div>
+            </div>
 
-const classHubView = document.getElementById('class-hub-view'); 
-const classView = document.getElementById('class-view'); 
-const studentDetailView = document.getElementById('student-detail-view'); 
-const viewClassCalendario = document.getElementById('view-class-calendario'); 
-const viewClassHorario = document.getElementById('view-class-horario');
-const viewClassForum = document.getElementById('view-class-forum'); 
-const viewClassEstatisticas = document.getElementById('view-class-estatisticas');
-const viewAvaliacoes = document.getElementById('view-avaliacoes'); 
-const viewDisciplinaModulos = document.getElementById('view-disciplina-modulos');
-const viewInformacoes = document.getElementById('view-informacoes'); 
-const viewPrhf = document.getElementById('view-prhf');
-const viewFaltas = document.getElementById('view-faltas'); 
-const viewFaltasModulos = document.getElementById('view-faltas-modulos');
-const viewValidarJustificacoes = document.getElementById('view-validar-justificacoes');
+            <!-- VISTA DE ALUNOS -->
+            <div id="class-view" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-class-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button><h2 class="section-title">Lista de Alunos</h2></div>
+                <div class="students-list-container"><p class="text-muted">A carregar...</p></div>
+            </div>
 
-let alunoAtualId = ""; 
-let turmaAtual = ""; 
-let myUserName = ""; 
-let nomePessoaContactoModal = ""; 
-let idPrhfAtivo = ""; 
-let pdfBase64Temporario = ""; 
-let pdfNomeTemporario = "";
-let forumAtivoId = null;
+            <!-- PERFIL DO ALUNO (COM O NOVO BOTÃO DE CHAT EE) -->
+            <div id="student-detail-view" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-lista" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
+                <div class="student-profile-header">
+                    <div class="profile-avatar"><img id="avatar-img" src="" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:50%;"><i class="fa-solid fa-user" id="avatar-icon"></i></div>
+                    <h2 id="detail-student-name">Nome</h2><p id="detail-student-number" class="text-muted">a0000</p>
+                </div>
+                <div class="admin-hub-grid" style="margin-top:20px;">
+                    <button class="hub-card" id="btn-hub-informacoes"><i class="fa-solid fa-address-card"></i><span>Contactos / EE</span></button>
+                    <button class="hub-card" id="btn-hub-avaliacoes"><i class="fa-solid fa-star"></i><span>Lançar Avaliações</span></button>
+                    <button class="hub-card" id="btn-hub-faltas"><i class="fa-solid fa-user-clock"></i><span>Gerir Faltas</span></button>
+                    <button class="hub-card" id="btn-hub-prhf"><i class="fa-solid fa-file-medical"></i><span>Criar PRHFs</span></button>
+                    <!-- NOVO BOTÃO DE MENSAGENS COM O EE -->
+                    <button class="hub-card" id="btn-hub-chat-ee" style="border-color: var(--warning-yellow);">
+                        <i class="fa-solid fa-envelope" style="color: var(--warning-yellow);"></i>
+                        <span>Mensagens EE</span>
+                    </button>
+                </div>
+            </div>
 
-function esconderTudoMenos(ecraAtivo) {
-    [classHubView, classView, studentDetailView, viewAvaliacoes, viewDisciplinaModulos, 
-     viewInformacoes, viewPrhf, viewFaltas, viewFaltasModulos, viewClassCalendario, 
-     viewClassHorario, viewClassForum, viewClassEstatisticas, viewValidarJustificacoes].forEach(el => { if(el) el.style.display = 'none'; });
-    if(ecraAtivo) ecraAtivo.style.display = 'block';
-}
+            <!-- AVALIAÇÕES E FALTAS -->
+            <div id="view-avaliacoes" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-hub-avaliacoes" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Avaliações</h2></div>
+                <button id="btn-pauta-global" class="primary-btn" style="margin-bottom: 25px; background-color: transparent; border: 1px solid var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-table-list"></i> Consultar Pauta Global</button>
+                <div id="matriz-disciplinas-container"></div>
+            </div>
+            <div id="view-disciplina-modulos" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-disciplinas" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button><h2 id="titulo-disciplina" class="section-title">PORT</h2></div>
+                <div class="card" style="padding: 10px 20px;"><div id="lista-modulos-disciplina"></div></div>
+            </div>
 
-// 1. SEGURANÇA E INICIALIZAÇÃO
-onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        const userId = user.email.split('@')[0];
-        try {
-            const docSnap = await getDoc(doc(db, "utilizadores", userId));
-            if (docSnap.exists()) {
-                const dados = docSnap.data();
-                if(dados.papel !== 'dt' && dados.papel !== 'admin') {
-                    window.location.href = "index.html"; 
-                    return;
-                }
-                myUserName = dados.nome.split(' ')[0];
-                turmaAtual = dados.turma; 
-                document.getElementById('header-user-name-staff').innerText = `Olá, ${myUserName} (DT)`;
-                document.getElementById('class-hub-title').innerHTML = `A Minha Turma: ${turmaAtual}`;
-                document.getElementById('header-staff').style.display = 'flex';
-                esconderTudoMenos(classHubView);
-            }
-        } catch (e) { console.error(e); }
-    } else { window.location.href = "index.html"; }
-});
+            <div id="view-faltas" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-hub-faltas" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Registo de Faltas</h2></div>
+                <div class="falta-tabs"><button class="falta-tab-btn active" id="tab-faltas-disciplina">Por Disciplina</button><button class="falta-tab-btn" id="tab-faltas-data">Por Data</button></div>
+                <div class="faltas-toolbar" id="toolbar-faltas-data" style="display:none;">
+                    <button id="btn-nova-falta"><i class="fa-solid fa-plus"></i> Nova</button>
+                    <button id="btn-alterar-falta"><i class="fa-solid fa-pen"></i> Alterar</button>
+                    <button id="btn-justificar-falta" class="just-btn"><i class="fa-solid fa-file-signature"></i> Justif. Rápida</button>
+                    <button id="btn-eliminar-falta" class="del-btn"><i class="fa-solid fa-trash"></i> Eliminar</button>
+                </div>
+                <div id="faltas-container-disciplina"></div>
+                <div id="faltas-container-data" style="display:none;">
+                    <div style="display:flex; gap:10px; margin-bottom:15px; align-items:center;">
+                        <select id="filtro-mes-faltas" style="margin:0; flex:1;"><option value="">Mês (Todos)</option><option value="09">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option><option value="01">Janeiro</option><option value="02">Fevereiro</option><option value="03">Março</option><option value="04">Abril</option><option value="05">Maio</option><option value="06">Junho</option><option value="07">Julho</option></select>
+                        <select id="filtro-disc-faltas" style="margin:0; flex:1;"><option value="">Todas as Disc.</option></select>
+                        <select id="filtro-just-faltas" style="margin:0; flex:1;"><option value="">Todas</option><option value="justificada">Justificadas</option><option value="injustificada">Injustificadas</option></select>
+                        <button id="btn-refresh-faltas" class="secondary-btn" style="margin:0; width:auto; padding:12px;"><i class="fa-solid fa-rotate-right"></i></button>
+                    </div>
+                    <div id="lista-historico-faltas-container"><p class="text-muted" style="text-align:center; margin-top:20px;">Sem faltas registadas.</p></div>
+                </div>
+            </div>
+            
+            <div id="view-faltas-modulos" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-faltas-disc" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button><h2 id="titulo-falta-disciplina" class="section-title">PORT</h2></div>
+                <div class="card" style="padding: 10px 20px;"><div id="lista-faltas-disciplina"></div></div>
+            </div>
 
-document.getElementById('btn-logout-staff')?.addEventListener('click', () => { signOut(auth).then(() => window.location.href = "index.html"); });
+            <!-- INFORMAÇÕES E PRHF-->
+            <div id="view-informacoes" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-hub-info" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Informações e Contactos</h2></div>
+                <div class="card">
+                    <h3 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-user"></i> Dados do Aluno</h3>
+                    <div id="info-aluno-display"><div class="data-display-group"><span class="data-label">Idade</span><span class="data-value" id="display-aluno-idade">-</span></div><div class="data-display-group"><span class="data-label">Telemóvel</span><span class="data-value clickable-contact" data-type="tel" id="display-aluno-tel">-</span></div><div class="data-display-group"><span class="data-label">Email</span><span class="data-value clickable-contact" data-type="email" id="display-aluno-email">-</span></div><div class="data-display-group"><span class="data-label">Morada</span><span class="data-value" id="display-aluno-morada">-</span></div></div>
+                </div>
+                <div class="card">
+                    <h3 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-user-tie"></i> Encarregado de Educação</h3>
+                    <div id="info-ee-display"><div class="data-display-group"><span class="data-label">Nome</span><span class="data-value" id="display-ee-nome">-</span></div><div class="data-display-group"><span class="data-label">Filiação</span><span class="data-value" id="display-ee-filiacao">-</span></div><div class="data-display-group"><span class="data-label">Telemóvel</span><span class="data-value clickable-contact" data-type="tel" id="display-ee-tel">-</span></div><div class="data-display-group"><span class="data-label">Email</span><span class="data-value clickable-contact" data-type="email" id="display-ee-email">-</span></div></div>
+                </div>
+            </div>
 
-// NAVEGAÇÃO
-document.getElementById('btn-voltar-class-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
-document.getElementById('btn-voltar-lista')?.addEventListener('click', () => esconderTudoMenos(classView));
-document.getElementById('btn-voltar-hub-avaliacoes')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
-document.getElementById('btn-voltar-disciplinas')?.addEventListener('click', () => esconderTudoMenos(viewAvaliacoes));
-document.getElementById('btn-voltar-hub-info')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
-document.getElementById('btn-voltar-hub-prhf')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
-document.getElementById('btn-voltar-hub-faltas')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
-document.getElementById('btn-voltar-faltas-disc')?.addEventListener('click', () => esconderTudoMenos(viewFaltas));
-document.getElementById('btn-voltar-cal-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
-document.getElementById('btn-voltar-horario-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
-document.getElementById('btn-voltar-forum-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
-document.getElementById('btn-voltar-canais')?.addEventListener('click', () => { document.getElementById('forum-chat-view').style.display = 'none'; document.getElementById('forum-channel-list').style.display = 'block'; });
-document.getElementById('btn-voltar-stats-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
+            <div id="view-prhf" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-hub-prhf" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Planos de Recuperação</h2></div>
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px;"><i class="fa-solid fa-plus"></i> Novo PRHF</h3>
+                    <div class="input-row"><select id="prhf-disciplina"><option value="">Disc.</option></select><select id="prhf-modulo"><option value="">Mod.</option></select></div>
+                    <div class="input-row"><input type="number" id="prhf-horas" placeholder="Total Horas"><div style="display:flex; align-items:center; width:100%; gap:5px; margin-bottom:15px; background-color:var(--bg-dark); border:1px solid #333; border-radius:8px; padding-left:10px;"><span style="color:var(--text-muted); font-size:0.85rem; white-space:nowrap;">Data Lim.:</span><input type="date" id="prhf-prazo" style="margin-bottom:0; border:none; padding:10px;"></div></div>
+                    <div class="input-row" style="margin-bottom:15px;"><label style="display:flex; align-items:center; gap:10px; font-size:0.9rem; color:var(--text-light);"><input type="checkbox" id="prhf-modulo-terminado" style="width:auto; margin:0;"> O Módulo já terminou?</label></div>
+                    <textarea id="prhf-descricao" class="input-field" placeholder="Descreve a tarefa..."></textarea>
+                    <div style="display:flex; flex-direction:column; margin-top:10px; margin-bottom:15px;"><div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:0.9rem; color:var(--text-muted);">Anexos:</span><label for="prhf-file-upload" class="secondary-btn small-btn" style="margin:0;"><i class="fa-solid fa-paperclip"></i> Anexar PDF</label><input type="file" id="prhf-file-upload" style="display:none;" accept=".pdf,.doc,.docx"></div><span id="prhf-file-name" class="file-name-display"></span></div>
+                    <button id="btn-guardar-prhf" class="primary-btn">Processar e Gravar</button>
+                </div>
+                <div class="section-container">
+                    <div class="tabs-container"><button class="tab-btn active" id="tab-prhf-ativas">Ativas</button><button class="tab-btn" id="tab-prhf-concluidas">Concluídas</button></div>
+                    <div style="margin-bottom:15px;"><select id="filtro-prhf-disc" style="margin:0; padding:8px;"><option value="">Todas as Disciplinas</option></select></div>
+                    <div id="lista-prhf-container"></div>
+                </div>
+            </div>
 
-document.getElementById('btn-hub-alunos')?.addEventListener('click', () => { esconderTudoMenos(classView); carregarAlunos(turmaAtual); });
-document.getElementById('btn-hub-calendario')?.addEventListener('click', () => { esconderTudoMenos(viewClassCalendario); carregarEventosCalendario(); });
-document.getElementById('btn-hub-horario')?.addEventListener('click', () => { esconderTudoMenos(viewClassHorario); carregarHorario(); });
-document.getElementById('btn-hub-forum')?.addEventListener('click', () => { esconderTudoMenos(viewClassForum); carregarForuns(); });
-document.getElementById('btn-hub-estatisticas')?.addEventListener('click', () => { esconderTudoMenos(viewClassEstatisticas); calcularEstatisticasTurma(); });
+            <!-- CALENDÁRIO, HORÁRIO, FÓRUM, ESTATÍSTICAS -->
+            <div id="view-class-calendario" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-cal-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-cal-turma">Calendário</h2></div>
+                <div style="display:flex; gap:10px; margin-bottom: 20px;"><button id="btn-abrir-modal-evento" class="primary-btn" style="flex:1;"><i class="fa-solid fa-plus"></i> Novo Evento</button><button id="btn-refresh-calendario" class="secondary-btn" style="width:auto; padding:12px 20px;"><i class="fa-solid fa-rotate-right"></i></button></div>
+                <div id="lista-calendario-container"><p class="text-muted">A carregar...</p></div>
+            </div>
 
-async function carregarAlunos(turmaEscolhida) {
-    const container = document.querySelector('.students-list-container'); container.innerHTML = '<p class="text-muted">A carregar...</p>';
-    try {
-        const q = query(collection(db, "utilizadores"), where("turma", "==", turmaEscolhida), where("papel", "==", "aluno"));
-        const res = await getDocs(q); if (res.empty) { container.innerHTML = '<p class="text-muted">Sem alunos.</p>'; return; }
-        let html = '<ul class="students-list">';
-        res.forEach((doc) => {
-            const aluno = doc.data();
-            const miniatura = aluno.fotoPerfil ? `<img src="${aluno.fotoPerfil}" class="list-avatar">` : `<div class="list-avatar"><i class="fa-solid fa-user"></i></div>`;
-            html += `<li class="student-item"><div style="display:flex; align-items:center; gap:12px;">${miniatura}<div class="student-info"><strong>${aluno.nome}</strong><span>${doc.id.toUpperCase()}</span></div></div><button class="secondary-btn small-btn btn-ver-aluno" data-nome="${aluno.nome}" data-numero="${doc.id}"><i class="fa-solid fa-eye"></i> Ver</button></li>`;
-        });
-        container.innerHTML = html + '</ul>';
-        container.querySelectorAll('.btn-ver-aluno').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                document.getElementById('detail-student-name').innerText = e.currentTarget.getAttribute('data-nome'); 
-                alunoAtualId = e.currentTarget.getAttribute('data-numero'); 
-                document.getElementById('detail-student-number').innerText = alunoAtualId.toUpperCase();
-                esconderTudoMenos(studentDetailView); 
-                document.getElementById('avatar-img').style.display = 'none'; document.getElementById('avatar-icon').style.display = 'block';
-                try {
-                    const docSnap = await getDoc(doc(db, "utilizadores", alunoAtualId));
-                    if (docSnap.exists() && docSnap.data().fotoPerfil) { document.getElementById('avatar-img').src = docSnap.data().fotoPerfil; document.getElementById('avatar-img').style.display = 'block'; document.getElementById('avatar-icon').style.display = 'none'; }
-                } catch(e){}
-            });
-        });
-    } catch (e) {}
-}
+            <div id="view-class-horario" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-horario-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-horario-turma">Horário</h2></div>
+                <div class="week-nav-bar"><button id="btn-prev-week"><i class="fa-solid fa-chevron-left"></i></button><span id="week-display">A carregar semana...</span><button id="btn-next-week"><i class="fa-solid fa-chevron-right"></i></button></div>
+                <div class="card" style="padding: 10px;">
+                    <div class="horario-grid" id="grid-horario-turma">
+                        <div></div><div class="horario-header">SEG <span id="h-seg-dt">--/--</span></div><div class="horario-header">TER <span id="h-ter-dt">--/--</span></div><div class="horario-header">QUA <span id="h-qua-dt">--/--</span></div><div class="horario-header">QUI <span id="h-qui-dt">--/--</span></div><div class="horario-header">SEX <span id="h-sex-dt">--/--</span></div>
+                        <div class="horario-time">08:30<br>09:30</div><div class="horario-slot" data-dia="seg" data-hora="1"></div><div class="horario-slot" data-dia="ter" data-hora="1"></div><div class="horario-slot" data-dia="qua" data-hora="1"></div><div class="horario-slot" data-dia="qui" data-hora="1"></div><div class="horario-slot" data-dia="sex" data-hora="1"></div>
+                        <div class="horario-time">09:35<br>10:35</div><div class="horario-slot" data-dia="seg" data-hora="2"></div><div class="horario-slot" data-dia="ter" data-hora="2"></div><div class="horario-slot" data-dia="qua" data-hora="2"></div><div class="horario-slot" data-dia="qui" data-hora="2"></div><div class="horario-slot" data-dia="sex" data-hora="2"></div>
+                        <div class="horario-time">10:50<br>11:50</div><div class="horario-slot" data-dia="seg" data-hora="3"></div><div class="horario-slot" data-dia="ter" data-hora="3"></div><div class="horario-slot" data-dia="qua" data-hora="3"></div><div class="horario-slot" data-dia="qui" data-hora="3"></div><div class="horario-slot" data-dia="sex" data-hora="3"></div>
+                        <div class="horario-time">11:55<br>12:55</div><div class="horario-slot" data-dia="seg" data-hora="4"></div><div class="horario-slot" data-dia="ter" data-hora="4"></div><div class="horario-slot" data-dia="qua" data-hora="4"></div><div class="horario-slot" data-dia="qui" data-hora="4"></div><div class="horario-slot" data-dia="sex" data-hora="4"></div>
+                        <div class="horario-time">13:00<br>14:00</div><div class="horario-slot" data-dia="seg" data-hora="1300"></div><div class="horario-slot" data-dia="ter" data-hora="1300"></div><div class="horario-slot" data-dia="qua" data-hora="1300"></div><div class="horario-slot" data-dia="qui" data-hora="1300"></div><div class="horario-slot" data-dia="sex" data-hora="1300"></div>
+                        <div class="horario-time">14:05<br>15:05</div><div class="horario-slot" data-dia="seg" data-hora="5"></div><div class="horario-slot" data-dia="ter" data-hora="5"></div><div class="horario-slot" data-dia="qua" data-hora="5"></div><div class="horario-slot" data-dia="qui" data-hora="5"></div><div class="horario-slot" data-dia="sex" data-hora="5"></div>
+                        <div class="horario-time">15:15<br>16:15</div><div class="horario-slot" data-dia="seg" data-hora="6"></div><div class="horario-slot" data-dia="ter" data-hora="6"></div><div class="horario-slot" data-dia="qua" data-hora="6"></div><div class="horario-slot" data-dia="qui" data-hora="6"></div><div class="horario-slot" data-dia="sex" data-hora="6"></div>
+                        <div class="horario-time">16:20<br>17:20</div><div class="horario-slot" data-dia="seg" data-hora="7"></div><div class="horario-slot" data-dia="ter" data-hora="7"></div><div class="horario-slot" data-dia="qua" data-hora="7"></div><div class="horario-slot" data-dia="qui" data-hora="7"></div><div class="horario-slot" data-dia="sex" data-hora="7"></div>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:center; margin-top: 15px;">
+                    <button id="btn-editar-horario" class="secondary-btn" style="width:100%; max-width:300px;"><i class="fa-solid fa-pen"></i> Editar Horário</button>
+                    <button id="btn-salvar-horario" class="primary-btn" style="display:none; width:100%; max-width:300px;"><i class="fa-solid fa-check"></i> Concluir Edição</button>
+                </div>
+            </div>
 
-// CAIXA DE ENTRADA: VALIDAR JUSTIFICAÇÕES
-document.getElementById('btn-hub-justificacoes')?.addEventListener('click', () => { esconderTudoMenos(viewValidarJustificacoes); carregarJustificacoesPendentes(); });
-document.getElementById('btn-voltar-justificacoes-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
+            <div id="view-class-forum" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-forum-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-forum-turma">Fóruns da Turma</h2></div>
+                <div id="forum-channel-list">
+                    <button id="btn-novo-forum" class="primary-btn" style="margin-bottom: 15px;"><i class="fa-solid fa-plus"></i> Criar Novo Canal</button>
+                    <div class="forum-canais-grid" id="lista-canais-forum"><p class="text-muted" style="text-align:center;">A carregar canais...</p></div>
+                </div>
+                <div id="forum-chat-view" style="display:none; flex-direction:column; height:75vh; background:var(--bg-card); border-radius:12px; border:1px solid #333; overflow:hidden;">
+                    <div style="background:#222; padding:15px; display:flex; align-items:center; gap:10px; border-bottom:1px solid #333;">
+                        <button id="btn-voltar-canais" class="secondary-btn small-btn" style="padding:5px 10px; width:auto; border:none;"><i class="fa-solid fa-arrow-left"></i></button>
+                        <h3 id="chat-active-title" style="color:var(--primary-green); font-size:1.1rem; margin:0; flex:1;">...</h3>
+                        <button id="btn-info-canal" class="icon-btn"><i class="fa-solid fa-circle-info"></i></button>
+                    </div>
+                    <div class="forum-messages" id="chat-messages-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:15px;"></div>
+                    <div class="forum-input-area" style="background:#1a1a1a; padding:10px; border-top:1px solid #333; display:flex; gap:8px; align-items:center;">
+                        <button class="icon-btn"><i class="fa-solid fa-paperclip"></i></button>
+                        <button class="icon-btn"><i class="fa-solid fa-microphone"></i></button>
+                        <input type="text" id="input-forum-msg" placeholder="Escreve aqui..." style="margin:0; flex:1; border-radius:20px; padding:10px 15px;">
+                        <button class="icon-btn"><i class="fa-regular fa-face-smile"></i></button>
+                        <button id="btn-send-msg" class="forum-send-btn" style="width:40px; height:40px;"><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
 
-let faltaPendenteSelecionada = null; let alunoPendenteSelecionadoId = null;
+            <div id="view-class-estatisticas" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-stats-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-stats-turma">Estatísticas Reais</h2></div>
+                <h3 style="margin-bottom: 15px; color: var(--primary-green); font-size: 1rem;"><i class="fa-solid fa-chart-pie"></i> Visão Global</h3>
+                <div class="stats-grid">
+                    <div class="stat-card"><i class="fa-solid fa-graduation-cap"></i><div class="stat-value" id="stat-media-turma">...</div><div class="stat-label">Média Global</div></div>
+                    <div class="stat-card"><i class="fa-solid fa-user-clock"></i><div class="stat-value" id="stat-faltas-totais" style="color:var(--danger-red);">...</div><div class="stat-label">Faltas Totais (h)</div></div>
+                    <div class="stat-card"><i class="fa-solid fa-file-medical"></i><div class="stat-value" id="stat-prhf-ativos" style="color:var(--warning-yellow);">...</div><div class="stat-label">PRHF (Ativos)</div><div class="stat-sub-info">Cump: <strong id="stat-prhf-cump">0</strong>h | Plan: <strong id="stat-prhf-plan">0</strong>h</div></div>
+                    <div class="stat-card"><i class="fa-solid fa-triangle-exclamation"></i><div class="stat-value" id="stat-alunos-risco" style="color:var(--danger-red);">...</div><div class="stat-label">Alunos em Risco (≥3 Neg.)</div></div>
+                </div>
+                <h3 style="margin: 25px 0 15px 0; color: var(--primary-green); font-size: 1rem;"><i class="fa-solid fa-layer-group"></i> Médias por Componente</h3>
+                <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                    <div class="stat-card" style="padding:15px;"><div class="stat-value" id="stat-med-socio" style="font-size:1.4rem;">...</div><div class="stat-label">Sociocultural</div></div>
+                    <div class="stat-card" style="padding:15px;"><div class="stat-value" id="stat-med-cient" style="font-size:1.4rem;">...</div><div class="stat-label">Científica</div></div>
+                    <div class="stat-card" style="padding:15px;"><div class="stat-value" id="stat-med-tec" style="font-size:1.4rem;">...</div><div class="stat-label">Técnica</div></div>
+                </div>
+                <h3 style="margin: 25px 0 15px 0; color: var(--primary-green); font-size: 1rem;"><i class="fa-solid fa-list-ol"></i> Tabela de Alunos</h3>
+                <div class="table-container">
+                    <table class="styled-table">
+                        <thead><tr><th>Nº/Nome</th><th class="center">Média</th><th class="center">Faltas(h)</th><th class="center">Estado</th></tr></thead>
+                        <tbody id="tabela-stats-alunos"><tr><td colspan="4" class="text-muted center">A processar dados...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- CAIXA DE ENTRADA DE JUSTIFICAÇÕES (DT) -->
+            <div id="view-validar-justificacoes" style="display: none;">
+                <div class="class-header">
+                    <button id="btn-voltar-justificacoes-hub" class="secondary-btn small-btn">
+                        <i class="fa-solid fa-arrow-left"></i> Turma
+                    </button>
+                    <h2 class="section-title">Validar Justificações</h2>
+                </div>
+                
+                <div id="lista-justificacoes-pendentes">
+                    <p class="text-muted" style="text-align:center; margin-top:20px;">A procurar atestados enviados pelos Encarregados de Educação...</p>
+                </div>
+            </div>
 
-async function carregarJustificacoesPendentes() {
-    const container = document.getElementById('lista-justificacoes-pendentes'); container.innerHTML = '<p class="text-muted" style="text-align:center;">A carregar caixa de entrada...</p>';
-    try {
-        const qAlunos = query(collection(db, "utilizadores"), where("turma", "==", turmaAtual), where("papel", "==", "aluno"));
-        const snapshotAlunos = await getDocs(qAlunos); let pendentes = [];
-        for (let alunoDoc of snapshotAlunos.docs) {
-            const faltasDb = await getDocs(collection(db, "utilizadores", alunoDoc.id, "faltas"));
-            faltasDb.forEach(f => {
-                const dadosFalta = f.data();
-                if (!dadosFalta.justificada && dadosFalta.comprovativoEnviado) { pendentes.push({ idFalta: f.id, idAluno: alunoDoc.id, nomeAluno: alunoDoc.data().nome, ...dadosFalta }); }
-            });
-        }
-        if (pendentes.length === 0) { container.innerHTML = '<div style="text-align:center; padding:30px;"><i class="fa-solid fa-check-circle" style="font-size:3rem; color:var(--success-green); margin-bottom:15px;"></i><p class="text-muted">Tudo limpo! Não há atestados pendentes.</p></div>'; return; }
-        pendentes.sort((a,b) => b.dataEnvioJustificacao.localeCompare(a.dataEnvioJustificacao));
-        let html = '';
-        pendentes.forEach(p => {
-            html += `<div class="card" style="margin-bottom:15px; border-left: 4px solid var(--warning-yellow);"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><h4 style="margin:0; color:white;">${p.nomeAluno}</h4><p style="font-size:0.85rem; color:var(--text-muted); margin-top:3px;">Faltou a: ${p.disciplina} (${p.dataInicio})</p></div><button class="primary-btn small-btn btn-ver-anexo" data-idaluno="${p.idAluno}" data-idfalta="${p.idFalta}" data-nome="${p.nomeAluno}" data-disc="${p.disciplina}" data-data="${p.dataInicio}" style="width:auto; padding:8px 15px;"><i class="fa-solid fa-eye"></i> Ver Anexo</button></div></div>`;
-        });
-        container.innerHTML = html;
-        container.querySelectorAll('.btn-ver-anexo').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                const el = e.currentTarget; alunoPendenteSelecionadoId = el.getAttribute('data-idaluno'); faltaPendenteSelecionada = el.getAttribute('data-idfalta');
-                document.getElementById('txt-atestado-detalhe').innerText = `Aluno: ${el.getAttribute('data-nome')} \nFalta: ${el.getAttribute('data-disc')} a ${el.getAttribute('data-data')}`;
-                const imgPreview = document.getElementById('img-atestado-preview'); const pdfPreview = document.getElementById('pdf-atestado-preview');
-                imgPreview.style.display = 'none'; pdfPreview.style.display = 'none';
-                const iconNormal = el.innerHTML; el.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-                try {
-                    const docSnap = await getDoc(doc(db, "utilizadores", alunoPendenteSelecionadoId, "faltas", faltaPendenteSelecionada));
-                    if (docSnap.exists() && docSnap.data().anexoJustificacao) {
-                        const base64 = docSnap.data().anexoJustificacao;
-                        if (base64.startsWith('data:image')) { imgPreview.src = base64; imgPreview.style.display = 'block'; } else if (base64.startsWith('data:application/pdf')) { pdfPreview.src = base64; pdfPreview.style.display = 'block'; }
-                        document.getElementById('modal-ver-atestado').style.display = 'flex';
-                    }
-                } catch(err) { console.error(err); alert("Erro ao carregar anexo."); }
-                el.innerHTML = iconNormal;
-            });
-        });
-    } catch (e) { container.innerHTML = '<p class="text-danger center">Erro ao carregar caixa de entrada.</p>'; }
-}
+        </main>
+    </div>
 
-document.getElementById('btn-aprovar-atestado')?.addEventListener('click', async (e) => {
-    const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-    try {
-        await updateDoc(doc(db, "utilizadores", alunoPendenteSelecionadoId, "faltas", faltaPendenteSelecionada), { justificada: true, comprovativoEnviado: false });
-        document.getElementById('modal-ver-atestado').style.display = 'none'; carregarJustificacoesPendentes();
-    } catch(err) {}
-    btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Aprovar Falta';
-});
+    <!-- MODAIS DO DT -->
+    <div id="modal-telefone" class="modal-overlay bottom"><div class="action-sheet"><h3>Opções de Contacto</h3><a id="action-ligar" href="#" class="primary-btn"><i class="fa-solid fa-phone"></i> Ligar Diretamente</a><button id="action-guardar-vcard" class="secondary-btn"><i class="fa-solid fa-user-plus"></i> Guardar Contacto</button><button class="danger-btn btn-fechar-modal">Cancelar</button></div></div>
+    <div id="modal-email" class="modal-overlay bottom"><div class="action-sheet"><h3>Opções de Email</h3><a id="action-enviar-email" href="#" class="primary-btn"><i class="fa-solid fa-envelope"></i> Escrever Email</a><button class="danger-btn btn-fechar-modal">Cancelar</button></div></div>
 
-document.getElementById('btn-rejeitar-atestado')?.addEventListener('click', async (e) => {
-    if(!confirm("Tem a certeza que deseja rejeitar esta justificação? O atestado será apagado.")) return;
-    const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-    try {
-        await updateDoc(doc(db, "utilizadores", alunoPendenteSelecionadoId, "faltas", faltaPendenteSelecionada), { justificada: false, comprovativoEnviado: false, anexoJustificacao: "" });
-        document.getElementById('modal-ver-atestado').style.display = 'none'; carregarJustificacoesPendentes();
-    } catch(err) {}
-    btnRef.innerHTML = '<i class="fa-solid fa-xmark"></i> Rejeitar';
-});
-// CALENDÁRIO DA TURMA 
-let idEventoEmEdicao = null;
-document.getElementById('btn-refresh-calendario')?.addEventListener('click', (e) => { e.currentTarget.querySelector('i').classList.add('fa-spin'); carregarEventosCalendario().finally(() => setTimeout(() => e.target.closest('button').querySelector('i').classList.remove('fa-spin'), 500)); });
-document.getElementById('btn-abrir-modal-evento')?.addEventListener('click', () => {
-    idEventoEmEdicao = null; document.getElementById('modal-evento-title').innerHTML = '<i class="fa-solid fa-calendar-plus"></i> Novo Evento / Teste';
-    document.getElementById('ev-titulo').value = ""; document.getElementById('ev-data').value = ""; document.getElementById('ev-hora').value = "09:00";
-    document.getElementById('modal-novo-evento').style.display = 'flex';
-    let opt = '<option value="">Disciplina Relacionada (Opcional)</option>';
-    for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) opt += `<option value="${d}">${d}</option>`; }
-    document.getElementById('ev-disc').innerHTML = opt; document.getElementById('ev-disc').value = "";
-});
-document.getElementById('btn-cancelar-evento')?.addEventListener('click', () => document.getElementById('modal-novo-evento').style.display = 'none');
-document.getElementById('btn-gravar-evento')?.addEventListener('click', async (e) => {
-    const titulo = document.getElementById('ev-titulo').value.trim(); const tipo = document.getElementById('ev-tipo').value;
-    const data = document.getElementById('ev-data').value; const hora = document.getElementById('ev-hora').value; const disc = document.getElementById('ev-disc').value;
-    if(!titulo || !data) return alert("Preenche Título e Data!");
-    const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
-    try {
-        if(idEventoEmEdicao) { await updateDoc(doc(db, "turmas", turmaAtual, "eventos", idEventoEmEdicao), { titulo, tipo, data, hora, disciplina: disc }); } 
-        else { await addDoc(collection(db, "turmas", turmaAtual, "eventos"), { titulo, tipo, data, hora, disciplina: disc, criadoEm: new Date().toISOString() }); }
-        document.getElementById('modal-novo-evento').style.display = 'none'; btnRef.innerText = "Guardar"; await carregarEventosCalendario(); await carregarHorario(); 
-    } catch(err) { btnRef.innerText = "Erro!"; }
-});
+    <div id="modal-prhf-sheet" class="modal-overlay">
+        <div class="paper-sheet">
+            <button class="btn-close-paper"><i class="fa-solid fa-xmark"></i></button>
+            <div class="paper-header"><h2 id="sheet-title">TIC_M3</h2><span id="sheet-status" class="paper-status">ATIVA</span></div>
+            <div class="paper-details">
+                <p><strong>Prazo:</strong> <span id="sheet-prazo">-</span></p>
+                <p><strong>Planificadas:</strong> <span id="sheet-hp">-</span>h Presenciais | <span id="sheet-ha">-</span>h Autónomas</p>
+                <div class="paper-desc" id="sheet-desc">Descrição...</div>
+                <a id="sheet-btn-download-pdf" href="#" download="Anexo_PRHF.pdf" class="secondary-btn small-btn" style="display:none; margin-bottom:15px; color:var(--primary-green); border-color:var(--primary-green);"><i class="fa-solid fa-file-pdf"></i> Descarregar Anexo</a>
+                <div style="background-color: var(--bg-dark); color: white; padding: 10px; border-radius: 6px; font-size: 0.9rem; border: 1px dashed var(--primary-green); text-align:center;">Presenciais Realizadas: <strong id="sheet-horas-feitas" style="color:var(--primary-green); font-size:1.1rem;">0</strong> / <span id="sheet-horas-totais">0</span>h</div>
+            </div>
+            <div class="paper-actions">
+                <button id="sheet-btn-toggle-manual" class="secondary-btn" style="color:#333; border-color:#999;"><i class="fa-solid fa-pen-to-square"></i> <span id="txt-btn-registo">Registar Presenciais</span></button>
+                <div id="manual-presence-box" class="manual-presence-form"><input type="date" id="reg-pres-data"><div style="display:flex; gap:5px;"><input type="time" id="reg-pres-inicio" title="Início"><input type="time" id="reg-pres-fim" title="Fim"></div><button id="btn-save-manual-pres" class="primary-btn small-btn">Guardar Registo</button><div id="lista-presencias-manuais" style="margin-top:15px; font-size:0.85rem;"></div></div>
+                <button id="sheet-btn-concluir" class="btn-progress-container"><div class="btn-progress-fill" id="sheet-btn-progress-fill" style="width:0%;"></div><div class="btn-progress-text" id="sheet-btn-progress-text">Concluído (0%)</div></button>
+                <button id="sheet-btn-reverter" class="danger-btn" style="display:none;"><i class="fa-solid fa-rotate-left"></i> Reverter para Ativa</button>
+            </div>
+        </div>
+    </div>
 
-async function carregarEventosCalendario() {
-    const container = document.getElementById('lista-calendario-container'); container.innerHTML = '<p class="text-muted">A carregar eventos...</p>';
-    try {
-        const res = await getDocs(query(collection(db, "turmas", turmaAtual, "eventos")));
-        if(res.empty) { container.innerHTML = '<p class="text-muted">Sem eventos agendados.</p>'; return; }
-        let evs = []; res.forEach(d => { let ed = d.data(); ed.id = d.id; evs.push(ed); });
-        const hoje = new Date().toISOString().split('T')[0];
-        const futuros = evs.filter(e => e.data >= hoje).sort((a,b) => a.data.localeCompare(b.data));
-        const passados = evs.filter(e => e.data < hoje).sort((a,b) => b.data.localeCompare(a.data));
+    <!-- Modais de Eventos e Horários -->
+    <div id="modal-evento-info" class="modal-overlay"><div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto; text-align:center;"><div style="font-size: 3rem; color: var(--warning-yellow); margin-bottom:10px;"><i class="fa-solid fa-star"></i></div><h3 id="mei-titulo" style="color:white; font-size:1.4rem; margin-bottom:5px;">Título</h3><span id="mei-tipo" class="badge-tipo-evento">Tipo</span><div style="background:var(--bg-dark); padding:15px; border-radius:8px; margin-top:15px; text-align:left; border:1px solid #333;"><p style="margin-bottom:8px;"><strong><i class="fa-solid fa-calendar"></i> Data:</strong> <span id="mei-data"></span></p><p style="margin-bottom:8px;"><strong><i class="fa-regular fa-clock"></i> Hora:</strong> <span id="mei-hora"></span></p><p><strong><i class="fa-solid fa-book"></i> Disciplina:</strong> <span id="mei-disc"></span></p></div><button class="primary-btn btn-fechar-modal" style="margin-top:20px;">Fechar</button></div></div>
+    <div id="modal-novo-evento" class="modal-overlay"><div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto;"><h3 id="modal-evento-title" style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-calendar-plus"></i> Novo Evento / Teste</h3><div class="falta-form-grid"><div class="falta-form-full"><input type="text" id="ev-titulo" placeholder="Título (ex: Frequência PORT)" style="margin-bottom:0;"></div><div class="falta-form-full"><select id="ev-tipo" style="margin-bottom:0;"><option value="teste">Teste / Frequência</option><option value="avaliacao">Avaliação / Trabalho</option><option value="outro">Outro Evento / Visita</option></select></div><div><input type="date" id="ev-data" style="margin-bottom:0;"></div><div><input type="time" id="ev-hora" style="margin-bottom:0;" value="09:00"></div><div class="falta-form-full"><select id="ev-disc" style="margin-bottom:0;"><option value="">Disciplina Relacionada (Opc.)</option></select></div></div><div style="display:flex; gap:10px; margin-top:15px;"><button id="btn-gravar-evento" class="primary-btn" style="flex:1;">Guardar</button><button id="btn-cancelar-evento" class="danger-btn" style="flex:1;">Cancelar</button></div></div></div>
+    <div id="modal-editar-horario" class="modal-overlay"><div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto;"><h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-pen"></i> Editar Bloco</h3><select id="ed-horario-disc" style="margin-bottom:15px;"><option value="">Disciplina (ou Limpar)</option></select><div style="display:flex; gap:10px;"><button id="btn-gravar-bloco-horario" class="primary-btn" style="flex:1;">Confirmar</button><button id="btn-cancelar-bloco-horario" class="danger-btn" style="flex:1;">Cancelar</button></div></div></div>
 
-        let html = ''; const mesArr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-        function renderCard(ev, jaPassou) {
-            let classeCard = "outro"; let badgeClass = "outro"; let badgeTexto = "OUTRO EVENTO";
-            if(jaPassou) { classeCard = "concluido"; badgeClass = "concluido"; badgeTexto = "CONCLUÍDO"; } 
-            else if(ev.tipo === 'teste') { classeCard = "teste"; badgeClass = "teste"; badgeTexto = "TESTE / FREQUÊNCIA"; } 
-            else if (ev.tipo === 'avaliacao') { classeCard = "avaliacao"; badgeClass = "avaliacao"; badgeTexto = "AVALIAÇÃO / TRABALHO"; }
-            const dp = ev.data.split('-'); const mesStr = dp.length === 3 ? mesArr[parseInt(dp[1])-1] : ''; const diaStr = dp.length === 3 ? dp[2] : '';
-            const pDisc = ev.disciplina ? `<p><i class="fa-solid fa-book"></i> ${ev.disciplina} | ${ev.hora || '09:00'}</p>` : `<p><i class="fa-regular fa-clock"></i> ${ev.hora || '09:00'}</p>`;
-            return `<div class="calendar-event-card ${classeCard}"><div class="calendar-date-box"><span class="day">${diaStr}</span><span class="month">${mesStr}</span></div><div class="calendar-info"><span class="badge-tipo-evento ${badgeClass}">${badgeTexto}</span><h4>${ev.titulo}</h4>${pDisc}</div><div class="event-actions"><button class="edit-evt" data-id="${ev.id}" data-json='${JSON.stringify(ev)}'><i class="fa-solid fa-pen"></i></button><button class="del-evt" data-id="${ev.id}"><i class="fa-solid fa-trash"></i></button></div></div>`;
-        }
-        futuros.forEach(e => html += renderCard(e, false));
-        if(passados.length > 0) { html += `<div class="calendar-divider"><span>Eventos Passados</span></div>`; passados.forEach(e => html += renderCard(e, true)); }
-        container.innerHTML = html;
-        container.querySelectorAll('.edit-evt').forEach(btn => btn.addEventListener('click', (e) => {
-            const data = JSON.parse(e.currentTarget.getAttribute('data-json')); idEventoEmEdicao = data.id;
-            document.getElementById('modal-evento-title').innerHTML = '<i class="fa-solid fa-pen"></i> Editar Evento';
-            document.getElementById('ev-titulo').value = data.titulo; document.getElementById('ev-tipo').value = data.tipo;
-            document.getElementById('ev-data').value = data.data; document.getElementById('ev-hora').value = data.hora;
-            let opt = '<option value="">Disciplina Relacionada (Opcional)</option>'; for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) opt += `<option value="${d}">${d}</option>`; } document.getElementById('ev-disc').innerHTML = opt;
-            document.getElementById('ev-disc').value = data.disciplina || ""; document.getElementById('modal-novo-evento').style.display = 'flex';
-        }));
-        container.querySelectorAll('.del-evt').forEach(btn => btn.addEventListener('click', async (e) => {
-            if(!confirm("Eliminar este evento?")) return;
-            await deleteDoc(doc(db, "turmas", turmaAtual, "eventos", e.currentTarget.getAttribute('data-id'))); carregarEventosCalendario(); carregarHorario();
-        }));
-    } catch(err) { container.innerHTML = '<p class="text-muted" style="color:var(--danger-red);">Erro ao carregar calendário.</p>'; }
-}
+    <!-- Modais de Fórum -->
+    <div id="modal-novo-forum" class="modal-overlay"><div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto;"><h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-comments"></i> Criar Fórum</h3><input type="text" id="novo-forum-nome" placeholder="Nome do Canal (ex: Matemática)" style="margin-bottom:15px;"><div style="display:flex; gap:10px; margin-bottom:15px; align-items:center;"><select id="novo-forum-tipo" style="margin:0;"><option value="permanente">Permanente</option><option value="temporario">Temporário</option></select><div id="box-forum-expira" style="display:none; flex:1; text-align:center;"><label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:3px;">Ativo até:</label><input type="date" id="novo-forum-expira" style="margin:0;"></div></div><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;"><label class="text-muted" style="font-size:0.85rem; display:block;">Selecionar Membros:</label><button id="btn-selecionar-todos-forum" class="secondary-btn small-btn" style="padding:4px 8px; border:none; color:var(--primary-green);">Inverter Seleção</button></div><div id="novo-forum-membros-list" class="forum-membros-list"><p class="text-muted" style="font-size:0.8rem; text-align:center;">A carregar alunos...</p></div><div style="display:flex; gap:10px;"><button id="btn-gravar-forum" class="primary-btn" style="flex:1;">Criar</button><button id="btn-cancelar-forum" class="danger-btn" style="flex:1;">Cancelar</button></div></div></div>
+    <div id="modal-info-forum" class="modal-overlay"><div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto;"><h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-circle-info"></i> Info do Canal</h3><div style="background:var(--bg-dark); padding:15px; border-radius:8px; border:1px solid #333; margin-bottom:15px;"><p style="margin-bottom:8px;"><strong>Nome:</strong> <span id="mif-nome">...</span></p><p style="margin-bottom:8px;"><strong>Tipo:</strong> <span id="mif-tipo">...</span></p><p><strong>Membros Ativos:</strong> <span id="mif-membros">...</span></p></div><button class="primary-btn btn-fechar-modal">Fechar</button></div></div>
 
-// HORÁRIO DINÂMICO
-let modoEdicaoHorario = false; let slotSelecionado = null;
-let dataInicioSemana = new Date(); dataInicioSemana.setDate(dataInicioSemana.getDate() - (dataInicioSemana.getDay() === 0 ? 6 : dataInicioSemana.getDay() - 1));
-document.getElementById('btn-prev-week')?.addEventListener('click', () => { dataInicioSemana.setDate(dataInicioSemana.getDate() - 7); carregarHorario(); });
-document.getElementById('btn-next-week')?.addEventListener('click', () => { dataInicioSemana.setDate(dataInicioSemana.getDate() + 7); carregarHorario(); });
+    <!-- Modais de Faltas e Pauta -->
+    <div id="modal-nova-falta" class="modal-overlay"><div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto; max-height: 90vh; overflow-y:auto;"><h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-plus"></i> Registar Falta(s)</h3><div class="falta-tabs" style="margin-bottom: 15px;"><button class="falta-tab-btn active" id="tab-falta-simples" style="padding:8px; font-size:0.9rem;">1 Disciplina</button><button class="falta-tab-btn" id="tab-falta-multipla" style="padding:8px; font-size:0.9rem;">Múltiplas / Dias</button></div><div id="view-falta-simples"><div class="falta-form-grid"><div class="falta-form-full"><input type="date" id="nf-data" style="margin-bottom:0;"></div><div><select id="nf-disc" style="margin-bottom:0;"><option value="">Disciplina</option></select></div><div><select id="nf-mod" style="margin-bottom:0;"><option value="">Módulo</option></select></div><div class="falta-form-full" style="display:flex; gap:10px; align-items:center; justify-content:center;"><span class="text-muted">Horas:</span><button id="btn-menos-hora" class="secondary-btn small-btn" style="width:40px;">-</button><input type="number" id="nf-horas" value="1" min="1" max="8" style="margin:0; text-align:center; width:60px;"><button id="btn-mais-hora" class="primary-btn small-btn" style="width:40px;">+</button></div></div></div><div id="view-falta-multipla" style="display:none;"><div class="falta-form-grid"><div><label class="text-muted" style="font-size:0.8rem;">De:</label><input type="date" id="nfm-data-inicio" style="margin-bottom:0;"></div><div><label class="text-muted" style="font-size:0.8rem;">Até:</label><input type="date" id="nfm-data-fim" style="margin-bottom:0;"></div></div><div style="margin-top:10px; margin-bottom:10px;"><label class="text-muted" style="font-size:0.8rem; margin-bottom:5px; display:block;">Disciplinas e Horas Afetadas:</label><div id="lista-linhas-faltas" style="display:flex; flex-direction:column; gap:5px;"></div><button id="btn-add-linha-falta" class="secondary-btn small-btn" style="margin-top:10px; width:100%; border-style:dashed;"><i class="fa-solid fa-plus"></i> Adicionar Disciplina</button></div></div><div class="falta-form-full" style="margin-top:15px; margin-bottom:15px;"><label class="falta-checkbox-group"><input type="checkbox" id="nf-justificada"><span>Falta Justificada?</span></label></div><div style="display:flex; gap:10px;"><button id="btn-gravar-nova-falta" class="primary-btn" style="flex:1;">Registar</button><button id="btn-cancelar-nova-falta" class="danger-btn" style="flex:1;">Cancelar</button></div></div></div>
+    <div id="modal-alterar-falta" class="modal-overlay"><div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto;"><h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-pen"></i> Alterar Falta</h3><div class="falta-form-grid"><div class="falta-form-full"><input type="date" id="af-data" style="margin-bottom:0;"></div><div><select id="af-disc" style="margin-bottom:0;"><option value="">Disciplina</option></select></div><div><select id="af-mod" style="margin-bottom:0;"><option value="">Módulo</option></select></div><div class="falta-form-full" style="display:flex; gap:10px; align-items:center; justify-content:center;"><span class="text-muted">Horas:</span><input type="number" id="af-horas" min="1" max="8" style="margin:0; text-align:center; width:60px;"></div><div class="falta-form-full" style="margin-top:10px;"><label class="falta-checkbox-group"><input type="checkbox" id="af-justificada"><span>Falta Justificada?</span></label></div></div><div style="display:flex; gap:10px; margin-top:10px;"><button id="btn-gravar-alteracao-falta" class="primary-btn" style="flex:1;">Guardar</button><button id="btn-cancelar-alteracao-falta" class="danger-btn" style="flex:1;">Cancelar</button></div></div></div>
+    <div id="modal-pauta-global" class="modal-overlay"><div class="paper-sheet" style="max-width: 600px; width: 95%; max-height: 85vh; overflow-y: auto;"><button id="btn-close-pauta" class="btn-close-paper"><i class="fa-solid fa-xmark"></i></button><h2 style="text-align:center; margin-bottom: 20px; color: var(--primary-green);"><i class="fa-solid fa-table-list"></i> Pauta Global</h2><div id="pauta-global-content"><p class="text-muted" style="text-align:center;">A compilar notas...</p></div></div></div>
 
-function formatarDataHeader(dt) { const dp = String(dt.getDate()).padStart(2,'0'); const mp = String(dt.getMonth()+1).padStart(2,'0'); return `${dp}/${mp}`; }
-function dataParaStringDb(dt) { const y = dt.getFullYear(); const m = String(dt.getMonth()+1).padStart(2,'0'); const d = String(dt.getDate()).padStart(2,'0'); return `${y}-${m}-${d}`; }
+    <!-- MODAL PARA VER O ATESTADO EM GRANDE -->
+    <div id="modal-ver-atestado" class="modal-overlay">
+        <div class="action-sheet" style="border-radius: 12px; max-width: 500px; margin: auto; max-height: 90vh; display: flex; flex-direction: column;">
+            <h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:10px;"><i class="fa-solid fa-file-medical"></i> Atestado Médico</h3>
+            <p id="txt-atestado-detalhe" style="font-size:0.9rem; color:var(--text-muted); margin-bottom:15px;"></p>
+            
+            <div style="flex:1; overflow:auto; background:#111; border-radius:8px; display:flex; justify-content:center; align-items:center; min-height:200px; margin-bottom:15px;">
+                <img id="img-atestado-preview" src="" style="max-width:100%; height:auto; display:none; border-radius:4px;">
+                <iframe id="pdf-atestado-preview" src="" style="width:100%; height:300px; display:none; border:none; border-radius:4px;"></iframe>
+            </div>
 
-document.getElementById('btn-editar-horario')?.addEventListener('click', (e) => {
-    modoEdicaoHorario = true; e.currentTarget.style.display = 'none'; document.getElementById('btn-salvar-horario').style.display = 'flex';
-    document.querySelectorAll('.horario-slot').forEach(slot => slot.classList.add('edit-mode'));
-});
-document.getElementById('btn-salvar-horario')?.addEventListener('click', (e) => {
-    modoEdicaoHorario = false; e.currentTarget.style.display = 'none'; document.getElementById('btn-editar-horario').style.display = 'flex';
-    document.querySelectorAll('.horario-slot').forEach(slot => slot.classList.remove('edit-mode'));
-});
+            <div style="display:flex; gap:10px;">
+                <button id="btn-aprovar-atestado" class="primary-btn" style="flex:1; background-color: var(--success-green);"><i class="fa-solid fa-check"></i> Aprovar Falta</button>
+                <button id="btn-rejeitar-atestado" class="danger-btn" style="flex:1;"><i class="fa-solid fa-xmark"></i> Rejeitar</button>
+            </div>
+            <button class="secondary-btn btn-fechar-modal" style="margin-top:10px;">Cancelar</button>
+        </div>
+    </div>
 
-document.querySelectorAll('.horario-slot').forEach(slot => {
-    slot.addEventListener('click', (e) => {
-        if(modoEdicaoHorario) {
-            slotSelecionado = e.currentTarget; let opt = '<option value="">Sem Aula (Limpar)</option>';
-            for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) opt += `<option value="${d}">${d}</option>`; }
-            opt += `<option disabled>──────────</option><option value="ALM">Almoço</option><option value="Visita">Visita Estudo</option><option value="FCT">FCT</option><option value="PAP">PAP</option><option value="PRHF">PRHF</option>`;
-            document.getElementById('ed-horario-disc').innerHTML = opt; document.getElementById('modal-editar-horario').style.display = 'flex';
-        } else {
-            if(e.currentTarget.querySelector('.slot-event-badge')) {
-                const badge = e.currentTarget.querySelector('.slot-event-badge');
-                document.getElementById('mei-titulo').innerText = badge.getAttribute('data-titulo'); document.getElementById('mei-tipo').innerText = badge.getAttribute('data-tipo').toUpperCase();
-                document.getElementById('mei-hora').innerText = badge.getAttribute('data-hora') || 'N/A'; document.getElementById('mei-disc').innerText = badge.getAttribute('data-disc') || 'N/A';
-                document.getElementById('modal-evento-info').style.display = 'flex';
-            }
-        }
-    });
-});
-document.getElementById('btn-cancelar-bloco-horario')?.addEventListener('click', () => document.getElementById('modal-editar-horario').style.display = 'none');
-document.getElementById('btn-gravar-bloco-horario')?.addEventListener('click', async (e) => {
-    if(!slotSelecionado) return; const novaDisc = document.getElementById('ed-horario-disc').value;
-    const dataReal = slotSelecionado.getAttribute('data-datareal'); const horaId = slotSelecionado.getAttribute('data-hora');
-    const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-    try { await setDoc(doc(db, "turmas", turmaAtual), { horario: { [`${dataReal}_${horaId}`]: novaDisc } }, {merge:true}); document.getElementById('modal-editar-horario').style.display = 'none'; btnRef.innerText = "Confirmar"; carregarHorario(); } catch(err) { btnRef.innerText = "Erro!"; }
-});
+    <!-- MODAL: CHAT COM O EE (LADO DO DT) -->
+    <div id="modal-dt-chat-ee" class="modal-overlay">
+        <div class="action-sheet" style="border-radius: 12px; max-width: 500px; margin: auto; height: 80vh; display: flex; flex-direction: column; padding: 0;">
+            <div style="background:#222; padding:15px; display:flex; align-items:center; gap:10px; border-bottom:1px solid #333; border-radius: 12px 12px 0 0;">
+                <h3 id="dt-chat-ee-title" style="color:var(--warning-yellow); font-size:1.1rem; margin:0; flex:1;"><i class="fa-solid fa-envelope"></i> Chat Família</h3>
+                <button class="icon-btn btn-fechar-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="forum-messages" id="dt-chat-ee-messages" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:15px; background: var(--bg-dark);"></div>
+            <div class="forum-input-area" style="background:#1a1a1a; padding:10px; border-top:1px solid #333; display:flex; gap:8px; align-items:center; border-radius: 0 0 12px 12px;">
+                <input type="text" id="dt-chat-ee-input" placeholder="Escreva a resposta..." style="margin:0; flex:1; border-radius:20px; padding:10px 15px;">
+                <button id="btn-dt-chat-ee-send" class="forum-send-btn" style="width:40px; height:40px; background-color: var(--warning-yellow); color: black;"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
 
-async function carregarHorario() {
-    const diasUIAbrv = ['seg', 'ter', 'qua', 'qui', 'sex']; const mapDiasParaDataReal = {}; 
-    let endOfWeek = new Date(dataInicioSemana); endOfWeek.setDate(endOfWeek.getDate() + 4);
-    document.getElementById('week-display').innerText = `${formatarDataHeader(dataInicioSemana)} a ${formatarDataHeader(endOfWeek)}`;
-    let iterDate = new Date(dataInicioSemana);
-    for(let i=0; i<5; i++) {
-        const dStr = dataParaStringDb(iterDate); document.getElementById(`h-${diasUIAbrv[i]}-dt`).innerText = formatarDataHeader(iterDate);
-        mapDiasParaDataReal[diasUIAbrv[i]] = dStr; document.querySelectorAll(`.horario-slot[data-dia="${diasUIAbrv[i]}"]`).forEach(s => s.setAttribute('data-datareal', dStr)); iterDate.setDate(iterDate.getDate() + 1);
-    }
-    document.querySelectorAll('.horario-slot').forEach(slot => { slot.innerHTML = ""; slot.classList.remove('filled'); });
-    try {
-        const docSnap = await getDoc(doc(db, "turmas", turmaAtual)); let horarioBase = {}; if(docSnap.exists() && docSnap.data().horario) horarioBase = docSnap.data().horario;
-        let eventosTurma = []; const resEvts = await getDocs(query(collection(db, "turmas", turmaAtual, "eventos"))); resEvts.forEach(d => eventosTurma.push(d.data()));
-        for(const key in horarioBase) {
-            const [dataReal, hora] = key.split('_'); const disc = horarioBase[key]; const slot = document.querySelector(`.horario-slot[data-datareal="${dataReal}"][data-hora="${hora}"]`);
-            if(slot && disc) { 
-                slot.innerHTML = `<strong>${disc}</strong>`; slot.classList.add('filled'); 
-                const evtEncontrado = eventosTurma.find(e => e.data === dataReal && e.disciplina === disc);
-                if(evtEncontrado) { slot.innerHTML += `<div class="slot-event-badge" data-titulo="${evtEncontrado.titulo}" data-tipo="${evtEncontrado.tipo}" data-disc="${evtEncontrado.disciplina}" data-hora="${evtEncontrado.hora}"><i class="fa-solid fa-star"></i></div>`; }
-            }
-        }
-    } catch(err){}
-}
-
-// ESTATÍSTICAS REAIS
-async function calcularEstatisticasTurma() {
-    document.getElementById('stat-media-turma').innerText = '...'; document.getElementById('stat-faltas-totais').innerText = '...'; document.getElementById('stat-prhf-ativos').innerText = '...'; document.getElementById('stat-alunos-risco').innerText = '...';
-    document.getElementById('stat-med-socio').innerText = '...'; document.getElementById('stat-med-cient').innerText = '...'; document.getElementById('stat-med-tec').innerText = '...';
-    const tabelaAlunos = document.getElementById('tabela-stats-alunos'); tabelaAlunos.innerHTML = '<tr><td colspan="4" class="text-muted center">A compilar...</td></tr>';
-    try {
-        const qAlunos = query(collection(db, "utilizadores"), where("turma", "==", turmaAtual), where("papel", "==", "aluno"));
-        const snapshotAlunos = await getDocs(qAlunos);
-        if(snapshotAlunos.empty) { tabelaAlunos.innerHTML = '<tr><td colspan="4" class="text-muted center">Sem alunos registados.</td></tr>'; return; }
-        
-        let sumGlobalTotal = 0; let countGlobalTotal = 0; let sumSocio = 0; let countSocio = 0; let sumCient = 0; let countCient = 0; let sumTec = 0; let countTec = 0;
-        let prhfsAtivosGerais = 0; let hPrhfPlan = 0; let hPrhfCump = 0; let alunosEmRiscoCount = 0; let totalHorasFaltasTurma = 0; let listaTrAlunos = [];
-
-        for(let alunoDoc of snapshotAlunos.docs) {
-            const aId = alunoDoc.id; const dAluno = alunoDoc.data(); let sumAluno = 0; let countAluno = 0; let negAluno = 0; let faltasAluno = 0;
-            try {
-                const notas = await getDocs(collection(db, "utilizadores", aId, "notas"));
-                notas.forEach(n => {
-                    const disc = n.data().disciplina; const val = n.data().nota;
-                    if(val !== 'REP' && !isNaN(val)) { 
-                        const vNum = Number(val); sumAluno += vNum; countAluno++; sumGlobalTotal += vNum; countGlobalTotal++;
-                        if(vNum < 10) negAluno++;
-                        if(matrizCurso["Sociocultural"] && matrizCurso["Sociocultural"][disc]) { sumSocio += vNum; countSocio++; } 
-                        else if(matrizCurso["Científica"] && matrizCurso["Científica"][disc]) { sumCient += vNum; countCient++; } 
-                        else if(matrizCurso["Técnica"] && matrizCurso["Técnica"][disc]) { sumTec += vNum; countTec++; }
-                    } else if (val === 'REP') { negAluno++; }
-                });
-                const faltas = await getDocs(collection(db, "utilizadores", aId, "faltas")); faltas.forEach(f => { if(!f.data().justificada) { faltasAluno += f.data().horas; totalHorasFaltasTurma += f.data().horas; } });
-                const prhfs = await getDocs(collection(db, "utilizadores", aId, "prhfs")); prhfs.forEach(p => { const dataP = p.data(); if(dataP.status === 'ativa') prhfsAtivosGerais++; hPrhfPlan += (dataP.horasPresenciais || 0); if(dataP.registosManuais) { dataP.registosManuais.forEach(r => hPrhfCump += r.horas); } });
-            } catch(subErr) {}
-            if(negAluno >= 3) alunosEmRiscoCount++;
-            const medInd = countAluno > 0 ? (sumAluno/countAluno).toFixed(1) : '-';
-            const estadoBadge = negAluno >= 3 ? `<span class="badge-risco">EM RISCO</span>` : `<span class="badge-ok">REGULAR</span>`;
-            listaTrAlunos.push(`<tr><td><strong>${dAluno.nome}</strong><br><span style="font-size:0.75rem; color:#888;">${aId.toUpperCase()}</span></td><td class="center" style="font-weight:bold;">${medInd}</td><td class="center">${faltasAluno}</td><td class="center">${estadoBadge}</td></tr>`);
-        }
-        document.getElementById('stat-media-turma').innerText = countGlobalTotal > 0 ? (sumGlobalTotal / countGlobalTotal).toFixed(1) : '-'; document.getElementById('stat-med-socio').innerText = countSocio > 0 ? (sumSocio / countSocio).toFixed(1) : '-'; document.getElementById('stat-med-cient').innerText = countCient > 0 ? (sumCient / countCient).toFixed(1) : '-'; document.getElementById('stat-med-tec').innerText = countTec > 0 ? (sumTec / countTec).toFixed(1) : '-'; document.getElementById('stat-prhf-ativos').innerText = prhfsAtivosGerais; if(document.getElementById('stat-prhf-plan')) document.getElementById('stat-prhf-plan').innerText = hPrhfPlan; if(document.getElementById('stat-prhf-cump')) document.getElementById('stat-prhf-cump').innerText = hPrhfCump; document.getElementById('stat-alunos-risco').innerText = alunosEmRiscoCount; document.getElementById('stat-faltas-totais').innerText = totalHorasFaltasTurma; tabelaAlunos.innerHTML = listaTrAlunos.length > 0 ? listaTrAlunos.join('') : '<tr><td colspan="4" class="text-muted center">Sem dados.</td></tr>';
-    } catch(e) {}
-}
-
-// FÓRUM / CANAIS 
-document.getElementById('btn-novo-forum')?.addEventListener('click', async () => { 
-    document.getElementById('modal-novo-forum').style.display = 'flex'; const cList = document.getElementById('novo-forum-membros-list'); cList.innerHTML = '<p class="text-muted" style="text-align:center;">A procurar...</p>';
-    try { const qAlunos = query(collection(db, "utilizadores"), where("turma", "==", turmaAtual), where("papel", "==", "aluno")); const snapshot = await getDocs(qAlunos); let h = ''; snapshot.forEach(d => { h += `<label class="membro-checkbox-item"><input type="checkbox" class="cb-membro-forum" value="${d.id}" checked> ${d.data().nome}</label>`; }); cList.innerHTML = h || '<p class="text-muted" style="text-align:center;">Sem alunos registados.</p>'; } catch(e) {}
-});
-document.getElementById('btn-cancelar-forum')?.addEventListener('click', () => { document.getElementById('modal-novo-forum').style.display = 'none'; });
-document.getElementById('btn-selecionar-todos-forum')?.addEventListener('click', () => { const cbs = document.querySelectorAll('.cb-membro-forum'); const todosMarcados = Array.from(cbs).every(cb => cb.checked); cbs.forEach(cb => cb.checked = !todosMarcados); });
-document.getElementById('novo-forum-tipo')?.addEventListener('change', (e) => { document.getElementById('box-forum-expira').style.display = e.target.value === 'temporario' ? 'block' : 'none'; });
-
-document.getElementById('btn-gravar-forum')?.addEventListener('click', async (e) => {
-    const nome = document.getElementById('novo-forum-nome').value.trim(); const tipo = document.getElementById('novo-forum-tipo').value; const expira = document.getElementById('novo-forum-expira').value;
-    if(!nome) return alert("Dá um nome ao canal!"); let membrosSelecionados = []; document.querySelectorAll('.cb-membro-forum:checked').forEach(cb => membrosSelecionados.push(cb.value));
-    if(membrosSelecionados.length === 0) return alert("Tens de adicionar pelo menos 1 membro!");
-    const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-    try { await addDoc(collection(db, "turmas", turmaAtual, "foruns"), { nome: nome, tipo: tipo, expiraEm: tipo==='temporario'?expira:'', membros: membrosSelecionados, criadoEm: new Date().toISOString() }); document.getElementById('modal-novo-forum').style.display = 'none'; document.getElementById('novo-forum-nome').value = ""; btnRef.innerText = "Criar"; carregarForuns(); } catch(err) { btnRef.innerText = "Erro!"; }
-});
-
-async function carregarForuns() {
-    const container = document.getElementById('lista-canais-forum'); container.innerHTML = '<p class="text-muted" style="text-align:center;">A carregar canais...</p>';
-    try {
-        const res = await getDocs(query(collection(db, "turmas", turmaAtual, "foruns"))); if(res.empty) { container.innerHTML = '<p class="text-muted" style="text-align:center;">Ainda não existem fóruns criados para esta turma.</p>'; return; }
-        let html = ''; res.forEach(docSnap => { const f = docSnap.data(); const icon = f.tipo === 'permanente' ? 'fa-comments' : 'fa-stopwatch'; html += `<div class="canal-card" data-id="${docSnap.id}" data-json='${JSON.stringify(f)}'><div class="canal-icon"><i class="fa-solid ${icon}"></i></div><div class="canal-info"><h4>${f.nome}</h4><p>${f.membros.length} Membro(s)</p></div></div>`; }); container.innerHTML = html;
-        container.querySelectorAll('.canal-card').forEach(card => card.addEventListener('click', (e) => { const fData = JSON.parse(e.currentTarget.getAttribute('data-json')); forumAtivoId = e.currentTarget.getAttribute('data-id'); document.getElementById('chat-active-title').innerText = fData.nome; document.getElementById('mif-nome').innerText = fData.nome; document.getElementById('mif-tipo').innerText = fData.tipo.toUpperCase() + (fData.expiraEm ? ` (até ${fData.expiraEm})` : ''); document.getElementById('mif-membros').innerText = fData.membros.length + " aluno(s)"; document.getElementById('forum-channel-list').style.display = 'none'; document.getElementById('forum-chat-view').style.display = 'flex'; iniciarChat(forumAtivoId); }));
-    } catch(err) {}
-}
-document.getElementById('btn-info-canal')?.addEventListener('click', () => document.getElementById('modal-info-forum').style.display = 'flex');
-
-let chatUnsubscribe = null;
-function iniciarChat(fId) {
-    const chatContainer = document.getElementById('chat-messages-container'); chatContainer.innerHTML = ''; if(chatUnsubscribe) chatUnsubscribe();
-    chatUnsubscribe = onSnapshot(query(collection(db, "turmas", turmaAtual, "foruns", fId, "mensagens"), orderBy("timestamp")), (snapshot) => { let html = ''; snapshot.forEach(doc => { const msg = doc.data(); const isMe = msg.remetente === myUserName; const classe = isMe ? 'admin' : 'student'; html += `<div class="chat-bubble ${classe}"><strong>${isMe ? 'Tu' : msg.remetente}</strong><br>${msg.texto}<span class="chat-meta">${new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span></div>`; }); chatContainer.innerHTML = html; chatContainer.scrollTop = chatContainer.scrollHeight; });
-}
-document.getElementById('btn-send-msg')?.addEventListener('click', async () => { const inp = document.getElementById('input-forum-msg'); const txt = inp.value.trim(); if(!txt || !forumAtivoId) return; try { await addDoc(collection(db, "turmas", turmaAtual, "foruns", forumAtivoId, "mensagens"), { remetente: myUserName, texto: txt, timestamp: Date.now() }); inp.value = ''; } catch(e){} });
-
-// AVALIAÇÕES E PAUTA GLOBAL
-document.getElementById('btn-hub-avaliacoes')?.addEventListener('click', () => { esconderTudoMenos(viewAvaliacoes); construirMatrizVisual(document.getElementById('matriz-disciplinas-container'), abrirModulosDisciplinaAvaliacao); });
-function construirMatrizVisual(containerEl, funcaoClique) { let html = ""; for (const [nomeComponente, disciplines] of Object.entries(matrizCurso)) { html += `<div class="component-section"><div class="component-header">${nomeComponente}</div><div class="subject-grid">`; for (const nomeDisciplina of Object.keys(disciplines)) { html += `<button class="subject-btn" data-disc="${nomeDisciplina}">${nomeDisciplina}</button>`; } html += `</div></div>`; } containerEl.innerHTML = html; containerEl.querySelectorAll('.subject-btn').forEach(btn => btn.addEventListener('click', (e) => funcaoClique(e.currentTarget.getAttribute('data-disc')))); }
-document.getElementById('btn-pauta-global')?.addEventListener('click', async () => { document.getElementById('modal-pauta-global').style.display = 'flex'; const container = document.getElementById('pauta-global-content'); container.innerHTML = '<p class="text-muted" style="text-align:center;">A compilar notas...</p>'; try { const notasDb = await getDocs(collection(db, "utilizadores", alunoAtualId, "notas")); const mapNotas = {}; notasDb.forEach(d => { const dt = d.data(); mapNotas[`${dt.disciplina}_${dt.modulo}`] = dt.nota; }); let html = ''; for (const [nomeComponente, disciplinas] of Object.entries(matrizCurso)) { html += `<div class="pauta-global-componente"><div class="pauta-global-header">${nomeComponente}</div>`; for (const [nomeDisc, modulos] of Object.entries(disciplinas)) { html += `<div class="pauta-global-disc"><div class="pauta-global-disc-title">${nomeDisc}</div><div class="pauta-global-notas">`; for(const mod of Object.keys(modulos)) { const nota = mapNotas[`${nomeDisc}_${mod}`] || 'SN'; let cor = "sn"; if(nota !== 'SN' && nota !== 'REP' && nota >= 10) cor = "positiva"; else if(nota === 'REP' || nota < 10) cor = "negativa"; html += `<div class="pg-nota-item"><span>${mod}</span><span class="pg-nota-val ${cor}">${nota}</span></div>`; } html += `</div></div>`; } html += `</div>`; } container.innerHTML = html; } catch(err) { container.innerHTML = '<p class="text-muted" style="color:var(--danger-red); text-align:center;">Erro ao carregar a pauta.</p>'; } });
-document.getElementById('btn-close-pauta')?.addEventListener('click', () => document.getElementById('modal-pauta-global').style.display = 'none');
-
-async function abrirModulosDisciplinaAvaliacao(disciplina) {
-    esconderTudoMenos(viewDisciplinaModulos); document.getElementById('titulo-disciplina').innerText = disciplina;
-    const listaModulosUI = document.getElementById('lista-modulos-disciplina'); listaModulosUI.innerHTML = '<p class="text-muted">A preparar pauta...</p>';
-    const notasMapa = {}; try { const qNotas = await getDocs(collection(db, "utilizadores", alunoAtualId, "notas")); qNotas.forEach(d => { if (d.data().disciplina === disciplina) { notasMapa[d.data().modulo] = d.data().nota; notasMapa[d.data().modulo + "_motivo"] = d.data().motivoRep; } }); } catch(e){}
-    let modulosArray = []; for (const comp of Object.values(matrizCurso)) { if (comp[disciplina]) modulosArray = Object.keys(comp[disciplina]); } let gridBtns = ""; for(let i=10; i<=20; i++) { gridBtns += `<button class="grade-btn" data-val="${i}">${i}</button>`; } gridBtns += `<button class="grade-btn rep" data-val="REP">REP</button>`;
-    let html = ""; modulosArray.forEach(mod => { const nEx = notasMapa[mod] !== undefined ? notasMapa[mod] : "SN"; let classeBadge = ""; if(nEx === "SN") classeBadge = "sn"; else if(nEx === "REP") classeBadge = "rep"; const txtMotivo = (nEx === "REP" && notasMapa[mod+"_motivo"]) ? `<div style="font-size:0.8rem; color:var(--text-muted); margin-top:5px;"><i>Motivo: ${notasMapa[mod+"_motivo"]}</i></div>` : ""; html += `<div class="modulo-avaliar-item" style="display:flex; flex-direction:column;"><div class="mod-view" id="view-${disciplina}-${mod}" style="display:flex; justify-content:space-between; width:100%; align-items:center;"><div><strong>${mod}</strong>${txtMotivo}</div><div style="display:flex; align-items:center; gap:15px;"><span class="nota-badge ${classeBadge}" id="badge-${disciplina}-${mod}">${nEx}</span><button class="secondary-btn small-btn btn-abrir-edicao-nota" data-mod="${mod}"><i class="fa-solid fa-pen"></i></button></div></div><div class="mod-edit" id="edit-${disciplina}-${mod}" style="display:none; flex-direction:column; width:100%;"><div class="grade-grid" id="grid-${disciplina}-${mod}">${gridBtns}</div><div id="rep-reason-box-${disciplina}-${mod}" style="display:none; width:100%; margin-bottom:10px;"><input type="text" id="input-reason-${disciplina}-${mod}" placeholder="Motivo do REP" style="margin:0; padding:8px; font-size:0.9rem;"></div><div style="display:flex; gap:10px;"><button class="primary-btn small-btn btn-gravar-nota" data-disc="${disciplina}" data-mod="${mod}" style="flex:1;">OK (Gravar)</button><button class="secondary-btn small-btn btn-fechar-edicao-nota" data-mod="${mod}" style="flex:1;">Cancelar</button></div></div></div>`; });
-    listaModulosUI.innerHTML = html; listaModulosUI.querySelectorAll('.btn-abrir-edicao-nota').forEach(b => b.addEventListener('click', (e) => { const m=e.currentTarget.getAttribute('data-mod'); document.getElementById(`view-${disciplina}-${m}`).style.display='none'; document.getElementById(`edit-${disciplina}-${m}`).style.display='flex'; })); listaModulosUI.querySelectorAll('.btn-fechar-edicao-nota').forEach(b => b.addEventListener('click', (e) => { const m=e.currentTarget.getAttribute('data-mod'); document.getElementById(`view-${disciplina}-${m}`).style.display='flex'; document.getElementById(`edit-${disciplina}-${m}`).style.display='none'; }));
-    let notaSelecionadaTemporaria = {}; listaModulosUI.querySelectorAll('.grade-btn').forEach(btn => { btn.addEventListener('click', (e) => { const gridPai = e.currentTarget.parentElement; gridPai.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('selected')); e.currentTarget.classList.add('selected'); const modId = gridPai.id.split('-')[2]; const discId = gridPai.id.split('-')[1]; const v = e.currentTarget.getAttribute('data-val'); notaSelecionadaTemporaria[modId] = v; document.getElementById(`rep-reason-box-${discId}-${modId}`).style.display = v === "REP" ? "block" : "none"; }); });
-    listaModulosUI.querySelectorAll('.btn-gravar-nota').forEach(b => b.addEventListener('click', async (e) => { const d = e.currentTarget.getAttribute('data-disc'); const m = e.currentTarget.getAttribute('data-mod'); const v = notaSelecionadaTemporaria[m]; if(!v) return; const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ...'; try { const valorDb = v === "REP" ? "REP" : Number(v); const motivo = v === "REP" ? document.getElementById(`input-reason-${d}-${m}`).value : ""; await setDoc(doc(db, "utilizadores", alunoAtualId, "notas", `${d}_${m}`), { disciplina: d, modulo: m, nota: valorDb, motivoRep: motivo, data: new Date().toISOString() }); btnRef.innerText = "Gravado!"; setTimeout(() => { btnRef.innerText = "OK (Gravar)"; abrirModulosDisciplinaAvaliacao(d); }, 800); } catch(err){ btnRef.innerText = "Erro!"; } }));
-}
-
-// INFORMAÇÕES PESSOAIS
-document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { document.getElementById('modal-telefone').style.display='none'; document.getElementById('modal-email').style.display='none'; document.getElementById('modal-nova-falta').style.display='none'; document.getElementById('modal-alterar-falta').style.display='none'; document.getElementById('modal-novo-evento').style.display='none'; document.getElementById('modal-editar-horario').style.display='none'; document.getElementById('modal-novo-forum').style.display='none'; document.getElementById('modal-info-forum').style.display='none'; document.getElementById('modal-evento-info').style.display='none'; document.getElementById('modal-ver-atestado').style.display='none'; }));
-document.addEventListener('click', (e) => { if (e.target.classList.contains('clickable-contact')) { const tipo = e.target.getAttribute('data-type'); const valor = e.target.innerText; if(valor === "-" || valor === "") return; nomePessoaContactoModal = e.target.id.includes('aluno') ? document.getElementById('detail-student-name').innerText : (document.getElementById('display-ee-nome').innerText || "Enc. Educação"); window.contactoTemp = valor; if (tipo === 'tel') { document.getElementById('action-ligar').href = `tel:${valor}`; document.getElementById('modal-telefone').style.display = 'flex'; } else if (tipo === 'email') { document.getElementById('action-enviar-email').href = `mailto:${valor}`; document.getElementById('modal-email').style.display = 'flex'; } } });
-document.getElementById('action-guardar-vcard')?.addEventListener('click', () => { const vcard = `BEGIN:VCARD\nVERSION:3.0\nFN:${nomePessoaContactoModal}\nTEL:${window.contactoTemp}\nEND:VCARD`; const blob = new Blob([vcard], { type: 'text/vcard' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${nomePessoaContactoModal.replace(/\s+/g,'_')}.vcf`; document.body.appendChild(link); link.click(); document.body.removeChild(link); document.getElementById('modal-telefone').style.display = 'none'; });
-document.getElementById('btn-hub-informacoes')?.addEventListener('click', async () => { esconderTudoMenos(viewInformacoes); try { const docSnap = await getDoc(doc(db, "utilizadores", alunoAtualId)); if (docSnap.exists()) { const d = docSnap.data(); document.getElementById('display-aluno-idade').innerText = d.idade || "-"; document.getElementById('display-aluno-tel').innerText = d.telAluno || "-"; document.getElementById('display-aluno-email').innerText = d.emailAluno || "-"; document.getElementById('display-aluno-morada').innerText = d.morada || "-"; document.getElementById('display-ee-nome').innerText = d.nomeEE || "-"; document.getElementById('display-ee-filiacao').innerText = d.filiacaoEE || "-"; document.getElementById('display-ee-tel').innerText = d.telEE || "-"; document.getElementById('display-ee-email').innerText = d.emailEE || "-"; } } catch (error) {} });
-
-// PRHF
-const selDisc = document.getElementById('prhf-disciplina'); const selMod = document.getElementById('prhf-modulo');
-let optDisc = '<option value="">Disc.</option>'; for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) optDisc += `<option value="${d}">${d}</option>`; } selDisc.innerHTML = optDisc;
-const optDiscFilter = '<option value="">Todas as Disciplinas</option>' + optDisc; document.getElementById('filtro-prhf-disc').innerHTML = optDiscFilter;
-selDisc.addEventListener('change', (e) => { const d = e.target.value; let modsObj = {}; for(const comp of Object.values(matrizCurso)) { if(comp[d]) modsObj = comp[d]; } let optMod = '<option value="">Mod.</option>'; Object.keys(modsObj).forEach(m => optMod += `<option value="${m}">${m}</option>`); selMod.innerHTML = optMod; });
-document.getElementById('prhf-file-upload')?.addEventListener('change', (e) => { const file = e.target.files[0]; if(!file) return; if(file.size > 1048576) { alert("Ficheiro demasiado grande!"); return; } pdfNomeTemporario = file.name; document.getElementById('prhf-file-name').innerText = pdfNomeTemporario; const reader = new FileReader(); reader.onload = (ev) => { pdfBase64Temporario = ev.target.result; }; reader.readAsDataURL(file); });
-
-let tabAtivaPrhf = 'ativas'; const modalFolha = document.getElementById('modal-prhf-sheet');
-if(document.getElementById('btn-hub-prhf')) { document.getElementById('btn-hub-prhf').addEventListener('click', () => { esconderTudoMenos(viewPrhf); tabAtivaPrhf = 'ativas'; document.getElementById('tab-prhf-ativas').classList.add('active'); document.getElementById('tab-prhf-concluidas').classList.remove('active'); carregarListaPRHF(alunoAtualId); }); }
-document.getElementById('tab-prhf-ativas')?.addEventListener('click', (e) => { tabAtivaPrhf = 'ativas'; e.currentTarget.classList.add('active'); document.getElementById('tab-prhf-concluidas').classList.remove('active'); carregarListaPRHF(alunoAtualId); });
-document.getElementById('tab-prhf-concluidas')?.addEventListener('click', (e) => { tabAtivaPrhf = 'concluidas'; e.currentTarget.classList.add('active'); document.getElementById('tab-prhf-ativas').classList.remove('active'); carregarListaPRHF(alunoAtualId); });
-document.getElementById('filtro-prhf-disc')?.addEventListener('change', () => carregarListaPRHF(alunoAtualId));
-
-document.getElementById('btn-guardar-prhf')?.addEventListener('click', async (e) => {
-    const disc = selDisc.value; const mod = selMod.value; const prazo = document.getElementById('prhf-prazo').value; const desc = document.getElementById('prhf-descricao').value.trim(); const htInput = document.getElementById('prhf-horas').value; const isTerminado = document.getElementById('prhf-modulo-terminado').checked;
-    if(!disc || !mod || !prazo || !desc || !htInput) return alert("Preenche todos os campos!");
-    const hT = parseInt(htInput); const hP = hT > 4 ? Math.ceil(hT * 0.3) : 0; const hN = hT - hP; const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A gravar...';
-    try { await addDoc(collection(db, "utilizadores", alunoAtualId, "prhfs"), { disciplina: disc, modulo: mod, prazo: prazo, descricao: desc, horasNaoPresenciais: hN, horasPresenciais: hP, moduloTerminado: isTerminado, status: 'ativa', dataRegisto: new Date().toISOString(), registosManuais: [], pdfName: pdfNomeTemporario, pdfFile: pdfBase64Temporario }); selDisc.value = ""; selMod.value = ""; document.getElementById('prhf-prazo').value = ""; document.getElementById('prhf-descricao').value = ""; document.getElementById('prhf-horas').value = ""; document.getElementById('prhf-modulo-terminado').checked = false; pdfBase64Temporario = ""; pdfNomeTemporario = ""; document.getElementById('prhf-file-name').innerText = ""; document.getElementById('prhf-file-upload').value = ""; btnRef.innerText = "Gravado!"; setTimeout(() => { btnRef.innerText = "Processar e Gravar"; }, 1000); tabAtivaPrhf = 'ativas'; document.getElementById('tab-prhf-ativas').classList.add('active'); document.getElementById('tab-prhf-concluidas').classList.remove('active'); carregarListaPRHF(alunoAtualId); } catch (err) { btnRef.innerText = "Erro!"; } 
-});
-
-let prhfsMemoria = [];
-async function carregarListaPRHF(idAluno) {
-    const container = document.getElementById('lista-prhf-container'); container.innerHTML = '<p class="text-muted">A carregar...</p>'; prhfsMemoria = []; const filtroDisc = document.getElementById('filtro-prhf-disc').value;
-    try { const res = await getDocs(query(collection(db, "utilizadores", idAluno, "prhfs"))); let html = ''; res.forEach(doc => { const data = doc.data(); data.id = doc.id; if (filtroDisc !== "" && data.disciplina !== filtroDisc) return; if ((tabAtivaPrhf === 'ativas' && data.status === 'ativa') || (tabAtivaPrhf === 'concluidas' && data.status === 'concluida')) { prhfsMemoria.push(data); let classeCor = 'concluida'; if(data.status === 'ativa') classeCor = data.moduloTerminado ? 'ativa-terminado' : 'ativa-decorrer'; const sM = (data.modulo||"").includes('M') ? data.modulo : 'M'+data.modulo; html += `<div class="prhf-mini-card ${classeCor}" data-id="${data.id}"><strong>${data.disciplina}_${sM}</strong><i class="fa-solid fa-chevron-right" style="color:var(--text-muted); font-size:0.8rem;"></i></div>`; } }); if (html === '') { container.innerHTML = `<p class="text-muted">Sem tarefas ${tabAtivaPrhf}.</p>`; return; } container.innerHTML = html; container.querySelectorAll('.prhf-mini-card').forEach(card => card.addEventListener('click', (e) => abrirFolhaPRHF(e.currentTarget.getAttribute('data-id')))); } catch (err) {}
-}
-
-function desenharRegistosManuais(plano) {
-    const container = document.getElementById('lista-presencias-manuais'); let totalRealizado = 0;
-    if(!plano.registosManuais || plano.registosManuais.length === 0) { container.innerHTML = ""; } else { let h = "<p style='margin-bottom:5px;'><strong>Já Registadas:</strong></p>"; plano.registosManuais.forEach((r, idx) => { totalRealizado += r.horas; h += `<div class="registo-item"><span>${r.data} (${r.inicio} - ${r.fim}) [${r.horas}h]</span><i class="fa-solid fa-trash registo-item-del" data-idx="${idx}"></i></div>`; }); container.innerHTML = h; container.querySelectorAll('.registo-item-del').forEach(icon => { icon.addEventListener('click', async (e) => { if(!confirm("Apagar este registo?")) return; const indexToRemove = e.currentTarget.getAttribute('data-idx'); const novaLista = [...plano.registosManuais]; novaLista.splice(indexToRemove, 1); try { await updateDoc(doc(db, "utilizadores", alunoAtualId, "prhfs", idPrhfAtivo), { registosManuais: novaLista }); plano.registosManuais = novaLista; desenharRegistosManuais(plano); } catch(err) {} }); }); }
-    document.getElementById('sheet-horas-feitas').innerText = totalRealizado; document.getElementById('sheet-horas-totais').innerText = plano.horasPresenciais || 0; const btnConcluir = document.getElementById('sheet-btn-concluir'); const progressFill = document.getElementById('sheet-btn-progress-fill'); const progressText = document.getElementById('sheet-btn-progress-text'); const txtRegisto = document.getElementById('txt-btn-registo'); const hP = plano.horasPresenciais || 0; let perc = hP > 0 ? Math.min((totalRealizado / hP) * 100, 100) : 100; progressFill.style.width = `${perc}%`; progressText.innerHTML = `<i class="fa-solid fa-check"></i> Concluído (${Math.floor(perc || 0)}%)`; if(totalRealizado >= hP && hP > 0) { btnConcluir.classList.add('ready'); btnConcluir.disabled = false; txtRegisto.innerText = "Retificar Presenciais"; } else { btnConcluir.classList.remove('ready'); btnConcluir.disabled = true; txtRegisto.innerText = "Registar Presenciais"; }
-}
-
-function abrirFolhaPRHF(id) {
-    const p = prhfsMemoria.find(x => x.id === id); if(!p) return; idPrhfAtivo = id; const sM = (p.modulo||"").includes('M') ? p.modulo : 'M'+p.modulo; const dp = (p.prazo||"").split('-'); const dF = dp.length === 3 ? `${dp[2]}/${dp[1]}/${dp[0]}` : p.prazo; document.getElementById('sheet-title').innerText = `${p.disciplina}_${sM}`; document.getElementById('sheet-prazo').innerText = dF; document.getElementById('sheet-hp').innerText = p.horasPresenciais || 0; document.getElementById('sheet-ha').innerText = p.horasNaoPresenciais || 0; document.getElementById('sheet-desc').innerText = p.descricao; const btnDownload = document.getElementById('sheet-btn-download-pdf'); if(p.pdfFile) { btnDownload.style.display = 'flex'; btnDownload.href = p.pdfFile; btnDownload.download = p.pdfName || `Anexo_${p.disciplina}.pdf`; } else { btnDownload.style.display = 'none'; } const badge = document.getElementById('sheet-status'); badge.innerText = p.status.toUpperCase(); if(p.status === 'ativa') badge.className = `paper-status ${p.moduloTerminado ? 'ativa-terminado' : 'ativa-decorrer'}`; else badge.className = `paper-status concluida`; if (p.status === 'concluida') { document.getElementById('sheet-btn-concluir').style.display = 'none'; document.getElementById('sheet-btn-reverter').style.display = 'flex'; document.getElementById('sheet-btn-toggle-manual').style.display = 'none'; document.getElementById('manual-presence-box').style.display = 'none'; } else { document.getElementById('sheet-btn-concluir').style.display = 'block'; document.getElementById('sheet-btn-reverter').style.display = 'none'; document.getElementById('sheet-btn-toggle-manual').style.display = 'flex'; document.getElementById('manual-presence-box').style.display = 'none'; } desenharRegistosManuais(p); modalFolha.style.display = 'flex';
-}
-document.querySelector('.btn-close-paper')?.addEventListener('click', () => modalFolha.style.display = 'none');
-document.getElementById('sheet-btn-toggle-manual')?.addEventListener('click', () => { const box = document.getElementById('manual-presence-box'); box.style.display = box.style.display === 'none' ? 'block' : 'none'; });
-
-document.getElementById('btn-save-manual-pres')?.addEventListener('click', async (e) => { const d = document.getElementById('reg-pres-data').value; const i = document.getElementById('reg-pres-inicio').value; const f = document.getElementById('reg-pres-fim').value; if(!d || !i || !f) return alert("Preenche Data, Início e Fim!"); const [hI, mI] = i.split(':').map(Number); const [hF, mF] = f.split(':').map(Number); let diff = (hF + mF/60) - (hI + mI/60); const horasCalc = diff > 0 ? Math.floor(diff) : 0; if(horasCalc <= 0) return alert("A diferença deve ser pelo menos 1h!"); const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; try { const nR = { data: d, inicio: i, fim: f, horas: horasCalc }; const p = prhfsMemoria.find(x => x.id === idPrhfAtivo); const novaLista = p.registosManuais ? [...p.registosManuais, nR] : [nR]; await updateDoc(doc(db, "utilizadores", alunoAtualId, "prhfs", idPrhfAtivo), { registosManuais: novaLista }); document.getElementById('reg-pres-data').value = ""; document.getElementById('reg-pres-inicio').value = ""; document.getElementById('reg-pres-fim').value = ""; p.registosManuais = novaLista; desenharRegistosManuais(p); btnRef.innerText = "Gravado!"; setTimeout(() => btnRef.innerText = "Guardar Registo", 1000); } catch(err){ btnRef.innerText = "Erro!"; } });
-document.getElementById('sheet-btn-concluir')?.addEventListener('click', async () => { const p = prhfsMemoria.find(x => x.id === idPrhfAtivo); if(p.status === 'concluida' || document.getElementById('sheet-btn-concluir').disabled) return; if(!confirm("Marcar como CONCLUÍDO?")) return; try { await updateDoc(doc(db, "utilizadores", alunoAtualId, "prhfs", idPrhfAtivo), { status: 'concluida' }); modalFolha.style.display = 'none'; carregarListaPRHF(alunoAtualId); } catch(err){} });
-document.getElementById('sheet-btn-reverter')?.addEventListener('click', async (e) => { if(!confirm("REVERTER para ATIVA?")) return; e.currentTarget.innerText = "A reverter..."; try { await updateDoc(doc(db, "utilizadores", alunoAtualId, "prhfs", idPrhfAtivo), { status: 'ativa' }); modalFolha.style.display = 'none'; carregarListaPRHF(alunoAtualId); } catch(err){ e.currentTarget.innerText = "Reverter para Ativa"; } });
-
-// FALTAS ADMIN
-let optFaltasDiscOptionsOnly = ""; let faltasMemoria = [];
-for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) optFaltasDiscOptionsOnly += `<option value="${d}">${d}</option>`; }
-
-document.getElementById('btn-hub-faltas')?.addEventListener('click', () => { esconderTudoMenos(viewFaltas); document.getElementById('tab-faltas-disciplina').classList.add('active'); document.getElementById('tab-faltas-data').classList.remove('active'); document.getElementById('faltas-container-disciplina').style.display = 'block'; document.getElementById('faltas-container-data').style.display = 'none'; document.getElementById('toolbar-faltas-data').style.display = 'none'; document.getElementById('filtro-disc-faltas').innerHTML = '<option value="">Todas as Disc.</option>' + optFaltasDiscOptionsOnly; document.getElementById('nf-disc').innerHTML = '<option value="">Disciplina</option>' + optFaltasDiscOptionsOnly; document.getElementById('af-disc').innerHTML = '<option value="">Disciplina</option>' + optFaltasDiscOptionsOnly; construirMatrizVisual(document.getElementById('faltas-container-disciplina'), abrirModulosDisciplinaFaltas); });
-document.getElementById('tab-faltas-disciplina')?.addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('tab-faltas-data').classList.remove('active'); document.getElementById('faltas-container-disciplina').style.display = 'block'; document.getElementById('faltas-container-data').style.display = 'none'; document.getElementById('toolbar-faltas-data').style.display = 'none'; });
-document.getElementById('tab-faltas-data')?.addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('tab-faltas-disciplina').classList.remove('active'); document.getElementById('faltas-container-disciplina').style.display = 'none'; document.getElementById('faltas-container-data').style.display = 'block'; document.getElementById('toolbar-faltas-data').style.display = 'flex'; carregarHistoricoFaltas(); });
-document.getElementById('btn-refresh-faltas')?.addEventListener('click', (e) => { e.currentTarget.querySelector('i').classList.add('fa-spin'); carregarHistoricoFaltas().finally(() => setTimeout(() => e.target.closest('button').querySelector('i').classList.remove('fa-spin'), 500)); });
-document.getElementById('filtro-mes-faltas')?.addEventListener('change', carregarHistoricoFaltas); document.getElementById('filtro-disc-faltas')?.addEventListener('change', carregarHistoricoFaltas); document.getElementById('filtro-just-faltas')?.addEventListener('change', carregarHistoricoFaltas);
-document.getElementById('btn-nova-falta')?.addEventListener('click', () => { document.getElementById('modal-nova-falta').style.display = 'flex'; });
-document.getElementById('btn-cancelar-nova-falta')?.addEventListener('click', () => { document.getElementById('modal-nova-falta').style.display = 'none'; });
-document.getElementById('btn-menos-hora')?.addEventListener('click', () => { const input = document.getElementById('nf-horas'); let v = parseInt(input.value) || 1; if(v > 1) input.value = v - 1; });
-document.getElementById('btn-mais-hora')?.addEventListener('click', () => { const input = document.getElementById('nf-horas'); let v = parseInt(input.value) || 1; if(v < 8) input.value = v + 1; });
-
-let modoFaltaAtual = 'simples';
-document.getElementById('tab-falta-simples')?.addEventListener('click', (e) => { modoFaltaAtual = 'simples'; e.currentTarget.classList.add('active'); document.getElementById('tab-falta-multipla').classList.remove('active'); document.getElementById('view-falta-simples').style.display = 'block'; document.getElementById('view-falta-multipla').style.display = 'none'; });
-document.getElementById('tab-falta-multipla')?.addEventListener('click', (e) => { modoFaltaAtual = 'multipla'; e.currentTarget.classList.add('active'); document.getElementById('tab-falta-simples').classList.remove('active'); document.getElementById('view-falta-simples').style.display = 'none'; document.getElementById('view-falta-multipla').style.display = 'block'; });
-
-document.getElementById('btn-add-linha-falta')?.addEventListener('click', () => { const div = document.createElement('div'); div.className = "falta-linha-multipla"; div.innerHTML = `<select class="lf-disc" style="margin:0; padding:8px; flex:2;"><option value="">Disc.</option>${optFaltasDiscOptionsOnly}</select><select class="lf-mod" style="margin:0; padding:8px; flex:2;"><option value="">Mod.</option></select><input type="number" class="lf-horas" value="1" min="1" max="8" style="margin:0; padding:8px; flex:1; text-align:center;"><button class="danger-btn small-btn btn-remover-linha-falta" style="padding:8px;"><i class="fa-solid fa-xmark"></i></button>`; document.getElementById('lista-linhas-faltas').appendChild(div); div.querySelector('.lf-disc').addEventListener('change', (e) => { const d = e.target.value; let modsObj = {}; for(const comp of Object.values(matrizCurso)) { if(comp[d]) modsObj = comp[d]; } let optMod = '<option value="">Mod.</option>'; Object.keys(modsObj).forEach(m => optMod += `<option value="${m}">${m}</option>`); div.querySelector('.lf-mod').innerHTML = optMod; }); div.querySelector('.btn-remover-linha-falta').addEventListener('click', () => div.remove()); });
-document.getElementById('nf-disc')?.addEventListener('change', (e) => { const d = e.target.value; let modsObj = {}; for(const comp of Object.values(matrizCurso)) { if(comp[d]) modsObj = comp[d]; } let optMod = '<option value="">Módulo</option>'; Object.keys(modsObj).forEach(m => optMod += `<option value="${m}">${m}</option>`); document.getElementById('nf-mod').innerHTML = optMod; });
-
-document.getElementById('btn-gravar-nova-falta')?.addEventListener('click', async (e) => {
-    const justificada = document.getElementById('nf-justificada').checked; const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A registar...';
-    try {
-        if(modoFaltaAtual === 'simples') {
-            const dInicio = document.getElementById('nf-data').value; const disc = document.getElementById('nf-disc').value; const mod = document.getElementById('nf-mod').value; const horas = parseInt(document.getElementById('nf-horas').value) || 1;
-            if(!dInicio || !disc || !mod) { btnRef.innerText = "Registar"; return alert("Preenche todos os campos!"); }
-            await addDoc(collection(db, "utilizadores", alunoAtualId, "faltas"), { dataInicio: dInicio, disciplina: disc, modulo: mod, horas, justificada, criadoEm: new Date().toISOString() });
-        } else {
-            const dIn = document.getElementById('nfm-data-inicio').value; const dFi = document.getElementById('nfm-data-fim').value || dIn;
-            if(!dIn) { btnRef.innerText = "Registar"; return alert("Preenche a Data Inicial!"); }
-            let dtStart = new Date(dIn); let dtEnd = new Date(dFi); let dArr = []; while(dtStart <= dtEnd) { const yyyy = dtStart.getFullYear(); const mm = String(dtStart.getMonth() + 1).padStart(2, '0'); const dd = String(dtStart.getDate()).padStart(2, '0'); dArr.push(`${yyyy}-${mm}-${dd}`); dtStart.setDate(dtStart.getDate() + 1); }
-            const linhas = document.querySelectorAll('.falta-linha-multipla');
-            for(let dataStr of dArr) { for(let linha of linhas) { const disc = linha.querySelector('.lf-disc').value; const mod = linha.querySelector('.lf-mod').value; const horas = parseInt(linha.querySelector('.lf-horas').value) || 1; if(disc && mod) await addDoc(collection(db, "utilizadores", alunoAtualId, "faltas"), { dataInicio: dataStr, disciplina: disc, modulo: mod, horas, justificada, criadoEm: new Date().toISOString() }); } }
-        }
-        document.getElementById('modal-nova-falta').style.display = 'none'; btnRef.innerText = "Registar"; await carregarHistoricoFaltas(); 
-    } catch(err) { btnRef.innerText = "Erro!"; }
-});
-
-async function carregarHistoricoFaltas() {
-    const container = document.getElementById('lista-historico-faltas-container'); container.innerHTML = '<p class="text-muted" style="text-align:center;">A carregar faltas...</p>';
-    const filtroMes = document.getElementById('filtro-mes-faltas').value; const filtroDisc = document.getElementById('filtro-disc-faltas').value; const filtroJust = document.getElementById('filtro-just-faltas').value;
-    try {
-        const res = await getDocs(query(collection(db, "utilizadores", alunoAtualId, "faltas")));
-        if(res.empty) { container.innerHTML = '<p class="text-muted" style="text-align:center;">Sem faltas registadas.</p>'; return; }
-        faltasMemoria = []; res.forEach(d => { const f = d.data(); f.id = d.id; faltasMemoria.push(f); });
-        let faltasFiltradas = faltasMemoria;
-        if (filtroDisc) faltasFiltradas = faltasFiltradas.filter(f => f.disciplina === filtroDisc); if (filtroMes) faltasFiltradas = faltasFiltradas.filter(f => f.dataInicio.split('-')[1] === filtroMes);
-        if (filtroJust === 'justificada') faltasFiltradas = faltasFiltradas.filter(f => f.justificada === true); else if (filtroJust === 'injustificada') faltasFiltradas = faltasFiltradas.filter(f => f.justificada === false);
-        if(faltasFiltradas.length === 0) { container.innerHTML = '<p class="text-muted" style="text-align:center;">Nenhuma falta corresponde a estes filtros.</p>'; return; }
-        faltasFiltradas.sort((a,b) => b.dataInicio.localeCompare(a.dataInicio));
-        let html = ''; let currentDate = ''; const mesArr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-        faltasFiltradas.forEach(f => {
-            if(f.dataInicio !== currentDate) { currentDate = f.dataInicio; const dp = currentDate.split('-'); const dateStr = `${dp[2]} de ${mesArr[parseInt(dp[1])-1]} de ${dp[0]}`; html += `<div class="falta-date-divider">${dateStr}</div>`; }
-            const cBar = f.justificada ? 'justificada' : 'injustificada'; const cMeta = f.justificada ? 'var(--success-green)' : 'var(--danger-red)'; const tMeta = f.justificada ? 'Justificada' : 'Injustificada';
-            html += `<div class="falta-registo-card" style="flex-direction: row; align-items:center; background:var(--bg-dark);"><div class="falta-status-bar ${cBar}" style="align-self: stretch;"></div><input type="checkbox" class="falta-card-checkbox" data-id="${f.id}"><div class="falta-registo-info" style="flex:1;"><div><strong>${f.disciplina} - ${f.modulo} - ${f.horas}h</strong></div><div style="text-align:right;"><span class="falta-registo-meta" style="color:${cMeta}; font-weight:bold;">${tMeta}</span></div></div></div>`;
-        });
-        container.innerHTML = html;
-    } catch(err) { container.innerHTML = '<p class="text-muted" style="color:var(--danger-red); text-align:center;">Erro ao carregar faltas.</p>'; }
-}
-
-document.getElementById('btn-eliminar-falta')?.addEventListener('click', async () => {
-    const checkboxes = document.querySelectorAll('.falta-card-checkbox:checked'); if(checkboxes.length === 0) return alert("Seleciona pelo menos uma falta para eliminar.");
-    if(!confirm(`Tens a certeza que queres eliminar ${checkboxes.length} falta(s)?`)) return;
-    const btn = document.getElementById('btn-eliminar-falta'); const originalHTML = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ...';
-    for(let cb of checkboxes) { await deleteDoc(doc(db, "utilizadores", alunoAtualId, "faltas", cb.getAttribute('data-id'))); } btn.innerHTML = originalHTML; await carregarHistoricoFaltas();
-});
-document.getElementById('btn-justificar-falta')?.addEventListener('click', async () => {
-    const checkboxes = document.querySelectorAll('.falta-card-checkbox:checked'); if(checkboxes.length === 0) return alert("Seleciona pelo menos uma falta para (in)justificar.");
-    const btn = document.getElementById('btn-justificar-falta'); const originalHTML = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ...';
-    for(let cb of checkboxes) { const id = cb.getAttribute('data-id'); const f = faltasMemoria.find(x => x.id === id); if(f) { await updateDoc(doc(db, "utilizadores", alunoAtualId, "faltas", id), { justificada: !f.justificada }); } }
-    btn.innerHTML = originalHTML; await carregarHistoricoFaltas();
-});
-
-document.getElementById('btn-alterar-falta')?.addEventListener('click', () => {
-    const checkboxes = document.querySelectorAll('.falta-card-checkbox:checked'); if(checkboxes.length !== 1) return alert("Seleciona exatamente UMA falta para alterar.");
-    const id = checkboxes[0].getAttribute('data-id'); const f = faltasMemoria.find(x => x.id === id); if(!f) return;
-    idFaltaEmEdicao = id; document.getElementById('af-data').value = f.dataInicio; document.getElementById('af-disc').value = f.disciplina;
-    const d = f.disciplina; let modsObj = {}; for(const comp of Object.values(matrizCurso)) { if(comp[d]) modsObj = comp[d]; } 
-    let optMod = '<option value="">Módulo</option>'; Object.keys(modsObj).forEach(m => optMod += `<option value="${m}">${m}</option>`); 
-    document.getElementById('af-mod').innerHTML = optMod; document.getElementById('af-mod').value = f.modulo;
-    document.getElementById('af-horas').value = f.horas; document.getElementById('af-justificada').checked = f.justificada;
-    document.getElementById('modal-alterar-falta').style.display = 'flex';
-});
-
-document.getElementById('af-disc')?.addEventListener('change', (e) => { const d = e.target.value; let modsObj = {}; for(const comp of Object.values(matrizCurso)) { if(comp[d]) modsObj = comp[d]; } let optMod = '<option value="">Módulo</option>'; Object.keys(modsObj).forEach(m => optMod += `<option value="${m}">${m}</option>`); document.getElementById('af-mod').innerHTML = optMod; });
-document.getElementById('btn-cancelar-alteracao-falta')?.addEventListener('click', () => document.getElementById('modal-alterar-falta').style.display = 'none');
-document.getElementById('btn-gravar-alteracao-falta')?.addEventListener('click', async (e) => {
-    const dataInicio = document.getElementById('af-data').value; const disciplina = document.getElementById('af-disc').value; const modulo = document.getElementById('af-mod').value; const horas = parseInt(document.getElementById('af-horas').value) || 1; const justificada = document.getElementById('af-justificada').checked;
-    if(!dataInicio || !disciplina || !modulo) return alert("Preenche os campos!");
-    const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A guardar...';
-    try { await updateDoc(doc(db, "utilizadores", alunoAtualId, "faltas", idFaltaEmEdicao), { dataInicio, disciplina, modulo, horas, justificada }); document.getElementById('modal-alterar-falta').style.display = 'none'; btnRef.innerText = "Guardar"; await carregarHistoricoFaltas(); } catch(err) { btnRef.innerText = "Erro!"; }
-});
-
-async function abrirModulosDisciplinaFaltas(disciplina) {
-    esconderTudoMenos(viewFaltasModulos); document.getElementById('titulo-falta-disciplina').innerText = disciplina;
-    const container = document.getElementById('lista-faltas-disciplina'); container.innerHTML = '<p class="text-muted">A preparar faltas...</p>';
-    let html = `<p class="text-muted" style="margin-bottom:15px;">Gestão de assiduidade por módulo:</p>`;
-    let modulosArray = []; for (const comp of Object.values(matrizCurso)) { if (comp[disciplina]) modulosArray = Object.keys(comp[disciplina]); }
-    modulosArray.forEach(mod => { html += `<div style="background:var(--bg-dark); padding:15px; border-radius:8px; border:1px solid #333; margin-bottom:12px;"><div style="display:flex; justify-content:space-between; margin-bottom:10px;"><strong>${mod}</strong><span class="falta-badge" id="badge-falta-${mod}">0h / ${matrizCurso[Object.keys(matrizCurso).find(c => matrizCurso[c][disciplina])][disciplina][mod]}h</span></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:0%;"></div></div></div>`; });
-    container.innerHTML = html;
-}
-
-// ==========================================
-// MÓDULO NOVO: CHAT DIRETO COM O EE (DT)
-// ==========================================
-let chatUnsubscribeDTEE = null;
-
-// Fechar este modal específico quando clicam no X
-document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { 
-    const m = document.getElementById('modal-dt-chat-ee');
-    if(m) m.style.display = 'none'; 
-}));
-
-document.getElementById('btn-hub-chat-ee')?.addEventListener('click', () => {
-    if(!alunoAtualId) return;
-    const nome = document.getElementById('detail-student-name').innerText;
-    document.getElementById('dt-chat-ee-title').innerHTML = `<i class="fa-solid fa-envelope"></i> Família de ${nome}`;
-    document.getElementById('modal-dt-chat-ee').style.display = 'flex';
-    iniciarChatDTEE();
-});
-
-function iniciarChatDTEE() {
-    const chatContainer = document.getElementById('dt-chat-ee-messages');
-    chatContainer.innerHTML = '';
-    if(chatUnsubscribeDTEE) chatUnsubscribeDTEE();
-
-    chatUnsubscribeDTEE = onSnapshot(query(collection(db, "utilizadores", alunoAtualId, "chat_dt"), orderBy("timestamp")), (snapshot) => {
-        let html = '';
-        snapshot.forEach(doc => {
-            const msg = doc.data();
-            const isMe = msg.autor === 'dt';
-            // Se for do DT (Eu), usa verde (admin), senão usa cinza (student)
-            const classe = isMe ? 'admin' : 'student'; 
-            html += `<div class="chat-bubble ${classe}">
-                        <strong>${isMe ? 'Tu' : msg.remetente} (EE)</strong><br>
-                        ${msg.texto}
-                        <span class="chat-meta">${new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                     </div>`;
-        });
-        chatContainer.innerHTML = html;
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-    });
-}
-
-document.getElementById('btn-dt-chat-ee-send')?.addEventListener('click', async () => {
-    const inp = document.getElementById('dt-chat-ee-input');
-    const txt = inp.value.trim();
-    if(!txt || !alunoAtualId) return;
-    
-    try {
-        await addDoc(collection(db, "utilizadores", alunoAtualId, "chat_dt"), {
-            remetente: myUserName,
-            autor: 'dt',
-            texto: txt,
-            timestamp: Date.now()
-        });
-        inp.value = '';
-    } catch(e) { console.error("Erro a enviar mensagem", e); }
-});
+    <script type="module" src="./js/dt-app.js"></script>
+</body>
+</html>
