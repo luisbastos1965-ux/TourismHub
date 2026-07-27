@@ -3,13 +3,23 @@ import { signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gsta
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const btnLogin = document.getElementById('btn-login-manual');
+const btnBiometrico = document.getElementById('btn-login-biometrico');
 const errorMsg = document.getElementById('login-error');
 
-// 1. Verificar se alguém já tem sessão iniciada
+// ==================================================
+// 1. VERIFICAR SE O DISPOSITIVO SUPORTA BIOMETRIA
+// ==================================================
+if (window.PasswordCredential && navigator.credentials) {
+    // Se o browser suportar o cofre do dispositivo, mostramos o botão
+    btnBiometrico.style.display = 'flex';
+}
+
+// ==================================================
+// 2. VERIFICAR SESSÃO ATIVA & REDIRECIONAR
+// ==================================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        // Se a pessoa já fez login antes, não a deixamos na porta.
-        // Vamos ver quem é e atirar para a página certa!
+        // Se já está logado, descobrir o papel e mandar para a página certa
         const userId = user.email.split('@')[0];
         try {
             const docSnap = await getDoc(doc(db, "utilizadores", userId));
@@ -17,9 +27,9 @@ onAuthStateChanged(auth, async (user) => {
                 const papel = docSnap.data().papel;
                 redirecionarParaPainel(papel);
             }
-        } catch (e) { console.error("Erro ao ler perfil", e); }
+        } catch (e) { console.error("Erro ao ler perfil para redirecionamento", e); }
     } else {
-        // Se não tem sessão, garantimos que o botão está normal
+        // Garantir que os botões ficam normais se não houver sessão
         if(btnLogin) {
             btnLogin.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Entrar';
             btnLogin.disabled = false;
@@ -27,42 +37,93 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-// 2. Ação de clicar no botão "Entrar"
+// ==================================================
+// 3. LOGIN MANUAL E GUARDAR IMPRESSÃO DIGITAL
+// ==================================================
 if(btnLogin) {
-    btnLogin.addEventListener('click', () => {
+    btnLogin.addEventListener('click', async () => {
         const username = document.getElementById('login-username').value.trim().toLowerCase();
         const pass = document.getElementById('login-password').value;
         
         if(!username || !pass) {
-            errorMsg.innerText = "Preenche todos os campos.";
-            errorMsg.style.display = 'block';
+            mostrarErro("Preenche todos os campos.");
             return;
         }
 
-        // Animação de carregamento
         btnLogin.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A entrar...';
         btnLogin.disabled = true;
         errorMsg.style.display = 'none';
 
-        // Tenta fazer login
-        signInWithEmailAndPassword(auth, username + "@turmapro.com", pass)
-            .then(() => {
-                // O onAuthStateChanged (lá em cima) vai detetar o sucesso automaticamente e redirecionar
-            })
-            .catch((error) => {
-                btnLogin.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Entrar';
-                btnLogin.disabled = false;
-                errorMsg.innerText = "Utilizador ou Palavra-passe incorretos.";
-                errorMsg.style.display = 'block';
-            });
+        try {
+            // Fazer Login no Firebase
+            await signInWithEmailAndPassword(auth, username + "@turmapro.com", pass);
+            
+            // GUARDAR CREDENCIAL PARA BIOMETRIA FUTURA (Se o browser suportar)
+            if (window.PasswordCredential && navigator.credentials) {
+                try {
+                    const cred = new PasswordCredential({
+                        id: username,
+                        password: pass,
+                        name: username.toUpperCase()
+                    });
+                    await navigator.credentials.store(cred);
+                    // O dispositivo guardou com sucesso no Keychain/Google Passwords
+                } catch(err) {
+                    console.log("O utilizador recusou guardar a credencial ou o dispositivo não permite.", err);
+                }
+            }
+            
+            // A função onAuthStateChanged apanha o sucesso e redireciona automaticamente!
+        } catch (error) {
+            btnLogin.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Entrar';
+            btnLogin.disabled = false;
+            mostrarErro("Utilizador ou Palavra-passe incorretos.");
+        }
     });
 }
 
-// 3. A Máquina de Redirecionamento
-function redirecionarParaPainel(papel) {
-    // Evita loop infinito se já estiver na página certa
-    const paginaAtual = window.location.pathname;
+// ==================================================
+// 4. LOGIN COM IMPRESSÃO DIGITAL / FACE ID
+// ==================================================
+if(btnBiometrico) {
+    btnBiometrico.addEventListener('click', async () => {
+        errorMsg.style.display = 'none';
+        
+        try {
+            // Pedir ao sistema operativo as credenciais guardadas
+            // Isto obriga o dispositivo a pedir a Impressão Digital ou Face ID ao utilizador!
+            const cred = await navigator.credentials.get({
+                password: true,
+                mediation: 'required' // Força a interação de segurança do telemóvel
+            });
 
+            if (cred && cred.id && cred.password) {
+                // Biometria aprovada! O cofre devolveu a password, vamos entrar!
+                btnBiometrico.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A verificar...';
+                
+                await signInWithEmailAndPassword(auth, cred.id + "@turmapro.com", cred.password);
+                // O onAuthStateChanged vai apanhar e redirecionar
+            } else {
+                mostrarErro("Nenhuma credencial guardada neste dispositivo.");
+            }
+        } catch (err) {
+            console.error("Erro na biometria:", err);
+            mostrarErro("Autenticação biométrica cancelada ou falhou.");
+            btnBiometrico.innerHTML = '<i class="fa-solid fa-fingerprint"></i> Entrar com Biometria';
+        }
+    });
+}
+
+// ==================================================
+// 5. MÁQUINA DE ROTAS E AJUDANTES
+// ==================================================
+function mostrarErro(texto) {
+    errorMsg.innerText = texto;
+    errorMsg.style.display = 'block';
+}
+
+function redirecionarParaPainel(papel) {
+    const paginaAtual = window.location.pathname;
     let paginaDestino = 'index.html'; // Default
 
     if (papel === 'admin') paginaDestino = 'admin.html';
@@ -71,7 +132,7 @@ function redirecionarParaPainel(papel) {
     else if (papel === 'ee') paginaDestino = 'ee.html';
     else if (papel === 'aluno') paginaDestino = 'aluno.html';
 
-    // Se ele NÃO estiver já na página de destino, redireciona
+    // Para evitar loops, se não estiver na página de destino, redireciona
     if (!paginaAtual.includes(paginaDestino)) {
         window.location.href = paginaDestino;
     }
