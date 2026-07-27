@@ -618,3 +618,88 @@ document.getElementById('btn-dt-chat-ee-send')?.addEventListener('click', async 
         inp.value = '';
     } catch(e) { console.error("Erro a enviar mensagem", e); }
 });
+
+// ==========================================
+// GESTÃO DO PASSAPORTE (FCT & PAP)
+// ==========================================
+
+// Fechar modal genérico (adicionamos a verificação para fechar este também)
+document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { 
+    const mFct = document.getElementById('modal-dt-fct-pap');
+    if(mFct) mFct.style.display = 'none'; 
+}));
+
+document.getElementById('btn-hub-fct-pap')?.addEventListener('click', async () => {
+    if(!alunoAtualId) return;
+    document.getElementById('modal-dt-fct-pap').style.display = 'flex';
+    
+    // Resetar campos para mostrar estado de loading
+    document.getElementById('dt-fct-entidade').value = "A carregar...";
+    document.getElementById('dt-fct-horas-feitas').value = "";
+    document.getElementById('dt-fct-horas-totais').value = "";
+    document.getElementById('dt-pap-tema').value = "A carregar...";
+    document.getElementById('btn-dt-baixar-pap').style.display = 'none';
+    document.getElementById('dt-pap-status-txt').innerText = "A procurar ficheiro...";
+
+    try {
+        const docSnap = await getDoc(doc(db, "utilizadores", alunoAtualId));
+        if(docSnap.exists()) {
+            const d = docSnap.data();
+            
+            // Preencher campos
+            document.getElementById('dt-fct-entidade').value = d.fctEntidade || "";
+            document.getElementById('dt-fct-horas-feitas').value = d.fctHorasFeitas || 0;
+            document.getElementById('dt-fct-horas-totais').value = d.fctHorasTotais || 400;
+            document.getElementById('dt-pap-tema').value = d.papTema || "";
+            
+            // Verificar se o aluno já enviou o PDF
+            if(d.papFicheiroEnviado && d.papFicheiroBase64) {
+                document.getElementById('dt-pap-status-txt').innerHTML = '<i class="fa-solid fa-file-pdf" style="color:var(--success-green);"></i> Anteprojeto Recebido!';
+                const btnDownload = document.getElementById('btn-dt-baixar-pap');
+                btnDownload.style.display = 'block';
+                btnDownload.href = d.papFicheiroBase64;
+                
+                // Dar o nome do aluno ao ficheiro PDF para ser mais fácil de organizar no computador
+                const nomeAlunoLimpo = d.nome.replace(/\s+/g, '_');
+                btnDownload.download = `PAP_${nomeAlunoLimpo}.pdf`;
+            } else {
+                document.getElementById('dt-pap-status-txt').innerText = "O aluno ainda não enviou o ficheiro.";
+            }
+        }
+    } catch(e) {
+        console.error("Erro a carregar FCT/PAP:", e);
+        document.getElementById('dt-pap-status-txt').innerText = "Erro ao carregar os dados.";
+    }
+});
+
+// Guardar alterações feitas pelo DT
+document.getElementById('btn-gravar-fct-pap')?.addEventListener('click', async (e) => {
+    if(!alunoAtualId) return;
+    const btnRef = e.currentTarget;
+    const textOrig = btnRef.innerHTML;
+    btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A gravar...';
+    
+    const entidade = document.getElementById('dt-fct-entidade').value.trim();
+    const hFeitas = Number(document.getElementById('dt-fct-horas-feitas').value) || 0;
+    const hTotais = Number(document.getElementById('dt-fct-horas-totais').value) || 400;
+    const tema = document.getElementById('dt-pap-tema').value.trim();
+
+    try {
+        await updateDoc(doc(db, "utilizadores", alunoAtualId), {
+            fctEntidade: entidade,
+            fctHorasFeitas: hFeitas,
+            fctHorasTotais: hTotais,
+            papTema: tema
+        });
+        
+        btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Gravado com Sucesso!';
+        setTimeout(() => {
+            document.getElementById('modal-dt-fct-pap').style.display = 'none';
+            btnRef.innerHTML = textOrig;
+        }, 1200);
+        
+    } catch(err) {
+        btnRef.innerHTML = "Erro ao gravar!";
+        setTimeout(() => btnRef.innerHTML = textOrig, 2000);
+    }
+});
