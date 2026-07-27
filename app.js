@@ -1,6 +1,6 @@
 // IMPORTAÇÃO MODULAR DA BASE DE DADOS E CÉREBRO DO ALUNO
 import { auth, db } from "./js/firebase.js";
-import { carregarDashboardAluno, carregarCadernetaAluno, carregarForunsAluno } from "./js/aluno.js";
+import { carregarDashboardAluno, carregarCadernetaAluno, carregarForunsAluno, carregarAgendaAluno, carregarPassaporteAluno } from "./js/aluno.js";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, addDoc, deleteDoc, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
@@ -42,7 +42,9 @@ function esconderTudoMenos(ecraAtivo) {
     if(ecraAtivo) ecraAtivo.style.display = 'block';
 }
 
-// 1. Autenticação e Separação de Papéis (Roles)
+// ==========================================
+// 1. AUTENTICAÇÃO E PERMISSÕES (ROLES)
+// ==========================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         const userId = user.email.split('@')[0];
@@ -101,7 +103,9 @@ btnLoginManual.addEventListener('click', () => {
 document.getElementById('btn-logout-staff')?.addEventListener('click', () => signOut(auth));
 document.getElementById('btn-logout-aluno')?.addEventListener('click', () => signOut(auth));
 
-// 2. Navegação Inferior do Aluno
+// ==========================================
+// 2. NAVEGAÇÃO INFERIOR DO ALUNO (ROUTER)
+// ==========================================
 document.querySelectorAll('.bottom-nav .nav-item').forEach(link => {
     link.addEventListener('click', (e) => {
         e.preventDefault();
@@ -115,10 +119,12 @@ document.querySelectorAll('.bottom-nav .nav-item').forEach(link => {
             carregarDashboardAluno(alunoAtualId, turmaAtual, myUserName);
         } else if (targetId === 'view-aluno-caderneta') {
             carregarCadernetaAluno(alunoAtualId, matrizCurso);
+        } else if (targetId === 'view-aluno-agenda') {
+            carregarAgendaAluno(turmaAtual);
         } else if (targetId === 'view-aluno-forum') {
             carregarForunsAluno(turmaAtual, alunoAtualId, myUserName);
         } else if (targetId === 'view-aluno-passaporte') {
-            // Futuro logic
+            carregarPassaporteAluno(alunoAtualId);
         }
     });
 });
@@ -127,9 +133,13 @@ document.getElementById('btn-abrir-passaporte')?.addEventListener('click', () =>
     document.querySelectorAll('.bottom-nav .nav-item').forEach(l => l.classList.remove('active'));
     document.querySelector('.bottom-nav .nav-item[data-target="view-aluno-passaporte"]')?.classList.add('active');
     esconderTudoMenos(document.getElementById('view-aluno-passaporte'));
+    carregarPassaporteAluno(alunoAtualId);
 });
 
-// NAVEGAÇÃO GERAL ADMIN/DT
+
+// ==========================================
+// 3. NAVEGAÇÃO GERAL ADMIN / DT
+// ==========================================
 document.getElementById('btn-voltar-turmas-hub')?.addEventListener('click', () => { 
     if(window.userRole === 'dt') return; // Segurança extra
     esconderTudoMenos(painelAdmin); 
@@ -205,7 +215,7 @@ async function carregarFotoPerfil() {
 
 
 // ==========================================
-// CALENDÁRIO DA TURMA 
+// ADMIN: CALENDÁRIO DA TURMA E EVENTOS
 // ==========================================
 let idEventoEmEdicao = null;
 
@@ -285,7 +295,7 @@ async function carregarEventosCalendario() {
 
 
 // ==========================================
-// HORÁRIO DINÂMICO (DATA REAL)
+// ADMIN: HORÁRIO DINÂMICO E DATAS REAIS
 // ==========================================
 let modoEdicaoHorario = false; let slotSelecionado = null;
 let dataInicioSemana = new Date(); dataInicioSemana.setDate(dataInicioSemana.getDate() - (dataInicioSemana.getDay() === 0 ? 6 : dataInicioSemana.getDay() - 1));
@@ -366,7 +376,7 @@ async function carregarHorario() {
 
 
 // ==========================================
-// CÉREBRO: ESTATÍSTICAS REAIS
+// ADMIN: ESTATÍSTICAS REAIS
 // ==========================================
 async function calcularEstatisticasTurma() {
     document.getElementById('stat-media-turma').innerText = '...'; document.getElementById('stat-assiduidade').innerText = '...'; document.getElementById('stat-prhf-ativos').innerText = '...'; document.getElementById('stat-alunos-risco').innerText = '...';
@@ -408,7 +418,7 @@ async function calcularEstatisticasTurma() {
                     hPrhfPlan += (dataP.horasPresenciais || 0);
                     if(dataP.registosManuais) { dataP.registosManuais.forEach(r => hPrhfCump += r.horas); }
                 });
-            } catch(subErr) { }
+            } catch(subErr) {}
 
             if(negAluno >= 3) alunosEmRiscoCount++;
             const medInd = countAluno > 0 ? (sumAluno/countAluno).toFixed(1) : '-';
@@ -431,7 +441,7 @@ async function calcularEstatisticasTurma() {
 
 
 // ==========================================
-// FÓRUM / CANAIS DINÂMICOS
+// ADMIN: FÓRUM / CANAIS 
 // ==========================================
 document.getElementById('btn-novo-forum')?.addEventListener('click', async () => { 
     document.getElementById('modal-novo-forum').style.display = 'flex'; 
@@ -505,7 +515,7 @@ document.getElementById('btn-send-msg')?.addEventListener('click', async () => {
 
 
 // ==========================================
-// AVALIAÇÕES E PAUTA GLOBAL
+// ADMIN: AVALIAÇÕES E PAUTA GLOBAL
 // ==========================================
 document.getElementById('btn-hub-avaliacoes')?.addEventListener('click', () => { esconderTudoMenos(viewAvaliacoes); construirMatrizVisual(document.getElementById('matriz-disciplinas-container'), abrirModulosDisciplinaAvaliacao); });
 function construirMatrizVisual(containerEl, funcaoClique) {
@@ -560,7 +570,7 @@ async function abrirModulosDisciplinaAvaliacao(disciplina) {
     }));
 }
 
-// INFORMAÇÕES
+// ADMIN: INFORMAÇÕES PESSOAIS
 document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { document.getElementById('modal-telefone').style.display='none'; document.getElementById('modal-email').style.display='none'; document.getElementById('modal-nova-falta').style.display='none'; document.getElementById('modal-alterar-falta').style.display='none'; document.getElementById('modal-novo-evento').style.display='none'; document.getElementById('modal-editar-horario').style.display='none'; document.getElementById('modal-novo-forum').style.display='none'; document.getElementById('modal-info-forum').style.display='none'; document.getElementById('modal-evento-info').style.display='none';}));
 document.addEventListener('click', (e) => {
     if (e.target.classList.contains('clickable-contact')) {
@@ -591,13 +601,13 @@ document.getElementById('btn-cancelar-ee')?.addEventListener('click', () => { do
 document.getElementById('btn-guardar-aluno')?.addEventListener('click', async (e) => { const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; try { await updateDoc(doc(db, "utilizadores", alunoAtualId), { idade: document.getElementById('info-aluno-idade').value, telAluno: document.getElementById('info-aluno-telemovel').value, emailAluno: document.getElementById('info-aluno-email').value, morada: document.getElementById('info-aluno-morada').value }); carregarInfoLeitura(); document.getElementById('info-aluno-display').style.display='block'; document.getElementById('info-aluno-edit').style.display='none'; } catch(err) {} btnRef.innerText = "Guardar"; });
 document.getElementById('btn-guardar-ee')?.addEventListener('click', async (e) => { const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; try { await updateDoc(doc(db, "utilizadores", alunoAtualId), { nomeEE: document.getElementById('info-ee-nome').value, filiacaoEE: document.getElementById('info-ee-filiacao').value, telEE: document.getElementById('info-ee-telemovel').value, emailEE: document.getElementById('info-ee-email').value }); carregarInfoLeitura(); document.getElementById('info-ee-display').style.display='block'; document.getElementById('info-ee-edit').style.display='none'; } catch(err) {} btnRef.innerText = "Guardar"; });
 
-// PRHF
+// ADMIN: PRHF
 const selDisc = document.getElementById('prhf-disciplina'); const selMod = document.getElementById('prhf-modulo');
 let optDisc = '<option value="">Disc.</option>'; for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) optDisc += `<option value="${d}">${d}</option>`; } selDisc.innerHTML = optDisc;
 const optDiscFilter = '<option value="">Todas as Disciplinas</option>' + optDisc; document.getElementById('filtro-prhf-disc').innerHTML = optDiscFilter;
 
 selDisc.addEventListener('change', (e) => { const d = e.target.value; let modsObj = {}; for(const comp of Object.values(matrizCurso)) { if(comp[d]) modsObj = comp[d]; } let optMod = '<option value="">Mod.</option>'; Object.keys(modsObj).forEach(m => optMod += `<option value="${m}">${m}</option>`); selMod.innerHTML = optMod; });
-document.getElementById('prhf-file-upload')?.addEventListener('change', (e) => { const file = e.target.files[0]; if(!file) return; if(file.size > 1048576) { alert("Ficheiro demasiado grande!"); return; } pdfNomeTemporario = file.name; document.getElementById('prhf-file-name').innerText = pdfNomeTemporario; const reader = new FileReader(); reader.onload = (ev) => { pdfBase64Temporario = ev.target.result; }; reader.readAsDataURL(file); });
+document.getElementById('prhf-file-upload')?.addEventListener('change', (e) => { const file = e.target.files[0]; if(!file) return; if(file.size > 1048576) { alert("Ficheiro demasiado grande! (Limite 1MB para testes)"); return; } pdfNomeTemporario = file.name; document.getElementById('prhf-file-name').innerText = pdfNomeTemporario; const reader = new FileReader(); reader.onload = (ev) => { pdfBase64Temporario = ev.target.result; }; reader.readAsDataURL(file); });
 
 let tabAtivaPrhf = 'ativas'; const modalFolha = document.getElementById('modal-prhf-sheet');
 
@@ -706,7 +716,8 @@ document.getElementById('sheet-btn-reverter')?.addEventListener('click', async (
     try { await updateDoc(doc(db, "utilizadores", alunoAtualId, "prhfs", idPrhfAtivo), { status: 'ativa' }); modalFolha.style.display = 'none'; carregarListaPRHF(alunoAtualId); } catch(err){ e.currentTarget.innerText = "Reverter para Ativa"; }
 });
 
-// FALTAS ADMIN
+
+// ADMIN: FALTAS
 let optFaltasDiscOptionsOnly = ""; let faltasMemoria = [];
 for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) optFaltasDiscOptionsOnly += `<option value="${d}">${d}</option>`; }
 
@@ -880,7 +891,9 @@ async function abrirModulosDisciplinaFaltas(disciplina) {
     container.innerHTML = html;
 }
 
+// ==========================================
 // 9. MODO DE ESTUDO (POMODORO)
+// ==========================================
 let studyTimer; let tempoRestante = 25 * 60; 
 const elText = document.getElementById('study-timer-text'); const elCircle = document.getElementById('study-timer-circle');
 
