@@ -855,3 +855,112 @@ async function carregarSumariosGestao() {
         container.innerHTML = html;
     } catch(e) { container.innerHTML = '<p class="text-danger center">Erro ao ler sumários.</p>'; }
 }
+
+// ==========================================
+// GESTÃO DE COMPORTAMENTO / OCORRÊNCIAS
+// ==========================================
+const viewComportamento = document.getElementById('view-comportamento');
+let tipoOcorrenciaAtual = "negativa"; 
+
+document.getElementById('btn-hub-comportamento')?.addEventListener('click', () => {
+    if(!alunoAtualId) return;
+    document.getElementById('student-detail-view').style.display = 'none';
+    if(viewComportamento) viewComportamento.style.display = 'block';
+    carregarComportamento();
+});
+
+document.getElementById('btn-voltar-hub-comportamento')?.addEventListener('click', () => {
+    if(viewComportamento) viewComportamento.style.display = 'none';
+    document.getElementById('student-detail-view').style.display = 'block';
+});
+
+document.getElementById('btn-tipo-negativo')?.addEventListener('click', (e) => { 
+    tipoOcorrenciaAtual = "negativa"; 
+    e.currentTarget.classList.add('active'); 
+    document.getElementById('btn-tipo-positivo').classList.remove('active'); 
+});
+
+document.getElementById('btn-tipo-positivo')?.addEventListener('click', (e) => { 
+    tipoOcorrenciaAtual = "positiva"; 
+    e.currentTarget.classList.add('active'); 
+    document.getElementById('btn-tipo-negativo').classList.remove('active'); 
+});
+
+document.getElementById('btn-nova-ocorrencia')?.addEventListener('click', () => {
+    document.getElementById('no-data').value = new Date().toISOString().split('T')[0];
+    document.getElementById('no-titulo').value = ""; 
+    document.getElementById('no-descricao').value = "";
+    document.getElementById('modal-nova-ocorrencia').style.display = 'flex';
+});
+
+document.getElementById('btn-gravar-ocorrencia')?.addEventListener('click', async (e) => {
+    const data = document.getElementById('no-data').value; 
+    const titulo = document.getElementById('no-titulo').value.trim(); 
+    const desc = document.getElementById('no-descricao').value.trim();
+    
+    if(!data || !titulo) return alert("Preencha Data e Motivo!");
+    
+    const btnRef = e.currentTarget; 
+    const txtOrig = btnRef.innerText; 
+    btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; 
+    btnRef.disabled = true;
+    
+    try {
+        await addDoc(collection(db, "utilizadores", alunoAtualId, "ocorrencias"), { 
+            data: data, 
+            tipo: tipoOcorrenciaAtual, 
+            titulo: titulo, 
+            descricao: desc, 
+            autor: (typeof myUserName !== 'undefined') ? myUserName : "Gestão", 
+            timestamp: Date.now() 
+        });
+        btnRef.innerHTML = '<i class="fa-solid fa-check"></i>';
+        setTimeout(() => { 
+            document.getElementById('modal-nova-ocorrencia').style.display = 'none'; 
+            btnRef.innerText = txtOrig; 
+            btnRef.disabled = false; 
+            carregarComportamento(); 
+        }, 1000);
+    } catch(err) { 
+        btnRef.innerText = "Erro!"; 
+        setTimeout(() => { 
+            btnRef.innerText = txtOrig; 
+            btnRef.disabled = false; 
+        }, 2000); 
+    }
+});
+
+async function carregarComportamento() {
+    const container = document.getElementById('lista-comportamento-container'); 
+    container.innerHTML = '<p class="text-muted center">A carregar...</p>';
+    if(!alunoAtualId) return;
+    
+    try {
+        const res = await getDocs(query(collection(db, "utilizadores", alunoAtualId, "ocorrencias")));
+        if(res.empty) { 
+            container.innerHTML = '<p class="text-muted center">Nenhum registo.</p>'; 
+            return; 
+        }
+        
+        let regs = []; 
+        res.forEach(d => regs.push(d.data())); 
+        regs.sort((a,b) => b.data.localeCompare(a.data));
+        
+        let html = '';
+        regs.forEach(r => {
+            const cor = r.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)';
+            const ic = r.tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>';
+            html += `
+            <div class="card" style="margin-bottom:15px; border-left: 4px solid ${cor};">
+                <div>
+                    <div style="display:flex; align-items:center; gap:8px; color:${cor}; margin-bottom:5px;">
+                        ${ic} <strong>${r.titulo}</strong>
+                    </div>
+                    <span style="font-size:0.75rem; color:var(--text-muted);">Data: ${r.data} | Prof. ${r.autor}</span>
+                    ${r.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px; background:var(--bg-dark); padding:8px; border-radius:6px;">${r.descricao}</p>` : ''}
+                </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+    } catch(e) { container.innerHTML = '<p class="text-danger center">Erro.</p>'; }
+}
