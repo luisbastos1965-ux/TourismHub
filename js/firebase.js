@@ -18,7 +18,7 @@ export const db = getFirestore(app);
 export const messaging = getMessaging(app);
 
 // Adicionamos a VAPID KEY que geraste na consola do Firebase
-export const VAPID_KEY = "COLA_AQUI_A_TUA_CHAVE_VAPID_QUE_GERASTE_NA_CONSOLA"; 
+export const VAPID_KEY = "BGvfEWuZMe51THx0yPPBDXcpDIEX1CuMHc5uj85eI7KMvPo8wSiZaORLfM3uTwjm5j-zqPJ3knoqXG4g-Uut5ZE"; 
 
 // Exportamos as funções para usar nos outros ficheiros
 export { getToken, onMessage };
