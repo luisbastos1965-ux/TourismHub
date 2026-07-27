@@ -1,6 +1,6 @@
-// IMPORTAÇÃO MODULAR DA BASE DE DADOS E CÉREBRO DO ALUNO
+// IMPORTAÇÃO MODULAR
 import { auth, db } from "./js/firebase.js";
-import { carregarDashboardAluno } from "./js/aluno.js";
+import { carregarDashboardAluno, carregarCadernetaAluno, carregarForunsAluno } from "./js/aluno.js";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, addDoc, deleteDoc, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
@@ -30,11 +30,17 @@ let pdfBase64Temporario = ""; let pdfNomeTemporario = "";
 let forumAtivoId = null; let myUserName = "Admin";
 
 function esconderTudoMenos(ecraAtivo) {
-    [classHubView, classView, studentDetailView, viewAvaliacoes, viewDisciplinaModulos, viewInformacoes, viewPrhf, viewFaltas, viewFaltasModulos, painelAluno, viewStudyMode, viewClassCalendario, viewClassHorario, viewClassForum, viewClassEstatisticas].forEach(el => { if(el) el.style.display = 'none'; });
+    [
+        classHubView, classView, studentDetailView, viewAvaliacoes, viewDisciplinaModulos, 
+        viewInformacoes, viewPrhf, viewFaltas, viewFaltasModulos, painelAluno, viewStudyMode, 
+        viewClassCalendario, viewClassHorario, viewClassForum, viewClassEstatisticas,
+        document.getElementById('view-aluno-caderneta'), document.getElementById('view-aluno-agenda'),
+        document.getElementById('view-aluno-forum'), document.getElementById('view-aluno-passaporte')
+    ].forEach(el => { if(el) el.style.display = 'none'; });
     if(ecraAtivo) ecraAtivo.style.display = 'block';
 }
 
-// 1. Autenticação e Gamificação Aluno (Agora Modular!)
+// 1. Autenticação 
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         const userId = user.email.split('@')[0];
@@ -46,7 +52,8 @@ onAuthStateChanged(auth, async (user) => {
                 if(dados.papel === 'admin') { 
                     painelAdmin.style.display = 'block'; bottomNav.style.display = 'none'; esconderTudoMenos(null); 
                 } else { 
-                    painelAdmin.style.display = 'none'; bottomNav.style.display = 'flex'; esconderTudoMenos(painelAluno); alunoAtualId = userId; 
+                    painelAdmin.style.display = 'none'; bottomNav.style.display = 'flex'; esconderTudoMenos(painelAluno); 
+                    alunoAtualId = userId; turmaAtual = dados.turma;
                     carregarDashboardAluno(userId, dados.turma, dados.nome);
                 }
                 loginScreen.style.display = 'none'; appContent.style.display = 'block'; 
@@ -61,7 +68,35 @@ btnLoginManual.addEventListener('click', () => {
 });
 btnLogout.addEventListener('click', () => signOut(auth));
 
-// 2. Navegação Geral
+// 2. Navegação Inferior do Aluno
+document.querySelectorAll('.bottom-nav .nav-item').forEach(link => {
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelectorAll('.bottom-nav .nav-item').forEach(l => l.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        
+        const targetId = e.currentTarget.getAttribute('data-target');
+        esconderTudoMenos(document.getElementById(targetId));
+
+        if (targetId === 'student-dashboard') {
+            carregarDashboardAluno(alunoAtualId, turmaAtual, myUserName);
+        } else if (targetId === 'view-aluno-caderneta') {
+            carregarCadernetaAluno(alunoAtualId, matrizCurso);
+        } else if (targetId === 'view-aluno-forum') {
+            carregarForunsAluno(turmaAtual, alunoAtualId, myUserName);
+        } else if (targetId === 'view-aluno-passaporte') {
+            // Futuro logic
+        }
+    });
+});
+
+document.getElementById('btn-abrir-passaporte')?.addEventListener('click', () => {
+    document.querySelectorAll('.bottom-nav .nav-item').forEach(l => l.classList.remove('active'));
+    document.querySelector('.bottom-nav .nav-item[data-target="view-aluno-passaporte"]')?.classList.add('active');
+    esconderTudoMenos(document.getElementById('view-aluno-passaporte'));
+});
+
+// NAVEGAÇÃO GERAL ADMIN
 document.getElementById('btn-voltar-turmas-hub')?.addEventListener('click', () => { esconderTudoMenos(null); painelAdmin.style.display = 'block'; });
 document.getElementById('btn-voltar-class-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
 document.getElementById('btn-voltar-lista')?.addEventListener('click', () => esconderTudoMenos(classView));
@@ -145,7 +180,7 @@ document.getElementById('upload-avatar').addEventListener('change', (e) => {
 
 
 // ==========================================
-// 3. CALENDÁRIO DA TURMA 
+// CALENDÁRIO DA TURMA 
 // ==========================================
 let idEventoEmEdicao = null;
 
@@ -225,7 +260,7 @@ async function carregarEventosCalendario() {
 
 
 // ==========================================
-// 4. HORÁRIO DINÂMICO (DATA REAL)
+// HORÁRIO DINÂMICO (DATA REAL)
 // ==========================================
 let modoEdicaoHorario = false; let slotSelecionado = null;
 let dataInicioSemana = new Date(); dataInicioSemana.setDate(dataInicioSemana.getDate() - (dataInicioSemana.getDay() === 0 ? 6 : dataInicioSemana.getDay() - 1));
@@ -306,7 +341,7 @@ async function carregarHorario() {
 
 
 // ==========================================
-// 5. CÉREBRO: ESTATÍSTICAS REAIS (TABELA DE ALUNOS)
+// CÉREBRO: ESTATÍSTICAS REAIS
 // ==========================================
 async function calcularEstatisticasTurma() {
     document.getElementById('stat-media-turma').innerText = '...'; document.getElementById('stat-assiduidade').innerText = '...'; document.getElementById('stat-prhf-ativos').innerText = '...'; document.getElementById('stat-alunos-risco').innerText = '...';
@@ -314,7 +349,6 @@ async function calcularEstatisticasTurma() {
     const tabelaAlunos = document.getElementById('tabela-stats-alunos'); tabelaAlunos.innerHTML = '<tr><td colspan="4" class="text-muted center">A compilar bases de dados de notas e faltas...</td></tr>';
     
     try {
-        // Correção de Bypass para evitar erro de Index no Firebase
         const qAlunos = query(collection(db, "utilizadores"), where("papel", "==", "aluno"));
         const snapshotAlunos = await getDocs(qAlunos);
         const alunosTurma = snapshotAlunos.docs.filter(doc => doc.data().turma === turmaAtual);
@@ -349,7 +383,7 @@ async function calcularEstatisticasTurma() {
                     hPrhfPlan += (dataP.horasPresenciais || 0);
                     if(dataP.registosManuais) { dataP.registosManuais.forEach(r => hPrhfCump += r.horas); }
                 });
-            } catch(subErr) { console.warn("Dados omissos para " + aId); }
+            } catch(subErr) {}
 
             if(negAluno >= 3) alunosEmRiscoCount++;
             const medInd = countAluno > 0 ? (sumAluno/countAluno).toFixed(1) : '-';
@@ -372,7 +406,7 @@ async function calcularEstatisticasTurma() {
 
 
 // ==========================================
-// 6. FÓRUM / CANAIS DINÂMICOS (Correção e Checkboxes)
+// FÓRUM / CANAIS DINÂMICOS
 // ==========================================
 document.getElementById('btn-novo-forum')?.addEventListener('click', async () => { 
     document.getElementById('modal-novo-forum').style.display = 'flex'; 
@@ -386,29 +420,19 @@ document.getElementById('btn-novo-forum')?.addEventListener('click', async () =>
     } catch(e) { cList.innerHTML = '<p class="text-danger">Erro ao carregar alunos.</p>'; }
 });
 document.getElementById('btn-cancelar-forum')?.addEventListener('click', () => { document.getElementById('modal-novo-forum').style.display = 'none'; });
-
-document.getElementById('btn-selecionar-todos-forum')?.addEventListener('click', () => {
-    const cbs = document.querySelectorAll('.cb-membro-forum');
-    const todosMarcados = Array.from(cbs).every(cb => cb.checked);
-    cbs.forEach(cb => cb.checked = !todosMarcados);
-});
-
-document.getElementById('novo-forum-tipo')?.addEventListener('change', (e) => {
-    document.getElementById('box-forum-expira').style.display = e.target.value === 'temporario' ? 'block' : 'none';
-});
+document.getElementById('btn-selecionar-todos-forum')?.addEventListener('click', () => { const cbs = document.querySelectorAll('.cb-membro-forum'); const todosMarcados = Array.from(cbs).every(cb => cb.checked); cbs.forEach(cb => cb.checked = !todosMarcados); });
+document.getElementById('novo-forum-tipo')?.addEventListener('change', (e) => { document.getElementById('box-forum-expira').style.display = e.target.value === 'temporario' ? 'block' : 'none'; });
 
 document.getElementById('btn-gravar-forum')?.addEventListener('click', async (e) => {
     const nome = document.getElementById('novo-forum-nome').value.trim(); const tipo = document.getElementById('novo-forum-tipo').value; const expira = document.getElementById('novo-forum-expira').value;
     if(!nome) return alert("Dá um nome ao canal!");
-    
     let membrosSelecionados = []; document.querySelectorAll('.cb-membro-forum:checked').forEach(cb => membrosSelecionados.push(cb.value));
     if(membrosSelecionados.length === 0) return alert("Tens de adicionar pelo menos 1 membro!");
 
     const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
     try {
         await addDoc(collection(db, "turmas", turmaAtual, "foruns"), { nome: nome, tipo: tipo, expiraEm: tipo==='temporario'?expira:'', membros: membrosSelecionados, criadoEm: new Date().toISOString() });
-        document.getElementById('modal-novo-forum').style.display = 'none'; document.getElementById('novo-forum-nome').value = ""; btnRef.innerText = "Criar";
-        carregarForuns();
+        document.getElementById('modal-novo-forum').style.display = 'none'; document.getElementById('novo-forum-nome').value = ""; btnRef.innerText = "Criar"; carregarForuns();
     } catch(err) { btnRef.innerText = "Erro!"; }
 });
 
@@ -424,15 +448,9 @@ async function carregarForuns() {
         });
         container.innerHTML = html;
         container.querySelectorAll('.canal-card').forEach(card => card.addEventListener('click', (e) => {
-            const fData = JSON.parse(e.currentTarget.getAttribute('data-json'));
-            forumAtivoId = e.currentTarget.getAttribute('data-id');
+            const fData = JSON.parse(e.currentTarget.getAttribute('data-json')); forumAtivoId = e.currentTarget.getAttribute('data-id');
             document.getElementById('chat-active-title').innerText = fData.nome;
-            
-            // Gravar infos no Modal
-            document.getElementById('mif-nome').innerText = fData.nome;
-            document.getElementById('mif-tipo').innerText = fData.tipo.toUpperCase() + (fData.expiraEm ? ` (até ${fData.expiraEm})` : '');
-            document.getElementById('mif-membros').innerText = fData.membros.length + " aluno(s)";
-            
+            document.getElementById('mif-nome').innerText = fData.nome; document.getElementById('mif-tipo').innerText = fData.tipo.toUpperCase() + (fData.expiraEm ? ` (até ${fData.expiraEm})` : ''); document.getElementById('mif-membros').innerText = fData.membros.length + " aluno(s)";
             document.getElementById('forum-channel-list').style.display = 'none'; document.getElementById('forum-chat-view').style.display = 'flex';
             iniciarChat(forumAtivoId);
         }));
@@ -441,7 +459,6 @@ async function carregarForuns() {
 
 document.getElementById('btn-info-canal')?.addEventListener('click', () => document.getElementById('modal-info-forum').style.display = 'flex');
 
-// Chat Real-Time Simplificado
 let chatUnsubscribe = null;
 function iniciarChat(fId) {
     const chatContainer = document.getElementById('chat-messages-container'); chatContainer.innerHTML = '';
@@ -463,7 +480,7 @@ document.getElementById('btn-send-msg')?.addEventListener('click', async () => {
 
 
 // ==========================================
-// 7. AVALIAÇÕES E PAUTA GLOBAL (Mantido)
+// AVALIAÇÕES E PAUTA GLOBAL
 // ==========================================
 document.getElementById('btn-hub-avaliacoes')?.addEventListener('click', () => { esconderTudoMenos(viewAvaliacoes); construirMatrizVisual(document.getElementById('matriz-disciplinas-container'), abrirModulosDisciplinaAvaliacao); });
 function construirMatrizVisual(containerEl, funcaoClique) {
@@ -498,16 +515,14 @@ async function abrirModulosDisciplinaAvaliacao(disciplina) {
     modulosArray.forEach(mod => {
         const nEx = notasMapa[mod] !== undefined ? notasMapa[mod] : "SN"; let classeBadge = ""; if(nEx === "SN") classeBadge = "sn"; else if(nEx === "REP") classeBadge = "rep";
         const txtMotivo = (nEx === "REP" && notasMapa[mod+"_motivo"]) ? `<div style="font-size:0.8rem; color:var(--text-muted); margin-top:5px;"><i>Motivo: ${notasMapa[mod+"_motivo"]}</i></div>` : "";
-        html += `<div class="modulo-avaliar-item" style="display:flex; flex-direction:column;"><div class="mod-view" id="view-${disciplina}-${mod}" style="display:flex; justify-content:space-between; width:100%; align-items:center;"><div><strong>${mod}</strong>${txtMotivo}</div><div style="display:flex; align-items:center; gap:15px;"><span class="nota-badge ${classeBadge}" id="badge-${disciplina}-${mod}">${nEx}</span><button class="secondary-btn small-btn btn-abrir-edicao-nota" data-mod="${mod}"><i class="fa-solid fa-pen"></i></button></div></div><div class="mod-edit" id="edit-${disciplina}-${mod}" style="display:none; flex-direction:column; width:100%;"><div class="grade-grid" id="grid-${disciplina}-${mod}">${gridBtns}</div><div id="rep-reason-box-${disciplina}-${mod}" style="display:none; width:100%; margin-bottom:10px;"><input type="text" id="input-reason-${disciplina}-${mod}" placeholder="Motivo do REP (Opc. Ex: Falta de Teste)" style="margin:0; padding:8px; font-size:0.9rem;"></div><div style="display:flex; gap:10px;"><button class="primary-btn small-btn btn-gravar-nota" data-disc="${disciplina}" data-mod="${mod}" style="flex:1;">OK (Gravar)</button><button class="secondary-btn small-btn btn-fechar-edicao-nota" data-mod="${mod}" style="flex:1;">Cancelar</button></div></div></div>`;
+        html += `<div class="modulo-avaliar-item" style="display:flex; flex-direction:column;"><div class="mod-view" id="view-${disciplina}-${mod}" style="display:flex; justify-content:space-between; width:100%; align-items:center;"><div><strong>${mod}</strong>${txtMotivo}</div><div style="display:flex; align-items:center; gap:15px;"><span class="nota-badge ${classeBadge}" id="badge-${disciplina}-${mod}">${nEx}</span><button class="secondary-btn small-btn btn-abrir-edicao-nota" data-mod="${mod}"><i class="fa-solid fa-pen"></i></button></div></div><div class="mod-edit" id="edit-${disciplina}-${mod}" style="display:none; flex-direction:column; width:100%;"><div class="grade-grid" id="grid-${disciplina}-${mod}">${gridBtns}</div><div id="rep-reason-box-${disciplina}-${mod}" style="display:none; width:100%; margin-bottom:10px;"><input type="text" id="input-reason-${disciplina}-${mod}" placeholder="Motivo do REP" style="margin:0; padding:8px; font-size:0.9rem;"></div><div style="display:flex; gap:10px;"><button class="primary-btn small-btn btn-gravar-nota" data-disc="${disciplina}" data-mod="${mod}" style="flex:1;">OK (Gravar)</button><button class="secondary-btn small-btn btn-fechar-edicao-nota" data-mod="${mod}" style="flex:1;">Cancelar</button></div></div></div>`;
     });
     listaModulosUI.innerHTML = html;
     listaModulosUI.querySelectorAll('.btn-abrir-edicao-nota').forEach(b => b.addEventListener('click', (e) => { const m=e.currentTarget.getAttribute('data-mod'); document.getElementById(`view-${disciplina}-${m}`).style.display='none'; document.getElementById(`edit-${disciplina}-${m}`).style.display='flex'; }));
     listaModulosUI.querySelectorAll('.btn-fechar-edicao-nota').forEach(b => b.addEventListener('click', (e) => { const m=e.currentTarget.getAttribute('data-mod'); document.getElementById(`view-${disciplina}-${m}`).style.display='flex'; document.getElementById(`edit-${disciplina}-${m}`).style.display='none'; }));
     let notaSelecionadaTemporaria = {};
     listaModulosUI.querySelectorAll('.grade-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const gridPai = e.currentTarget.parentElement; gridPai.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('selected')); e.currentTarget.classList.add('selected'); const modId = gridPai.id.split('-')[2]; const discId = gridPai.id.split('-')[1]; const v = e.currentTarget.getAttribute('data-val'); notaSelecionadaTemporaria[modId] = v; document.getElementById(`rep-reason-box-${discId}-${modId}`).style.display = v === "REP" ? "block" : "none";
-        });
+        btn.addEventListener('click', (e) => { const gridPai = e.currentTarget.parentElement; gridPai.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('selected')); e.currentTarget.classList.add('selected'); const modId = gridPai.id.split('-')[2]; const discId = gridPai.id.split('-')[1]; const v = e.currentTarget.getAttribute('data-val'); notaSelecionadaTemporaria[modId] = v; document.getElementById(`rep-reason-box-${discId}-${modId}`).style.display = v === "REP" ? "block" : "none"; });
     });
     listaModulosUI.querySelectorAll('.btn-gravar-nota').forEach(b => b.addEventListener('click', async (e) => {
         const d = e.currentTarget.getAttribute('data-disc'); const m = e.currentTarget.getAttribute('data-mod'); const v = notaSelecionadaTemporaria[m];
@@ -551,13 +566,13 @@ document.getElementById('btn-cancelar-ee')?.addEventListener('click', () => { do
 document.getElementById('btn-guardar-aluno')?.addEventListener('click', async (e) => { const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; try { await updateDoc(doc(db, "utilizadores", alunoAtualId), { idade: document.getElementById('info-aluno-idade').value, telAluno: document.getElementById('info-aluno-telemovel').value, emailAluno: document.getElementById('info-aluno-email').value, morada: document.getElementById('info-aluno-morada').value }); carregarInfoLeitura(); document.getElementById('info-aluno-display').style.display='block'; document.getElementById('info-aluno-edit').style.display='none'; } catch(err) {} btnRef.innerText = "Guardar"; });
 document.getElementById('btn-guardar-ee')?.addEventListener('click', async (e) => { const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; try { await updateDoc(doc(db, "utilizadores", alunoAtualId), { nomeEE: document.getElementById('info-ee-nome').value, filiacaoEE: document.getElementById('info-ee-filiacao').value, telEE: document.getElementById('info-ee-telemovel').value, emailEE: document.getElementById('info-ee-email').value }); carregarInfoLeitura(); document.getElementById('info-ee-display').style.display='block'; document.getElementById('info-ee-edit').style.display='none'; } catch(err) {} btnRef.innerText = "Guardar"; });
 
-// PRHF (MANTIDO COMPLETO)
+// PRHF
 const selDisc = document.getElementById('prhf-disciplina'); const selMod = document.getElementById('prhf-modulo');
 let optDisc = '<option value="">Disc.</option>'; for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) optDisc += `<option value="${d}">${d}</option>`; } selDisc.innerHTML = optDisc;
 const optDiscFilter = '<option value="">Todas as Disciplinas</option>' + optDisc; document.getElementById('filtro-prhf-disc').innerHTML = optDiscFilter;
 
 selDisc.addEventListener('change', (e) => { const d = e.target.value; let modsObj = {}; for(const comp of Object.values(matrizCurso)) { if(comp[d]) modsObj = comp[d]; } let optMod = '<option value="">Mod.</option>'; Object.keys(modsObj).forEach(m => optMod += `<option value="${m}">${m}</option>`); selMod.innerHTML = optMod; });
-document.getElementById('prhf-file-upload')?.addEventListener('change', (e) => { const file = e.target.files[0]; if(!file) return; if(file.size > 1048576) { alert("Ficheiro demasiado grande! (Limite 1MB para testes)"); return; } pdfNomeTemporario = file.name; document.getElementById('prhf-file-name').innerText = pdfNomeTemporario; const reader = new FileReader(); reader.onload = (ev) => { pdfBase64Temporario = ev.target.result; }; reader.readAsDataURL(file); });
+document.getElementById('prhf-file-upload')?.addEventListener('change', (e) => { const file = e.target.files[0]; if(!file) return; if(file.size > 1048576) { alert("Ficheiro demasiado grande!"); return; } pdfNomeTemporario = file.name; document.getElementById('prhf-file-name').innerText = pdfNomeTemporario; const reader = new FileReader(); reader.onload = (ev) => { pdfBase64Temporario = ev.target.result; }; reader.readAsDataURL(file); });
 
 let tabAtivaPrhf = 'ativas'; const modalFolha = document.getElementById('modal-prhf-sheet');
 
@@ -667,7 +682,7 @@ document.getElementById('sheet-btn-reverter')?.addEventListener('click', async (
 });
 
 
-// MOTOR DE FALTAS (MANTIDO COMPLETO)
+// FALTAS ADMIN (MANTIDO COMPLETO)
 let optFaltasDiscOptionsOnly = ""; let faltasMemoria = [];
 for(const comp of Object.values(matrizCurso)) { for(const d of Object.keys(comp)) optFaltasDiscOptionsOnly += `<option value="${d}">${d}</option>`; }
 
