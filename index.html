@@ -9,32 +9,48 @@
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Estilos exclusivos do ecrã de Login para ficar centrado e bonito */
-        body { justify-content: center; align-items: center; background: linear-gradient(135deg, var(--bg-dark) 0%, #1a1a1a 100%); }
-        .login-box { box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-top: 4px solid var(--primary-green); }
+        body { justify-content: center; align-items: center; background: linear-gradient(135deg, var(--bg-dark) 0%, #1a1a1a 100%); min-height: 100vh; display: flex; margin: 0; }
+        .login-box { 
+            background: var(--bg-card); padding: 40px 30px; border-radius: 16px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-top: 4px solid var(--primary-green);
+            width: 100%; max-width: 350px; text-align: center;
+        }
+        .biometric-btn {
+            background-color: transparent; border: 2px solid var(--primary-green); color: var(--primary-green);
+            width: 100%; padding: 12px; border-radius: 8px; font-size: 1rem; font-weight: bold;
+            cursor: pointer; margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 10px;
+            transition: all 0.3s; display: none; /* Escondido até o JS verificar se o telemóvel suporta */
+        }
+        .biometric-btn:hover { background-color: rgba(0, 204, 136, 0.1); }
+        .biometric-btn i { font-size: 1.4rem; }
     </style>
 </head>
 <body>
     <div class="login-box">
-        <div style="font-size: 3rem; color: var(--primary-green); margin-bottom: 10px;">
+        <div style="font-size: 3.5rem; color: var(--primary-green); margin-bottom: 10px;">
             <i class="fa-solid fa-graduation-cap"></i>
         </div>
-        <h2>Turma PRO</h2>
-        <p class="text-muted" style="margin-bottom: 20px; font-size: 0.9rem;">Plataforma de Gestão Escolar</p>
+        <h2 style="margin-bottom: 5px;">Turma PRO</h2>
+        <p class="text-muted" style="margin-bottom: 25px; font-size: 0.9rem;">Plataforma de Gestão Escolar</p>
         
-        <div class="input-group">
-            <input type="text" id="login-username" placeholder="Nº de Utilizador (ex: a1234)">
+        <div class="input-group" style="text-align: left;">
+            <input type="text" id="login-username" placeholder="Nº Utilizador (ex: a1234, d1000)" style="margin-bottom: 15px;">
             <input type="password" id="login-password" placeholder="Palavra-passe">
         </div>
         
-        <p id="login-error" class="error-msg" style="display: none;">Credenciais inválidas.</p>
+        <p id="login-error" class="error-msg" style="display: none; margin-bottom: 15px; color: var(--danger-red); font-size: 0.85rem; font-weight: bold;"></p>
         
-        <button id="btn-login-manual" class="primary-btn">
+        <button id="btn-login-manual" class="primary-btn" style="width: 100%; margin-top: 10px;">
             <i class="fa-solid fa-right-to-bracket"></i> Entrar
+        </button>
+
+        <!-- Botão de Impressão Digital / Face ID -->
+        <button id="btn-login-biometrico" class="biometric-btn">
+            <i class="fa-solid fa-fingerprint"></i> Entrar com Biometria
         </button>
     </div>
 
-    <!-- O Script que trata do Login está modularizado -->
+    <!-- O Script que trata do Login e Impressão Digital -->
     <script type="module" src="./js/auth.js"></script>
 </body>
 </html>
