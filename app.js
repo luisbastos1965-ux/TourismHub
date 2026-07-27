@@ -1,19 +1,8 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, addDoc, deleteDoc, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyAUU6riTOuybEamgkPke4UXJwyjMA0nJzU",
-  authDomain: "turmapro-e6358.firebaseapp.com",
-  projectId: "turmapro-e6358",
-  storageBucket: "turmapro-e6358.firebasestorage.app",
-  messagingSenderId: "242512169110",
-  appId: "1:242512169110:web:f94978c0c2a13858a41ab7"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// IMPORTAÇÃO MODULAR DA BASE DE DADOS E CÉREBRO DO ALUNO
+import { auth, db } from "./js/firebase.js";
+import { carregarDashboardAluno } from "./js/aluno.js";
+import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, addDoc, deleteDoc, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 window.addEventListener('beforeunload', (e) => { e.preventDefault(); e.returnValue = ''; });
 
@@ -45,7 +34,7 @@ function esconderTudoMenos(ecraAtivo) {
     if(ecraAtivo) ecraAtivo.style.display = 'block';
 }
 
-// 1. Autenticação e Gamificação Aluno
+// 1. Autenticação e Gamificação Aluno (Agora Modular!)
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         const userId = user.email.split('@')[0];
@@ -57,8 +46,8 @@ onAuthStateChanged(auth, async (user) => {
                 if(dados.papel === 'admin') { 
                     painelAdmin.style.display = 'block'; bottomNav.style.display = 'none'; esconderTudoMenos(null); 
                 } else { 
-                    document.getElementById('lms-welcome-name').innerText = `Olá, ${myUserName}!`; 
                     painelAdmin.style.display = 'none'; bottomNav.style.display = 'flex'; esconderTudoMenos(painelAluno); alunoAtualId = userId; 
+                    carregarDashboardAluno(userId, dados.turma, dados.nome);
                 }
                 loginScreen.style.display = 'none'; appContent.style.display = 'block'; 
             }
@@ -89,11 +78,14 @@ document.getElementById('btn-voltar-study')?.addEventListener('click', () => esc
 
 document.getElementById('btn-hub-calendario')?.addEventListener('click', () => { document.getElementById('title-cal-turma').innerText = `Calendário - ${turmaAtual}`; esconderTudoMenos(viewClassCalendario); carregarEventosCalendario(); });
 document.getElementById('btn-voltar-cal-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
+
 document.getElementById('btn-hub-horario')?.addEventListener('click', () => { document.getElementById('title-horario-turma').innerText = `Horário - ${turmaAtual}`; esconderTudoMenos(viewClassHorario); carregarHorario(); });
 document.getElementById('btn-voltar-horario-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
+
 document.getElementById('btn-hub-forum')?.addEventListener('click', () => { document.getElementById('title-forum-turma').innerText = `Fóruns - ${turmaAtual}`; esconderTudoMenos(viewClassForum); carregarForuns(); });
 document.getElementById('btn-voltar-forum-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
 document.getElementById('btn-voltar-canais')?.addEventListener('click', () => { document.getElementById('forum-chat-view').style.display = 'none'; document.getElementById('forum-channel-list').style.display = 'block'; });
+
 document.getElementById('btn-hub-estatisticas')?.addEventListener('click', () => { document.getElementById('title-stats-turma').innerText = `Estatísticas - ${turmaAtual}`; esconderTudoMenos(viewClassEstatisticas); calcularEstatisticasTurma(); });
 document.getElementById('btn-voltar-stats-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
 
@@ -435,7 +427,12 @@ async function carregarForuns() {
             const fData = JSON.parse(e.currentTarget.getAttribute('data-json'));
             forumAtivoId = e.currentTarget.getAttribute('data-id');
             document.getElementById('chat-active-title').innerText = fData.nome;
-            document.getElementById('mif-nome').innerText = fData.nome; document.getElementById('mif-tipo').innerText = fData.tipo.toUpperCase() + (fData.expiraEm ? ` (até ${fData.expiraEm})` : ''); document.getElementById('mif-membros').innerText = fData.membros.length + " aluno(s)";
+            
+            // Gravar infos no Modal
+            document.getElementById('mif-nome').innerText = fData.nome;
+            document.getElementById('mif-tipo').innerText = fData.tipo.toUpperCase() + (fData.expiraEm ? ` (até ${fData.expiraEm})` : '');
+            document.getElementById('mif-membros').innerText = fData.membros.length + " aluno(s)";
+            
             document.getElementById('forum-channel-list').style.display = 'none'; document.getElementById('forum-chat-view').style.display = 'flex';
             iniciarChat(forumAtivoId);
         }));
@@ -444,6 +441,7 @@ async function carregarForuns() {
 
 document.getElementById('btn-info-canal')?.addEventListener('click', () => document.getElementById('modal-info-forum').style.display = 'flex');
 
+// Chat Real-Time Simplificado
 let chatUnsubscribe = null;
 function iniciarChat(fId) {
     const chatContainer = document.getElementById('chat-messages-container'); chatContainer.innerHTML = '';
@@ -500,7 +498,7 @@ async function abrirModulosDisciplinaAvaliacao(disciplina) {
     modulosArray.forEach(mod => {
         const nEx = notasMapa[mod] !== undefined ? notasMapa[mod] : "SN"; let classeBadge = ""; if(nEx === "SN") classeBadge = "sn"; else if(nEx === "REP") classeBadge = "rep";
         const txtMotivo = (nEx === "REP" && notasMapa[mod+"_motivo"]) ? `<div style="font-size:0.8rem; color:var(--text-muted); margin-top:5px;"><i>Motivo: ${notasMapa[mod+"_motivo"]}</i></div>` : "";
-        html += `<div class="modulo-avaliar-item" style="display:flex; flex-direction:column;"><div class="mod-view" id="view-${disciplina}-${mod}" style="display:flex; justify-content:space-between; width:100%; align-items:center;"><div><strong>${mod}</strong>${txtMotivo}</div><div style="display:flex; align-items:center; gap:15px;"><span class="nota-badge ${classeBadge}" id="badge-${disciplina}-${mod}">${nEx}</span><button class="secondary-btn small-btn btn-abrir-edicao-nota" data-mod="${mod}"><i class="fa-solid fa-pen"></i></button></div></div><div class="mod-edit" id="edit-${disciplina}-${mod}" style="display:none; flex-direction:column; width:100%;"><div class="grade-grid" id="grid-${disciplina}-${mod}">${gridBtns}</div><div id="rep-reason-box-${disciplina}-${mod}" style="display:none; width:100%; margin-bottom:10px;"><input type="text" id="input-reason-${disciplina}-${mod}" placeholder="Motivo do REP" style="margin:0; padding:8px; font-size:0.9rem;"></div><div style="display:flex; gap:10px;"><button class="primary-btn small-btn btn-gravar-nota" data-disc="${disciplina}" data-mod="${mod}" style="flex:1;">OK (Gravar)</button><button class="secondary-btn small-btn btn-fechar-edicao-nota" data-mod="${mod}" style="flex:1;">Cancelar</button></div></div></div>`;
+        html += `<div class="modulo-avaliar-item" style="display:flex; flex-direction:column;"><div class="mod-view" id="view-${disciplina}-${mod}" style="display:flex; justify-content:space-between; width:100%; align-items:center;"><div><strong>${mod}</strong>${txtMotivo}</div><div style="display:flex; align-items:center; gap:15px;"><span class="nota-badge ${classeBadge}" id="badge-${disciplina}-${mod}">${nEx}</span><button class="secondary-btn small-btn btn-abrir-edicao-nota" data-mod="${mod}"><i class="fa-solid fa-pen"></i></button></div></div><div class="mod-edit" id="edit-${disciplina}-${mod}" style="display:none; flex-direction:column; width:100%;"><div class="grade-grid" id="grid-${disciplina}-${mod}">${gridBtns}</div><div id="rep-reason-box-${disciplina}-${mod}" style="display:none; width:100%; margin-bottom:10px;"><input type="text" id="input-reason-${disciplina}-${mod}" placeholder="Motivo do REP (Opc. Ex: Falta de Teste)" style="margin:0; padding:8px; font-size:0.9rem;"></div><div style="display:flex; gap:10px;"><button class="primary-btn small-btn btn-gravar-nota" data-disc="${disciplina}" data-mod="${mod}" style="flex:1;">OK (Gravar)</button><button class="secondary-btn small-btn btn-fechar-edicao-nota" data-mod="${mod}" style="flex:1;">Cancelar</button></div></div></div>`;
     });
     listaModulosUI.innerHTML = html;
     listaModulosUI.querySelectorAll('.btn-abrir-edicao-nota').forEach(b => b.addEventListener('click', (e) => { const m=e.currentTarget.getAttribute('data-mod'); document.getElementById(`view-${disciplina}-${m}`).style.display='none'; document.getElementById(`edit-${disciplina}-${m}`).style.display='flex'; }));
