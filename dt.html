@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Turma PRO - Direção de Turma</title>
+    <link rel="icon" type="image/png" href="logo_tur.png">
+    
+    <!-- CSS Modular -->
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/dt.css">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="app-content">
+        <!-- CABEÇALHO DO STAFF -->
+        <header id="header-staff" class="app-header">
+            <div class="logo"><i class="fa-solid fa-graduation-cap"></i> Turma PRO</div>
+            <div class="user-profile">
+                <span id="header-user-name-staff">A carregar...</span>
+                <button id="btn-logout-staff" class="logout-btn" style="margin-left: 15px;" title="Sair"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
+            </div>
+        </header>
+
+        <main class="app-content">
+            <!-- HUB PRINCIPAL DA TURMA DO DT -->
+            <div id="class-hub-view">
+                <div class="class-header"><h2 id="class-hub-title" class="section-title">A Minha Turma</h2></div>
+                <div class="admin-hub-grid">
+                    <button class="hub-card" id="btn-hub-alunos"><i class="fa-solid fa-users-viewfinder"></i><span>Alunos e Notas</span></button>
+                    <button class="hub-card" id="btn-hub-calendario"><i class="fa-regular fa-calendar-days"></i><span>Calendário (Testes)</span></button>
+                    <button class="hub-card" id="btn-hub-horario"><i class="fa-solid fa-clock"></i><span>Gerir Horário</span></button>
+                    <button class="hub-card" id="btn-hub-forum"><i class="fa-regular fa-comments"></i><span>Fórum e Alertas</span></button>
+                    <button class="hub-card" id="btn-hub-estatisticas"><i class="fa-solid fa-chart-line"></i><span>Estatísticas Reais</span></button>
+                </div>
+            </div>
+
+            <!-- VISTA DE ALUNOS -->
+            <div id="class-view" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-class-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button><h2 class="section-title">Lista de Alunos</h2></div>
+                <div class="students-list-container"><p class="text-muted">A carregar...</p></div>
+            </div>
+
+            <!-- PERFIL DO ALUNO (Onde o DT atua) -->
+            <div id="student-detail-view" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-lista" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
+                <div class="student-profile-header">
+                    <div class="profile-avatar"><i class="fa-solid fa-user" id="avatar-icon"></i></div>
+                    <h2 id="detail-student-name">Nome</h2><p id="detail-student-number" class="text-muted">a0000</p>
+                </div>
+                <div class="admin-hub-grid" style="margin-top:20px;">
+                    <button class="hub-card" id="btn-hub-informacoes"><i class="fa-solid fa-address-card"></i><span>Contactos / EE</span></button>
+                    <button class="hub-card" id="btn-hub-avaliacoes"><i class="fa-solid fa-star"></i><span>Lançar Avaliações</span></button>
+                    <button class="hub-card" id="btn-hub-faltas"><i class="fa-solid fa-user-clock"></i><span>Gerir Faltas</span></button>
+                    <button class="hub-card" id="btn-hub-prhf"><i class="fa-solid fa-file-medical"></i><span>Criar PRHFs</span></button>
+                </div>
+            </div>
+
+            <!-- O Resto do Código do Admin (Faltas, Horários, Estatísticas) que já tinhas limpo e afinado entra aqui! -->
+            <!-- ... -->
+        </main>
+    </div>
+    <script type="module" src="./js/dt-app.js"></script>
+</body>
+</html>
