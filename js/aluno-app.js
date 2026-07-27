@@ -206,3 +206,250 @@ function resetPomodoro() {
     document.getElementById('btn-stop-study').style.display = 'none';
     document.getElementById('btn-start-study').style.display = 'inline-block';
 }
+
+// ==========================================
+// 5. CADERNETA DO ALUNO (Notas, Faltas, PRHFs)
+// ==========================================
+const tabNotas = document.getElementById('tab-aluno-notas');
+const tabFaltas = document.getElementById('tab-aluno-faltas');
+const tabPrhfs = document.getElementById('tab-aluno-prhfs');
+const cadernetaContent = document.getElementById('aluno-caderneta-content');
+
+tabNotas?.addEventListener('click', (e) => { ativarTab(e.currentTarget, ['tab-aluno-faltas', 'tab-aluno-prhfs']); carregarNotasAluno(); });
+tabFaltas?.addEventListener('click', (e) => { ativarTab(e.currentTarget, ['tab-aluno-notas', 'tab-aluno-prhfs']); carregarFaltasAluno(); });
+tabPrhfs?.addEventListener('click', (e) => { ativarTab(e.currentTarget, ['tab-aluno-notas', 'tab-aluno-faltas']); carregarPrhfsAluno(); });
+
+// Carrega as Notas ao clicar na Caderneta no menu inferior
+document.querySelector('.nav-item[data-target="view-aluno-caderneta"]')?.addEventListener('click', () => {
+    ativarTab(tabNotas, ['tab-aluno-faltas', 'tab-aluno-prhfs']);
+    carregarNotasAluno();
+});
+
+function ativarTab(tabAtiva, tabsInativasIds) {
+    if(!tabAtiva) return;
+    tabAtiva.classList.add('active');
+    tabsInativasIds.forEach(id => document.getElementById(id)?.classList.remove('active'));
+    cadernetaContent.innerHTML = '<p class="text-muted" style="text-align:center;">A carregar...</p>';
+}
+
+async function carregarNotasAluno() {
+    try {
+        const notasDb = await getDocs(collection(db, "utilizadores", myUserId, "notas"));
+        if(notasDb.empty) { cadernetaContent.innerHTML = '<p class="text-muted" style="text-align:center;">Ainda não tens notas lançadas.</p>'; return; }
+        
+        let html = '<div class="stats-grid" style="grid-template-columns: 1fr;">';
+        notasDb.forEach(d => {
+            const nota = d.data();
+            const cor = (nota.nota === 'REP' || Number(nota.nota) < 10) ? 'var(--danger-red)' : 'var(--success-green)';
+            html += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; border-left: 4px solid ${cor};">
+                        <div><strong>${nota.disciplina}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">Módulo ${nota.modulo}</span></div>
+                        <div style="font-size:1.4rem; font-weight:bold; color:${cor};">${nota.nota}</div>
+                     </div>`;
+        });
+        cadernetaContent.innerHTML = html + '</div>';
+    } catch(e) { cadernetaContent.innerHTML = '<p class="text-danger center">Erro ao ler notas.</p>'; }
+}
+
+async function carregarFaltasAluno() {
+    try {
+        const faltasDb = await getDocs(collection(db, "utilizadores", myUserId, "faltas"));
+        if(faltasDb.empty) { cadernetaContent.innerHTML = '<div style="text-align:center; padding:30px;"><i class="fa-solid fa-check-circle" style="font-size:3rem; color:var(--success-green); margin-bottom:15px;"></i><p class="text-muted">Parabéns! Não tens faltas registadas.</p></div>'; return; }
+        
+        let html = '';
+        let faltasArr = [];
+        faltasDb.forEach(d => { faltasArr.push(d.data()); });
+        faltasArr.sort((a,b) => b.dataInicio.localeCompare(a.dataInicio)); // Mais recentes primeiro
+
+        faltasArr.forEach(f => {
+            const statusColor = f.justificada ? 'var(--success-green)' : 'var(--danger-red)';
+            const statusTxt = f.justificada ? 'Justificada' : (f.comprovativoEnviado ? 'Em Análise (DT)' : 'Injustificada');
+            html += `<div class="card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                        <div><strong>${f.disciplina}</strong> (${f.horas}h)<br><span style="font-size:0.8rem; color:var(--text-muted);">${f.dataInicio}</span></div>
+                        <span style="font-size:0.8rem; font-weight:bold; color:${statusColor}; padding:5px 10px; background:rgba(255,255,255,0.05); border-radius:12px;">${statusTxt}</span>
+                     </div>`;
+        });
+        cadernetaContent.innerHTML = html;
+    } catch(e) { cadernetaContent.innerHTML = '<p class="text-danger center">Erro ao ler faltas.</p>'; }
+}
+
+async function carregarPrhfsAluno() {
+    try {
+        const prhfsDb = await getDocs(collection(db, "utilizadores", myUserId, "prhfs"));
+        if(prhfsDb.empty) { cadernetaContent.innerHTML = '<p class="text-muted" style="text-align:center;">Não tens Planos de Recuperação (PRHF) atribuídos.</p>'; return; }
+        
+        let html = '';
+        prhfsDb.forEach(d => {
+            const p = d.data();
+            const cor = p.status === 'concluida' ? 'var(--success-green)' : 'var(--warning-yellow)';
+            html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${cor};">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                            <strong>${p.disciplina} (Mod. ${p.modulo})</strong>
+                            <span style="color:${cor}; font-size:0.85rem; font-weight:bold;">${p.status.toUpperCase()}</span>
+                        </div>
+                        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">${p.descricao}</p>
+                        <div style="font-size:0.8rem;">Data Limite: <strong>${p.prazo}</strong> | Presenciais: <strong>${p.horasPresenciais}h</strong></div>
+                     </div>`;
+        });
+        cadernetaContent.innerHTML = html;
+    } catch(e) { cadernetaContent.innerHTML = '<p class="text-danger center">Erro ao ler PRHFs.</p>'; }
+}
+
+// ==========================================
+// 6. AGENDA E HORÁRIO DO ALUNO
+// ==========================================
+let minhaTurma = ""; // Para podermos ir buscar a agenda da turma certa
+
+document.querySelector('.nav-item[data-target="view-aluno-agenda"]')?.addEventListener('click', async () => {
+    document.getElementById('tab-aluno-eventos').classList.add('active');
+    document.getElementById('tab-aluno-horario').classList.remove('active');
+    
+    // Descobrir a turma do aluno se ainda não soubermos
+    if(!minhaTurma) {
+        const docSnap = await getDoc(doc(db, "utilizadores", myUserId));
+        if(docSnap.exists()) minhaTurma = docSnap.data().turma;
+    }
+    carregarAgendaAluno();
+});
+
+document.getElementById('tab-aluno-eventos')?.addEventListener('click', (e) => {
+    e.currentTarget.classList.add('active');
+    document.getElementById('tab-aluno-horario').classList.remove('active');
+    carregarAgendaAluno();
+});
+
+document.getElementById('tab-aluno-horario')?.addEventListener('click', (e) => {
+    e.currentTarget.classList.add('active');
+    document.getElementById('tab-aluno-eventos').classList.remove('active');
+    carregarHorarioAluno();
+});
+
+async function carregarAgendaAluno() {
+    const container = document.getElementById('aluno-agenda-content');
+    container.innerHTML = '<p class="text-muted center">A carregar calendário...</p>';
+    if(!minhaTurma) return;
+
+    try {
+        const evDb = await getDocs(collection(db, "turmas", minhaTurma, "eventos"));
+        if(evDb.empty) { container.innerHTML = '<p class="text-muted center">Sem eventos agendados.</p>'; return; }
+        
+        let html = '';
+        let evArr = [];
+        evDb.forEach(d => evArr.push(d.data()));
+        
+        // Mostrar apenas eventos futuros ou de hoje
+        const hoje = new Date().toISOString().split('T')[0];
+        const futuros = evArr.filter(e => e.data >= hoje).sort((a,b) => a.data.localeCompare(b.data));
+        
+        if(futuros.length === 0) { container.innerHTML = '<p class="text-muted center">Sem eventos futuros.</p>'; return; }
+
+        futuros.forEach(ev => {
+            html += `<div class="card" style="margin-bottom:10px; display:flex; gap:15px; align-items:center;">
+                        <div style="background:var(--bg-dark); padding:10px; border-radius:8px; text-align:center; min-width:60px;">
+                            <div style="color:var(--primary-green); font-weight:bold; font-size:1.2rem;">${ev.data.split('-')[2]}</div>
+                            <div style="font-size:0.75rem; text-transform:uppercase;">${ev.data.split('-')[1]}</div>
+                        </div>
+                        <div>
+                            <h4 style="margin:0; font-size:1rem;">${ev.titulo}</h4>
+                            <span style="font-size:0.85rem; color:var(--text-muted);"><i class="fa-regular fa-clock"></i> ${ev.hora} | ${ev.tipo.toUpperCase()}</span>
+                        </div>
+                     </div>`;
+        });
+        container.innerHTML = html;
+        
+        // Atualiza também o widget principal do ecrã inicial
+        if(futuros.length > 0) {
+            document.getElementById('aluno-proximo-evento').innerText = futuros[0].data.split('-').reverse().join('/') + ' - ' + futuros[0].titulo;
+        } else {
+            document.getElementById('aluno-proximo-evento').innerText = "Livre!";
+        }
+        
+    } catch(e) { container.innerHTML = '<p class="text-danger center">Erro.</p>'; }
+}
+
+async function carregarHorarioAluno() {
+    const container = document.getElementById('aluno-agenda-content');
+    container.innerHTML = '<p class="text-muted center">Esta funcionalidade espelhará o horário inserido pelo DT.</p>';
+}
+
+// ==========================================
+// 7. FÓRUM DA TURMA (ALUNO)
+// ==========================================
+let chatUnsubscribeAluno = null;
+let alunoForumAtivoId = null;
+
+document.querySelector('.nav-item[data-target="view-aluno-forum"]')?.addEventListener('click', async () => {
+    const container = document.getElementById('aluno-forum-channel-list');
+    container.innerHTML = '<p class="text-muted center">A carregar fóruns...</p>';
+    if(!minhaTurma) {
+        const docSnap = await getDoc(doc(db, "utilizadores", myUserId));
+        if(docSnap.exists()) minhaTurma = docSnap.data().turma;
+    }
+    
+    try {
+        const res = await getDocs(collection(db, "turmas", minhaTurma, "foruns"));
+        let html = '';
+        res.forEach(docSnap => {
+            const f = docSnap.data();
+            // Mostrar fórum apenas se o aluno for membro
+            if(f.membros.includes(myUserId)) {
+                const icon = f.tipo === 'permanente' ? 'fa-comments' : 'fa-stopwatch';
+                html += `<div class="canal-card" data-id="${docSnap.id}" data-nome="${f.nome}">
+                            <div class="canal-icon"><i class="fa-solid ${icon}"></i></div>
+                            <div class="canal-info"><h4>${f.nome}</h4></div>
+                         </div>`;
+            }
+        });
+        if(html === '') { container.innerHTML = '<p class="text-muted center">Não estás inserido em nenhum canal.</p>'; return; }
+        
+        container.innerHTML = html;
+        container.querySelectorAll('.canal-card').forEach(card => card.addEventListener('click', (e) => {
+            alunoForumAtivoId = e.currentTarget.getAttribute('data-id');
+            document.getElementById('aluno-chat-active-title').innerText = e.currentTarget.getAttribute('data-nome');
+            document.getElementById('aluno-forum-channel-list').style.display = 'none';
+            document.getElementById('aluno-forum-chat-view').style.display = 'flex';
+            iniciarChatAluno(alunoForumAtivoId);
+        }));
+    } catch(e) {}
+});
+
+document.getElementById('btn-aluno-voltar-canais')?.addEventListener('click', () => {
+    document.getElementById('aluno-forum-chat-view').style.display = 'none';
+    document.getElementById('aluno-forum-channel-list').style.display = 'block';
+});
+
+function iniciarChatAluno(fId) {
+    const chatContainer = document.getElementById('aluno-chat-messages-container');
+    chatContainer.innerHTML = '';
+    if(chatUnsubscribeAluno) chatUnsubscribeAluno();
+    
+    chatUnsubscribeAluno = onSnapshot(query(collection(db, "turmas", minhaTurma, "foruns", fId, "mensagens"), orderBy("timestamp")), (snapshot) => {
+        let html = '';
+        snapshot.forEach(doc => {
+            const msg = doc.data();
+            const isMe = msg.remetente === myUserName;
+            const classe = isMe ? 'admin' : 'student'; // 'admin' alinha à direita no nosso CSS
+            html += `<div class="chat-bubble ${classe}">
+                        <strong>${isMe ? 'Tu' : msg.remetente}</strong><br>
+                        ${msg.texto}
+                        <span class="chat-meta">${new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                     </div>`;
+        });
+        chatContainer.innerHTML = html;
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    });
+}
+
+document.getElementById('btn-aluno-send-msg')?.addEventListener('click', async () => {
+    const inp = document.getElementById('aluno-input-forum-msg');
+    const txt = inp.value.trim();
+    if(!txt || !alunoForumAtivoId) return;
+    
+    try {
+        await addDoc(collection(db, "turmas", minhaTurma, "foruns", alunoForumAtivoId, "mensagens"), {
+            remetente: myUserName,
+            texto: txt,
+            timestamp: Date.now()
+        });
+        inp.value = '';
+    } catch(e) {}
+});
