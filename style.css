@@ -267,3 +267,14 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--bg-card); display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #333; }
 .nav-item { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: var(--text-muted); font-size: 0.75rem; gap: 5px; }
 .nav-item.active { color: var(--primary-green); }
+
+/* =========================================
+   DASHBOARD DO ALUNO (RESUMO DO DIA)
+========================================= */
+.student-alerts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+.alert-card { background: var(--bg-card); border: 1px solid #333; border-radius: 12px; padding: 15px; display: flex; align-items: center; gap: 15px; transition: 0.2s; cursor: default; }
+.alert-card:hover { border-color: var(--primary-green); transform: translateY(-2px); }
+.alert-icon { width: 45px; height: 45px; border-radius: 10px; background: rgba(0, 204, 136, 0.1); color: var(--primary-green); display: flex; justify-content: center; align-items: center; font-size: 1.3rem; flex-shrink: 0; }
+.alert-info { display: flex; flex-direction: column; }
+.alert-info h4 { font-size: 1.05rem; color: white; margin-bottom: 2px; }
+.alert-info span { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: bold; }
