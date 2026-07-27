@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Turma PRO - Portal do Professor</title>
+    <link rel="icon" type="image/png" href="logo_tur.png">
+    
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="app-content">
+        <!-- CABEÇALHO DO PROFESSOR -->
+        <header id="header-staff" class="app-header">
+            <div class="logo"><i class="fa-solid fa-graduation-cap"></i> Turma PRO <span style="font-size: 0.7rem; color: var(--primary-green);">| Docente</span></div>
+            <div class="user-profile">
+                <span id="header-user-name-staff">A carregar...</span>
+                <button id="btn-logout-staff" class="logout-btn" style="margin-left: 15px;" title="Sair"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
+            </div>
+        </header>
+
+        <main class="app-content">
+            <!-- DASHBOARD: AS TURMAS DO PROFESSOR -->
+            <div id="prof-dashboard">
+                <div class="dashboard-header"><h2>Lecionar Turmas</h2></div>
+                <p class="text-muted" style="margin-bottom: 20px;">Selecione a turma onde vai dar aula:</p>
+                <div class="turmas-grid-large" id="prof-turmas-list">
+                    <!-- Gerado dinamicamente no JS -->
+                    <button class="turma-card-large" data-turma="10T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>10T</h3></div></button>
+                    <button class="turma-card-large" data-turma="11T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>11T</h3></div></button>
+                    <button class="turma-card-large" data-turma="12T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>12T</h3></div></button>
+                </div>
+            </div>
+
+            <!-- HUB DA TURMA PARA O PROFESSOR -->
+            <div id="prof-hub-view" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-turmas-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turmas</button><h2 id="prof-hub-title" class="section-title">Turma X</h2></div>
+                
+                <div class="admin-hub-grid">
+                    <button class="hub-card" id="btn-prof-faltas"><i class="fa-solid fa-user-check"></i><span>Sumário e Faltas</span></button>
+                    <button class="hub-card" id="btn-prof-avaliacoes"><i class="fa-solid fa-star"></i><span>Lançar Avaliações</span></button>
+                    <button class="hub-card" id="btn-prof-prhf"><i class="fa-solid fa-file-medical"></i><span>Planos PRHF</span></button>
+                    <button class="hub-card" id="btn-prof-forum"><i class="fa-regular fa-comments"></i><span>Fórum da Turma</span></button>
+                </div>
+            </div>
+
+            <!-- LISTA DE ALUNOS (Usada para Faltas e Notas) -->
+            <div id="prof-lista-alunos-view" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-prof-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button><h2 id="prof-action-title" class="section-title">Ação</h2></div>
+                
+                <!-- Barra de Ferramentas (Dinâmica: Faltas vs Notas) -->
+                <div id="prof-toolbar" class="card" style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
+                    <select id="prof-select-disc" style="margin:0; flex:1;"><option value="">A sua Disciplina...</option></select>
+                    <select id="prof-select-mod" style="margin:0; flex:1;"><option value="">Módulo...</option></select>
+                    
+                    <!-- Específico para Faltas -->
+                    <div id="prof-faltas-tools" style="display: none; align-items: center; gap: 10px;">
+                        <input type="number" id="prof-faltas-horas" value="1" min="1" max="8" style="margin:0; width: 60px; text-align: center;" title="Horas de Falta">
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="styled-table">
+                        <thead>
+                            <tr>
+                                <th>Aluno</th>
+                                <th class="center" id="th-action-col">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="prof-lista-tabela">
+                            <tr><td colspan="2" class="text-muted center">A carregar alunos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- (O Fórum e os PRHFs do Professor reutilizam os ecrãs já habituais, mas simplificados) -->
+        </main>
+    </div>
+
+    <script type="module" src="./js/prof-app.js"></script>
+</body>
+</html>
