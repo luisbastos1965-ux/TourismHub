@@ -6,10 +6,8 @@
     <title>Turma PRO - Portal dos Pais</title>
     <link rel="icon" type="image/png" href="logo_tur.png">
     
-    <!-- CSS Modular -->
-    <link rel="stylesheet" href="css/global.css">
-    <link rel="stylesheet" href="css/ee.css">
-    
+    <!-- LIGAÇÃO AO CSS ORIGINAL -->
+    <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -26,7 +24,7 @@
             <div id="ee-dashboard">
                 <div class="student-welcome-header">
                     <h2 id="ee-welcome-name">Bem-vindo(a)!</h2>
-                    <p>Resumo letivo do seu educando: <strong id="ee-nome-aluno" style="color:white;">A carregar...</strong></p>
+                    <p>Resumo letivo do educando: <strong id="ee-nome-aluno" style="color:white;">A carregar...</strong></p>
                 </div>
 
                 <div class="student-alerts-grid">
@@ -36,7 +34,7 @@
                     </div>
                     <div class="alert-card" style="background: rgba(255, 77, 77, 0.05); border-color: var(--danger-red);">
                         <div class="alert-icon" style="color: var(--danger-red);"><i class="fa-solid fa-user-clock"></i></div>
-                        <div class="alert-info"><h4 id="ee-faltas-aluno">--</h4><span>Faltas (Horas)</span></div>
+                        <div class="alert-info"><h4 id="ee-faltas-aluno">--</h4><span>Faltas Injustificadas (h)</span></div>
                     </div>
                 </div>
 
@@ -46,7 +44,7 @@
                         <i class="fa-solid fa-file-signature"></i><span>Justificar Faltas</span>
                     </button>
                     <button class="lms-btn" id="btn-ee-caderneta">
-                        <i class="fa-solid fa-book-open"></i><span>Ver Avaliações</span>
+                        <i class="fa-solid fa-book-open"></i><span>Ver Caderneta</span>
                     </button>
                     <button class="lms-btn" id="btn-ee-mensagens" style="border-color:var(--warning-yellow); color:var(--warning-yellow);">
                         <i class="fa-solid fa-envelope"></i><span>Falar com o DT</span>
@@ -55,6 +53,41 @@
             </div>
         </main>
     </div>
+
+    <!-- MODAL: JUSTIFICAR FALTAS -->
+    <div id="modal-ee-justificar" class="modal-overlay">
+        <div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto; max-height: 85vh; overflow-y:auto;">
+            <h3 style="color:#0099ff; font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-file-signature"></i> Justificar Faltas</h3>
+            <p class="text-muted" style="font-size:0.85rem; margin-bottom:15px;">Selecione a falta e anexe o comprovativo médico ou declaração.</p>
+            
+            <div id="ee-lista-faltas-injustificadas" style="margin-bottom: 20px;">
+                <p class="text-muted center">A procurar faltas...</p>
+            </div>
+
+            <!-- Formulário de Anexo (Oculto até selecionar uma falta) -->
+            <div id="ee-form-anexo" style="display: none; background: var(--bg-dark); padding: 15px; border-radius: 8px; border: 1px dashed #0099ff;">
+                <p style="font-size: 0.9rem; margin-bottom: 10px;">A justificar: <strong id="ee-falta-selecionada-txt">...</strong></p>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label for="ee-upload-atestado" class="secondary-btn small-btn" style="margin:0; border-color:#0099ff; color:#0099ff;"><i class="fa-solid fa-camera"></i> Anexar Foto / PDF</label>
+                    <input type="file" id="ee-upload-atestado" style="display:none;" accept="image/*,.pdf">
+                </div>
+                <span id="ee-atestado-nome" class="file-name-display" style="display:block; margin-top:10px; font-size:0.8rem;"></span>
+                <button id="btn-ee-enviar-justificacao" class="primary-btn" style="margin-top: 15px; width: 100%; background-color:#0099ff;"><i class="fa-solid fa-paper-plane"></i> Enviar para o DT</button>
+            </div>
+
+            <button class="danger-btn btn-fechar-modal" style="margin-top:20px; width:100%;">Fechar</button>
+        </div>
+    </div>
+
+    <!-- MODAL: VER CADERNETA (Read-Only) -->
+    <div id="modal-ee-caderneta" class="modal-overlay">
+        <div class="paper-sheet" style="max-width: 600px; width: 95%; max-height: 85vh; overflow-y: auto;">
+            <button class="btn-close-paper btn-fechar-modal"><i class="fa-solid fa-xmark"></i></button>
+            <h2 style="text-align:center; margin-bottom: 20px; color: var(--primary-green);"><i class="fa-solid fa-book-open"></i> Caderneta do Aluno</h2>
+            <div id="ee-caderneta-content"><p class="text-muted" style="text-align:center;">A compilar notas...</p></div>
+        </div>
+    </div>
+
     <script type="module" src="./js/ee-app.js"></script>
 </body>
 </html>
