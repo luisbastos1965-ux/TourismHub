@@ -20,41 +20,63 @@
     </div>
 
     <div id="app-content" style="display: none;">
+        <!-- NOVO CABEÇALHO COM O PASSAPORTE ESCOLAR -->
         <header class="app-header">
             <div class="logo"><i class="fa-solid fa-graduation-cap"></i> Turma PRO</div>
-            <div class="user-profile"><span id="header-user-name">A carregar...</span><button id="btn-logout" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i> Sair</button></div>
+            
+            <div style="display:flex; align-items:center;">
+                <!-- Botão do Passaporte Escolar -->
+                <button id="btn-abrir-passaporte" class="header-passaporte-btn">
+                    <div class="header-user-info">
+                        <span id="header-user-name" class="header-user-name">A carregar...</span>
+                        <span id="header-user-tag" class="header-user-tag">Passaporte</span>
+                    </div>
+                    <div class="header-avatar" id="header-avatar-circle"><i class="fa-solid fa-user"></i></div>
+                </button>
+                <button id="btn-logout" class="logout-btn" style="margin-left: 15px;" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button>
+            </div>
         </header>
 
         <main class="app-content">
-            <!-- ALUNO -->
+            <!-- ========================================= -->
+            <!-- ALUNO: DASHBOARD INICIAL DINÂMICO         -->
+            <!-- ========================================= -->
             <div id="student-dashboard" style="display: none;">
-                <div class="student-welcome-header"><h2 id="lms-welcome-name">Olá, Aluno!</h2><p>Aqui está o teu resumo de hoje.</p></div>
+                
+                <!-- CHECK-IN EMOCIONAL -->
+                <div class="checkin-card" id="student-checkin-box">
+                    <h3>Como te sentes hoje?</h3>
+                    <div class="emoji-row">
+                        <button class="emoji-btn sad" data-val="triste">😔</button>
+                        <button class="emoji-btn neutral" data-val="neutro">😐</button>
+                        <button class="emoji-btn happy" data-val="feliz">😊</button>
+                    </div>
+                </div>
+
+                <!-- GAMIFICAÇÃO: CARTÃO XP -->
                 <div class="xp-card">
-                    <div class="xp-card-header"><div><div class="xp-title">O teu Nível</div><div class="xp-level">5 <span style="font-size:1rem; color:white; font-weight:normal;">/ Estudante Focado</span></div></div><div class="xp-points">1250 <span style="color:var(--text-muted); font-size:0.8rem;">XP</span></div></div>
+                    <div class="xp-card-header"><div><div class="xp-title">O teu Nível</div><div class="xp-level">5 <span style="font-size:1rem; color:white; font-weight:normal;">/ Aprendiz</span></div></div><div class="xp-points">1250 <span style="color:var(--text-muted); font-size:0.8rem;">XP</span></div></div>
                     <div class="xp-bar-bg"><div class="xp-bar-fill" style="width: 65%;"></div></div>
                 </div>
 
+                <!-- ACESSO RÁPIDO: POMODORO -->
+                <button class="pomodoro-btn-large" id="btn-open-study-mode"><i class="fa-solid fa-stopwatch"></i> Iniciar Foco (Pomodoro)</button>
+
+                <!-- ALERTAS: O MEU DIA -->
                 <h3 class="section-title" style="font-size:1.05rem; color:var(--primary-green);"><i class="fa-solid fa-bolt"></i> O Meu Dia</h3>
                 <div class="student-alerts-grid">
                     <div class="alert-card">
                         <div class="alert-icon"><i class="fa-solid fa-calendar-day"></i></div>
-                        <div class="alert-info"><h4 id="aluno-proximo-evento">A procurar...</h4><span>Próxima Avaliação</span></div>
+                        <div class="alert-info"><h4 id="aluno-proximo-evento">A procurar...</h4><span>Próximo Teste</span></div>
                     </div>
                     <div class="alert-card">
                         <div class="alert-icon" style="color: var(--danger-red); background: rgba(255, 77, 77, 0.1);"><i class="fa-solid fa-file-medical"></i></div>
                         <div class="alert-info"><h4 id="aluno-prhf-count">0</h4><span>PRHFs Ativos</span></div>
                     </div>
                 </div>
-
-                <h3 class="section-title" style="font-size:1.05rem; color:var(--primary-green); margin-top: 10px;"><i class="fa-solid fa-rocket"></i> Acesso Rápido</h3>
-                <div class="lms-action-grid">
-                    <button class="lms-btn study" id="btn-open-study-mode"><i class="fa-solid fa-stopwatch"></i><span>Foco (Pomodoro)</span></button>
-                    <button class="lms-btn forum"><i class="fa-regular fa-comments"></i><span>Fórum da Turma</span></button>
-                    <button class="lms-btn"><i class="fa-regular fa-calendar-check"></i><span>Calendário</span></button>
-                    <button class="lms-btn" id="btn-lms-meu-perfil" style="border-color:var(--primary-green); color:var(--primary-green);"><i class="fa-solid fa-user-astronaut"></i><span>A Minha Caderneta</span></button>
-                </div>
             </div>
 
+            <!-- MODO DE ESTUDO (POMODORO) -->
             <div id="view-study-mode" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-study" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button><h2 class="section-title">Modo de Estudo</h2></div>
                 <div class="study-mode-container">
@@ -64,7 +86,9 @@
                 </div>
             </div>
 
-            <!-- ADMIN -->
+            <!-- ========================================= -->
+            <!-- ADMIN: DASHBOARD E GESTÃO                 -->
+            <!-- ========================================= -->
             <div id="admin-dashboard" style="display: none;">
                 <div class="dashboard-header"><h2>As Minhas Turmas</h2></div>
                 <div class="turmas-grid-large">
@@ -75,6 +99,7 @@
                 </div>
             </div>
 
+            <!-- HUB DA TURMA (ADMIN) -->
             <div id="class-hub-view" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-turmas-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turmas</button><h2 id="class-hub-title" class="section-title">Turma X</h2></div>
                 <div class="admin-hub-grid">
@@ -86,7 +111,7 @@
                 </div>
             </div>
 
-            <!-- CALENDÁRIO -->
+            <!-- CALENDÁRIO GERAL -->
             <div id="view-class-calendario" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-cal-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-cal-turma">Calendário</h2></div>
                 <div style="display:flex; gap:10px; margin-bottom: 20px;">
@@ -96,7 +121,7 @@
                 <div id="lista-calendario-container"><p class="text-muted">A carregar...</p></div>
             </div>
 
-            <!-- HORÁRIO COM NAVEGAÇÃO -->
+            <!-- HORÁRIO COM NAVEGAÇÃO SEMANAL -->
             <div id="view-class-horario" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-horario-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-horario-turma">Horário</h2></div>
                 
@@ -142,7 +167,9 @@
                 
                 <div id="forum-channel-list">
                     <button id="btn-novo-forum" class="primary-btn" style="margin-bottom: 15px;"><i class="fa-solid fa-plus"></i> Criar Novo Canal</button>
-                    <div class="forum-canais-grid" id="lista-canais-forum"><p class="text-muted" style="text-align:center;">A carregar canais...</p></div>
+                    <div class="forum-canais-grid" id="lista-canais-forum">
+                        <p class="text-muted" style="text-align:center;">A carregar canais...</p>
+                    </div>
                 </div>
 
                 <div id="forum-chat-view" style="display:none; flex-direction:column; height:75vh; background:var(--bg-card); border-radius:12px; border:1px solid #333; overflow:hidden;">
@@ -151,7 +178,8 @@
                         <h3 id="chat-active-title" style="color:var(--primary-green); font-size:1.1rem; margin:0; flex:1;">...</h3>
                         <button id="btn-info-canal" class="icon-btn"><i class="fa-solid fa-circle-info"></i></button>
                     </div>
-                    <div class="forum-messages" id="chat-messages-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:15px;"></div>
+                    <div class="forum-messages" id="chat-messages-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:15px;">
+                    </div>
                     <div class="forum-input-area" style="background:#1a1a1a; padding:10px; border-top:1px solid #333; display:flex; gap:8px; align-items:center;">
                         <button class="icon-btn"><i class="fa-solid fa-paperclip"></i></button>
                         <button class="icon-btn"><i class="fa-solid fa-microphone"></i></button>
@@ -169,7 +197,9 @@
                 <div class="stats-grid">
                     <div class="stat-card"><i class="fa-solid fa-graduation-cap"></i><div class="stat-value" id="stat-media-turma">...</div><div class="stat-label">Média Global</div></div>
                     <div class="stat-card"><i class="fa-solid fa-user-clock"></i><div class="stat-value" id="stat-faltas-totais" style="color:var(--danger-red);">...</div><div class="stat-label">Faltas Totais (h)</div></div>
-                    <div class="stat-card"><i class="fa-solid fa-file-medical"></i><div class="stat-value" id="stat-prhf-ativos" style="color:var(--warning-yellow);">...</div><div class="stat-label">PRHF (Ativos)</div><div class="stat-sub-info">Cump: <strong id="stat-prhf-cump">0</strong>h | Plan: <strong id="stat-prhf-plan">0</strong>h</div></div>
+                    <div class="stat-card"><i class="fa-solid fa-file-medical"></i><div class="stat-value" id="stat-prhf-ativos" style="color:var(--warning-yellow);">...</div><div class="stat-label">PRHF (Ativos)</div>
+                        <div class="stat-sub-info">Cump: <strong id="stat-prhf-cump">0</strong>h | Plan: <strong id="stat-prhf-plan">0</strong>h</div>
+                    </div>
                     <div class="stat-card"><i class="fa-solid fa-triangle-exclamation"></i><div class="stat-value" id="stat-alunos-risco" style="color:var(--danger-red);">...</div><div class="stat-label">Alunos em Risco (≥3 Neg.)</div></div>
                 </div>
                 
@@ -189,7 +219,7 @@
                 </div>
             </div>
 
-            <!-- ALUNOS DA TURMA E DETALHE -->
+            <!-- ALUNOS DA TURMA E DETALHE (ADMIN) -->
             <div id="class-view" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-class-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button><h2 id="class-title" class="section-title">Lista de Alunos</h2></div>
                 <div class="students-list-container"><p class="text-muted">A carregar...</p></div>
@@ -285,11 +315,13 @@
             </div>
         </main>
         
-        <nav class="bottom-nav">
-            <a href="#" class="nav-item active"><i class="fa-solid fa-house"></i><span>Início</span></a>
-            <a href="#" class="nav-item"><i class="fa-solid fa-chart-pie"></i><span>Avaliações</span></a>
-            <a href="#" class="nav-item"><i class="fa-solid fa-user-clock"></i><span>Faltas</span></a>
-            <a href="#" class="nav-item"><i class="fa-solid fa-briefcase"></i><span>FCT/PAP</span></a>
+        <!-- BARRA INFERIOR (5 PILARES - PARA O ALUNO) -->
+        <nav class="bottom-nav" id="student-bottom-nav">
+            <a href="#" class="nav-item active" data-target="student-dashboard"><i class="fa-solid fa-house"></i><span>Início</span></a>
+            <a href="#" class="nav-item" data-target="view-caderneta-hub"><i class="fa-solid fa-book"></i><span>Caderneta</span></a>
+            <a href="#" class="nav-item" data-target="view-agenda-hub"><i class="fa-solid fa-calendar-days"></i><span>Agenda</span></a>
+            <a href="#" class="nav-item" data-target="view-class-forum"><i class="fa-solid fa-comments"></i><span>Fórum</span></a>
+            <a href="#" class="nav-item" data-target="view-fct-pap"><i class="fa-solid fa-briefcase"></i><span>FCT/PAP</span></a>
         </nav>
     </div>
 
@@ -324,6 +356,7 @@
             <h3 id="mei-titulo" style="color:white; font-size:1.4rem; margin-bottom:5px;">Título</h3>
             <span id="mei-tipo" class="badge-tipo-evento">Tipo</span>
             <div style="background:var(--bg-dark); padding:15px; border-radius:8px; margin-top:15px; text-align:left; border:1px solid #333;">
+                <p style="margin-bottom:8px;"><strong><i class="fa-solid fa-calendar"></i> Data:</strong> <span id="mei-data"></span></p>
                 <p style="margin-bottom:8px;"><strong><i class="fa-regular fa-clock"></i> Hora:</strong> <span id="mei-hora"></span></p>
                 <p><strong><i class="fa-solid fa-book"></i> Disciplina:</strong> <span id="mei-disc"></span></p>
             </div>
@@ -331,7 +364,7 @@
         </div>
     </div>
 
-    <!-- MODAL NOVO EVENTO CALENDÁRIO -->
+    <!-- MODAL NOVO/EDITAR EVENTO CALENDÁRIO -->
     <div id="modal-novo-evento" class="modal-overlay">
         <div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto;">
             <h3 id="modal-evento-title" style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-calendar-plus"></i> Novo Evento / Teste</h3>
@@ -393,7 +426,7 @@
         </div>
     </div>
 
-    <!-- MODALS FALTAS (Com espaçamento e flex box resolvidos) -->
+    <!-- MODALS FALTAS -->
     <div id="modal-nova-falta" class="modal-overlay">
         <div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto; max-height: 90vh; overflow-y:auto;">
             <h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-plus"></i> Registar Falta(s)</h3>
