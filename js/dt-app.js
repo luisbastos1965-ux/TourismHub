@@ -546,3 +546,61 @@ async function abrirModulosDisciplinaFaltas(disciplina) {
     modulosArray.forEach(mod => { html += `<div style="background:var(--bg-dark); padding:15px; border-radius:8px; border:1px solid #333; margin-bottom:12px;"><div style="display:flex; justify-content:space-between; margin-bottom:10px;"><strong>${mod}</strong><span class="falta-badge" id="badge-falta-${mod}">0h / ${matrizCurso[Object.keys(matrizCurso).find(c => matrizCurso[c][disciplina])][disciplina][mod]}h</span></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:0%;"></div></div></div>`; });
     container.innerHTML = html;
 }
+
+// ==========================================
+// MÓDULO NOVO: CHAT DIRETO COM O EE (DT)
+// ==========================================
+let chatUnsubscribeDTEE = null;
+
+// Fechar este modal específico quando clicam no X
+document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { 
+    const m = document.getElementById('modal-dt-chat-ee');
+    if(m) m.style.display = 'none'; 
+}));
+
+document.getElementById('btn-hub-chat-ee')?.addEventListener('click', () => {
+    if(!alunoAtualId) return;
+    const nome = document.getElementById('detail-student-name').innerText;
+    document.getElementById('dt-chat-ee-title').innerHTML = `<i class="fa-solid fa-envelope"></i> Família de ${nome}`;
+    document.getElementById('modal-dt-chat-ee').style.display = 'flex';
+    iniciarChatDTEE();
+});
+
+function iniciarChatDTEE() {
+    const chatContainer = document.getElementById('dt-chat-ee-messages');
+    chatContainer.innerHTML = '';
+    if(chatUnsubscribeDTEE) chatUnsubscribeDTEE();
+
+    chatUnsubscribeDTEE = onSnapshot(query(collection(db, "utilizadores", alunoAtualId, "chat_dt"), orderBy("timestamp")), (snapshot) => {
+        let html = '';
+        snapshot.forEach(doc => {
+            const msg = doc.data();
+            const isMe = msg.autor === 'dt';
+            // Se for do DT (Eu), usa verde (admin), senão usa cinza (student)
+            const classe = isMe ? 'admin' : 'student'; 
+            html += `<div class="chat-bubble ${classe}">
+                        <strong>${isMe ? 'Tu' : msg.remetente} (EE)</strong><br>
+                        ${msg.texto}
+                        <span class="chat-meta">${new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                     </div>`;
+        });
+        chatContainer.innerHTML = html;
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    });
+}
+
+document.getElementById('btn-dt-chat-ee-send')?.addEventListener('click', async () => {
+    const inp = document.getElementById('dt-chat-ee-input');
+    const txt = inp.value.trim();
+    if(!txt || !alunoAtualId) return;
+    
+    try {
+        await addDoc(collection(db, "utilizadores", alunoAtualId, "chat_dt"), {
+            remetente: myUserName,
+            autor: 'dt',
+            texto: txt,
+            timestamp: Date.now()
+        });
+        inp.value = '';
+    } catch(e) { console.error("Erro a enviar mensagem", e); }
+});
