@@ -104,17 +104,31 @@
             <!-- PASSAPORTE ESCOLAR (FCT/PAP) -->
             <div id="view-aluno-passaporte" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-passaporte" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Início</button><h2 class="section-title"><i class="fa-solid fa-passport"></i> Passaporte</h2></div>
+                
                 <h3 style="color: var(--primary-green); font-size: 1rem; margin-bottom: 15px;"><i class="fa-solid fa-medal"></i> Conquistas</h3>
                 <div style="display:flex; gap:15px; overflow-x:auto; padding-bottom:15px; margin-bottom:20px;">
                     <div style="background:var(--bg-card); border:1px solid #333; border-radius:12px; padding:15px; text-align:center; min-width:120px; flex-shrink:0;"><div style="font-size:2.5rem; color:var(--warning-yellow); margin-bottom:10px;"><i class="fa-solid fa-shield-halved"></i></div><h4 style="font-size:0.9rem;">100% Presença</h4><p style="font-size:0.75rem; color:var(--text-muted);">Mês Atual</p></div>
                     <div style="background:var(--bg-card); border:1px dashed #444; border-radius:12px; padding:15px; text-align:center; min-width:120px; flex-shrink:0; opacity:0.5;"><div style="font-size:2.5rem; color:#555; margin-bottom:10px;"><i class="fa-solid fa-lock"></i></div><h4 style="font-size:0.9rem;">Mestre TIC</h4><p style="font-size:0.75rem; color:var(--text-muted);">Bloqueado</p></div>
                 </div>
+
                 <h3 style="color: var(--primary-green); font-size: 1rem; margin-bottom: 15px;"><i class="fa-solid fa-briefcase"></i> FCT (Estágio)</h3>
-                <div class="card"><div style="display:flex; justify-content:space-between; margin-bottom:10px;"><strong>Entidade:</strong> <span class="text-muted">Por definir</span></div><div style="display:flex; justify-content:space-between; margin-bottom:10px;"><strong>Horas:</strong> <span style="color:var(--primary-green); font-weight:bold;">0 / 400h</span></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:0%;"></div></div></div>
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><strong>Entidade:</strong> <span class="text-muted" id="aluno-fct-entidade">Por definir</span></div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><strong>Horas:</strong> <span style="color:var(--primary-green); font-weight:bold;" id="aluno-fct-horas">0 / 400h</span></div>
+                    <div class="progress-bar-bg"><div class="progress-bar-fill" id="aluno-fct-progress" style="width:0%;"></div></div>
+                </div>
+
                 <h3 style="color: var(--primary-green); font-size: 1rem; margin-bottom: 15px;"><i class="fa-solid fa-laptop-code"></i> PAP</h3>
-                <div class="card"><div style="display:flex; justify-content:space-between; margin-bottom:15px;"><strong>Tema:</strong> <span class="text-muted">Por selecionar</span></div><button class="secondary-btn" disabled><i class="fa-solid fa-upload"></i> Entregar Anteprojeto</button></div>
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:15px;"><strong>Tema:</strong> <span class="text-muted" id="aluno-pap-tema">Por selecionar</span></div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <label for="aluno-upload-pap" class="secondary-btn small-btn" style="margin:0; flex:1; text-align:center; border-style: dashed;"><i class="fa-solid fa-upload"></i> Anexar Anteprojeto</label>
+                        <input type="file" id="aluno-upload-pap" style="display:none;" accept=".pdf,.doc,.docx">
+                    </div>
+                    <span id="aluno-pap-file-name" class="file-name-display" style="display:block; margin-top:10px; font-size:0.85rem; color:var(--success-green);"></span>
+                    <button id="btn-enviar-pap" class="primary-btn" style="display:none; width:100%; margin-top:10px;"><i class="fa-solid fa-paper-plane"></i> Submeter Ficheiro</button>
+                </div>
             </div>
-        </main>
         
         <!-- BARRA INFERIOR ALUNO -->
         <nav class="bottom-nav" id="student-bottom-nav">
