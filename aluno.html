@@ -5,97 +5,119 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Turma PRO - Aluno</title>
     <link rel="icon" type="image/png" href="logo_tur.png">
-    
-    <!-- LIGAÇÃO DIRETA AO TEU CSS ORIGINAL -->
     <link rel="stylesheet" href="style.css">
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div id="app-content">
-        <!-- CABEÇALHO DO ALUNO -->
+        <!-- HEADER -->
         <header id="header-aluno" class="app-header">
-            <div class="logo"><i class="fa-solid fa-graduation-cap"></i> Turma PRO</div>
-            <div style="display:flex; align-items:center;">
-                <button id="btn-abrir-passaporte" class="header-passaporte-btn">
-                    <div class="header-user-info">
-                        <span id="header-user-name-aluno">A carregar...</span>
-                        <span id="header-user-tag" class="header-user-tag">Passaporte</span>
-                    </div>
-                    <div class="header-avatar" id="header-avatar-circle"><i class="fa-solid fa-user"></i></div>
-                </button>
-                <button id="btn-logout-aluno" class="logout-btn" style="margin-left: 15px;" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button>
+            <div class="user-profile">
+                <div class="profile-avatar" id="header-avatar-circle" style="width: 35px; height: 35px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <i class="fa-solid fa-user" style="color: white; font-size: 1rem;"></i>
+                </div>
+                <span id="header-user-name-aluno">A carregar...</span>
             </div>
+            <button id="btn-logout-aluno" class="logout-btn" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button>
         </header>
 
-        <main class="app-content">
-            <!-- DASHBOARD INICIAL -->
+        <main class="app-content" style="padding-bottom: 80px;">
+            <!-- DASHBOARD PRINCIPAL -->
             <div id="student-dashboard">
-                <div class="checkin-card" id="student-checkin-box">
-                    <h3>Como te sentes hoje?</h3>
-                    <div class="emoji-row">
-                        <button class="emoji-btn sad" data-val="triste">😔</button>
-                        <button class="emoji-btn neutral" data-val="neutro">😐</button>
-                        <button class="emoji-btn happy" data-val="feliz">😊</button>
+                <div class="student-welcome-header">
+                    <h2 id="welcome-message">Olá, bem-vindo(a) de volta!</h2>
+                    <p>Pronto para mais um dia de aprendizagem?</p>
+                </div>
+
+                <div class="student-alerts-grid">
+                    <div class="alert-card" style="border-color: var(--warning-yellow);">
+                        <div class="alert-icon"><i class="fa-solid fa-calendar-day"></i></div>
+                        <div class="alert-info">
+                            <h4 id="aluno-proximo-evento">A carregar...</h4>
+                            <span>Próxima Avaliação</span>
+                        </div>
+                    </div>
+                    
+                    <!-- MODO DE ESTUDO POMODORO -->
+                    <div class="alert-card" id="btn-open-study-mode" style="border-color: #9b59b6; cursor: pointer; background: rgba(155, 89, 182, 0.05);">
+                        <div class="alert-icon" style="color: #9b59b6;"><i class="fa-solid fa-stopwatch"></i></div>
+                        <div class="alert-info">
+                            <h4 style="color: white;">Modo Foco</h4>
+                            <span>Iniciar sessão de 25m</span>
+                        </div>
                     </div>
                 </div>
-                <div class="xp-card">
-                    <div class="xp-card-header"><div><div class="xp-title">O teu Nível</div><div class="xp-level">5 <span style="font-size:1rem; color:white; font-weight:normal;">/ Aprendiz</span></div></div><div class="xp-points">1250 <span style="color:var(--text-muted); font-size:0.8rem;">XP</span></div></div>
-                    <div class="xp-bar-bg"><div class="xp-bar-fill" style="width: 65%;"></div></div>
-                </div>
-                <button class="pomodoro-btn-large" id="btn-open-study-mode"><i class="fa-solid fa-stopwatch"></i> Iniciar Foco (Pomodoro)</button>
-                <h3 class="section-title" style="font-size:1.05rem; color:var(--primary-green);"><i class="fa-solid fa-bolt"></i> O Meu Dia</h3>
-                <div class="student-alerts-grid">
-                    <div class="alert-card"><div class="alert-icon"><i class="fa-solid fa-calendar-day"></i></div><div class="alert-info"><h4 id="aluno-proximo-evento">A procurar...</h4><span>Próximo Teste</span></div></div>
-                    <div class="alert-card"><div class="alert-icon" style="color: var(--danger-red); background: rgba(255, 77, 77, 0.1);"><i class="fa-solid fa-file-medical"></i></div><div class="alert-info"><h4 id="aluno-prhf-count">0</h4><span>PRHFs Ativos</span></div></div>
+
+                <h3 class="section-title" style="font-size:1.05rem; color:var(--primary-green); margin-top: 10px;"><i class="fa-solid fa-bolt"></i> Acesso Rápido</h3>
+                <div class="lms-action-grid">
+                    <button class="lms-btn" id="btn-abrir-passaporte" style="border-color:var(--primary-green); color:var(--primary-green);">
+                        <i class="fa-solid fa-passport"></i>
+                        <span>Passaporte FCT/PAP</span>
+                    </button>
+                    <!-- NOVO BOTÃO DE SUMÁRIOS -->
+                    <button class="lms-btn" id="btn-open-sumarios" style="border-color:#0099ff; color:#0099ff;">
+                        <i class="fa-solid fa-book-open"></i>
+                        <span>Sumários e Materiais</span>
+                    </button>
                 </div>
             </div>
 
-            <!-- MODO DE ESTUDO (POMODORO) -->
-            <div id="view-study-mode" style="display: none;">
-                <div class="class-header"><button id="btn-voltar-study" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button><h2 class="section-title">Modo de Estudo</h2></div>
-                <div class="study-mode-container">
-                    <div class="timer-circle" id="study-timer-circle"><div class="timer-time" id="study-timer-text">25:00</div><div class="timer-label">Minutos Restantes</div></div>
-                    <button id="btn-start-study" class="primary-btn" style="background-color: #8a2be2; width: 220px; font-size: 1.2rem;"><i class="fa-solid fa-play"></i> Iniciar Foco</button>
-                    <button id="btn-stop-study" class="danger-btn" style="display: none; width: 220px; margin-top: 15px;"><i class="fa-solid fa-stop"></i> Desistir</button>
+            <!-- SUMÁRIOS E MATERIAIS (ALUNO) -->
+            <div id="view-aluno-sumarios" style="display: none;">
+                <div class="class-header">
+                    <button id="btn-voltar-sumarios" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Início</button>
+                    <h2 class="section-title"><i class="fa-solid fa-book-open"></i> Sumários</h2>
+                </div>
+                <div style="margin-bottom:15px;">
+                    <select id="aluno-filtro-sumarios-disc" style="margin:0; padding:8px;">
+                        <option value="">Todas as Disciplinas</option>
+                        <!-- As opções serão injetadas pelo JS -->
+                    </select>
+                </div>
+                <div id="aluno-lista-sumarios-container">
+                    <p class="text-muted" style="text-align:center;">A procurar materiais...</p>
                 </div>
             </div>
 
             <!-- CADERNETA DO ALUNO -->
             <div id="view-aluno-caderneta" style="display: none;">
-                <div class="class-header"><h2 class="section-title">A Minha Caderneta</h2></div>
-                <div class="tabs-container" style="margin-bottom: 20px;">
-                    <button class="tab-btn active" id="tab-aluno-notas">Notas</button>
-                    <button class="tab-btn" id="tab-aluno-faltas">Faltas</button>
-                    <button class="tab-btn" id="tab-aluno-prhfs">PRHFs</button>
+                <div class="class-header"><h2 class="section-title">Minha Caderneta</h2></div>
+                <div class="falta-tabs">
+                    <button class="falta-tab-btn active" id="tab-aluno-notas">Notas</button>
+                    <button class="falta-tab-btn" id="tab-aluno-faltas">Faltas</button>
+                    <button class="falta-tab-btn" id="tab-aluno-prhfs">PRHFs</button>
                 </div>
-                <div id="aluno-caderneta-content"><p class="text-muted" style="text-align:center;">A carregar dados...</p></div>
+                <div id="aluno-caderneta-content" style="margin-top:20px;">
+                    <p class="text-muted" style="text-align:center;">A carregar...</p>
+                </div>
             </div>
 
-            <!-- AGENDA DO ALUNO -->
+            <!-- AGENDA E HORÁRIO -->
             <div id="view-aluno-agenda" style="display: none;">
-                <div class="class-header"><h2 class="section-title">Agenda e Horário</h2></div>
-                <div class="tabs-container" style="margin-bottom: 20px;">
-                    <button class="tab-btn active" id="tab-aluno-eventos">Testes / Eventos</button>
-                    <button class="tab-btn" id="tab-aluno-horario">Horário Semanal</button>
+                <div class="class-header"><h2 class="section-title">Minha Agenda</h2></div>
+                <div class="falta-tabs">
+                    <button class="falta-tab-btn active" id="tab-aluno-eventos">Testes / Eventos</button>
+                    <button class="falta-tab-btn" id="tab-aluno-horario">Horário</button>
                 </div>
-                <div id="aluno-agenda-content"><p class="text-muted" style="text-align:center;">A carregar agenda...</p></div>
+                <div id="aluno-agenda-content" style="margin-top:20px;">
+                    <p class="text-muted" style="text-align:center;">A carregar...</p>
+                </div>
             </div>
 
-            <!-- FÓRUM DO ALUNO -->
+            <!-- FÓRUM DA TURMA -->
             <div id="view-aluno-forum" style="display: none;">
                 <div class="class-header"><h2 class="section-title">Fóruns da Turma</h2></div>
-                <div id="aluno-forum-channel-list"><p class="text-muted" style="text-align:center;">A procurar os teus canais...</p></div>
-                <div id="aluno-forum-chat-view" style="display:none; flex-direction:column; height:75vh; background:var(--bg-card); border-radius:12px; border:1px solid #333; overflow:hidden;">
+                <div id="aluno-forum-channel-list">
+                    <p class="text-muted" style="text-align:center;">A carregar fóruns...</p>
+                </div>
+                <div id="aluno-forum-chat-view" style="display:none; flex-direction:column; height:70vh; background:var(--bg-card); border-radius:12px; border:1px solid #333; overflow:hidden;">
                     <div style="background:#222; padding:15px; display:flex; align-items:center; gap:10px; border-bottom:1px solid #333;">
                         <button id="btn-aluno-voltar-canais" class="secondary-btn small-btn" style="padding:5px 10px; width:auto; border:none;"><i class="fa-solid fa-arrow-left"></i></button>
                         <h3 id="aluno-chat-active-title" style="color:var(--primary-green); font-size:1.1rem; margin:0; flex:1;">...</h3>
-                        <button id="btn-aluno-info-canal" class="icon-btn"><i class="fa-solid fa-circle-info"></i></button>
                     </div>
                     <div class="forum-messages" id="aluno-chat-messages-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:15px;"></div>
                     <div class="forum-input-area" style="background:#1a1a1a; padding:10px; border-top:1px solid #333; display:flex; gap:8px; align-items:center;">
-                        <button class="icon-btn"><i class="fa-solid fa-paperclip"></i></button>
-                        <input type="text" id="aluno-input-forum-msg" placeholder="Mensagem..." style="margin:0; flex:1; border-radius:20px; padding:10px 15px;">
+                        <input type="text" id="aluno-input-forum-msg" placeholder="Escreve aqui..." style="margin:0; flex:1; border-radius:20px; padding:10px 15px;">
                         <button id="btn-aluno-send-msg" class="forum-send-btn" style="width:40px; height:40px;"><i class="fa-solid fa-paper-plane"></i></button>
                     </div>
                 </div>
@@ -129,14 +151,31 @@
                     <button id="btn-enviar-pap" class="primary-btn" style="display:none; width:100%; margin-top:10px;"><i class="fa-solid fa-paper-plane"></i> Submeter Ficheiro</button>
                 </div>
             </div>
-        
-        <!-- BARRA INFERIOR ALUNO -->
-        <nav class="bottom-nav" id="student-bottom-nav">
-            <a href="#" class="nav-item active" data-target="student-dashboard"><i class="fa-solid fa-house"></i><span>Início</span></a>
-            <a href="#" class="nav-item" data-target="view-aluno-caderneta"><i class="fa-solid fa-book"></i><span>Caderneta</span></a>
-            <a href="#" class="nav-item" data-target="view-aluno-agenda"><i class="fa-solid fa-calendar-days"></i><span>Agenda</span></a>
-            <a href="#" class="nav-item" data-target="view-aluno-forum"><i class="fa-solid fa-comments"></i><span>Fórum</span></a>
-            <a href="#" class="nav-item" data-target="view-aluno-passaporte"><i class="fa-solid fa-briefcase"></i><span>FCT/PAP</span></a>
+
+            <!-- MODO DE ESTUDO (POMODORO) -->
+            <div id="view-study-mode" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 70vh;">
+                <h2 style="color: #9b59b6; margin-bottom: 20px;"><i class="fa-solid fa-stopwatch"></i> Modo Foco</h2>
+                <div style="font-size: 5rem; font-weight: bold; font-family: monospace; color: white; margin-bottom: 30px;" id="study-timer-text">25:00</div>
+                <button id="btn-start-study" class="primary-btn" style="background-color: #9b59b6; font-size: 1.2rem; padding: 15px 40px; border-radius: 30px;"><i class="fa-solid fa-play"></i> Iniciar</button>
+                <button id="btn-stop-study" class="danger-btn" style="display: none; font-size: 1.2rem; padding: 15px 40px; border-radius: 30px;"><i class="fa-solid fa-stop"></i> Parar</button>
+                <button id="btn-voltar-study" class="secondary-btn" style="margin-top: 30px; border: none;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+            </div>
+        </main>
+
+        <!-- BARRA DE NAVEGAÇÃO INFERIOR -->
+        <nav class="bottom-nav">
+            <a href="#" class="nav-item active" data-target="student-dashboard">
+                <i class="fa-solid fa-house"></i><span>Início</span>
+            </a>
+            <a href="#" class="nav-item" data-target="view-aluno-caderneta">
+                <i class="fa-solid fa-book-open"></i><span>Caderneta</span>
+            </a>
+            <a href="#" class="nav-item" data-target="view-aluno-agenda">
+                <i class="fa-regular fa-calendar"></i><span>Agenda</span>
+            </a>
+            <a href="#" class="nav-item" data-target="view-aluno-forum">
+                <i class="fa-regular fa-comments"></i><span>Fórum</span>
+            </a>
         </nav>
     </div>
 
