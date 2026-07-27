@@ -3,62 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Turma PRO - Portal dos Pais</title>
+    <title>Turma PRO - Família</title>
     <link rel="icon" type="image/png" href="logo_tur.png">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div id="app-content">
+        <!-- HEADER -->
         <header id="header-ee" class="app-header">
-            <div class="logo"><i class="fa-solid fa-graduation-cap"></i> Turma PRO <span style="font-size: 0.7rem; color: #aaa;">| Famílias</span></div>
-            <div class="user-profile"><button id="btn-logout-ee" class="logout-btn" title="Sair"><i class="fa-solid fa-right-from-bracket"></i> Sair</button></div>
+            <div class="user-profile">
+                <div class="profile-avatar" style="width: 35px; height: 35px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <i class="fa-solid fa-user-tie" style="color: white; font-size: 1rem;"></i>
+                </div>
+                <span id="header-user-name-ee">A carregar...</span>
+            </div>
+            <button id="btn-logout-ee" class="logout-btn" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button>
         </header>
 
-        <main class="app-content">
+        <main class="app-content" style="padding-bottom: 80px;">
+            <!-- DASHBOARD EE -->
             <div id="ee-dashboard">
-                <div class="student-welcome-header">
-                    <h2 id="ee-welcome-name">Bem-vindo(a)!</h2>
-                    <p>Resumo letivo do educando: <strong id="ee-nome-aluno" style="color:white;">A carregar...</strong></p>
+                <div class="student-profile-header" style="text-align: left; background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
+                    <div style="width: 50px; height: 50px; background: var(--primary-green); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <i class="fa-solid fa-user-graduate" style="color: white; font-size: 1.5rem;"></i>
+                    </div>
+                    <div>
+                        <h2 style="font-size: 1.1rem; margin: 0; color: white;">O Meu Educando</h2>
+                        <p id="ee-educando-nome" style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">A carregar dados...</p>
+                    </div>
                 </div>
 
                 <div class="student-alerts-grid">
-                    <div class="alert-card" style="background: rgba(0, 204, 136, 0.05); border-color: var(--primary-green);"><div class="alert-icon"><i class="fa-solid fa-graduation-cap"></i></div><div class="alert-info"><h4 id="ee-media-aluno">--</h4><span>Média Global</span></div></div>
-                    <div class="alert-card" style="background: rgba(255, 77, 77, 0.05); border-color: var(--danger-red);"><div class="alert-icon" style="color: var(--danger-red);"><i class="fa-solid fa-user-clock"></i></div><div class="alert-info"><h4 id="ee-faltas-aluno">--</h4><span>Faltas Injustificadas (h)</span></div></div>
-                </div>
-
-                <h3 class="section-title" style="font-size:1.05rem; color:var(--primary-green); margin-top: 10px;"><i class="fa-solid fa-hand-holding-heart"></i> Serviços ao Encarregado</h3>
-                <div class="lms-action-grid">
-                    <button class="lms-btn" id="btn-ee-justificacoes" style="border-color:#0099ff; color:#0099ff;"><i class="fa-solid fa-file-signature"></i><span>Justificar Faltas</span></button>
-                    <button class="lms-btn" id="btn-ee-caderneta"><i class="fa-solid fa-book-open"></i><span>Ver Caderneta</span></button>
-                    <!-- BOTÃO DO CHAT AGORA ATIVADO -->
-                    <button class="lms-btn" id="btn-ee-mensagens" style="border-color:var(--warning-yellow); color:var(--warning-yellow);"><i class="fa-solid fa-envelope"></i><span>Falar com o DT</span></button>
+                    <div class="alert-card" id="btn-open-chat-dt" style="border-color: var(--warning-yellow); cursor: pointer;">
+                        <div class="alert-icon" style="color: var(--warning-yellow);"><i class="fa-solid fa-envelope"></i></div>
+                        <div class="alert-info">
+                            <h4 style="color: white;">Mensagens</h4>
+                            <span>Falar com Diretor de Turma</span>
+                        </div>
+                    </div>
+                    
+                    <div class="alert-card" id="btn-open-justificar" style="border-color: var(--success-green); cursor: pointer;">
+                        <div class="alert-icon" style="color: var(--success-green);"><i class="fa-solid fa-file-medical"></i></div>
+                        <div class="alert-info">
+                            <h4 style="color: white;">Justificar Faltas</h4>
+                            <span>Enviar Atestado Médico</span>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            <!-- CHAT COM O DT (MENSAGENS) -->
+            <div id="view-ee-chat" style="display: none; flex-direction: column; height: 75vh;">
+                <div class="class-header">
+                    <button id="btn-voltar-chat-ee" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+                    <h2 class="section-title" style="color: var(--warning-yellow);"><i class="fa-solid fa-envelope"></i> Mensagens (DT)</h2>
+                </div>
+                <div class="forum-messages" id="ee-chat-messages-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:15px; background: var(--bg-card); border-radius: 12px 12px 0 0; border: 1px solid #333; border-bottom: none;">
+                    <p class="text-muted center">A carregar mensagens...</p>
+                </div>
+                <div class="forum-input-area" style="background:#1a1a1a; padding:10px; border: 1px solid #333; display:flex; gap:8px; align-items:center; border-radius: 0 0 12px 12px;">
+                    <input type="text" id="ee-input-chat-msg" placeholder="Escreva aqui a sua mensagem..." style="margin:0; flex:1; border-radius:20px; padding:10px 15px;">
+                    <button id="btn-ee-send-msg" class="forum-send-btn" style="width:40px; height:40px; background-color: var(--warning-yellow); color: black;"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+
+            <!-- JUSTIFICAR FALTAS -->
+            <div id="view-ee-justificar" style="display: none;">
+                <div class="class-header">
+                    <button id="btn-voltar-justificar" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+                    <h2 class="section-title" style="color: var(--success-green);"><i class="fa-solid fa-file-medical"></i> Justificar</h2>
+                </div>
+                
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px; font-size: 1rem;"><i class="fa-solid fa-cloud-arrow-up"></i> Enviar Comprovativo</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Selecione o atestado médico ou declaração para justificar as ausências recentes do seu educando.</p>
+                    
+                    <div style="background:var(--bg-dark); padding:20px; border-radius:8px; border:1px dashed #555; text-align:center; margin-bottom:15px;">
+                        <label for="ee-upload-atestado" class="secondary-btn" style="margin:0 auto; width:fit-content; border-color: var(--success-green); color: var(--success-green);">
+                            <i class="fa-solid fa-camera"></i> Tirar Foto / Escolher Ficheiro
+                        </label>
+                        <input type="file" id="ee-upload-atestado" style="display:none;" accept="image/*,.pdf">
+                        <span id="ee-atestado-file-name" class="file-name-display" style="display:block; margin-top:10px; font-size:0.85rem; color:white;"></span>
+                    </div>
+
+                    <textarea id="ee-atestado-obs" class="input-field" placeholder="Observações breves (ex: Doença de 2ª a 4ª feira)..." style="min-height: 80px;"></textarea>
+                    <button id="btn-ee-enviar-atestado" class="primary-btn" style="width:100%; background-color: var(--success-green); display:none;"><i class="fa-solid fa-paper-plane"></i> Enviar para Análise</button>
+                </div>
+
+                <h3 style="color: var(--primary-green); font-size: 1rem; margin-bottom: 15px;">Histórico de Envios</h3>
+                <div id="ee-lista-atestados-container">
+                    <p class="text-muted" style="text-align:center;">A carregar...</p>
+                </div>
+            </div>
+
+            <!-- CADERNETA DO EDUCANDO -->
+            <div id="view-ee-caderneta" style="display: none;">
+                <div class="class-header"><h2 class="section-title">Caderneta</h2></div>
+                <div class="falta-tabs">
+                    <button class="falta-tab-btn active" id="tab-ee-notas">Notas</button>
+                    <button class="falta-tab-btn" id="tab-ee-faltas">Faltas</button>
+                    <button class="falta-tab-btn" id="tab-ee-prhfs">PRHFs</button>
+                    <button class="falta-tab-btn" id="tab-ee-comportamento">Comportamento</button>
+                </div>
+                <div id="ee-caderneta-content" style="margin-top:20px;">
+                    <p class="text-muted" style="text-align:center;">A carregar...</p>
+                </div>
+            </div>
+
+            <!-- AGENDA DO EDUCANDO -->
+            <div id="view-ee-agenda" style="display: none;">
+                <div class="class-header"><h2 class="section-title">Calendário Escolar</h2></div>
+                <div id="ee-agenda-content" style="margin-top:20px;">
+                    <p class="text-muted" style="text-align:center;">A carregar...</p>
+                </div>
+            </div>
+
         </main>
-    </div>
 
-    <!-- MODAL: JUSTIFICAR FALTAS -->
-    <div id="modal-ee-justificar" class="modal-overlay"><div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto; max-height: 85vh; overflow-y:auto;"><h3 style="color:#0099ff; font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-file-signature"></i> Justificar Faltas</h3><p class="text-muted" style="font-size:0.85rem; margin-bottom:15px;">Selecione a falta e anexe o comprovativo.</p><div id="ee-lista-faltas-injustificadas" style="margin-bottom: 20px;"><p class="text-muted center">A procurar faltas...</p></div><div id="ee-form-anexo" style="display: none; background: var(--bg-dark); padding: 15px; border-radius: 8px; border: 1px dashed #0099ff;"><p style="font-size: 0.9rem; margin-bottom: 10px;">A justificar: <strong id="ee-falta-selecionada-txt">...</strong></p><div style="display:flex; justify-content:space-between; align-items:center;"><label for="ee-upload-atestado" class="secondary-btn small-btn" style="margin:0; border-color:#0099ff; color:#0099ff;"><i class="fa-solid fa-camera"></i> Anexar Foto / PDF</label><input type="file" id="ee-upload-atestado" style="display:none;" accept="image/*,.pdf"></div><span id="ee-atestado-nome" class="file-name-display" style="display:block; margin-top:10px; font-size:0.8rem;"></span><button id="btn-ee-enviar-justificacao" class="primary-btn" style="margin-top: 15px; width: 100%; background-color:#0099ff;"><i class="fa-solid fa-paper-plane"></i> Enviar para o DT</button></div><button class="danger-btn btn-fechar-modal" style="margin-top:20px; width:100%;">Fechar</button></div></div>
-
-    <!-- MODAL: VER CADERNETA -->
-    <div id="modal-ee-caderneta" class="modal-overlay"><div class="paper-sheet" style="max-width: 600px; width: 95%; max-height: 85vh; overflow-y: auto;"><button class="btn-close-paper btn-fechar-modal"><i class="fa-solid fa-xmark"></i></button><h2 style="text-align:center; margin-bottom: 20px; color: var(--primary-green);"><i class="fa-solid fa-book-open"></i> Caderneta do Aluno</h2><div id="ee-caderneta-content"><p class="text-muted" style="text-align:center;">A compilar notas...</p></div></div></div>
-
-    <!-- NOVO MODAL: CHAT COM O DT -->
-    <div id="modal-ee-chat" class="modal-overlay">
-        <div class="action-sheet" style="border-radius: 12px; max-width: 500px; margin: auto; height: 80vh; display: flex; flex-direction: column; padding: 0;">
-            <div style="background:#222; padding:15px; display:flex; align-items:center; gap:10px; border-bottom:1px solid #333; border-radius: 12px 12px 0 0;">
-                <h3 style="color:var(--warning-yellow); font-size:1.1rem; margin:0; flex:1;"><i class="fa-solid fa-envelope"></i> Diretor de Turma</h3>
-                <button class="icon-btn btn-fechar-modal"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div class="forum-messages" id="ee-chat-messages" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:15px; background: var(--bg-dark);">
-                <!-- Mensagens entram aqui -->
-            </div>
-            <div class="forum-input-area" style="background:#1a1a1a; padding:10px; border-top:1px solid #333; display:flex; gap:8px; align-items:center; border-radius: 0 0 12px 12px;">
-                <input type="text" id="ee-chat-input" placeholder="Escreva a sua mensagem..." style="margin:0; flex:1; border-radius:20px; padding:10px 15px;">
-                <button id="btn-ee-chat-send" class="forum-send-btn" style="width:40px; height:40px; background-color: var(--warning-yellow); color: black;"><i class="fa-solid fa-paper-plane"></i></button>
-            </div>
-        </div>
+        <!-- BARRA DE NAVEGAÇÃO INFERIOR -->
+        <nav class="bottom-nav">
+            <a href="#" class="nav-item active" data-target="ee-dashboard"><i class="fa-solid fa-house"></i><span>Início</span></a>
+            <a href="#" class="nav-item" data-target="view-ee-caderneta"><i class="fa-solid fa-book-open"></i><span>Caderneta</span></a>
+            <a href="#" class="nav-item" data-target="view-ee-agenda"><i class="fa-regular fa-calendar"></i><span>Agenda</span></a>
+        </nav>
     </div>
 
     <script type="module" src="./js/ee-app.js"></script>
