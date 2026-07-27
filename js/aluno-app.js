@@ -592,8 +592,16 @@ async function pedirPermissaoNotificacoes() {
         const permission = await Notification.requestPermission();
         
         if (permission === 'granted') {
-            console.log("Permissão concedida! A gerar token...");
-            const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY });
+            console.log("Permissão concedida! A registar Service Worker e gerar token...");
+            
+            // A MAGIA ESTÁ AQUI: Forçar o browser a procurar o ficheiro na pasta atual do GitHub Pages
+            const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+            
+            // Pedir o token associado a este registo correto
+            const currentToken = await getToken(messaging, { 
+                vapidKey: VAPID_KEY,
+                serviceWorkerRegistration: registration 
+            });
             
             if (currentToken) {
                 console.log("🔑 O teu Token de Notificação é:", currentToken);
