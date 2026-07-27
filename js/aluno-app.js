@@ -1,9 +1,10 @@
 import { auth, db } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, collection, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { doc, getDoc, collection, updateDoc, getDocs, query, addDoc, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 let myUserId = "";
 let myUserName = "";
+let minhaTurma = ""; 
 
 // ==========================================
 // 1. SEGURANÇA E INICIALIZAÇÃO
@@ -21,6 +22,7 @@ onAuthStateChanged(auth, async (user) => {
                 }
                 
                 myUserName = dados.nome.split(' ')[0];
+                minhaTurma = dados.turma; // Guarda a turma na memória global
                 document.getElementById('header-user-name-aluno').innerText = myUserName;
                 
                 // Carregar foto de perfil
@@ -30,6 +32,7 @@ onAuthStateChanged(auth, async (user) => {
                 }
 
                 carregarDadosPassaporte(dados);
+                carregarAgendaDashboard(); // Atualiza o widget "Próxima Avaliação"
             }
         } catch (e) { console.error("Erro ao ler perfil", e); }
     } else { window.location.href = "index.html"; }
@@ -49,7 +52,8 @@ const views = [
     document.getElementById('view-aluno-agenda'),
     document.getElementById('view-aluno-forum'),
     document.getElementById('view-aluno-passaporte'),
-    document.getElementById('view-study-mode')
+    document.getElementById('view-study-mode'),
+    document.getElementById('view-aluno-sumarios') // Nova vista adicionada
 ];
 
 function esconderTodasAsVistas() {
@@ -75,7 +79,6 @@ navItems.forEach(item => {
 // O Botão especial no cabeçalho para saltar direto para o passaporte
 document.getElementById('btn-abrir-passaporte')?.addEventListener('click', () => {
     navItems.forEach(nav => nav.classList.remove('active'));
-    document.querySelector('.nav-item[data-target="view-aluno-passaporte"]').classList.add('active');
     esconderTodasAsVistas();
     document.getElementById('view-aluno-passaporte').style.display = 'block';
 });
@@ -96,7 +99,7 @@ function carregarDadosPassaporte(dados) {
     // FCT
     const fctEntidade = dados.fctEntidade || "Por definir";
     const fctHorasFeitas = dados.fctHorasFeitas || 0;
-    const fctHorasTotais = dados.fctHorasTotais || 400; // Padrão dos Cursos Profissionais
+    const fctHorasTotais = dados.fctHorasTotais || 400;
     
     document.getElementById('aluno-fct-entidade').innerText = fctEntidade;
     document.getElementById('aluno-fct-horas').innerText = `${fctHorasFeitas} / ${fctHorasTotais}h`;
@@ -107,6 +110,10 @@ function carregarDadosPassaporte(dados) {
     // PAP
     const papTema = dados.papTema || "Por selecionar";
     document.getElementById('aluno-pap-tema').innerText = papTema;
+    
+    if (dados.papFicheiroEnviado) {
+        document.getElementById('aluno-pap-file-name').innerText = "Ficheiro submetido e entregue à escola.";
+    }
 }
 
 // Upload do Anteprojeto da PAP
@@ -114,14 +121,15 @@ document.getElementById('aluno-upload-pap')?.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if(!file) return;
     
-    // Limite de segurança de tamanho
+    // Limite de 700KB para não rebentar o limite de 1MB do Firestore em formato texto
     if(file.size > 716800) { 
         alert("Ficheiro demasiado grande! O limite nesta versão é 700KB. Tente comprimir o PDF online."); 
         return; 
     }
     
     document.getElementById('aluno-pap-file-name').innerText = file.name;
-    document.getElementById('btn-enviar-pap').style.display = 'block'; // Mostrar botão de envio
+    document.getElementById('aluno-pap-file-name').style.color = "var(--warning-yellow)";
+    document.getElementById('btn-enviar-pap').style.display = 'block';
 
     const reader = new FileReader();
     reader.onload = (ev) => { ficheiroPapBase64 = ev.target.result; };
@@ -152,6 +160,7 @@ document.getElementById('btn-enviar-pap')?.addEventListener('click', async (e) =
             btnRef.style.backgroundColor = "var(--primary-green)";
             btnRef.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submeter Ficheiro';
             document.getElementById('aluno-pap-file-name').innerText = "Ficheiro na posse da escola.";
+            document.getElementById('aluno-pap-file-name').style.color = "var(--success-green)";
         }, 3000);
         
     } catch(err) {
@@ -171,11 +180,13 @@ let pomodoroRestante = 25 * 60; // 25 Minutos
 
 document.getElementById('btn-open-study-mode')?.addEventListener('click', () => {
     esconderTodasAsVistas();
+    navItems.forEach(nav => nav.classList.remove('active'));
     document.getElementById('view-study-mode').style.display = 'flex';
 });
 
 document.getElementById('btn-voltar-study')?.addEventListener('click', () => {
     esconderTodasAsVistas();
+    document.querySelector('.nav-item[data-target="student-dashboard"]').classList.add('active');
     document.getElementById('student-dashboard').style.display = 'block';
 });
 
@@ -219,7 +230,6 @@ tabNotas?.addEventListener('click', (e) => { ativarTab(e.currentTarget, ['tab-al
 tabFaltas?.addEventListener('click', (e) => { ativarTab(e.currentTarget, ['tab-aluno-notas', 'tab-aluno-prhfs']); carregarFaltasAluno(); });
 tabPrhfs?.addEventListener('click', (e) => { ativarTab(e.currentTarget, ['tab-aluno-notas', 'tab-aluno-faltas']); carregarPrhfsAluno(); });
 
-// Carrega as Notas ao clicar na Caderneta no menu inferior
 document.querySelector('.nav-item[data-target="view-aluno-caderneta"]')?.addEventListener('click', () => {
     ativarTab(tabNotas, ['tab-aluno-faltas', 'tab-aluno-prhfs']);
     carregarNotasAluno();
@@ -258,7 +268,7 @@ async function carregarFaltasAluno() {
         let html = '';
         let faltasArr = [];
         faltasDb.forEach(d => { faltasArr.push(d.data()); });
-        faltasArr.sort((a,b) => b.dataInicio.localeCompare(a.dataInicio)); // Mais recentes primeiro
+        faltasArr.sort((a,b) => b.dataInicio.localeCompare(a.dataInicio)); 
 
         faltasArr.forEach(f => {
             const statusColor = f.justificada ? 'var(--success-green)' : 'var(--danger-red)';
@@ -297,17 +307,9 @@ async function carregarPrhfsAluno() {
 // ==========================================
 // 6. AGENDA E HORÁRIO DO ALUNO
 // ==========================================
-let minhaTurma = ""; // Para podermos ir buscar a agenda da turma certa
-
 document.querySelector('.nav-item[data-target="view-aluno-agenda"]')?.addEventListener('click', async () => {
     document.getElementById('tab-aluno-eventos').classList.add('active');
     document.getElementById('tab-aluno-horario').classList.remove('active');
-    
-    // Descobrir a turma do aluno se ainda não soubermos
-    if(!minhaTurma) {
-        const docSnap = await getDoc(doc(db, "utilizadores", myUserId));
-        if(docSnap.exists()) minhaTurma = docSnap.data().turma;
-    }
     carregarAgendaAluno();
 });
 
@@ -323,6 +325,25 @@ document.getElementById('tab-aluno-horario')?.addEventListener('click', (e) => {
     carregarHorarioAluno();
 });
 
+// Esta função atualiza apenas a informação rápida no dashboard
+async function carregarAgendaDashboard() {
+    if(!minhaTurma) return;
+    try {
+        const evDb = await getDocs(collection(db, "turmas", minhaTurma, "eventos"));
+        if(!evDb.empty) {
+            let evArr = [];
+            evDb.forEach(d => evArr.push(d.data()));
+            const hoje = new Date().toISOString().split('T')[0];
+            const futuros = evArr.filter(e => e.data >= hoje).sort((a,b) => a.data.localeCompare(b.data));
+            if(futuros.length > 0) {
+                document.getElementById('aluno-proximo-evento').innerText = futuros[0].data.split('-').reverse().join('/') + ' - ' + futuros[0].titulo;
+                return;
+            }
+        }
+        document.getElementById('aluno-proximo-evento').innerText = "Agenda Livre!";
+    } catch(e){}
+}
+
 async function carregarAgendaAluno() {
     const container = document.getElementById('aluno-agenda-content');
     container.innerHTML = '<p class="text-muted center">A carregar calendário...</p>';
@@ -336,7 +357,6 @@ async function carregarAgendaAluno() {
         let evArr = [];
         evDb.forEach(d => evArr.push(d.data()));
         
-        // Mostrar apenas eventos futuros ou de hoje
         const hoje = new Date().toISOString().split('T')[0];
         const futuros = evArr.filter(e => e.data >= hoje).sort((a,b) => a.data.localeCompare(b.data));
         
@@ -356,19 +376,12 @@ async function carregarAgendaAluno() {
         });
         container.innerHTML = html;
         
-        // Atualiza também o widget principal do ecrã inicial
-        if(futuros.length > 0) {
-            document.getElementById('aluno-proximo-evento').innerText = futuros[0].data.split('-').reverse().join('/') + ' - ' + futuros[0].titulo;
-        } else {
-            document.getElementById('aluno-proximo-evento').innerText = "Livre!";
-        }
-        
     } catch(e) { container.innerHTML = '<p class="text-danger center">Erro.</p>'; }
 }
 
 async function carregarHorarioAluno() {
     const container = document.getElementById('aluno-agenda-content');
-    container.innerHTML = '<p class="text-muted center">Esta funcionalidade espelhará o horário inserido pelo DT.</p>';
+    container.innerHTML = '<p class="text-muted center">Esta funcionalidade espelhará o horário inserido pelo DT futuramente.</p>';
 }
 
 // ==========================================
@@ -380,17 +393,13 @@ let alunoForumAtivoId = null;
 document.querySelector('.nav-item[data-target="view-aluno-forum"]')?.addEventListener('click', async () => {
     const container = document.getElementById('aluno-forum-channel-list');
     container.innerHTML = '<p class="text-muted center">A carregar fóruns...</p>';
-    if(!minhaTurma) {
-        const docSnap = await getDoc(doc(db, "utilizadores", myUserId));
-        if(docSnap.exists()) minhaTurma = docSnap.data().turma;
-    }
+    if(!minhaTurma) return;
     
     try {
         const res = await getDocs(collection(db, "turmas", minhaTurma, "foruns"));
         let html = '';
         res.forEach(docSnap => {
             const f = docSnap.data();
-            // Mostrar fórum apenas se o aluno for membro
             if(f.membros.includes(myUserId)) {
                 const icon = f.tipo === 'permanente' ? 'fa-comments' : 'fa-stopwatch';
                 html += `<div class="canal-card" data-id="${docSnap.id}" data-nome="${f.nome}">
@@ -427,7 +436,7 @@ function iniciarChatAluno(fId) {
         snapshot.forEach(doc => {
             const msg = doc.data();
             const isMe = msg.remetente === myUserName;
-            const classe = isMe ? 'admin' : 'student'; // 'admin' alinha à direita no nosso CSS
+            const classe = isMe ? 'admin' : 'student'; 
             html += `<div class="chat-bubble ${classe}">
                         <strong>${isMe ? 'Tu' : msg.remetente}</strong><br>
                         ${msg.texto}
@@ -453,3 +462,75 @@ document.getElementById('btn-aluno-send-msg')?.addEventListener('click', async (
         inp.value = '';
     } catch(e) {}
 });
+
+// ==========================================
+// 8. SUMÁRIOS E MATERIAIS DE AULA
+// ==========================================
+const viewSumarios = document.getElementById('view-aluno-sumarios');
+
+document.getElementById('btn-open-sumarios')?.addEventListener('click', async () => {
+    esconderTodasAsVistas();
+    navItems.forEach(nav => nav.classList.remove('active'));
+    viewSumarios.style.display = 'block';
+    carregarSumariosAluno();
+});
+
+document.getElementById('btn-voltar-sumarios')?.addEventListener('click', () => {
+    esconderTodasAsVistas();
+    document.querySelector('.nav-item[data-target="student-dashboard"]').classList.add('active');
+    document.getElementById('student-dashboard').style.display = 'block';
+});
+
+document.getElementById('aluno-filtro-sumarios-disc')?.addEventListener('change', carregarSumariosAluno);
+
+async function carregarSumariosAluno() {
+    const container = document.getElementById('aluno-lista-sumarios-container');
+    container.innerHTML = '<p class="text-muted" style="text-align:center;">A carregar sumários...</p>';
+    if(!minhaTurma) return;
+
+    try {
+        const res = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios")));
+        if(res.empty) { container.innerHTML = '<p class="text-muted" style="text-align:center;">Nenhum material publicado pelos professores.</p>'; return; }
+        
+        let sumarios = [];
+        let disciplinasUnicas = new Set();
+        
+        res.forEach(d => {
+            const data = d.data();
+            sumarios.push({id: d.id, ...data});
+            disciplinasUnicas.add(data.disciplina);
+        });
+        
+        // Popular o dropdown de filtros dinamicamente
+        const filtroSelect = document.getElementById('aluno-filtro-sumarios-disc');
+        if (filtroSelect.options.length <= 1) {
+            let optHTML = '<option value="">Todas as Disciplinas</option>';
+            disciplinasUnicas.forEach(disc => optHTML += `<option value="${disc}">${disc}</option>`);
+            filtroSelect.innerHTML = optHTML;
+        }
+
+        const filtroAtual = filtroSelect.value;
+        if(filtroAtual) sumarios = sumarios.filter(s => s.disciplina === filtroAtual);
+        
+        sumarios.sort((a,b) => b.data.localeCompare(a.data)); 
+
+        if(sumarios.length === 0) { container.innerHTML = '<p class="text-muted" style="text-align:center;">Sem sumários para esta disciplina.</p>'; return; }
+
+        let html = '';
+        sumarios.forEach(s => {
+            const anexoBtn = s.anexoBase64 ? `<a href="${s.anexoBase64}" download="${s.anexoNome}" class="primary-btn small-btn" style="display:inline-block; margin-top:10px; width:auto; padding:8px 12px; background-color:#0099ff;"><i class="fa-solid fa-download"></i> Baixar ${s.anexoNome}</a>` : '';
+            html += `
+            <div class="card" style="margin-bottom:15px; border-left: 4px solid #0099ff;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">${s.data} | ${s.disciplina} | Prof. ${s.professor}</span>
+                        <h4 style="margin:5px 0;">${s.titulo}</h4>
+                        ${s.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px;">${s.descricao}</p>` : ''}
+                    </div>
+                </div>
+                ${anexoBtn}
+            </div>`;
+        });
+        container.innerHTML = html;
+    } catch(e) { container.innerHTML = '<p class="text-danger center">Erro ao carregar os dados.</p>'; }
+}
