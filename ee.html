@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Turma PRO - Portal dos Pais</title>
+    <link rel="icon" type="image/png" href="logo_tur.png">
+    
+    <!-- CSS Modular -->
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/ee.css">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="app-content">
+        <!-- CABEÇALHO DOS PAIS -->
+        <header id="header-ee" class="app-header">
+            <div class="logo"><i class="fa-solid fa-graduation-cap"></i> Turma PRO <span style="font-size: 0.7rem; color: #aaa;">| Famílias</span></div>
+            <div class="user-profile">
+                <button id="btn-logout-ee" class="logout-btn" title="Sair"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
+            </div>
+        </header>
+
+        <main class="app-content">
+            <div id="ee-dashboard">
+                <div class="student-welcome-header">
+                    <h2 id="ee-welcome-name">Bem-vindo(a)!</h2>
+                    <p>Resumo letivo do seu educando: <strong id="ee-nome-aluno" style="color:white;">A carregar...</strong></p>
+                </div>
+
+                <div class="student-alerts-grid">
+                    <div class="alert-card" style="background: rgba(0, 204, 136, 0.05); border-color: var(--primary-green);">
+                        <div class="alert-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+                        <div class="alert-info"><h4 id="ee-media-aluno">--</h4><span>Média Global</span></div>
+                    </div>
+                    <div class="alert-card" style="background: rgba(255, 77, 77, 0.05); border-color: var(--danger-red);">
+                        <div class="alert-icon" style="color: var(--danger-red);"><i class="fa-solid fa-user-clock"></i></div>
+                        <div class="alert-info"><h4 id="ee-faltas-aluno">--</h4><span>Faltas (Horas)</span></div>
+                    </div>
+                </div>
+
+                <h3 class="section-title" style="font-size:1.05rem; color:var(--primary-green); margin-top: 10px;"><i class="fa-solid fa-hand-holding-heart"></i> Serviços ao Encarregado</h3>
+                <div class="lms-action-grid">
+                    <button class="lms-btn" id="btn-ee-justificacoes" style="border-color:#0099ff; color:#0099ff;">
+                        <i class="fa-solid fa-file-signature"></i><span>Justificar Faltas</span>
+                    </button>
+                    <button class="lms-btn" id="btn-ee-caderneta">
+                        <i class="fa-solid fa-book-open"></i><span>Ver Avaliações</span>
+                    </button>
+                    <button class="lms-btn" id="btn-ee-mensagens" style="border-color:var(--warning-yellow); color:var(--warning-yellow);">
+                        <i class="fa-solid fa-envelope"></i><span>Falar com o DT</span>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script type="module" src="./js/ee-app.js"></script>
+</body>
+</html>
