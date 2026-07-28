@@ -76,14 +76,16 @@
                 </div>
             </div>
 
-            <!-- CADERNETA DO ALUNO -->
+            <!-- CADERNETA DO ALUNO (Com a nova aba de Observações!) -->
             <div id="view-aluno-caderneta" style="display: none;">
                 <div class="class-header"><h2 class="section-title">Minha Caderneta</h2></div>
-                <div class="falta-tabs">
-                    <button class="falta-tab-btn active" id="tab-aluno-notas">Notas</button>
-                    <button class="falta-tab-btn" id="tab-aluno-faltas">Faltas</button>
-                    <button class="falta-tab-btn" id="tab-aluno-prhfs">PRHFs</button>
-                    <button class="falta-tab-btn" id="tab-aluno-comportamento">Comportamento</button>
+                <div class="falta-tabs" style="display:flex; flex-wrap:wrap; gap:5px; justify-content:center;">
+                    <button class="falta-tab-btn active" id="tab-aluno-notas" style="flex: 1 1 30%;">Notas</button>
+                    <button class="falta-tab-btn" id="tab-aluno-faltas" style="flex: 1 1 30%;">Faltas</button>
+                    <button class="falta-tab-btn" id="tab-aluno-prhfs" style="flex: 1 1 30%;">PRHFs</button>
+                    <button class="falta-tab-btn" id="tab-aluno-comportamento" style="flex: 1 1 45%;">Comportamento</button>
+                    <!-- NOVA ABA: OBSERVAÇÕES -->
+                    <button class="falta-tab-btn" id="tab-aluno-observacoes" style="flex: 1 1 45%;">Reuniões</button>
                 </div>
                 <div id="aluno-caderneta-content" style="margin-top:20px;">
                     <p class="text-muted" style="text-align:center;">A carregar...</p>
