@@ -435,7 +435,6 @@ async function carregarEventosCalendario() {
     containerEL.innerHTML = '<p class="text-muted">A desenhar calendário...</p>'; 
     
     try { 
-        // Vamos buscar à coleção global de eventos
         const res = await getDocs(query(collection(db, "eventos"))); 
         
         let eventosFormatados = []; 
@@ -443,15 +442,14 @@ async function carregarEventosCalendario() {
             const e = d.data(); 
             eventosFormatados.push({
                 title: e.titulo,
-                start: e.data, // Formato YYYY-MM-DD
-                backgroundColor: '#11998e', // Cor principal do professor
+                start: e.data,
+                backgroundColor: '#11998e', 
                 borderColor: '#11998e'
             });
         }); 
         
-        containerEL.innerHTML = ""; // Limpar o texto de carregamento
+        containerEL.innerHTML = ""; 
         
-        // Renderizar o FullCalendar
         let calendar = new FullCalendar.Calendar(containerEL, {
             initialView: 'dayGridMonth',
             locale: 'pt',
@@ -473,7 +471,7 @@ async function carregarEventosCalendario() {
 }
 
 // ==========================================
-// 6. SUMÁRIOS E MATERIAIS DE AULA
+// 6. SUMÁRIOS E MATERIAIS DE AULA (COM COMPRESSÃO MÁGICA)
 // ==========================================
 let matBase64 = ""; 
 let matNome = ""; 
@@ -506,12 +504,32 @@ document.getElementById('btn-novo-sumario')?.addEventListener('click', () => {
     document.getElementById('modal-novo-sumario').style.display = 'flex'; 
 }); 
 
-document.getElementById('ns-upload-material')?.addEventListener('change', (e) => { 
-    const f = e.target.files[0]; 
+document.getElementById('ns-upload-material')?.addEventListener('change', async (e) => { 
+    let f = e.target.files[0]; 
     if(!f) return; 
-    if(f.size > 716800) return alert("Limite é 700KB."); 
+    
+    // Se for uma imagem, usamos a biblioteca para esmagar o tamanho!
+    if (f.type.startsWith('image/')) {
+        console.log(`📸 Imagem original: ${(f.size / 1024 / 1024).toFixed(2)} MB`);
+        const options = {
+            maxSizeMB: 0.4, // Comprimir até um máximo de 400KB
+            maxWidthOrHeight: 1920,
+            useWebWorker: true
+        };
+        try {
+            f = await imageCompression(f, options);
+            console.log(`✅ Imagem comprimida: ${(f.size / 1024 / 1024).toFixed(2)} MB`);
+        } catch (error) {
+            console.error("Erro na compressão:", error);
+        }
+    } else {
+        // Se for PDF ou Word, limitamos a 2MB para não rebentar a BD
+        if(f.size > 2097152) return alert("Ficheiros PDF/Word têm um limite de 2MB. Por favor, reduz o tamanho do documento."); 
+    }
+
     matNome = f.name; 
     document.getElementById('ns-file-name').innerText = matNome; 
+    
     const r = new FileReader(); 
     r.onload = (ev) => matBase64 = ev.target.result; 
     r.readAsDataURL(f); 
@@ -645,7 +663,7 @@ document.getElementById('btn-gravar-ocorrencia')?.addEventListener('click', asyn
             timestamp: Date.now() 
         }); 
 
-        // 🌟 LÓGICA DE GAMIFICAÇÃO: Dar +50 XP se a ocorrência for positiva!
+        // Gamificação Prof
         if (tipoOc === "positiva") {
             const alunoRef = doc(db, "utilizadores", alunoAtualId);
             const alunoSnap = await getDoc(alunoRef);
