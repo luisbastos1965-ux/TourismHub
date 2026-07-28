@@ -5,15 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Turma PRO - Área do Professor</title>
     
-    <!-- Ligar ao ficheiro de estilos geral -->
     <link rel="stylesheet" href="style.css">
-    
-    <!-- Manifesto para a PWA (Instalação no telemóvel) -->
     <link rel="manifest" href="manifest.json">
+
+    <!-- FullCalendar Biblioteca e Idioma Português -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/locales/pt.global.min.js'></script>
 </head>
 <body>
 
-    <!-- CABEÇALHO DA PLATAFORMA -->
     <header class="app-header">
         <div class="logo-container">
             <img src="logo_tur.png" alt="Logótipo Turma PRO" id="logo">
@@ -25,12 +25,10 @@
         </div>
     </header>
 
-    <!-- ÁREA PRINCIPAL DO PROFESSOR -->
     <main class="dashboard-container" id="prof-dashboard">
         
         <h2>Painel de Controlo</h2>
 
-        <!-- SECÇÃO 1: CRIAR EVENTOS/TESTES -->
         <section class="card">
             <div id="area-eventos">
                 <h3>📅 Marcar Novo Teste/Evento</h3>
@@ -48,11 +46,9 @@
             </div>
         </section>
 
-        <!-- SECÇÃO 2: GESTÃO DE ALUNOS -->
         <section class="card">
             <h3>👥 Gestão de Turmas</h3>
             <div class="turmas-grid">
-                <!-- Mantém aqui a forma como geras as tuas turmas -->
                 <div class="turma-card-large" data-turma="10A">
                     <h4>Turma 10ºA</h4>
                     <p>Abrir Hub da Turma</p>
@@ -62,7 +58,6 @@
 
     </main>
 
-    <!-- OS OUTROS ECRÃS ESCONDIDOS DO TEU JS -->
     <div id="class-hub-view" style="display: none;">
         <h2 id="class-hub-title">Turma Atual</h2>
         <button id="btn-voltar-turmas-hub">Voltar</button>
@@ -84,7 +79,6 @@
         <button id="btn-hub-faltas">Faltas</button>
         <button id="btn-hub-prhf">PRHF</button>
         <button id="btn-hub-comportamento">Comportamento</button>
-        <!-- NOVOS BOTÕES MUSAI E OBSERVAÇÕES -->
         <button id="btn-hub-musai">MUSAI</button>
         <button id="btn-hub-observacoes">Observações de Reunião</button>
     </div>
@@ -112,7 +106,9 @@
 
     <div id="view-class-calendario" style="display: none;">
         <button id="btn-voltar-cal-hub">Voltar</button>
-        <div id="lista-calendario-container"></div>
+        <div id="calendario-prof" style="margin-top: 15px; background: white; padding: 15px; border-radius: 8px; color: black;">
+            <!-- O calendário do professor vai nascer aqui -->
+        </div>
     </div>
 
     <div id="view-sumarios" style="display: none;">
@@ -125,7 +121,6 @@
         <div id="lista-comportamento-container"></div>
     </div>
 
-    <!-- VIEW: MUSAI (NOVO) -->
     <div id="view-musai" style="display: none;">
         <button id="btn-voltar-hub-musai">Voltar</button>
         <h3>🧩 Medidas de Apoio (MUSAI)</h3>
@@ -140,7 +135,6 @@
         </div>
     </div>
 
-    <!-- VIEW: OBSERVAÇÕES DE REUNIÃO (NOVO) -->
     <div id="view-observacoes" style="display: none;">
         <button id="btn-voltar-hub-observacoes">Voltar</button>
         <h3>📑 Observações de Reunião</h3>
@@ -163,8 +157,6 @@
         </div>
     </div>
 
-    <!-- LIGAR AO JAVASCRIPT DO PROFESSOR -->
     <script type="module" src="js/prof-app.js"></script>
-
 </body>
 </html>
