@@ -1,6 +1,5 @@
 import { auth, db } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-// ATENÇÃO: Adicionei o updateDoc a esta lista de importações para a Gamificação funcionar
 import { doc, getDoc, collection, query, where, getDocs, setDoc, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const matrizCurso = { 
@@ -424,7 +423,7 @@ async function carregarPrhfs() {
 }
 
 // ==========================================
-// 5. CALENDÁRIO
+// 5. CALENDÁRIO (VISUAL)
 // ==========================================
 document.getElementById('btn-hub-calendario')?.addEventListener('click', () => { 
     esconderTudoMenos(viewClassCalendario); 
@@ -432,25 +431,45 @@ document.getElementById('btn-hub-calendario')?.addEventListener('click', () => {
 });
 
 async function carregarEventosCalendario() { 
-    const container = document.getElementById('lista-calendario-container'); 
-    container.innerHTML = '<p class="text-muted">A carregar...</p>'; 
+    const containerEL = document.getElementById('calendario-prof'); 
+    containerEL.innerHTML = '<p class="text-muted">A desenhar calendário...</p>'; 
+    
     try { 
-        const res = await getDocs(query(collection(db, "turmas", turmaAtual, "eventos"))); 
-        if(res.empty) { 
-            container.innerHTML = '<p class="text-muted">Sem eventos.</p>'; 
-            return; 
-        } 
-        let html = ''; 
+        // Vamos buscar à coleção global de eventos
+        const res = await getDocs(query(collection(db, "eventos"))); 
+        
+        let eventosFormatados = []; 
         res.forEach(d => { 
             const e = d.data(); 
-            html += `
-            <div class="card" style="margin-bottom:10px;">
-                <strong>${e.titulo}</strong><br>
-                <span style="font-size:0.8rem; color:var(--text-muted);">${e.data} | ${e.disciplina || 'Geral'}</span>
-            </div>`; 
+            eventosFormatados.push({
+                title: e.titulo,
+                start: e.data, // Formato YYYY-MM-DD
+                backgroundColor: '#11998e', // Cor principal do professor
+                borderColor: '#11998e'
+            });
         }); 
-        container.innerHTML = html; 
-    } catch(err) {} 
+        
+        containerEL.innerHTML = ""; // Limpar o texto de carregamento
+        
+        // Renderizar o FullCalendar
+        let calendar = new FullCalendar.Calendar(containerEL, {
+            initialView: 'dayGridMonth',
+            locale: 'pt',
+            events: eventosFormatados,
+            headerToolbar: {
+                left: 'prev,next',
+                center: 'title',
+                right: 'today'
+            },
+            height: 'auto'
+        });
+        
+        calendar.render();
+
+    } catch(err) {
+        console.error("Erro no calendário:", err);
+        containerEL.innerHTML = '<p>Erro ao carregar calendário.</p>';
+    } 
 }
 
 // ==========================================
@@ -575,7 +594,7 @@ async function carregarSumarios() {
 }
 
 // ==========================================
-// 7. COMPORTAMENTO / OCORRÊNCIAS (ATUALIZADO COM GAMIFICAÇÃO)
+// 7. COMPORTAMENTO / OCORRÊNCIAS
 // ==========================================
 let tipoOc = "negativa"; 
 
