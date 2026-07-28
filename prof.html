@@ -1,77 +1,170 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Turma PRO - Professor</title>
-    <link rel="icon" type="image/png" href="logo_tur.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turma PRO - Área do Professor</title>
+    
+    <!-- Ligar ao ficheiro de estilos geral -->
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Manifesto para a PWA (Instalação no telemóvel) -->
+    <link rel="manifest" href="manifest.json">
 </head>
 <body>
-    <div id="app-content">
-        <header id="header-staff" class="app-header">
-            <div class="logo"><i class="fa-solid fa-graduation-cap"></i> Turma PRO <span style="font-size: 0.7rem; color: var(--primary-green);">| Prof</span></div>
-            <div class="user-profile"><span id="header-user-name-staff">A carregar...</span><button id="btn-logout-staff" class="logout-btn" style="margin-left: 15px;" title="Sair"><i class="fa-solid fa-right-from-bracket"></i> Sair</button></div>
-        </header>
 
-        <main class="app-content">
-            <div id="prof-dashboard">
-                <div class="dashboard-header"><h2>As Minhas Turmas</h2></div>
-                <div class="turmas-grid-large">
-                    <button class="turma-card-large" data-turma="10T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>10T</h3></div></button>
-                    <button class="turma-card-large" data-turma="11T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>11T</h3></div></button>
-                    <button class="turma-card-large" data-turma="12T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>12T</h3></div></button>
+    <!-- CABEÇALHO DA PLATAFORMA -->
+    <header class="app-header">
+        <div class="logo-container">
+            <img src="logo_tur.png" alt="Logótipo Turma PRO" id="logo">
+            <h1>Turma PRO</h1>
+        </div>
+        <div class="user-info">
+            <span id="header-user-name-staff">Bem-vindo, Professor</span>
+            <button id="btn-logout-staff" class="btn-perigo">Sair</button>
+        </div>
+    </header>
+
+    <!-- ÁREA PRINCIPAL DO PROFESSOR -->
+    <main class="dashboard-container" id="prof-dashboard">
+        
+        <h2>Painel de Controlo</h2>
+
+        <!-- SECÇÃO 1: CRIAR EVENTOS/TESTES -->
+        <section class="card">
+            <div id="area-eventos">
+                <h3>📅 Marcar Novo Teste/Evento</h3>
+                <div class="form-group">
+                    <label for="nome-evento">Título do Evento:</label>
+                    <input type="text" id="nome-evento" placeholder="Ex: Teste de Matemática" class="input-padrao">
+                </div>
+                
+                <div class="form-group">
+                    <label for="data-evento">Data:</label>
+                    <input type="date" id="data-evento" class="input-padrao">
+                </div>
+                
+                <button id="btn-criar-evento" class="btn-principal">Marcar na Agenda</button>
+            </div>
+        </section>
+
+        <!-- SECÇÃO 2: GESTÃO DE ALUNOS -->
+        <section class="card">
+            <h3>👥 Gestão de Turmas</h3>
+            <div class="turmas-grid">
+                <!-- Mantém aqui a forma como geras as tuas turmas -->
+                <div class="turma-card-large" data-turma="10A">
+                    <h4>Turma 10ºA</h4>
+                    <p>Abrir Hub da Turma</p>
                 </div>
             </div>
+        </section>
 
-            <div id="class-hub-view" style="display: none;">
-                <div class="class-header"><button id="btn-voltar-turmas-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turmas</button><h2 id="class-hub-title" class="section-title">Turma X</h2></div>
-                <div class="admin-hub-grid">
-                    <button class="hub-card" id="btn-hub-alunos"><i class="fa-solid fa-users-viewfinder"></i><span>Lista de Alunos</span></button>
-                    <button class="hub-card" id="btn-hub-calendario"><i class="fa-regular fa-calendar-days"></i><span>Calendário</span></button>
-                    <button class="hub-card" id="btn-hub-sumarios"><i class="fa-solid fa-book-open"></i><span>Sumários</span></button>
-                </div>
-            </div>
+    </main>
 
-            <div id="class-view" style="display: none;"><div class="class-header"><button id="btn-voltar-class-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button><h2 class="section-title">Lista de Alunos</h2></div><div class="students-list-container"><p class="text-muted">A carregar...</p></div></div>
-
-            <div id="student-detail-view" style="display: none;">
-                <div class="class-header"><button id="btn-voltar-lista" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
-                <div class="student-profile-header"><div class="profile-avatar"><img id="avatar-img" src="" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:50%;"><i class="fa-solid fa-user" id="avatar-icon"></i></div><h2 id="detail-student-name">Nome</h2><p id="detail-student-number" class="text-muted">a0000</p></div>
-                <div class="admin-hub-grid" style="margin-top:20px;">
-                    <button class="hub-card" id="btn-hub-avaliacoes"><i class="fa-solid fa-star"></i><span>Avaliações</span></button>
-                    <button class="hub-card" id="btn-hub-faltas"><i class="fa-solid fa-user-clock"></i><span>Registar Faltas</span></button>
-                    <button class="hub-card" id="btn-hub-prhf"><i class="fa-solid fa-file-medical"></i><span>Gerir PRHFs</span></button>
-                    <button class="hub-card" id="btn-hub-comportamento" style="border-color: #e67e22;"><i class="fa-solid fa-scale-balanced" style="color: #e67e22;"></i><span>Comportamento</span></button>
-                </div>
-            </div>
-
-            <div id="view-avaliacoes" style="display: none;"><div class="class-header"><button id="btn-voltar-hub-avaliacoes" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Avaliações</h2></div><div id="matriz-disciplinas-container"></div></div>
-            <div id="view-disciplina-modulos" style="display: none;"><div class="class-header"><button id="btn-voltar-disciplinas" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button><h2 id="titulo-disciplina" class="section-title">PORT</h2></div><div class="card" style="padding: 10px 20px;"><div id="lista-modulos-disciplina"></div></div></div>
-            
-            <div id="view-faltas" style="display: none;"><div class="class-header"><button id="btn-voltar-hub-faltas" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Registo de Faltas</h2></div><button id="btn-nova-falta" class="primary-btn" style="margin-bottom: 20px;"><i class="fa-solid fa-plus"></i> Registar Nova Falta</button><div id="lista-historico-faltas-container"><p class="text-muted" style="text-align:center; margin-top:20px;">A carregar histórico...</p></div></div>
-            
-            <div id="view-prhf" style="display: none;"><div class="class-header"><button id="btn-voltar-hub-prhf" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Planos de Recuperação</h2></div><div class="card" style="margin-bottom: 20px;"><h3 style="margin-bottom: 15px;"><i class="fa-solid fa-plus"></i> Novo PRHF</h3><div class="input-row"><select id="prhf-disciplina"><option value="">Disc.</option></select><select id="prhf-modulo"><option value="">Mod.</option></select></div><div class="input-row"><input type="number" id="prhf-horas" placeholder="Total Horas"><div style="display:flex; align-items:center; width:100%; gap:5px; margin-bottom:15px; background-color:var(--bg-dark); border:1px solid #333; border-radius:8px; padding-left:10px;"><span style="color:var(--text-muted); font-size:0.85rem; white-space:nowrap;">Data Lim.:</span><input type="date" id="prhf-prazo" style="margin-bottom:0; border:none; padding:10px;"></div></div><div class="input-row" style="margin-bottom:15px;"><label style="display:flex; align-items:center; gap:10px; font-size:0.9rem; color:var(--text-light);"><input type="checkbox" id="prhf-modulo-terminado" style="width:auto; margin:0;"> O Módulo já terminou?</label></div><textarea id="prhf-descricao" class="input-field" placeholder="Descreve a tarefa..."></textarea><button id="btn-guardar-prhf" class="primary-btn">Gravar Plano</button></div><div class="section-container"><div class="tabs-container"><button class="tab-btn active" id="tab-prhf-ativas">Ativas</button><button class="tab-btn" id="tab-prhf-concluidas">Concluídas</button></div><div id="lista-prhf-container"></div></div></div>
-
-            <div id="view-class-calendario" style="display: none;"><div class="class-header"><button id="btn-voltar-cal-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title">Calendário</h2></div><div id="lista-calendario-container"><p class="text-muted">A carregar...</p></div></div>
-
-            <div id="view-sumarios" style="display: none;"><div class="class-header"><button id="btn-voltar-sumarios-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title">Sumários e Materiais</h2></div><button id="btn-novo-sumario" class="primary-btn" style="margin-bottom: 20px;"><i class="fa-solid fa-plus"></i> Registar Sumário</button><div style="margin-bottom:15px;"><select id="filtro-sumarios-disc" style="margin:0; padding:8px;"><option value="">Todas as Disciplinas</option></select></div><div id="lista-sumarios-container"><p class="text-muted" style="text-align:center;">A carregar sumários...</p></div></div>
-
-            <div id="view-comportamento" style="display: none;"><div class="class-header"><button id="btn-voltar-hub-comportamento" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Comportamento</h2></div><button id="btn-nova-ocorrencia" class="primary-btn" style="margin-bottom: 20px; background-color: #e67e22;"><i class="fa-solid fa-plus"></i> Registar Ocorrência</button><div id="lista-comportamento-container"><p class="text-muted" style="text-align:center; margin-top:20px;">A carregar histórico...</p></div></div>
-
-        </main>
+    <!-- OS OUTROS ECRÃS ESCONDIDOS DO TEU JS -->
+    <div id="class-hub-view" style="display: none;">
+        <h2 id="class-hub-title">Turma Atual</h2>
+        <button id="btn-voltar-turmas-hub">Voltar</button>
+        <button id="btn-hub-alunos">Ver Alunos</button>
+        <button id="btn-hub-avaliacoes">Avaliações</button>
+        <button id="btn-hub-calendario">Calendário</button>
+        <button id="btn-hub-sumarios">Sumários</button>
     </div>
 
-    <!-- MODAIS DO PROFESSOR -->
-    <div id="modal-nova-falta" class="modal-overlay"><div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto;"><h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-user-clock"></i> Registar Falta</h3><div class="falta-form-grid"><div class="falta-form-full"><input type="date" id="nf-data" style="margin-bottom:0;"></div><div><select id="nf-disc" style="margin-bottom:0;"><option value="">Disciplina</option></select></div><div><select id="nf-mod" style="margin-bottom:0;"><option value="">Módulo</option></select></div><div class="falta-form-full" style="display:flex; gap:10px; align-items:center; justify-content:center;"><span class="text-muted">Horas:</span><button id="btn-menos-hora" class="secondary-btn small-btn" style="width:40px;">-</button><input type="number" id="nf-horas" value="1" min="1" max="8" style="margin:0; text-align:center; width:60px;"><button id="btn-mais-hora" class="primary-btn small-btn" style="width:40px;">+</button></div></div><div style="display:flex; gap:10px; margin-top:20px;"><button id="btn-gravar-nova-falta" class="primary-btn" style="flex:1;">Registar</button><button class="danger-btn btn-fechar-modal" style="flex:1;">Cancelar</button></div></div></div>
+    <div id="class-view" style="display: none;">
+        <button id="btn-voltar-lista">Voltar</button>
+        <div class="students-list-container"></div>
+    </div>
     
-    <div id="modal-prhf-sheet" class="modal-overlay"><div class="paper-sheet"><button class="btn-close-paper btn-fechar-modal"><i class="fa-solid fa-xmark"></i></button><div class="paper-header"><h2 id="sheet-title">Módulo</h2><span id="sheet-status" class="paper-status">ATIVA</span></div><div class="paper-details"><p><strong>Prazo:</strong> <span id="sheet-prazo">-</span></p><p><strong>Horas Presenciais:</strong> <span id="sheet-hp">-</span>h</p><div class="paper-desc" id="sheet-desc">Descrição...</div></div><button id="sheet-btn-concluir" class="primary-btn" style="width:100%; margin-top:15px;"><i class="fa-solid fa-check"></i> Marcar como Concluída</button></div></div>
+    <div id="student-detail-view" style="display: none;">
+        <button id="btn-voltar-class-hub">Voltar</button>
+        <h3 id="detail-student-name"></h3>
+        <p id="detail-student-number"></p>
+        <button id="btn-hub-faltas">Faltas</button>
+        <button id="btn-hub-prhf">PRHF</button>
+        <button id="btn-hub-comportamento">Comportamento</button>
+        <!-- NOVOS BOTÕES MUSAI E OBSERVAÇÕES -->
+        <button id="btn-hub-musai">MUSAI</button>
+        <button id="btn-hub-observacoes">Observações de Reunião</button>
+    </div>
+    
+    <div id="view-avaliacoes" style="display: none;">
+        <button id="btn-voltar-hub-avaliacoes">Voltar</button>
+        <div id="matriz-disciplinas-container"></div>
+    </div>
+    
+    <div id="view-disciplina-modulos" style="display: none;">
+        <button id="btn-voltar-disciplinas">Voltar</button>
+        <h3 id="titulo-disciplina"></h3>
+        <div id="lista-modulos-disciplina"></div>
+    </div>
+    
+    <div id="view-faltas" style="display: none;">
+        <button id="btn-voltar-hub-faltas">Voltar</button>
+        <div id="lista-historico-faltas-container"></div>
+    </div>
+    
+    <div id="view-prhf" style="display: none;">
+        <button id="btn-voltar-hub-prhf">Voltar</button>
+        <div id="lista-prhf-container"></div>
+    </div>
 
-    <div id="modal-novo-sumario" class="modal-overlay"><div class="action-sheet" style="border-radius: 12px; max-width: 500px; margin: auto; max-height: 90vh; overflow-y: auto;"><h3 style="color:var(--primary-green); font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-book-open"></i> Novo Sumário</h3><div class="input-row"><input type="date" id="ns-data" style="margin-bottom:10px;"></div><div class="input-row"><select id="ns-disc"><option value="">Disciplina</option></select></div><div class="input-row"><input type="text" id="ns-titulo" placeholder="Título / Tema da Aula" style="margin-bottom:10px;"></div><textarea id="ns-descricao" class="input-field" placeholder="Descrição do sumário (Opcional)..." style="min-height:80px;"></textarea><div style="background:var(--bg-dark); padding:15px; border-radius:8px; border:1px dashed #555; text-align:center; margin-bottom:15px;"><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">Anexar Material (Opcional - Máx 700KB)</p><label for="ns-upload-material" class="secondary-btn small-btn" style="margin:0 auto; width:fit-content;"><i class="fa-solid fa-paperclip"></i> Escolher Ficheiro</label><input type="file" id="ns-upload-material" style="display:none;" accept=".pdf,.doc,.docx,.ppt,.pptx"><span id="ns-file-name" class="file-name-display" style="display:block; margin-top:10px; font-size:0.8rem; color:var(--success-green);"></span></div><div style="display:flex; gap:10px;"><button id="btn-gravar-sumario" class="primary-btn" style="flex:1;"><i class="fa-solid fa-check"></i> Publicar</button></div><button class="secondary-btn btn-fechar-modal" style="margin-top:10px; width:100%;">Cancelar</button></div></div>
+    <div id="view-class-calendario" style="display: none;">
+        <button id="btn-voltar-cal-hub">Voltar</button>
+        <div id="lista-calendario-container"></div>
+    </div>
 
-    <div id="modal-nova-ocorrencia" class="modal-overlay"><div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto;"><h3 style="color:#e67e22; font-size:1.2rem; margin-bottom:15px;"><i class="fa-solid fa-scale-balanced"></i> Registar Comportamento</h3><div class="falta-tabs" style="margin-bottom: 15px;"><button class="falta-tab-btn active" id="btn-tipo-negativo" style="border-color:var(--danger-red); color:var(--danger-red);">Ocorrência (-)</button><button class="falta-tab-btn" id="btn-tipo-positivo" style="border-color:var(--success-green); color:var(--success-green);">Medalha (+)</button></div><div class="input-row"><input type="date" id="no-data" style="margin-bottom:10px;"></div><div class="input-row"><input type="text" id="no-titulo" placeholder="Motivo (ex: Falta de Material)" style="margin-bottom:10px;"></div><textarea id="no-descricao" class="input-field" placeholder="Detalhes da ocorrência..." style="min-height:80px;"></textarea><div style="display:flex; gap:10px;"><button id="btn-gravar-ocorrencia" class="primary-btn" style="flex:1; background-color: #e67e22;">Registar</button><button class="danger-btn btn-fechar-modal" style="flex:1;">Cancelar</button></div></div></div>
+    <div id="view-sumarios" style="display: none;">
+        <button id="btn-voltar-sumarios-hub">Voltar</button>
+        <div id="lista-sumarios-container"></div>
+    </div>
 
-    <script type="module" src="./js/prof-app.js"></script>
+    <div id="view-comportamento" style="display: none;">
+        <button id="btn-voltar-hub-comportamento">Voltar</button>
+        <div id="lista-comportamento-container"></div>
+    </div>
+
+    <!-- VIEW: MUSAI (NOVO) -->
+    <div id="view-musai" style="display: none;">
+        <button id="btn-voltar-hub-musai">Voltar</button>
+        <h3>🧩 Medidas de Apoio (MUSAI)</h3>
+        <div id="lista-musai-container" style="margin-bottom: 20px;"></div>
+        
+        <div class="card" style="border: 2px dashed var(--primary-color);">
+            <h4>Adicionar Informação MUSAI</h4>
+            <div class="form-group">
+                <textarea id="novo-musai-texto" placeholder="Descreve a medida ou adaptação necessária..." class="input-padrao" rows="3" style="width: 100%;"></textarea>
+            </div>
+            <button id="btn-gravar-musai" class="btn-principal">Gravar Medida</button>
+        </div>
+    </div>
+
+    <!-- VIEW: OBSERVAÇÕES DE REUNIÃO (NOVO) -->
+    <div id="view-observacoes" style="display: none;">
+        <button id="btn-voltar-hub-observacoes">Voltar</button>
+        <h3>📑 Observações de Reunião</h3>
+        <div id="lista-observacoes-container" style="margin-bottom: 20px;"></div>
+        
+        <div class="card" style="border: 2px dashed var(--primary-color);">
+            <h4>Escrever nova Síntese</h4>
+            <div class="form-group">
+                <select id="novo-obs-momento" class="input-padrao" style="width: 100%; margin-bottom: 10px;">
+                    <option value="Intercalar 1 (Nov)">Intercalar 1 (Nov)</option>
+                    <option value="1º Semestre">1º Semestre</option>
+                    <option value="Intercalar 2 (Abr)">Intercalar 2 (Abr)</option>
+                    <option value="2º Semestre">2º Semestre</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <textarea id="novo-obs-texto" placeholder="O aluno revelou empenho e..." class="input-padrao" rows="4" style="width: 100%;"></textarea>
+            </div>
+            <button id="btn-gravar-obs" class="btn-principal">Publicar Observação</button>
+        </div>
+    </div>
+
+    <!-- LIGAR AO JAVASCRIPT DO PROFESSOR -->
+    <script type="module" src="js/prof-app.js"></script>
+
 </body>
 </html>
