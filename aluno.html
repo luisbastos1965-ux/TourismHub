@@ -29,6 +29,25 @@
                     <p>Pronto para mais um dia de aprendizagem?</p>
                 </div>
 
+                <!-- NOVA SECÇÃO: GAMIFICAÇÃO (NÍVEL E XP) -->
+                <div class="card" style="background: linear-gradient(135deg, #11998e, #38ef7d); color: white; border: none; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div>
+                            <h3 style="margin: 0; font-size: 1.2rem; color: white;"><i class="fa-solid fa-star" style="color: #ffd700;"></i> Nível <span id="aluno-nivel">1</span></h3>
+                            <span style="font-size: 0.85rem; opacity: 0.9;" id="aluno-rank-title">Novato</span>
+                        </div>
+                        <div style="font-size: 1.5rem; font-weight: bold;">
+                            <span id="aluno-xp-atual">0</span> <span style="font-size: 1rem; opacity: 0.8;">XP</span>
+                        </div>
+                    </div>
+                    <div class="progress-bar-bg" style="background: rgba(0,0,0,0.2); height: 10px; border-radius: 5px; width: 100%;">
+                        <div class="progress-bar-fill" id="aluno-xp-progress" style="background: white; width: 0%; height: 100%; border-radius: 5px;"></div>
+                    </div>
+                    <div style="text-align: right; font-size: 0.75rem; margin-top: 5px; opacity: 0.9;">
+                        Faltam <span id="aluno-xp-falta">100</span> XP para o próximo nível
+                    </div>
+                </div>
+
                 <div class="student-alerts-grid">
                     <div class="alert-card" style="border-color: var(--warning-yellow);">
                         <div class="alert-icon"><i class="fa-solid fa-calendar-day"></i></div>
@@ -76,7 +95,7 @@
                 </div>
             </div>
 
-            <!-- CADERNETA DO ALUNO (Com a nova aba de Observações!) -->
+            <!-- CADERNETA DO ALUNO -->
             <div id="view-aluno-caderneta" style="display: none;">
                 <div class="class-header"><h2 class="section-title">Minha Caderneta</h2></div>
                 <div class="falta-tabs" style="display:flex; flex-wrap:wrap; gap:5px; justify-content:center;">
@@ -84,7 +103,6 @@
                     <button class="falta-tab-btn" id="tab-aluno-faltas" style="flex: 1 1 30%;">Faltas</button>
                     <button class="falta-tab-btn" id="tab-aluno-prhfs" style="flex: 1 1 30%;">PRHFs</button>
                     <button class="falta-tab-btn" id="tab-aluno-comportamento" style="flex: 1 1 45%;">Comportamento</button>
-                    <!-- NOVA ABA: OBSERVAÇÕES -->
                     <button class="falta-tab-btn" id="tab-aluno-observacoes" style="flex: 1 1 45%;">Reuniões</button>
                 </div>
                 <div id="aluno-caderneta-content" style="margin-top:20px;">
