@@ -57,6 +57,8 @@
                     <button class="hub-card" id="btn-hub-avaliacoes"><i class="fa-solid fa-star"></i><span>Lançar Avaliações</span></button>
                     <button class="hub-card" id="btn-hub-faltas"><i class="fa-solid fa-user-clock"></i><span>Gerir Faltas</span></button>
                     <button class="hub-card" id="btn-hub-prhf"><i class="fa-solid fa-file-medical"></i><span>Criar PRHFs</span></button>
+                    <button class="hub-card" id="btn-hub-musai" style="border-color: #e67e22;"><i class="fa-solid fa-puzzle-piece" style="color: #e67e22;"></i><span>MUSAI</span></button>
+                    <button class="hub-card" id="btn-hub-observacoes" style="border-color: #0099ff;"><i class="fa-solid fa-file-signature" style="color: #0099ff;"></i><span>Reuniões</span></button>
                     <button class="hub-card" id="btn-hub-chat-ee" style="border-color: var(--warning-yellow);"><i class="fa-solid fa-envelope" style="color: var(--warning-yellow);"></i><span>Mensagens EE</span></button>
                     <button class="hub-card" id="btn-hub-fct-pap" style="border-color: #9b59b6;"><i class="fa-solid fa-briefcase" style="color: #9b59b6;"></i><span>FCT & PAP</span></button>
                 </div>
@@ -75,12 +77,40 @@
             <div id="view-class-estatisticas" style="display: none;"><div class="class-header"><button id="btn-voltar-stats-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-stats-turma">Estatísticas Reais</h2></div><h3 style="margin-bottom: 15px; color: var(--primary-green); font-size: 1rem;"><i class="fa-solid fa-chart-pie"></i> Visão Global</h3><div class="stats-grid"><div class="stat-card"><i class="fa-solid fa-graduation-cap"></i><div class="stat-value" id="stat-media-turma">...</div><div class="stat-label">Média Global</div></div><div class="stat-card"><i class="fa-solid fa-user-clock"></i><div class="stat-value" id="stat-faltas-totais" style="color:var(--danger-red);">...</div><div class="stat-label">Faltas Totais (h)</div></div><div class="stat-card"><i class="fa-solid fa-file-medical"></i><div class="stat-value" id="stat-prhf-ativos" style="color:var(--warning-yellow);">...</div><div class="stat-label">PRHF (Ativos)</div><div class="stat-sub-info">Cump: <strong id="stat-prhf-cump">0</strong>h | Plan: <strong id="stat-prhf-plan">0</strong>h</div></div><div class="stat-card"><i class="fa-solid fa-triangle-exclamation"></i><div class="stat-value" id="stat-alunos-risco" style="color:var(--danger-red);">...</div><div class="stat-label">Alunos em Risco (≥3 Neg.)</div></div></div><h3 style="margin: 25px 0 15px 0; color: var(--primary-green); font-size: 1rem;"><i class="fa-solid fa-layer-group"></i> Médias por Componente</h3><div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);"><div class="stat-card" style="padding:15px;"><div class="stat-value" id="stat-med-socio" style="font-size:1.4rem;">...</div><div class="stat-label">Sociocultural</div></div><div class="stat-card" style="padding:15px;"><div class="stat-value" id="stat-med-cient" style="font-size:1.4rem;">...</div><div class="stat-label">Científica</div></div><div class="stat-card" style="padding:15px;"><div class="stat-value" id="stat-med-tec" style="font-size:1.4rem;">...</div><div class="stat-label">Técnica</div></div></div><h3 style="margin: 25px 0 15px 0; color: var(--primary-green); font-size: 1rem;"><i class="fa-solid fa-list-ol"></i> Tabela de Alunos</h3><div class="table-container"><table class="styled-table"><thead><tr><th>Nº/Nome</th><th class="center">Média</th><th class="center">Faltas(h)</th><th class="center">Estado</th></tr></thead><tbody id="tabela-stats-alunos"><tr><td colspan="4" class="text-muted center">A processar dados...</td></tr></tbody></table></div></div>
             <div id="view-validar-justificacoes" style="display: none;"><div class="class-header"><button id="btn-voltar-justificacoes-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title">Validar Justificações</h2></div><div id="lista-justificacoes-pendentes"><p class="text-muted" style="text-align:center; margin-top:20px;">A procurar atestados...</p></div></div>
             
-            <!-- NOVA VISTA DE SUMÁRIOS -->
             <div id="view-sumarios" style="display: none;">
                 <div class="class-header"><button id="btn-voltar-sumarios-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title">Sumários e Materiais</h2></div>
                 <button id="btn-novo-sumario" class="primary-btn" style="margin-bottom: 20px;"><i class="fa-solid fa-plus"></i> Registar Sumário</button>
                 <div style="margin-bottom:15px;"><select id="filtro-sumarios-disc" style="margin:0; padding:8px;"><option value="">Todas as Disciplinas</option></select></div>
                 <div id="lista-sumarios-container"><p class="text-muted" style="text-align:center;">A carregar sumários...</p></div>
+            </div>
+
+            <!-- NOVAS VISTAS MUSAI E OBSERVAÇÕES PARA O DT -->
+            <div id="view-musai" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-hub-musai" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Medidas de Apoio (MUSAI)</h2></div>
+                <div class="card" style="border: 2px dashed var(--primary-green); margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 15px;">Adicionar Informação MUSAI</h4>
+                    <div class="form-group"><textarea id="novo-musai-texto" placeholder="Descreve a medida ou adaptação necessária..." class="input-padrao" rows="3" style="width: 100%;"></textarea></div>
+                    <button id="btn-gravar-musai" class="primary-btn">Gravar Medida</button>
+                </div>
+                <div id="lista-musai-container"></div>
+            </div>
+
+            <div id="view-observacoes" style="display: none;">
+                <div class="class-header"><button id="btn-voltar-hub-observacoes" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Observações de Reunião</h2></div>
+                <div class="card" style="border: 2px dashed var(--primary-green); margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 15px;">Escrever nova Síntese</h4>
+                    <div class="form-group">
+                        <select id="novo-obs-momento" class="input-padrao" style="width: 100%; margin-bottom: 10px;">
+                            <option value="Intercalar 1 (Nov)">Intercalar 1 (Nov)</option>
+                            <option value="1º Semestre">1º Semestre</option>
+                            <option value="Intercalar 2 (Abr)">Intercalar 2 (Abr)</option>
+                            <option value="2º Semestre">2º Semestre</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><textarea id="novo-obs-texto" placeholder="O aluno revelou empenho e..." class="input-padrao" rows="4" style="width: 100%;"></textarea></div>
+                    <button id="btn-gravar-obs" class="primary-btn">Publicar Observação</button>
+                </div>
+                <div id="lista-observacoes-container"></div>
             </div>
 
         </main>
