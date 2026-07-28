@@ -1,6 +1,6 @@
-import { auth, db } from "./firebase.js";
+import { auth, db, messaging, VAPID_KEY, getToken, onMessage } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, collection, getDocs, query, addDoc, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { doc, getDoc, collection, getDocs, query, addDoc, onSnapshot, orderBy, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 let myUserId = "";
 let myUserName = "";
@@ -396,7 +396,6 @@ async function carregarComportamentoEE() {
 document.querySelector('.nav-item[data-target="view-ee-agenda"]')?.addEventListener('click', async () => {
     const container = document.getElementById('ee-agenda-content');
     
-    // Injetar Abas Dinâmicas para alternar entre Eventos e Horário da Turma
     let tabsHTML = `
     <div class="falta-tabs" style="margin-bottom: 20px;">
         <button class="falta-tab-btn active" id="btn-ee-tab-eventos">Testes / Eventos</button>
@@ -515,3 +514,26 @@ async function carregarHorarioEE() {
         subContainer.innerHTML = '<p class="text-danger center">Erro ao carregar horário.</p>';
     }
 }
+
+// ==========================================
+// 7. NOTIFICAÇÕES PUSH PARA EE
+// ==========================================
+async function pedirPermissaoNotificacoes() {
+    try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+            const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
+            if (currentToken && myUserId) {
+                await updateDoc(doc(db, "utilizadores", myUserId), { tokenNotificacao: currentToken });
+            }
+        }
+    } catch (error) {}
+}
+
+if(typeof onMessage !== "undefined" && messaging) {
+    onMessage(messaging, (payload) => {
+        alert(`NOVA NOTIFICAÇÃO:\n\n${payload.notification.title}\n${payload.notification.body}`);
+    });
+}
+setTimeout(() => { if(myUserId) pedirPermissaoNotificacoes(); }, 4000);
