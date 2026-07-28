@@ -11,6 +11,9 @@
     <!-- FullCalendar Biblioteca e Idioma Português -->
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/locales/pt.global.min.js'></script>
+
+    <!-- Biblioteca de Compressão de Imagens no Browser (NOVO) -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
 </head>
 <body>
     <div id="app-content">
@@ -181,7 +184,7 @@
                         <label for="aluno-upload-pap" class="secondary-btn small-btn" style="margin:0; flex:1; text-align:center; border-style: dashed;">
                             <i class="fa-solid fa-upload"></i> Anexar Anteprojeto
                         </label>
-                        <input type="file" id="aluno-upload-pap" style="display:none;" accept=".pdf,.doc,.docx">
+                        <input type="file" id="aluno-upload-pap" style="display:none;" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg">
                     </div>
                     <span id="aluno-pap-file-name" class="file-name-display" style="display:block; margin-top:10px; font-size:0.85rem; color:var(--success-green);"></span>
                     <button id="btn-enviar-pap" class="primary-btn" style="display:none; width:100%; margin-top:10px;"><i class="fa-solid fa-paper-plane"></i> Submeter Ficheiro</button>
