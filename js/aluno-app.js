@@ -68,7 +68,7 @@ function carregarGamificacao(dados) {
 }
 
 // ==========================================
-// 2. NAVEGAÇÃO DA BARRA INFERIOR
+// 2. NAVEGAÇÃO DA BARRA INFERIOR E BOTÕES
 // ==========================================
 const navItems = document.querySelectorAll('.nav-item');
 const views = [
@@ -78,7 +78,8 @@ const views = [
     document.getElementById('view-aluno-forum'),
     document.getElementById('view-aluno-passaporte'),
     document.getElementById('view-study-mode'),
-    document.getElementById('view-aluno-sumarios')
+    document.getElementById('view-aluno-sumarios'),
+    document.getElementById('view-aluno-caderno') // NOVO: Ecrã do Caderno
 ];
 
 function esconderTodasAsVistas() {
@@ -664,8 +665,132 @@ async function carregarSumariosAluno() {
     } catch(e) { container.innerHTML = '<p class="text-danger center">Erro ao carregar os dados.</p>'; }
 }
 
+
 // ==========================================
-// 9. NOTIFICAÇÕES PUSH
+// 10. CADERNO DIGITAL (NOVO: RICH TEXT EDITOR)
+// ==========================================
+let quillEditor; // Variável global para guardar o editor
+
+document.getElementById('btn-open-caderno')?.addEventListener('click', () => {
+    esconderTodasAsVistas();
+    navItems.forEach(nav => nav.classList.remove('active'));
+    document.getElementById('view-aluno-caderno').style.display = 'block';
+    
+    // Iniciar a biblioteca Quill.js apenas se ainda não tiver sido iniciada
+    if (!quillEditor) {
+        quillEditor = new Quill('#quill-editor', {
+            theme: 'snow',
+            placeholder: 'Escreve aqui o teu resumo com negritos, cores, listas...',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'color': [] }, { 'background': [] }],
+                    ['clean'] // Botão para limpar a formatação
+                ]
+            }
+        });
+    }
+    
+    // Carregar resumos gravados anteriormente
+    carregarApontamentos();
+});
+
+document.getElementById('btn-voltar-caderno')?.addEventListener('click', () => {
+    esconderTodasAsVistas();
+    document.querySelector('.nav-item[data-target="student-dashboard"]').classList.add('active');
+    document.getElementById('student-dashboard').style.display = 'block';
+});
+
+// Botão Gravar Apontamento
+document.getElementById('btn-gravar-apontamento')?.addEventListener('click', async (e) => {
+    const titulo = document.getElementById('caderno-titulo').value.trim();
+    const conteudoHTML = quillEditor.root.innerHTML; // Pega no texto com as formatações todas!
+    const textoLimpo = quillEditor.getText().trim(); // Apenas para validar se está vazio
+    
+    if(!titulo || textoLimpo.length === 0) {
+        alert("Preenche o título e escreve alguma coisa no resumo!");
+        return;
+    }
+    
+    const br = e.currentTarget;
+    const txtOriginal = br.innerHTML;
+    br.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A gravar na nuvem...';
+    br.disabled = true;
+    
+    try {
+        await addDoc(collection(db, "utilizadores", myUserId, "apontamentos"), {
+            titulo: titulo,
+            conteudo: conteudoHTML, // Grava o código HTML mágico gerado pelo Quill
+            timestamp: Date.now()
+        });
+        
+        // Limpar os campos após gravar
+        document.getElementById('caderno-titulo').value = '';
+        quillEditor.root.innerHTML = '';
+        
+        br.innerHTML = '<i class="fa-solid fa-check"></i> Gravado com sucesso!';
+        br.style.backgroundColor = 'var(--success-green)';
+        
+        // Atualiza a lista na página
+        carregarApontamentos();
+        
+        // Voltar ao normal após 2 segundos
+        setTimeout(() => {
+            br.innerHTML = txtOriginal;
+            br.disabled = false;
+            br.style.backgroundColor = '#e67e22'; // Cor de laranja original do botão
+        }, 2000);
+    } catch(err) {
+        console.error("Erro a gravar apontamento:", err);
+        br.innerHTML = 'Erro ao gravar!';
+        setTimeout(() => { br.innerHTML = txtOriginal; br.disabled = false; }, 2000);
+    }
+});
+
+// Função que puxa os resumos da Base de Dados
+async function carregarApontamentos() {
+    const container = document.getElementById('lista-apontamentos-container');
+    container.innerHTML = '<p class="text-muted center">A sincronizar com a nuvem...</p>';
+    
+    if(!myUserId) return;
+
+    try {
+        const res = await getDocs(query(collection(db, "utilizadores", myUserId, "apontamentos")));
+        if(res.empty) {
+            container.innerHTML = '<p class="text-muted center">Ainda não tens resumos gravados. Começa a escrever o teu primeiro!</p>';
+            return;
+        }
+        
+        let arr = [];
+        res.forEach(d => arr.push({id: d.id, ...d.data()}));
+        arr.sort((a,b) => b.timestamp - a.timestamp); // Os mais recentes aparecem primeiro
+        
+        let html = '';
+        arr.forEach(nota => {
+            html += `
+            <div class="card" style="margin-bottom:15px; border-left:4px solid #e67e22;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <strong style="font-size:1.05rem; color:var(--primary-green);">${nota.titulo}</strong>
+                    <span style="font-size:0.75rem; color:var(--text-muted);"><i class="fa-regular fa-clock"></i> ${new Date(nota.timestamp).toLocaleDateString('pt-PT')}</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.05); padding:10px; border-radius:6px; font-size:0.95rem; overflow-x:auto;">
+                    <!-- Injetar o HTML formatado com segurança -->
+                    ${nota.conteudo} 
+                </div>
+            </div>`;
+        });
+        
+        container.innerHTML = html;
+    } catch(e) {
+        console.error("Erro a ler apontamentos:", e);
+        container.innerHTML = '<p class="text-danger center">Ocorreu um erro a carregar os resumos.</p>';
+    }
+}
+
+
+// ==========================================
+// 11. NOTIFICAÇÕES PUSH
 // ==========================================
 async function pedirPermissaoNotificacoes() {
     try {
