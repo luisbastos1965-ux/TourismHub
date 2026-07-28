@@ -98,7 +98,6 @@ document.getElementById('btn-voltar-hub-musai')?.addEventListener('click', () =>
 document.getElementById('btn-voltar-hub-observacoes')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
 document.getElementById('btn-voltar-hub-comportamento')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
 
-
 // ACESSOS A PARTIR DO HUB DA TURMA
 document.getElementById('btn-hub-alunos')?.addEventListener('click', () => { esconderTudoMenos(classView); carregarAlunos(turmaAtual); });
 document.getElementById('btn-hub-calendario')?.addEventListener('click', () => { esconderTudoMenos(viewClassCalendario); carregarEventosCalendario(); });
@@ -416,13 +415,105 @@ async function abrirModulosDisciplinaAvaliacao(disciplina) {
     listaModulosUI.querySelectorAll('.btn-gravar-nota').forEach(b => b.addEventListener('click', async (e) => { const d = e.currentTarget.getAttribute('data-disc'); const m = e.currentTarget.getAttribute('data-mod'); const v = notaSelecionadaTemporaria[m]; if(!v) return; const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ...'; try { const valorDb = v === "REP" ? "REP" : Number(v); const motivo = v === "REP" ? document.getElementById(`input-reason-${d}-${m}`).value : ""; await setDoc(doc(db, "utilizadores", alunoAtualId, "notas", `${d}_${m}`), { disciplina: d, modulo: m, nota: valorDb, motivoRep: motivo, data: new Date().toISOString() }); btnRef.innerText = "Gravado!"; setTimeout(() => { btnRef.innerText = "OK (Gravar)"; abrirModulosDisciplinaAvaliacao(d); }, 800); } catch(err){ btnRef.innerText = "Erro!"; } }));
 }
 
-// INFORMAÇÕES PESSOAIS
-document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { document.getElementById('modal-telefone').style.display='none'; document.getElementById('modal-email').style.display='none'; document.getElementById('modal-nova-falta').style.display='none'; document.getElementById('modal-alterar-falta').style.display='none'; document.getElementById('modal-novo-evento').style.display='none'; document.getElementById('modal-editar-horario').style.display='none'; document.getElementById('modal-novo-forum').style.display='none'; document.getElementById('modal-ver-atestado').style.display='none'; document.getElementById('modal-dt-chat-ee').style.display='none'; document.getElementById('modal-dt-fct-pap').style.display='none'; document.getElementById('modal-novo-sumario').style.display='none'; document.getElementById('modal-nova-ocorrencia').style.display='none'; }));
+// INFORMAÇÕES PESSOAIS E FECHO DE MODAIS
+document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { document.getElementById('modal-telefone').style.display='none'; document.getElementById('modal-email').style.display='none'; document.getElementById('modal-nova-falta').style.display='none'; document.getElementById('modal-alterar-falta').style.display='none'; document.getElementById('modal-novo-evento').style.display='none'; document.getElementById('modal-editar-horario').style.display='none'; document.getElementById('modal-novo-forum').style.display='none'; document.getElementById('modal-info-forum').style.display='none'; document.getElementById('modal-evento-info').style.display='none'; document.getElementById('modal-ver-atestado').style.display='none'; document.getElementById('modal-dt-chat-ee').style.display='none'; document.getElementById('modal-dt-fct-pap').style.display='none'; document.getElementById('modal-novo-sumario').style.display='none'; document.getElementById('modal-nova-ocorrencia').style.display='none'; document.getElementById('modal-novo-utilizador').style.display='none'; document.getElementById('modal-admin-editar-aluno').style.display='none'; }));
 document.addEventListener('click', (e) => { if (e.target.classList.contains('clickable-contact')) { const tipo = e.target.getAttribute('data-type'); const valor = e.target.innerText; if(valor === "-" || valor === "") return; nomePessoaContactoModal = e.target.id.includes('aluno') ? document.getElementById('detail-student-name').innerText : (document.getElementById('display-ee-nome').innerText || "Enc. Educação"); window.contactoTemp = valor; if (tipo === 'tel') { document.getElementById('action-ligar').href = `tel:${valor}`; document.getElementById('modal-telefone').style.display = 'flex'; } else if (tipo === 'email') { document.getElementById('action-enviar-email').href = `mailto:${valor}`; document.getElementById('modal-email').style.display = 'flex'; } } });
 document.getElementById('action-guardar-vcard')?.addEventListener('click', () => { const vcard = `BEGIN:VCARD\nVERSION:3.0\nFN:${nomePessoaContactoModal}\nTEL:${window.contactoTemp}\nEND:VCARD`; const blob = new Blob([vcard], { type: 'text/vcard' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${nomePessoaContactoModal.replace(/\s+/g,'_')}.vcf`; document.body.appendChild(link); link.click(); document.body.removeChild(link); document.getElementById('modal-telefone').style.display = 'none'; });
 document.getElementById('btn-hub-informacoes')?.addEventListener('click', async () => { esconderTudoMenos(viewInformacoes); try { const docSnap = await getDoc(doc(db, "utilizadores", alunoAtualId)); if (docSnap.exists()) { const d = docSnap.data(); document.getElementById('display-aluno-idade').innerText = d.idade || "-"; document.getElementById('display-aluno-tel').innerText = d.telAluno || "-"; document.getElementById('display-aluno-email').innerText = d.emailAluno || "-"; document.getElementById('display-aluno-morada').innerText = d.morada || "-"; document.getElementById('display-ee-nome').innerText = d.nomeEE || "-"; document.getElementById('display-ee-filiacao').innerText = d.filiacaoEE || "-"; document.getElementById('display-ee-tel').innerText = d.telEE || "-"; document.getElementById('display-ee-email').innerText = d.emailEE || "-"; } } catch (error) {} });
 
-// CHAT EE - DT
+// ==========================================
+// NOVO: BACKOFFICE - CRIAR UTILIZADOR
+// ==========================================
+document.getElementById('btn-admin-novo-user')?.addEventListener('click', () => {
+    document.getElementById('nu-id').value = "";
+    document.getElementById('nu-nome').value = "";
+    document.getElementById('nu-turma').value = "";
+    document.getElementById('modal-novo-utilizador').style.display = 'flex';
+});
+
+document.getElementById('btn-gravar-novo-user')?.addEventListener('click', async (e) => {
+    const id = document.getElementById('nu-id').value.trim().toLowerCase();
+    const nome = document.getElementById('nu-nome').value.trim();
+    const papel = document.getElementById('nu-papel').value;
+    const turma = document.getElementById('nu-turma').value.trim().toUpperCase();
+
+    if(!id || !nome) return alert("Tens de preencher pelo menos o ID e o Nome!");
+    if((papel === 'aluno' || papel === 'dt') && !turma) return alert("Alunos e DTs precisam de ter uma Turma preenchida!");
+
+    const btnRef = e.currentTarget;
+    btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A criar...';
+    btnRef.disabled = true;
+
+    try {
+        const novoUser = { nome: nome, papel: papel };
+        if(papel === 'aluno' || papel === 'dt') novoUser.turma = turma;
+        if(papel === 'professor') novoUser.turmas = turma ? [turma] : [];
+
+        // Grava o documento com o ID exato escolhido (ex: a1234)
+        await setDoc(doc(db, "utilizadores", id), novoUser);
+
+        btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Perfil Criado!';
+        setTimeout(() => {
+            document.getElementById('modal-novo-utilizador').style.display = 'none';
+            btnRef.innerHTML = 'Criar Ficha na Base de Dados';
+            btnRef.disabled = false;
+        }, 1500);
+
+    } catch(err) {
+        console.error("Erro a criar perfil", err);
+        btnRef.innerHTML = 'Erro ao criar!';
+        setTimeout(() => { btnRef.innerHTML = 'Criar Ficha na Base de Dados'; btnRef.disabled = false; }, 2000);
+    }
+});
+
+// ==========================================
+// NOVO: BACKOFFICE - EDITAR ALUNO (TRANSIÇÃO)
+// ==========================================
+document.getElementById('btn-admin-editar-aluno')?.addEventListener('click', () => {
+    if(!alunoAtualId) return;
+    const nomeAtual = document.getElementById('detail-student-name').innerText;
+    
+    // Tenta encontrar a turma atual nos cartões do Admin para usar como placeholder
+    document.getElementById('ea-nome').value = nomeAtual;
+    document.getElementById('ea-turma').value = turmaAtual === 'TUR' ? '' : turmaAtual;
+    
+    document.getElementById('modal-admin-editar-aluno').style.display = 'flex';
+});
+
+document.getElementById('btn-gravar-edicao-aluno')?.addEventListener('click', async (e) => {
+    const nomeNovo = document.getElementById('ea-nome').value.trim();
+    const turmaNova = document.getElementById('ea-turma').value.trim().toUpperCase();
+
+    if(!nomeNovo || !turmaNova) return alert("O Nome e a Turma não podem estar vazios!");
+
+    const btnRef = e.currentTarget;
+    btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A guardar...';
+    btnRef.disabled = true;
+
+    try {
+        await updateDoc(doc(db, "utilizadores", alunoAtualId), {
+            nome: nomeNovo,
+            turma: turmaNova
+        });
+
+        document.getElementById('detail-student-name').innerText = nomeNovo;
+        btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Gravado!';
+        
+        setTimeout(() => {
+            document.getElementById('modal-admin-editar-aluno').style.display = 'none';
+            btnRef.innerHTML = 'Guardar Alterações';
+            btnRef.disabled = false;
+            // Recarrega a lista se estivermos numa turma específica
+            if(turmaAtual !== 'TUR') carregarAlunos(turmaAtual);
+        }, 1500);
+
+    } catch(err) {
+        btnRef.innerHTML = 'Erro!';
+        setTimeout(() => { btnRef.innerHTML = 'Guardar Alterações'; btnRef.disabled = false; }, 2000);
+    }
+});
+
+// CHAT EE - ADMIN (Herda a lógica do DT)
 let chatUnsubscribeDTEE = null;
 document.getElementById('btn-hub-chat-ee')?.addEventListener('click', () => {
     if(!alunoAtualId) return;
@@ -469,7 +560,6 @@ document.getElementById('btn-dt-chat-ee-send')?.addEventListener('click', async 
         inp.value = '';
     } catch(e) { console.error("Erro a enviar mensagem", e); }
 });
-
 
 // PRHF
 const selDisc = document.getElementById('prhf-disciplina'); const selMod = document.getElementById('prhf-modulo');
@@ -838,238 +928,4 @@ async function carregarSumariosGestao() {
         });
         container.innerHTML = html;
     } catch(e) { container.innerHTML = '<p class="text-danger center">Erro ao ler sumários.</p>'; }
-}
-
-// ==========================================
-// MUSAI (ADMIN - Gestão Completa)
-// ==========================================
-document.getElementById('btn-hub-musai')?.addEventListener('click', () => { 
-    if(!alunoAtualId) return; 
-    esconderTudoMenos(viewMusai); 
-    carregarMusaiDT(); 
-}); 
-
-document.getElementById('btn-gravar-musai')?.addEventListener('click', async (e) => { 
-    const texto = document.getElementById('novo-musai-texto').value.trim(); 
-    if(!texto) return alert("Preenche a descrição da medida!"); 
-    
-    const br = e.currentTarget; 
-    br.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; 
-    br.disabled = true; 
-    
-    try { 
-        await addDoc(collection(db, "utilizadores", alunoAtualId, "musai"), { 
-            descricao: texto, 
-            autor: myUserName, 
-            data: new Date().toISOString().split('T')[0],
-            timestamp: Date.now() 
-        }); 
-        document.getElementById('novo-musai-texto').value = "";
-        br.innerText = "Gravar Medida"; 
-        br.disabled = false; 
-        carregarMusaiDT(); 
-    } catch(err) { 
-        br.innerText = "Erro!"; 
-        setTimeout(() => { br.innerText = "Gravar Medida"; br.disabled = false; }, 2000); 
-    } 
-}); 
-
-async function carregarMusaiDT() { 
-    const container = document.getElementById('lista-musai-container'); 
-    container.innerHTML = '<p class="text-muted center">A carregar medidas...</p>'; 
-    try { 
-        const res = await getDocs(query(collection(db, "utilizadores", alunoAtualId, "musai"))); 
-        if(res.empty) { 
-            container.innerHTML = '<p class="text-muted center">Sem medidas MUSAI registadas.</p>'; 
-            return; 
-        } 
-        let arr = []; 
-        res.forEach(d => arr.push(d.data())); 
-        arr.sort((a,b) => b.timestamp - a.timestamp); 
-        let html = ''; 
-        arr.forEach(m => { 
-            html += `
-            <div class="card" style="margin-bottom:10px; border-left:4px solid #e67e22; background:var(--bg-dark);">
-                <span style="font-size:0.75rem; color:var(--text-muted);">Por ${m.autor} a ${m.data}</span>
-                <p style="margin-top:5px; font-size:0.9rem;">${m.descricao}</p>
-            </div>`; 
-        }); 
-        container.innerHTML = html; 
-    } catch(e) {} 
-}
-
-// ==========================================
-// OBSERVAÇÕES DE REUNIÃO (ADMIN - Gestão Completa)
-// ==========================================
-document.getElementById('btn-hub-observacoes')?.addEventListener('click', () => { 
-    if(!alunoAtualId) return; 
-    esconderTudoMenos(viewObservacoes); 
-    carregarObservacoesDT(); 
-}); 
-
-document.getElementById('btn-gravar-obs')?.addEventListener('click', async (e) => { 
-    const momento = document.getElementById('novo-obs-momento').value;
-    const texto = document.getElementById('novo-obs-texto').value.trim(); 
-    if(!texto) return alert("Preenche o texto da observação!"); 
-    
-    const br = e.currentTarget; 
-    br.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; 
-    br.disabled = true; 
-    
-    try { 
-        await addDoc(collection(db, "utilizadores", alunoAtualId, "observacoes"), { 
-            momento: momento,
-            descricao: texto, 
-            autor: myUserName, 
-            data: new Date().toISOString().split('T')[0],
-            timestamp: Date.now() 
-        }); 
-        document.getElementById('novo-obs-texto').value = "";
-        br.innerText = "Publicar Observação"; 
-        br.disabled = false; 
-        carregarObservacoesDT(); 
-    } catch(err) { 
-        br.innerText = "Erro!"; 
-        setTimeout(() => { br.innerText = "Publicar Observação"; br.disabled = false; }, 2000); 
-    } 
-}); 
-
-async function carregarObservacoesDT() { 
-    const container = document.getElementById('lista-observacoes-container'); 
-    container.innerHTML = '<p class="text-muted center">A carregar...</p>'; 
-    try { 
-        const res = await getDocs(query(collection(db, "utilizadores", alunoAtualId, "observacoes"))); 
-        if(res.empty) { 
-            container.innerHTML = '<p class="text-muted center">Sem avaliações registadas.</p>'; 
-            return; 
-        } 
-        let arr = []; 
-        res.forEach(d => arr.push(d.data())); 
-        arr.sort((a,b) => b.timestamp - a.timestamp); 
-        let html = ''; 
-        arr.forEach(o => { 
-            html += `
-            <div class="card" style="margin-bottom:10px; border-left:4px solid #0099ff;">
-                <div style="display:flex; justify-content:space-between;">
-                    <strong>${o.momento}</strong>
-                    <span style="font-size:0.75rem; color:var(--text-muted);">${o.data}</span>
-                </div>
-                <p style="margin-top:8px; font-size:0.9rem;">${o.descricao}</p>
-                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px; text-align:right;">Prof. ${o.autor}</div>
-            </div>`; 
-        }); 
-        container.innerHTML = html; 
-    } catch(e) {} 
-}
-
-// ==========================================
-// GESTÃO DE COMPORTAMENTO / OCORRÊNCIAS (ADMIN)
-// ==========================================
-document.getElementById('btn-hub-comportamento')?.addEventListener('click', () => {
-    if(!alunoAtualId) return;
-    esconderTudoMenos(viewComportamento);
-    carregarComportamento();
-});
-
-document.getElementById('btn-tipo-negativo')?.addEventListener('click', (e) => { 
-    tipoOcorrenciaAtual = "negativa"; 
-    e.currentTarget.classList.add('active'); 
-    document.getElementById('btn-tipo-positivo').classList.remove('active'); 
-});
-
-document.getElementById('btn-tipo-positivo')?.addEventListener('click', (e) => { 
-    tipoOcorrenciaAtual = "positiva"; 
-    e.currentTarget.classList.add('active'); 
-    document.getElementById('btn-tipo-negativo').classList.remove('active'); 
-});
-
-document.getElementById('btn-nova-ocorrencia')?.addEventListener('click', () => {
-    document.getElementById('no-data').value = new Date().toISOString().split('T')[0];
-    document.getElementById('no-titulo').value = ""; 
-    document.getElementById('no-descricao').value = "";
-    document.getElementById('modal-nova-ocorrencia').style.display = 'flex';
-});
-
-document.getElementById('btn-gravar-ocorrencia')?.addEventListener('click', async (e) => {
-    const data = document.getElementById('no-data').value; 
-    const titulo = document.getElementById('no-titulo').value.trim(); 
-    const desc = document.getElementById('no-descricao').value.trim();
-    
-    if(!data || !titulo) return alert("Preencha Data e Motivo!");
-    
-    const btnRef = e.currentTarget; 
-    const txtOrig = btnRef.innerText; 
-    btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; 
-    btnRef.disabled = true;
-    
-    try {
-        await addDoc(collection(db, "utilizadores", alunoAtualId, "ocorrencias"), { 
-            data: data, 
-            tipo: tipoOcorrenciaAtual, 
-            titulo: titulo, 
-            descricao: desc, 
-            autor: (typeof myUserName !== 'undefined') ? myUserName : "Direção", 
-            timestamp: Date.now() 
-        });
-
-        // Aplicar a Gamificação!
-        if (tipoOcorrenciaAtual === "positiva") {
-            const alunoRef = doc(db, "utilizadores", alunoAtualId);
-            const alunoSnap = await getDoc(alunoRef);
-            let currentXp = 0;
-            if(alunoSnap.exists() && alunoSnap.data().xp) {
-                currentXp = alunoSnap.data().xp;
-            }
-            await updateDoc(alunoRef, { xp: currentXp + 50 });
-        }
-
-        btnRef.innerHTML = '<i class="fa-solid fa-check"></i>';
-        setTimeout(() => { 
-            document.getElementById('modal-nova-ocorrencia').style.display = 'none'; 
-            btnRef.innerText = txtOrig; 
-            btnRef.disabled = false; 
-            carregarComportamento(); 
-        }, 1000);
-    } catch(err) { 
-        btnRef.innerText = "Erro!"; 
-        setTimeout(() => { 
-            btnRef.innerText = txtOrig; 
-            btnRef.disabled = false; 
-        }, 2000); 
-    }
-});
-
-async function carregarComportamento() {
-    const container = document.getElementById('lista-comportamento-container'); 
-    container.innerHTML = '<p class="text-muted center">A carregar...</p>';
-    if(!alunoAtualId) return;
-    
-    try {
-        const res = await getDocs(query(collection(db, "utilizadores", alunoAtualId, "ocorrencias")));
-        if(res.empty) { 
-            container.innerHTML = '<p class="text-muted center">Nenhum registo.</p>'; 
-            return; 
-        }
-        
-        let regs = []; 
-        res.forEach(d => regs.push(d.data())); 
-        regs.sort((a,b) => b.data.localeCompare(a.data)); 
-        
-        let html = '';
-        regs.forEach(r => {
-            const cor = r.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)';
-            const ic = r.tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>';
-            html += `
-            <div class="card" style="margin-bottom:15px; border-left: 4px solid ${cor};">
-                <div>
-                    <div style="display:flex; align-items:center; gap:8px; color:${cor}; margin-bottom:5px;">
-                        ${ic} <strong>${r.titulo}</strong>
-                    </div>
-                    <span style="font-size:0.75rem; color:var(--text-muted);">Data: ${r.data} | Por: ${r.autor}</span>
-                    ${r.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px; background:var(--bg-dark); padding:8px; border-radius:6px;">${r.descricao}</p>` : ''}
-                </div>
-            </div>`;
-        });
-        container.innerHTML = html;
-    } catch(e) { container.innerHTML = '<p class="text-danger center">Erro.</p>'; }
 }
