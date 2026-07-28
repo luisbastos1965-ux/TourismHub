@@ -31,7 +31,7 @@ onAuthStateChanged(auth, async (user) => {
                 }
 
                 carregarDadosPassaporte(dados);
-                carregarGamificacao(dados); // INICIA A GAMIFICAÇÃO
+                carregarGamificacao(dados);
                 carregarAgendaDashboard();
             }
         } catch (e) { console.error("Erro ao ler perfil", e); }
@@ -48,8 +48,8 @@ document.getElementById('btn-logout-aluno')?.addEventListener('click', () => {
 // 1.1. LÓGICA DE GAMIFICAÇÃO (XP & NÍVEIS)
 // ==========================================
 function carregarGamificacao(dados) {
-    const xp = dados.xp || 0; // Se não tiver XP, começa com 0
-    const nivel = Math.floor(xp / 100) + 1; // Cada 100 XP sobe 1 Nível
+    const xp = dados.xp || 0;
+    const nivel = Math.floor(xp / 100) + 1;
     const xpProximoNivel = nivel * 100;
     const xpNivelAtual = (nivel - 1) * 100;
     const progresso = ((xp - xpNivelAtual) / (xpProximoNivel - xpNivelAtual)) * 100;
@@ -59,7 +59,6 @@ function carregarGamificacao(dados) {
     document.getElementById('aluno-xp-progress').style.width = `${progresso}%`;
     document.getElementById('aluno-xp-falta').innerText = xpProximoNivel - xp;
 
-    // Títulos de Ranking
     let rank = "Novato";
     if (nivel >= 2) rank = "Aprendiz";
     if (nivel >= 5) rank = "Estudante PRO";
@@ -162,7 +161,6 @@ document.getElementById('btn-enviar-pap')?.addEventListener('click', async (e) =
     btnRef.disabled = true;
 
     try {
-        // Ao enviar a PAP ganha 200 XP de Bónus Automático!
         const docSnap = await getDoc(doc(db, "utilizadores", myUserId));
         let atualXp = 0;
         if(docSnap.exists() && docSnap.data().xp) atualXp = docSnap.data().xp;
@@ -171,13 +169,12 @@ document.getElementById('btn-enviar-pap')?.addEventListener('click', async (e) =
             papFicheiroEnviado: true,
             papFicheiroBase64: ficheiroPapBase64,
             papDataEnvio: new Date().toISOString(),
-            xp: atualXp + 200 // O Bónus da Gamificação!
+            xp: atualXp + 200
         });
         
         btnRef.style.backgroundColor = "var(--success-green)";
         btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Submetido (+200 XP!)';
         
-        // Recarregar a Gamificação visual no ecrã
         carregarGamificacao({xp: atualXp + 200});
 
         setTimeout(() => {
@@ -420,7 +417,7 @@ async function carregarObservacoesAluno() {
 }
 
 // ==========================================
-// 6. AGENDA E HORÁRIO
+// 6. AGENDA E HORÁRIO (VISUAL FULLCALENDAR)
 // ==========================================
 document.querySelector('.nav-item[data-target="view-aluno-agenda"]')?.addEventListener('click', () => {
     document.getElementById('tab-aluno-eventos').classList.add('active');
@@ -459,36 +456,43 @@ async function carregarAgendaDashboard() {
 }
 
 async function carregarAgendaAluno() {
-    const container = document.getElementById('aluno-agenda-content');
-    container.innerHTML = '<p class="text-muted center">A carregar calendário...</p>';
+    const containerEL = document.getElementById('aluno-agenda-content');
+    containerEL.innerHTML = '<p class="text-muted center">A desenhar calendário...</p>';
 
     try {
         const evDb = await getDocs(collection(db, "eventos"));
-        if(evDb.empty) { container.innerHTML = '<p class="text-muted center">Sem eventos agendados.</p>'; return; }
         
-        let evArr = [];
-        evDb.forEach(d => evArr.push(d.data()));
-        
-        const hoje = new Date().toISOString().split('T')[0];
-        const futuros = evArr.filter(e => e.data >= hoje).sort((a,b) => a.data.localeCompare(b.data));
-        
-        if(futuros.length === 0) { container.innerHTML = '<p class="text-muted center">Sem eventos futuros.</p>'; return; }
-
-        let html = '';
-        futuros.forEach(ev => {
-            html += `
-            <div class="card" style="margin-bottom:10px; display:flex; gap:15px; align-items:center;">
-                <div style="background:var(--bg-dark); padding:10px; border-radius:8px; text-align:center; min-width:60px;">
-                    <div style="color:var(--primary-green); font-weight:bold; font-size:1.2rem;">${ev.data.split('-')[2]}</div>
-                    <div style="font-size:0.75rem; text-transform:uppercase;">${ev.data.split('-')[1]}</div>
-                </div>
-                <div>
-                    <h4 style="margin:0; font-size:1rem;">${ev.titulo}</h4>
-                </div>
-            </div>`;
+        let eventosFormatados = [];
+        evDb.forEach(d => {
+            const e = d.data();
+            eventosFormatados.push({
+                title: e.titulo,
+                start: e.data,
+                backgroundColor: '#9b59b6', 
+                borderColor: '#9b59b6'
+            });
         });
-        container.innerHTML = html;
-    } catch(e) { container.innerHTML = '<p class="text-danger center">Erro.</p>'; }
+
+        containerEL.innerHTML = ""; 
+        
+        let calendar = new FullCalendar.Calendar(containerEL, {
+            initialView: 'dayGridMonth',
+            locale: 'pt',
+            events: eventosFormatados,
+            headerToolbar: {
+                left: 'prev,next',
+                center: 'title',
+                right: 'today'
+            },
+            height: 'auto'
+        });
+        
+        calendar.render();
+
+    } catch(e) { 
+        console.error(e);
+        containerEL.innerHTML = '<p class="text-danger center">Erro ao carregar o calendário.</p>'; 
+    }
 }
 
 // ==========================================
@@ -654,20 +658,34 @@ async function carregarSumariosAluno() {
 // ==========================================
 async function pedirPermissaoNotificacoes() {
     try {
+        console.log("A tentar pedir permissão...");
         const permission = await Notification.requestPermission();
+        
         if (permission === 'granted') {
+            console.log("Permissão concedida! A registar Service Worker e gerar token...");
+            
             const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+            
             const currentToken = await getToken(messaging, { 
                 vapidKey: VAPID_KEY,
                 serviceWorkerRegistration: registration 
             });
+            
             if (currentToken) {
+                console.log("🔑 O teu Token de Notificação é:", currentToken);
                 await updateDoc(doc(db, "utilizadores", myUserId), {
                     tokenNotificacao: currentToken
                 });
+                console.log("Token guardado na base de dados com sucesso!");
+            } else {
+                console.warn("Nenhum token gerado. Verifica a VAPID_KEY.");
             }
+        } else {
+            console.warn("O utilizador bloqueou as notificações.");
         }
-    } catch (error) { console.error("Erro Notificações:", error); }
+    } catch (error) {
+        console.error("🚨 Erro fatal ao ativar notificações:", error);
+    }
 }
 
 if(typeof onMessage !== "undefined" && messaging) {
@@ -676,4 +694,6 @@ if(typeof onMessage !== "undefined" && messaging) {
     });
 }
 
-setTimeout(() => { if(myUserId) pedirPermissaoNotificacoes(); }, 4000);
+setTimeout(() => {
+    if(myUserId) pedirPermissaoNotificacoes();
+}, 4000);
