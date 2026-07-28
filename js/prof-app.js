@@ -1,4 +1,4 @@
-import { auth, db } from "./firebase.js";
+import { auth, db, messaging, VAPID_KEY, getToken, onMessage } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, collection, query, where, getDocs, setDoc, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
@@ -26,6 +26,7 @@ const viewObservacoes = document.getElementById('view-observacoes');
 let turmaAtual = ""; 
 let alunoAtualId = ""; 
 let myUserName = "";
+let myUserId = ""; // NOVO PARA NOTIFICAÇÕES
 
 // Função Global de Navegação
 function esconderTudoMenos(ecraAtivo) { 
@@ -40,9 +41,9 @@ function esconderTudoMenos(ecraAtivo) {
 // ==========================================
 onAuthStateChanged(auth, async (user) => { 
     if (user) { 
-        const userId = user.email.split('@')[0]; 
+        myUserId = user.email.split('@')[0]; 
         try { 
-            const docSnap = await getDoc(doc(db, "utilizadores", userId)); 
+            const docSnap = await getDoc(doc(db, "utilizadores", myUserId)); 
             if (docSnap.exists() && docSnap.data().papel === 'professor') { 
                 const dados = docSnap.data();
                 myUserName = dados.nome.split(' ')[0]; 
@@ -793,7 +794,7 @@ if (btnCriarEvento) {
 }
 
 // ==========================================
-// 9. MUSAI (APENAS LEITURA PARA O PROFESSOR)
+// 9. MUSAI E OBSERVAÇÕES (APENAS LEITURA PARA O PROFESSOR)
 // ==========================================
 document.getElementById('btn-hub-musai')?.addEventListener('click', () => { 
     if(!alunoAtualId) return; 
@@ -825,9 +826,6 @@ async function carregarMusai() {
     } catch(e) {} 
 }
 
-// ==========================================
-// 10. OBSERVAÇÕES DE REUNIÃO (APENAS LEITURA PARA O PROFESSOR)
-// ==========================================
 document.getElementById('btn-hub-observacoes')?.addEventListener('click', () => { 
     if(!alunoAtualId) return; 
     esconderTudoMenos(viewObservacoes); 
@@ -861,3 +859,26 @@ async function carregarObservacoesProf() {
         container.innerHTML = html; 
     } catch(e) {} 
 }
+
+// ==========================================
+// 10. NOTIFICAÇÕES PUSH PARA STAFF (PROFESSOR)
+// ==========================================
+async function pedirPermissaoNotificacoes() {
+    try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+            const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
+            if (currentToken && myUserId) {
+                await updateDoc(doc(db, "utilizadores", myUserId), { tokenNotificacao: currentToken });
+            }
+        }
+    } catch (error) {}
+}
+
+if(typeof onMessage !== "undefined" && messaging) {
+    onMessage(messaging, (payload) => {
+        alert(`NOVA NOTIFICAÇÃO:\n\n${payload.notification.title}\n${payload.notification.body}`);
+    });
+}
+setTimeout(() => { if(myUserId) pedirPermissaoNotificacoes(); }, 4000);
