@@ -210,33 +210,38 @@ function resetPomodoro() {
 }
 
 // ==========================================
-// 5. CADERNETA (Notas, Faltas, PRHFs, Comportamento)
+// 5. CADERNETA (Notas, Faltas, PRHFs, Comportamento, Observações)
 // ==========================================
 const tabNotas = document.getElementById('tab-aluno-notas');
 const tabFaltas = document.getElementById('tab-aluno-faltas');
 const tabPrhfs = document.getElementById('tab-aluno-prhfs');
 const tabComportamento = document.getElementById('tab-aluno-comportamento');
+const tabObservacoes = document.getElementById('tab-aluno-observacoes'); // NOVA ABA
 const cadernetaContent = document.getElementById('aluno-caderneta-content');
 
 tabNotas?.addEventListener('click', (e) => { 
-    ativarTab(e.currentTarget, ['tab-aluno-faltas', 'tab-aluno-prhfs', 'tab-aluno-comportamento']); 
+    ativarTab(e.currentTarget, ['tab-aluno-faltas', 'tab-aluno-prhfs', 'tab-aluno-comportamento', 'tab-aluno-observacoes']); 
     carregarNotasAluno(); 
 });
 tabFaltas?.addEventListener('click', (e) => { 
-    ativarTab(e.currentTarget, ['tab-aluno-notas', 'tab-aluno-prhfs', 'tab-aluno-comportamento']); 
+    ativarTab(e.currentTarget, ['tab-aluno-notas', 'tab-aluno-prhfs', 'tab-aluno-comportamento', 'tab-aluno-observacoes']); 
     carregarFaltasAluno(); 
 });
 tabPrhfs?.addEventListener('click', (e) => { 
-    ativarTab(e.currentTarget, ['tab-aluno-notas', 'tab-aluno-faltas', 'tab-aluno-comportamento']); 
+    ativarTab(e.currentTarget, ['tab-aluno-notas', 'tab-aluno-faltas', 'tab-aluno-comportamento', 'tab-aluno-observacoes']); 
     carregarPrhfsAluno(); 
 });
 tabComportamento?.addEventListener('click', (e) => { 
-    ativarTab(e.currentTarget, ['tab-aluno-notas', 'tab-aluno-faltas', 'tab-aluno-prhfs']); 
+    ativarTab(e.currentTarget, ['tab-aluno-notas', 'tab-aluno-faltas', 'tab-aluno-prhfs', 'tab-aluno-observacoes']); 
     carregarComportamentoAluno(); 
+});
+tabObservacoes?.addEventListener('click', (e) => { 
+    ativarTab(e.currentTarget, ['tab-aluno-notas', 'tab-aluno-faltas', 'tab-aluno-prhfs', 'tab-aluno-comportamento']); 
+    carregarObservacoesAluno(); // NOVA FUNÇÃO
 });
 
 document.querySelector('.nav-item[data-target="view-aluno-caderneta"]')?.addEventListener('click', () => {
-    ativarTab(tabNotas, ['tab-aluno-faltas', 'tab-aluno-prhfs', 'tab-aluno-comportamento']);
+    ativarTab(tabNotas, ['tab-aluno-faltas', 'tab-aluno-prhfs', 'tab-aluno-comportamento', 'tab-aluno-observacoes']);
     carregarNotasAluno();
 });
 
@@ -351,6 +356,36 @@ async function carregarComportamentoAluno() {
     } catch(e) { cadernetaContent.innerHTML = '<p class="text-danger center">Erro ao carregar dados.</p>'; }
 }
 
+// NOVA FUNÇÃO: CARREGAR OBSERVAÇÕES DE REUNIÃO
+async function carregarObservacoesAluno() {
+    if(!myUserId) return;
+    try {
+        const res = await getDocs(query(collection(db, "utilizadores", myUserId, "observacoes")));
+        if(res.empty) { 
+            cadernetaContent.innerHTML = '<p class="text-muted" style="text-align:center;">Ainda não existem observações de reunião registadas.</p>'; 
+            return; 
+        }
+        
+        let obsArr = []; 
+        res.forEach(d => obsArr.push(d.data())); 
+        obsArr.sort((a,b) => b.timestamp - a.timestamp); // Mais recente primeiro
+        
+        let html = '';
+        obsArr.forEach(o => {
+            html += `
+            <div class="card" style="margin-bottom:10px; border-left: 4px solid var(--primary-green);">
+                <div style="display:flex; justify-content:space-between;">
+                    <strong style="color: white;">${o.momento}</strong>
+                    <span style="font-size:0.75rem; color:var(--text-muted);">${o.data}</span>
+                </div>
+                <p style="margin-top:8px; font-size:0.9rem; line-height: 1.5; color: var(--text-light);">${o.descricao}</p>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px; text-align:right;">Prof. ${o.autor}</div>
+            </div>`;
+        });
+        cadernetaContent.innerHTML = html;
+    } catch(e) { cadernetaContent.innerHTML = '<p class="text-danger center">Erro ao carregar observações.</p>'; }
+}
+
 // ==========================================
 // 6. AGENDA E HORÁRIO
 // ==========================================
@@ -375,7 +410,7 @@ document.getElementById('tab-aluno-horario')?.addEventListener('click', (e) => {
 async function carregarAgendaDashboard() {
     if(!minhaTurma) return;
     try {
-        const evDb = await getDocs(collection(db, "turmas", minhaTurma, "eventos"));
+        const evDb = await getDocs(collection(db, "eventos")); // Alterado para procurar na coleção global "eventos" que o professor criou
         if(!evDb.empty) {
             let evArr = [];
             evDb.forEach(d => evArr.push(d.data()));
@@ -393,10 +428,9 @@ async function carregarAgendaDashboard() {
 async function carregarAgendaAluno() {
     const container = document.getElementById('aluno-agenda-content');
     container.innerHTML = '<p class="text-muted center">A carregar calendário...</p>';
-    if(!minhaTurma) return;
 
     try {
-        const evDb = await getDocs(collection(db, "turmas", minhaTurma, "eventos"));
+        const evDb = await getDocs(collection(db, "eventos")); // Alterado para coleção global
         if(evDb.empty) { container.innerHTML = '<p class="text-muted center">Sem eventos agendados.</p>'; return; }
         
         let evArr = [];
@@ -417,7 +451,6 @@ async function carregarAgendaAluno() {
                 </div>
                 <div>
                     <h4 style="margin:0; font-size:1rem;">${ev.titulo}</h4>
-                    <span style="font-size:0.85rem; color:var(--text-muted);"><i class="fa-regular fa-clock"></i> ${ev.hora} | ${ev.tipo.toUpperCase()}</span>
                 </div>
             </div>`;
         });
