@@ -7,6 +7,10 @@
     <link rel="icon" type="image/png" href="logo_tur.png">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- FullCalendar Biblioteca e Idioma Português -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/locales/pt.global.min.js'></script>
 </head>
 <body>
     <div id="app-content">
@@ -29,7 +33,7 @@
                     <p>Pronto para mais um dia de aprendizagem?</p>
                 </div>
 
-                <!-- NOVA SECÇÃO: GAMIFICAÇÃO (NÍVEL E XP) -->
+                <!-- GAMIFICAÇÃO (NÍVEL E XP) -->
                 <div class="card" style="background: linear-gradient(135deg, #11998e, #38ef7d); color: white; border: none; margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <div>
@@ -117,8 +121,8 @@
                     <button class="falta-tab-btn active" id="tab-aluno-eventos">Testes / Eventos</button>
                     <button class="falta-tab-btn" id="tab-aluno-horario">Horário</button>
                 </div>
-                <div id="aluno-agenda-content" style="margin-top:20px;">
-                    <p class="text-muted" style="text-align:center;">A carregar...</p>
+                <div id="aluno-agenda-content" style="margin-top:20px; background: white; padding: 15px; border-radius: 8px; color: black;">
+                    <p class="text-muted" style="text-align:center;">A carregar calendário...</p>
                 </div>
             </div>
 
