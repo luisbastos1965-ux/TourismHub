@@ -36,7 +36,7 @@ function esconderTudoMenos(ecraAtivo) {
 }
 
 // ==========================================
-// 1. AUTENTICAÇÃO E NAVEGAÇÃO BÁSICA
+// 1. AUTENTICAÇÃO E NAVEGAÇÃO BÁSICA (COM TURMAS DINÂMICAS)
 // ==========================================
 onAuthStateChanged(auth, async (user) => { 
     if (user) { 
@@ -44,8 +44,14 @@ onAuthStateChanged(auth, async (user) => {
         try { 
             const docSnap = await getDoc(doc(db, "utilizadores", userId)); 
             if (docSnap.exists() && docSnap.data().papel === 'professor') { 
-                myUserName = docSnap.data().nome.split(' ')[0]; 
+                const dados = docSnap.data();
+                myUserName = dados.nome.split(' ')[0]; 
                 document.getElementById('header-user-name-staff').innerText = `Olá, ${myUserName}`; 
+                
+                // Mapear Turmas Reais do Professor!
+                const profTurmas = dados.turmas || [];
+                renderTurmasProfessor(profTurmas);
+
                 esconderTudoMenos(profDashboard); 
             } else { 
                 window.location.href = "index.html"; 
@@ -56,23 +62,47 @@ onAuthStateChanged(auth, async (user) => {
     } 
 });
 
+function renderTurmasProfessor(turmas) {
+    const grid = document.getElementById('prof-turmas-grid');
+    if (!grid) return;
+    
+    if (turmas.length === 0) {
+        grid.innerHTML = '<p class="text-muted" style="grid-column: 1/-1; text-align:center;">Ainda não tens turmas atribuídas. Pede à Direção para te associar a uma turma.</p>';
+        return;
+    }
+    
+    let html = '';
+    turmas.forEach(t => {
+        html += `
+        <div class="turma-card-large" data-turma="${t}">
+            <div class="tc-info">
+                <h4>Turma ${t}</h4>
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-top:5px;"><i class="fa-solid fa-door-open"></i> Abrir Hub da Turma</p>
+            </div>
+        </div>`;
+    });
+    grid.innerHTML = html;
+
+    // Ligar cliques dinâmicos
+    grid.querySelectorAll('.turma-card-large').forEach(b => { 
+        b.addEventListener('click', () => { 
+            turmaAtual = b.getAttribute('data-turma'); 
+            document.getElementById('class-hub-title').innerHTML = `Turma ${turmaAtual}`; 
+            esconderTudoMenos(classHubView); 
+        }); 
+    });
+}
+
 document.getElementById('btn-logout-staff')?.addEventListener('click', () => { 
     signOut(auth).then(() => window.location.href = "index.html"); 
 });
 
+// Fecha todos os modais novos e antigos
 document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { 
     document.querySelectorAll('.modal-overlay').forEach(m => m.style.display='none'); 
 }));
 
-// Eventos de Navegação
-document.querySelectorAll('.turma-card-large').forEach(b => { 
-    b.addEventListener('click', () => { 
-        turmaAtual = b.getAttribute('data-turma'); 
-        document.getElementById('class-hub-title').innerHTML = `Turma ${turmaAtual}`; 
-        esconderTudoMenos(classHubView); 
-    }); 
-});
-
+// Eventos de Voltar
 document.getElementById('btn-voltar-turmas-hub')?.addEventListener('click', () => esconderTudoMenos(profDashboard)); 
 document.getElementById('btn-voltar-class-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView)); 
 document.getElementById('btn-voltar-lista')?.addEventListener('click', () => esconderTudoMenos(classView)); 
@@ -99,7 +129,7 @@ async function carregarAlunos(turma) {
     container.innerHTML = '<p class="text-muted">A carregar...</p>'; 
     try { 
         const res = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turma), where("papel", "==", "aluno"))); 
-        if (res.empty) { container.innerHTML = '<p class="text-muted">Sem alunos.</p>'; return; } 
+        if (res.empty) { container.innerHTML = '<p class="text-muted">Sem alunos nesta turma.</p>'; return; } 
         
         let html = '<ul class="students-list">'; 
         res.forEach((doc) => { 
@@ -256,7 +286,7 @@ async function abrirModulos(disc) {
 }
 
 // ==========================================
-// 4. FALTAS E PRHF
+// 4. FALTAS E PRHF (Com Novos Formulários do Professor)
 // ==========================================
 document.getElementById('btn-hub-faltas')?.addEventListener('click', () => { 
     esconderTudoMenos(viewFaltas); 
@@ -316,7 +346,7 @@ document.getElementById('btn-gravar-nova-falta')?.addEventListener('click', asyn
             criadoEm: new Date().toISOString() 
         }); 
         document.getElementById('modal-nova-falta').style.display = 'none'; 
-        br.innerText = "Registar"; 
+        br.innerText = "Confirmar Falta"; 
         carregarFaltas(); 
     } catch(err) { 
         br.innerText = "Erro!"; 
@@ -338,7 +368,7 @@ async function carregarFaltas() {
         let html = ''; 
         fArr.forEach(f => { 
             html += `
-            <div class="card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+            <div class="card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border-left: 4px solid var(--danger-red);">
                 <div><strong>${f.disciplina}</strong> (${f.horas}h)<br><span style="font-size:0.8rem; color:var(--text-muted);">${f.dataInicio}</span></div>
             </div>`; 
         }); 
@@ -395,7 +425,7 @@ document.getElementById('btn-guardar-prhf')?.addEventListener('click', async (e)
         }); 
         document.getElementById('prhf-prazo').value = ""; 
         document.getElementById('prhf-descricao').value = ""; 
-        document.getElementById('prhf-horas').value = ""; 
+        document.getElementById('prhf-horas').value = "0"; 
         br.innerText = "Gravar Plano"; 
         carregarPrhfs(); 
     } catch (err) { 
@@ -418,7 +448,7 @@ async function carregarPrhfs() {
                 <span style="font-size:0.8rem;">Prazo: ${d.prazo} | Status: ${d.status.toUpperCase()}</span>
             </div>`; 
         }); 
-        container.innerHTML = html || '<p class="text-muted">Sem PRHFs.</p>'; 
+        container.innerHTML = html || '<p class="text-muted center">Sem PRHFs ativos.</p>'; 
     } catch (err) {} 
 }
 
@@ -471,14 +501,14 @@ async function carregarEventosCalendario() {
 }
 
 // ==========================================
-// 6. SUMÁRIOS E MATERIAIS DE AULA (COM COMPRESSÃO MÁGICA)
+// 6. SUMÁRIOS E MATERIAIS DE AULA
 // ==========================================
 let matBase64 = ""; 
 let matNome = ""; 
 
 document.getElementById('btn-hub-sumarios')?.addEventListener('click', () => { 
     esconderTudoMenos(viewSumarios); 
-    let opt = '<option value="">Todas</option>'; 
+    let opt = '<option value="">Todas as Disciplinas</option>'; 
     for(const comp of Object.values(matrizCurso)) { 
         for(const d of Object.keys(comp)) opt += `<option value="${d}">${d}</option>`; 
     } 
@@ -508,11 +538,10 @@ document.getElementById('ns-upload-material')?.addEventListener('change', async 
     let f = e.target.files[0]; 
     if(!f) return; 
     
-    // Se for uma imagem, usamos a biblioteca para esmagar o tamanho!
     if (f.type.startsWith('image/')) {
         console.log(`📸 Imagem original: ${(f.size / 1024 / 1024).toFixed(2)} MB`);
         const options = {
-            maxSizeMB: 0.4, // Comprimir até um máximo de 400KB
+            maxSizeMB: 0.4, 
             maxWidthOrHeight: 1920,
             useWebWorker: true
         };
@@ -523,7 +552,6 @@ document.getElementById('ns-upload-material')?.addEventListener('change', async 
             console.error("Erro na compressão:", error);
         }
     } else {
-        // Se for PDF ou Word, limitamos a 2MB para não rebentar a BD
         if(f.size > 2097152) return alert("Ficheiros PDF/Word têm um limite de 2MB. Por favor, reduz o tamanho do documento."); 
     }
 
@@ -561,13 +589,13 @@ document.getElementById('btn-gravar-sumario')?.addEventListener('click', async (
         br.innerHTML = '<i class="fa-solid fa-check"></i>'; 
         setTimeout(() => { 
             document.getElementById('modal-novo-sumario').style.display = 'none'; 
-            br.innerHTML = 'Publicar'; 
+            br.innerHTML = 'Publicar Sumário'; 
             br.disabled = false; 
             carregarSumarios(); 
         }, 1000); 
     } catch(err) { 
         br.innerHTML = "Erro!"; 
-        setTimeout(() => { br.innerHTML = 'Publicar'; br.disabled = false; }, 2000); 
+        setTimeout(() => { br.innerHTML = 'Publicar Sumário'; br.disabled = false; }, 2000); 
     } 
 }); 
 
@@ -598,7 +626,7 @@ async function carregarSumarios() {
         sArr.forEach(s => { 
             const aBtn = s.anexoBase64 ? `<a href="${s.anexoBase64}" download="${s.anexoNome}" class="secondary-btn small-btn" style="display:inline-block; margin-top:10px; width:auto; padding:5px 10px;"><i class="fa-solid fa-download"></i> ${s.anexoNome}</a>` : ''; 
             html += `
-            <div class="card" style="margin-bottom:15px; border-left:4px solid var(--primary-green);">
+            <div class="card" style="margin-bottom:15px; border-left:4px solid #0099ff;">
                 <div>
                     <span style="font-size:0.75rem; color:var(--text-muted);">${s.data} | ${s.disciplina} | ${s.professor}</span>
                     <h4 style="margin:5px 0;">${s.titulo}</h4>
@@ -626,18 +654,29 @@ document.getElementById('btn-tipo-negativo')?.addEventListener('click', (e) => {
     tipoOc = "negativa"; 
     e.currentTarget.classList.add('active'); 
     document.getElementById('btn-tipo-positivo').classList.remove('active'); 
+    e.currentTarget.style.borderColor = "var(--danger-red)";
+    e.currentTarget.style.color = "var(--danger-red)";
+    document.getElementById('btn-tipo-positivo').style.borderColor = "#333";
+    document.getElementById('btn-tipo-positivo').style.color = "var(--text-muted)";
 }); 
 
 document.getElementById('btn-tipo-positivo')?.addEventListener('click', (e) => { 
     tipoOc = "positiva"; 
     e.currentTarget.classList.add('active'); 
     document.getElementById('btn-tipo-negativo').classList.remove('active'); 
+    e.currentTarget.style.borderColor = "var(--success-green)";
+    e.currentTarget.style.color = "var(--success-green)";
+    document.getElementById('btn-tipo-negativo').style.borderColor = "#333";
+    document.getElementById('btn-tipo-negativo').style.color = "var(--text-muted)";
 }); 
 
 document.getElementById('btn-nova-ocorrencia')?.addEventListener('click', () => { 
     document.getElementById('no-data').value = new Date().toISOString().split('T')[0]; 
     document.getElementById('no-titulo').value = ""; 
     document.getElementById('no-descricao').value = ""; 
+    
+    // Resetar botões
+    document.getElementById('btn-tipo-negativo').click();
     document.getElementById('modal-nova-ocorrencia').style.display = 'flex'; 
 }); 
 
@@ -694,7 +733,7 @@ async function carregarComportamento() {
     try { 
         const res = await getDocs(query(collection(db, "utilizadores", alunoAtualId, "ocorrencias"))); 
         if(res.empty) { 
-            container.innerHTML = '<p class="text-muted center">Nenhum registo.</p>'; 
+            container.innerHTML = '<p class="text-muted center">Nenhum registo disciplinar.</p>'; 
             return; 
         } 
         
@@ -737,7 +776,6 @@ if (btnCriarEvento) {
         }
 
         try {
-            console.log("A guardar evento na base de dados...");
             await addDoc(collection(db, "eventos"), {
                 titulo: nome,
                 data: data,
@@ -749,43 +787,18 @@ if (btnCriarEvento) {
             document.getElementById("data-evento").value = "";
         } catch (error) {
             console.error("Erro ao marcar teste: ", error);
-            alert("Erro ao marcar o teste. Vê a consola.");
+            alert("Erro ao marcar o teste.");
         }
     });
 }
 
 // ==========================================
-// 9. MUSAI (MEDIDAS DE APOIO)
+// 9. MUSAI (APENAS LEITURA PARA O PROFESSOR)
 // ==========================================
 document.getElementById('btn-hub-musai')?.addEventListener('click', () => { 
     if(!alunoAtualId) return; 
     esconderTudoMenos(viewMusai); 
     carregarMusai(); 
-}); 
-
-document.getElementById('btn-gravar-musai')?.addEventListener('click', async (e) => { 
-    const texto = document.getElementById('novo-musai-texto').value.trim(); 
-    if(!texto) return alert("Preenche a descrição da medida!"); 
-    
-    const br = e.currentTarget; 
-    br.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; 
-    br.disabled = true; 
-    
-    try { 
-        await addDoc(collection(db, "utilizadores", alunoAtualId, "musai"), { 
-            descricao: texto, 
-            autor: myUserName, 
-            data: new Date().toISOString().split('T')[0],
-            timestamp: Date.now() 
-        }); 
-        document.getElementById('novo-musai-texto').value = "";
-        br.innerText = "Gravar Medida"; 
-        br.disabled = false; 
-        carregarMusai(); 
-    } catch(err) { 
-        br.innerText = "Erro!"; 
-        setTimeout(() => { br.innerText = "Gravar Medida"; br.disabled = false; }, 2000); 
-    } 
 }); 
 
 async function carregarMusai() { 
@@ -794,7 +807,7 @@ async function carregarMusai() {
     try { 
         const res = await getDocs(query(collection(db, "utilizadores", alunoAtualId, "musai"))); 
         if(res.empty) { 
-            container.innerHTML = '<p class="text-muted center">Sem medidas MUSAI registadas.</p>'; 
+            container.innerHTML = '<p class="text-muted center">Sem medidas MUSAI registadas para este aluno.</p>'; 
             return; 
         } 
         let arr = []; 
@@ -804,7 +817,7 @@ async function carregarMusai() {
         arr.forEach(m => { 
             html += `
             <div class="card" style="margin-bottom:10px; border-left:4px solid var(--primary-color); background:var(--bg-dark);">
-                <span style="font-size:0.75rem; color:var(--text-muted);">Por ${m.autor} a ${m.data}</span>
+                <span style="font-size:0.75rem; color:var(--text-muted);">Inserido por ${m.autor} a ${m.data}</span>
                 <p style="margin-top:5px; font-size:0.9rem;">${m.descricao}</p>
             </div>`; 
         }); 
@@ -813,39 +826,12 @@ async function carregarMusai() {
 }
 
 // ==========================================
-// 10. OBSERVAÇÕES DE REUNIÃO
+// 10. OBSERVAÇÕES DE REUNIÃO (APENAS LEITURA PARA O PROFESSOR)
 // ==========================================
 document.getElementById('btn-hub-observacoes')?.addEventListener('click', () => { 
     if(!alunoAtualId) return; 
     esconderTudoMenos(viewObservacoes); 
     carregarObservacoesProf(); 
-}); 
-
-document.getElementById('btn-gravar-obs')?.addEventListener('click', async (e) => { 
-    const momento = document.getElementById('novo-obs-momento').value;
-    const texto = document.getElementById('novo-obs-texto').value.trim(); 
-    if(!texto) return alert("Preenche o texto da observação!"); 
-    
-    const br = e.currentTarget; 
-    br.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; 
-    br.disabled = true; 
-    
-    try { 
-        await addDoc(collection(db, "utilizadores", alunoAtualId, "observacoes"), { 
-            momento: momento,
-            descricao: texto, 
-            autor: myUserName, 
-            data: new Date().toISOString().split('T')[0],
-            timestamp: Date.now() 
-        }); 
-        document.getElementById('novo-obs-texto').value = "";
-        br.innerText = "Publicar Observação"; 
-        br.disabled = false; 
-        carregarObservacoesProf(); 
-    } catch(err) { 
-        br.innerText = "Erro!"; 
-        setTimeout(() => { br.innerText = "Publicar Observação"; br.disabled = false; }, 2000); 
-    } 
 }); 
 
 async function carregarObservacoesProf() { 
