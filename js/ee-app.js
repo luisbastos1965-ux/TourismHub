@@ -130,7 +130,7 @@ function iniciarChatEE() {
         snapshot.forEach(doc => {
             const msg = doc.data();
             const isMe = msg.remetente === myUserId;
-            const classe = isMe ? 'student' : 'admin'; // Reutilizando classes CSS, 'student' fica à direita
+            const classe = isMe ? 'student' : 'admin'; 
             
             html += `
             <div class="chat-bubble ${classe}">
@@ -391,16 +391,44 @@ async function carregarComportamentoEE() {
 }
 
 // ==========================================
-// 6. AGENDA (VISUALIZAÇÃO DO EE)
+// 6. AGENDA E HORÁRIO (VISUALIZAÇÃO DO EE)
 // ==========================================
 document.querySelector('.nav-item[data-target="view-ee-agenda"]')?.addEventListener('click', async () => {
     const container = document.getElementById('ee-agenda-content');
-    container.innerHTML = '<p class="text-muted center">A carregar calendário escolar...</p>';
+    
+    // Injetar Abas Dinâmicas para alternar entre Eventos e Horário da Turma
+    let tabsHTML = `
+    <div class="falta-tabs" style="margin-bottom: 20px;">
+        <button class="falta-tab-btn active" id="btn-ee-tab-eventos">Testes / Eventos</button>
+        <button class="falta-tab-btn" id="btn-ee-tab-horario">Horário da Turma</button>
+    </div>
+    <div id="ee-agenda-dinamica"></div>
+    `;
+    container.innerHTML = tabsHTML;
+    
+    document.getElementById('btn-ee-tab-eventos').addEventListener('click', (e) => {
+        e.target.classList.add('active');
+        document.getElementById('btn-ee-tab-horario').classList.remove('active');
+        carregarEventosEE();
+    });
+    
+    document.getElementById('btn-ee-tab-horario').addEventListener('click', (e) => {
+        e.target.classList.add('active');
+        document.getElementById('btn-ee-tab-eventos').classList.remove('active');
+        carregarHorarioEE();
+    });
+    
+    carregarEventosEE();
+});
+
+async function carregarEventosEE() {
+    const subContainer = document.getElementById('ee-agenda-dinamica');
+    subContainer.innerHTML = '<p class="text-muted center">A carregar calendário escolar...</p>';
     if(!educandoTurma) return;
 
     try {
         const evDb = await getDocs(collection(db, "turmas", educandoTurma, "eventos"));
-        if(evDb.empty) { container.innerHTML = '<p class="text-muted center">Sem eventos agendados.</p>'; return; }
+        if(evDb.empty) { subContainer.innerHTML = '<p class="text-muted center">Sem eventos agendados.</p>'; return; }
         
         let evArr = [];
         evDb.forEach(d => evArr.push(d.data()));
@@ -408,7 +436,7 @@ document.querySelector('.nav-item[data-target="view-ee-agenda"]')?.addEventListe
         const hoje = new Date().toISOString().split('T')[0];
         const futuros = evArr.filter(e => e.data >= hoje).sort((a,b) => a.data.localeCompare(b.data));
         
-        if(futuros.length === 0) { container.innerHTML = '<p class="text-muted center">Sem eventos futuros.</p>'; return; }
+        if(futuros.length === 0) { subContainer.innerHTML = '<p class="text-muted center">Sem eventos futuros.</p>'; return; }
 
         let html = '';
         futuros.forEach(ev => {
@@ -424,6 +452,66 @@ document.querySelector('.nav-item[data-target="view-ee-agenda"]')?.addEventListe
                 </div>
             </div>`;
         });
-        container.innerHTML = html;
-    } catch(e) { container.innerHTML = '<p class="text-danger center">Erro.</p>'; }
-});
+        subContainer.innerHTML = html;
+    } catch(e) { subContainer.innerHTML = '<p class="text-danger center">Erro.</p>'; }
+}
+
+async function carregarHorarioEE() {
+    const subContainer = document.getElementById('ee-agenda-dinamica');
+    subContainer.innerHTML = '<p class="text-muted center">A carregar horário...</p>';
+    if(!educandoTurma) return;
+
+    try {
+        const docSnap = await getDoc(doc(db, "turmas", educandoTurma));
+        let horarioBase = {}; 
+        if(docSnap.exists() && docSnap.data().horario) horarioBase = docSnap.data().horario;
+        
+        let html = '<div class="card"><h4 style="margin-bottom:15px; color:var(--primary-green);">Aulas da Semana Corrente</h4>';
+        let temAulas = false;
+        
+        const diasMap = { 'seg': 'Segunda-feira', 'ter': 'Terça-feira', 'qua': 'Quarta-feira', 'qui': 'Quinta-feira', 'sex': 'Sexta-feira' };
+        const blocosTempo = { '1': '08:30 - 09:30', '2': '09:35 - 10:35', '3': '10:50 - 11:50', '4': '11:55 - 12:55', '1300': '13:00 - 14:00', '5': '14:05 - 15:05', '6': '15:15 - 16:15', '7': '16:20 - 17:20' };
+        
+        let dataInicioSemana = new Date(); 
+        dataInicioSemana.setDate(dataInicioSemana.getDate() - (dataInicioSemana.getDay() === 0 ? 6 : dataInicioSemana.getDay() - 1));
+        
+        let currDate = new Date(dataInicioSemana);
+        for(let i=0; i<5; i++) {
+            const y = currDate.getFullYear(); 
+            const m = String(currDate.getMonth()+1).padStart(2,'0'); 
+            const d = String(currDate.getDate()).padStart(2,'0');
+            const dataStr = `${y}-${m}-${d}`;
+            
+            let diaHtml = '';
+            Object.keys(blocosTempo).forEach(bId => {
+                const disc = horarioBase[`${dataStr}_${bId}`];
+                if(disc) {
+                    diaHtml += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #333; padding:8px 0;">
+                        <span style="color:var(--text-muted);">${blocosTempo[bId]}</span>
+                        <strong style="color:white;">${disc}</strong>
+                    </div>`;
+                    temAulas = true;
+                }
+            });
+            
+            if(diaHtml !== '') {
+                html += `<div style="margin-bottom:15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
+                            <h5 style="color:var(--warning-yellow); margin-bottom:5px;">${diasMap[Object.keys(diasMap)[i]]} (${d}/${m})</h5>
+                            ${diaHtml}
+                         </div>`;
+            }
+            
+            currDate.setDate(currDate.getDate() + 1);
+        }
+        
+        html += '</div>';
+        
+        if(!temAulas) {
+            subContainer.innerHTML = '<p class="text-muted center">O Diretor de Turma ainda não inseriu o horário desta semana.</p>';
+        } else {
+            subContainer.innerHTML = html;
+        }
+    } catch(e) {
+        subContainer.innerHTML = '<p class="text-danger center">Erro ao carregar horário.</p>';
+    }
+}
