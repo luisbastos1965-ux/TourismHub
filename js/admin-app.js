@@ -23,6 +23,9 @@ const viewPrhf = document.getElementById('view-prhf');
 const viewFaltas = document.getElementById('view-faltas'); 
 const viewFaltasModulos = document.getElementById('view-faltas-modulos');
 const viewValidarJustificacoes = document.getElementById('view-validar-justificacoes');
+const viewMusai = document.getElementById('view-musai');
+const viewObservacoes = document.getElementById('view-observacoes');
+const viewComportamento = document.getElementById('view-comportamento');
 
 let alunoAtualId = ""; 
 let turmaAtual = ""; 
@@ -36,7 +39,7 @@ let forumAtivoId = null;
 function esconderTudoMenos(ecraAtivo) {
     [adminDashboard, classHubView, classView, studentDetailView, viewAvaliacoes, viewDisciplinaModulos, 
      viewInformacoes, viewPrhf, viewFaltas, viewFaltasModulos, viewClassCalendario, 
-     viewClassHorario, viewClassForum, viewClassEstatisticas, viewValidarJustificacoes].forEach(el => { if(el) el.style.display = 'none'; });
+     viewClassHorario, viewClassForum, viewClassEstatisticas, viewValidarJustificacoes, viewMusai, viewObservacoes, viewComportamento].forEach(el => { if(el) el.style.display = 'none'; });
     if(ecraAtivo) ecraAtivo.style.display = 'block';
 }
 
@@ -91,6 +94,10 @@ document.getElementById('btn-voltar-horario-hub')?.addEventListener('click', () 
 document.getElementById('btn-voltar-forum-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
 document.getElementById('btn-voltar-canais')?.addEventListener('click', () => { document.getElementById('forum-chat-view').style.display = 'none'; document.getElementById('forum-channel-list').style.display = 'block'; });
 document.getElementById('btn-voltar-stats-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView));
+document.getElementById('btn-voltar-hub-musai')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
+document.getElementById('btn-voltar-hub-observacoes')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
+document.getElementById('btn-voltar-hub-comportamento')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
+
 
 // ACESSOS A PARTIR DO HUB DA TURMA
 document.getElementById('btn-hub-alunos')?.addEventListener('click', () => { esconderTudoMenos(classView); carregarAlunos(turmaAtual); });
@@ -381,10 +388,9 @@ async function carregarForuns() {
     try {
         const res = await getDocs(query(collection(db, "turmas", turmaAtual, "foruns"))); if(res.empty) { container.innerHTML = '<p class="text-muted" style="text-align:center;">Ainda não existem fóruns criados para esta turma.</p>'; return; }
         let html = ''; res.forEach(docSnap => { const f = docSnap.data(); const icon = f.tipo === 'permanente' ? 'fa-comments' : 'fa-stopwatch'; html += `<div class="canal-card" data-id="${docSnap.id}" data-json='${JSON.stringify(f)}'><div class="canal-icon"><i class="fa-solid ${icon}"></i></div><div class="canal-info"><h4>${f.nome}</h4><p>${f.membros.length} Membro(s)</p></div></div>`; }); container.innerHTML = html;
-        container.querySelectorAll('.canal-card').forEach(card => card.addEventListener('click', (e) => { const fData = JSON.parse(e.currentTarget.getAttribute('data-json')); forumAtivoId = e.currentTarget.getAttribute('data-id'); document.getElementById('chat-active-title').innerText = fData.nome; document.getElementById('mif-nome').innerText = fData.nome; document.getElementById('mif-tipo').innerText = fData.tipo.toUpperCase() + (fData.expiraEm ? ` (até ${fData.expiraEm})` : ''); document.getElementById('mif-membros').innerText = fData.membros.length + " aluno(s)"; document.getElementById('forum-channel-list').style.display = 'none'; document.getElementById('forum-chat-view').style.display = 'flex'; iniciarChat(forumAtivoId); }));
+        container.querySelectorAll('.canal-card').forEach(card => card.addEventListener('click', (e) => { const fData = JSON.parse(e.currentTarget.getAttribute('data-json')); forumAtivoId = e.currentTarget.getAttribute('data-id'); document.getElementById('chat-active-title').innerText = fData.nome; document.getElementById('forum-channel-list').style.display = 'none'; document.getElementById('forum-chat-view').style.display = 'flex'; iniciarChat(forumAtivoId); }));
     } catch(err) {}
 }
-document.getElementById('btn-info-canal')?.addEventListener('click', () => document.getElementById('modal-info-forum').style.display = 'flex');
 
 let chatUnsubscribe = null;
 function iniciarChat(fId) {
@@ -411,10 +417,59 @@ async function abrirModulosDisciplinaAvaliacao(disciplina) {
 }
 
 // INFORMAÇÕES PESSOAIS
-document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { document.getElementById('modal-telefone').style.display='none'; document.getElementById('modal-email').style.display='none'; document.getElementById('modal-nova-falta').style.display='none'; document.getElementById('modal-alterar-falta').style.display='none'; document.getElementById('modal-novo-evento').style.display='none'; document.getElementById('modal-editar-horario').style.display='none'; document.getElementById('modal-novo-forum').style.display='none'; document.getElementById('modal-info-forum').style.display='none'; document.getElementById('modal-evento-info').style.display='none'; document.getElementById('modal-ver-atestado').style.display='none'; }));
+document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { document.getElementById('modal-telefone').style.display='none'; document.getElementById('modal-email').style.display='none'; document.getElementById('modal-nova-falta').style.display='none'; document.getElementById('modal-alterar-falta').style.display='none'; document.getElementById('modal-novo-evento').style.display='none'; document.getElementById('modal-editar-horario').style.display='none'; document.getElementById('modal-novo-forum').style.display='none'; document.getElementById('modal-ver-atestado').style.display='none'; document.getElementById('modal-dt-chat-ee').style.display='none'; document.getElementById('modal-dt-fct-pap').style.display='none'; document.getElementById('modal-novo-sumario').style.display='none'; document.getElementById('modal-nova-ocorrencia').style.display='none'; }));
 document.addEventListener('click', (e) => { if (e.target.classList.contains('clickable-contact')) { const tipo = e.target.getAttribute('data-type'); const valor = e.target.innerText; if(valor === "-" || valor === "") return; nomePessoaContactoModal = e.target.id.includes('aluno') ? document.getElementById('detail-student-name').innerText : (document.getElementById('display-ee-nome').innerText || "Enc. Educação"); window.contactoTemp = valor; if (tipo === 'tel') { document.getElementById('action-ligar').href = `tel:${valor}`; document.getElementById('modal-telefone').style.display = 'flex'; } else if (tipo === 'email') { document.getElementById('action-enviar-email').href = `mailto:${valor}`; document.getElementById('modal-email').style.display = 'flex'; } } });
 document.getElementById('action-guardar-vcard')?.addEventListener('click', () => { const vcard = `BEGIN:VCARD\nVERSION:3.0\nFN:${nomePessoaContactoModal}\nTEL:${window.contactoTemp}\nEND:VCARD`; const blob = new Blob([vcard], { type: 'text/vcard' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${nomePessoaContactoModal.replace(/\s+/g,'_')}.vcf`; document.body.appendChild(link); link.click(); document.body.removeChild(link); document.getElementById('modal-telefone').style.display = 'none'; });
 document.getElementById('btn-hub-informacoes')?.addEventListener('click', async () => { esconderTudoMenos(viewInformacoes); try { const docSnap = await getDoc(doc(db, "utilizadores", alunoAtualId)); if (docSnap.exists()) { const d = docSnap.data(); document.getElementById('display-aluno-idade').innerText = d.idade || "-"; document.getElementById('display-aluno-tel').innerText = d.telAluno || "-"; document.getElementById('display-aluno-email').innerText = d.emailAluno || "-"; document.getElementById('display-aluno-morada').innerText = d.morada || "-"; document.getElementById('display-ee-nome').innerText = d.nomeEE || "-"; document.getElementById('display-ee-filiacao').innerText = d.filiacaoEE || "-"; document.getElementById('display-ee-tel').innerText = d.telEE || "-"; document.getElementById('display-ee-email').innerText = d.emailEE || "-"; } } catch (error) {} });
+
+// CHAT EE - DT
+let chatUnsubscribeDTEE = null;
+document.getElementById('btn-hub-chat-ee')?.addEventListener('click', () => {
+    if(!alunoAtualId) return;
+    const nome = document.getElementById('detail-student-name').innerText;
+    document.getElementById('dt-chat-ee-title').innerHTML = `<i class="fa-solid fa-envelope"></i> Família de ${nome}`;
+    document.getElementById('modal-dt-chat-ee').style.display = 'flex';
+    iniciarChatDTEE();
+});
+
+function iniciarChatDTEE() {
+    const chatContainer = document.getElementById('dt-chat-ee-messages');
+    chatContainer.innerHTML = '';
+    if(chatUnsubscribeDTEE) chatUnsubscribeDTEE();
+
+    chatUnsubscribeDTEE = onSnapshot(query(collection(db, "utilizadores", alunoAtualId, "chat_dt"), orderBy("timestamp")), (snapshot) => {
+        let html = '';
+        snapshot.forEach(doc => {
+            const msg = doc.data();
+            const isMe = msg.autor === 'dt';
+            const classe = isMe ? 'admin' : 'student'; 
+            html += `<div class="chat-bubble ${classe}">
+                        <strong>${isMe ? 'Tu (Admin)' : msg.remetente + ' (EE)'}</strong><br>
+                        ${msg.texto}
+                        <span class="chat-meta">${new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                     </div>`;
+        });
+        chatContainer.innerHTML = html;
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    });
+}
+
+document.getElementById('btn-dt-chat-ee-send')?.addEventListener('click', async () => {
+    const inp = document.getElementById('dt-chat-ee-input');
+    const txt = inp.value.trim();
+    if(!txt || !alunoAtualId) return;
+    
+    try {
+        await addDoc(collection(db, "utilizadores", alunoAtualId, "chat_dt"), {
+            remetente: myUserName,
+            autor: 'dt',
+            texto: txt,
+            timestamp: Date.now()
+        });
+        inp.value = '';
+    } catch(e) { console.error("Erro a enviar mensagem", e); }
+});
+
 
 // PRHF
 const selDisc = document.getElementById('prhf-disciplina'); const selMod = document.getElementById('prhf-modulo');
@@ -562,78 +617,12 @@ async function abrirModulosDisciplinaFaltas(disciplina) {
 }
 
 // ==========================================
-// MÓDULO NOVO: CHAT DIRETO COM O EE (DT)
-// ==========================================
-let chatUnsubscribeDTEE = null;
-
-// Fechar este modal específico quando clicam no X
-document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { 
-    const m = document.getElementById('modal-dt-chat-ee');
-    if(m) m.style.display = 'none'; 
-}));
-
-document.getElementById('btn-hub-chat-ee')?.addEventListener('click', () => {
-    if(!alunoAtualId) return;
-    const nome = document.getElementById('detail-student-name').innerText;
-    document.getElementById('dt-chat-ee-title').innerHTML = `<i class="fa-solid fa-envelope"></i> Família de ${nome}`;
-    document.getElementById('modal-dt-chat-ee').style.display = 'flex';
-    iniciarChatDTEE();
-});
-
-function iniciarChatDTEE() {
-    const chatContainer = document.getElementById('dt-chat-ee-messages');
-    chatContainer.innerHTML = '';
-    if(chatUnsubscribeDTEE) chatUnsubscribeDTEE();
-
-    chatUnsubscribeDTEE = onSnapshot(query(collection(db, "utilizadores", alunoAtualId, "chat_dt"), orderBy("timestamp")), (snapshot) => {
-        let html = '';
-        snapshot.forEach(doc => {
-            const msg = doc.data();
-            const isMe = msg.autor === 'dt';
-            // Se for do DT (Eu), usa verde (admin), senão usa cinza (student)
-            const classe = isMe ? 'admin' : 'student'; 
-            html += `<div class="chat-bubble ${classe}">
-                        <strong>${isMe ? 'Tu' : msg.remetente} (EE)</strong><br>
-                        ${msg.texto}
-                        <span class="chat-meta">${new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                     </div>`;
-        });
-        chatContainer.innerHTML = html;
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-    });
-}
-
-document.getElementById('btn-dt-chat-ee-send')?.addEventListener('click', async () => {
-    const inp = document.getElementById('dt-chat-ee-input');
-    const txt = inp.value.trim();
-    if(!txt || !alunoAtualId) return;
-    
-    try {
-        await addDoc(collection(db, "utilizadores", alunoAtualId, "chat_dt"), {
-            remetente: myUserName,
-            autor: 'dt',
-            texto: txt,
-            timestamp: Date.now()
-        });
-        inp.value = '';
-    } catch(e) { console.error("Erro a enviar mensagem", e); }
-});
-
-// ==========================================
 // GESTÃO DO PASSAPORTE (FCT & PAP)
 // ==========================================
-
-// Fechar modal genérico (adicionamos a verificação para fechar este também)
-document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { 
-    const mFct = document.getElementById('modal-dt-fct-pap');
-    if(mFct) mFct.style.display = 'none'; 
-}));
-
 document.getElementById('btn-hub-fct-pap')?.addEventListener('click', async () => {
     if(!alunoAtualId) return;
     document.getElementById('modal-dt-fct-pap').style.display = 'flex';
     
-    // Resetar campos para mostrar estado de loading
     document.getElementById('dt-fct-entidade').value = "A carregar...";
     document.getElementById('dt-fct-horas-feitas').value = "";
     document.getElementById('dt-fct-horas-totais').value = "";
@@ -646,20 +635,17 @@ document.getElementById('btn-hub-fct-pap')?.addEventListener('click', async () =
         if(docSnap.exists()) {
             const d = docSnap.data();
             
-            // Preencher campos
             document.getElementById('dt-fct-entidade').value = d.fctEntidade || "";
             document.getElementById('dt-fct-horas-feitas').value = d.fctHorasFeitas || 0;
             document.getElementById('dt-fct-horas-totais').value = d.fctHorasTotais || 400;
             document.getElementById('dt-pap-tema').value = d.papTema || "";
             
-            // Verificar se o aluno já enviou o PDF
             if(d.papFicheiroEnviado && d.papFicheiroBase64) {
                 document.getElementById('dt-pap-status-txt').innerHTML = '<i class="fa-solid fa-file-pdf" style="color:var(--success-green);"></i> Anteprojeto Recebido!';
                 const btnDownload = document.getElementById('btn-dt-baixar-pap');
                 btnDownload.style.display = 'block';
                 btnDownload.href = d.papFicheiroBase64;
                 
-                // Dar o nome do aluno ao ficheiro PDF para ser mais fácil de organizar no computador
                 const nomeAlunoLimpo = d.nome.replace(/\s+/g, '_');
                 btnDownload.download = `PAP_${nomeAlunoLimpo}.pdf`;
             } else {
@@ -672,7 +658,6 @@ document.getElementById('btn-hub-fct-pap')?.addEventListener('click', async () =
     }
 });
 
-// Guardar alterações feitas pelo DT
 document.getElementById('btn-gravar-fct-pap')?.addEventListener('click', async (e) => {
     if(!alunoAtualId) return;
     const btnRef = e.currentTarget;
@@ -705,20 +690,13 @@ document.getElementById('btn-gravar-fct-pap')?.addEventListener('click', async (
 });
 
 // ==========================================
-// SUMÁRIOS E MATERIAIS DE AULA (DT / ADMIN)
+// SUMÁRIOS E MATERIAIS DE AULA
 // ==========================================
 const viewSumarios = document.getElementById('view-sumarios');
 let materialBase64Temporario = "";
 let materialNomeTemporario = "";
 
-// Adicionar a função extra para fechar a nova janela (modal)
-document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { 
-    const mSum = document.getElementById('modal-novo-sumario');
-    if(mSum) mSum.style.display = 'none'; 
-}));
-
 document.getElementById('btn-hub-sumarios')?.addEventListener('click', async () => {
-    // Esconder o Hub Principal e mostrar os Sumários
     document.getElementById('class-hub-view').style.display = 'none';
     viewSumarios.style.display = 'block';
     
@@ -783,8 +761,13 @@ document.getElementById('btn-gravar-sumario')?.addEventListener('click', async (
     btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A publicar...';
     btnRef.disabled = true;
 
-    // Deteta se está no Admin ou no DT para encontrar a turma certa
     let turmaParaGravar = typeof turmaAtual !== 'undefined' ? turmaAtual : (typeof minhaTurma !== 'undefined' ? minhaTurma : null);
+    if(turmaParaGravar === 'TUR') {
+        alert("Erro: Não podes publicar sumários na vista 'TUR'. Seleciona uma turma específica.");
+        btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Publicar';
+        btnRef.disabled = false;
+        return;
+    }
     
     if(!turmaParaGravar) {
          alert("Erro interno: Turma não identificada.");
@@ -824,6 +807,7 @@ async function carregarSumariosGestao() {
     const filtroDisc = document.getElementById('filtro-sumarios-disc').value;
 
     let turmaParaLer = typeof turmaAtual !== 'undefined' ? turmaAtual : (typeof minhaTurma !== 'undefined' ? minhaTurma : "TUR"); 
+    if(turmaParaLer === 'TUR') { container.innerHTML = '<p class="text-muted" style="text-align:center;">Os sumários só podem ser vistos dentro de uma turma específica.</p>'; return; }
 
     try {
         const res = await getDocs(query(collection(db, "turmas", turmaParaLer, "sumarios")));
@@ -857,21 +841,134 @@ async function carregarSumariosGestao() {
 }
 
 // ==========================================
-// GESTÃO DE COMPORTAMENTO / OCORRÊNCIAS
+// MUSAI (ADMIN - Gestão Completa)
 // ==========================================
-const viewComportamento = document.getElementById('view-comportamento');
-let tipoOcorrenciaAtual = "negativa"; 
+document.getElementById('btn-hub-musai')?.addEventListener('click', () => { 
+    if(!alunoAtualId) return; 
+    esconderTudoMenos(viewMusai); 
+    carregarMusaiDT(); 
+}); 
 
+document.getElementById('btn-gravar-musai')?.addEventListener('click', async (e) => { 
+    const texto = document.getElementById('novo-musai-texto').value.trim(); 
+    if(!texto) return alert("Preenche a descrição da medida!"); 
+    
+    const br = e.currentTarget; 
+    br.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; 
+    br.disabled = true; 
+    
+    try { 
+        await addDoc(collection(db, "utilizadores", alunoAtualId, "musai"), { 
+            descricao: texto, 
+            autor: myUserName, 
+            data: new Date().toISOString().split('T')[0],
+            timestamp: Date.now() 
+        }); 
+        document.getElementById('novo-musai-texto').value = "";
+        br.innerText = "Gravar Medida"; 
+        br.disabled = false; 
+        carregarMusaiDT(); 
+    } catch(err) { 
+        br.innerText = "Erro!"; 
+        setTimeout(() => { br.innerText = "Gravar Medida"; br.disabled = false; }, 2000); 
+    } 
+}); 
+
+async function carregarMusaiDT() { 
+    const container = document.getElementById('lista-musai-container'); 
+    container.innerHTML = '<p class="text-muted center">A carregar medidas...</p>'; 
+    try { 
+        const res = await getDocs(query(collection(db, "utilizadores", alunoAtualId, "musai"))); 
+        if(res.empty) { 
+            container.innerHTML = '<p class="text-muted center">Sem medidas MUSAI registadas.</p>'; 
+            return; 
+        } 
+        let arr = []; 
+        res.forEach(d => arr.push(d.data())); 
+        arr.sort((a,b) => b.timestamp - a.timestamp); 
+        let html = ''; 
+        arr.forEach(m => { 
+            html += `
+            <div class="card" style="margin-bottom:10px; border-left:4px solid #e67e22; background:var(--bg-dark);">
+                <span style="font-size:0.75rem; color:var(--text-muted);">Por ${m.autor} a ${m.data}</span>
+                <p style="margin-top:5px; font-size:0.9rem;">${m.descricao}</p>
+            </div>`; 
+        }); 
+        container.innerHTML = html; 
+    } catch(e) {} 
+}
+
+// ==========================================
+// OBSERVAÇÕES DE REUNIÃO (ADMIN - Gestão Completa)
+// ==========================================
+document.getElementById('btn-hub-observacoes')?.addEventListener('click', () => { 
+    if(!alunoAtualId) return; 
+    esconderTudoMenos(viewObservacoes); 
+    carregarObservacoesDT(); 
+}); 
+
+document.getElementById('btn-gravar-obs')?.addEventListener('click', async (e) => { 
+    const momento = document.getElementById('novo-obs-momento').value;
+    const texto = document.getElementById('novo-obs-texto').value.trim(); 
+    if(!texto) return alert("Preenche o texto da observação!"); 
+    
+    const br = e.currentTarget; 
+    br.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; 
+    br.disabled = true; 
+    
+    try { 
+        await addDoc(collection(db, "utilizadores", alunoAtualId, "observacoes"), { 
+            momento: momento,
+            descricao: texto, 
+            autor: myUserName, 
+            data: new Date().toISOString().split('T')[0],
+            timestamp: Date.now() 
+        }); 
+        document.getElementById('novo-obs-texto').value = "";
+        br.innerText = "Publicar Observação"; 
+        br.disabled = false; 
+        carregarObservacoesDT(); 
+    } catch(err) { 
+        br.innerText = "Erro!"; 
+        setTimeout(() => { br.innerText = "Publicar Observação"; br.disabled = false; }, 2000); 
+    } 
+}); 
+
+async function carregarObservacoesDT() { 
+    const container = document.getElementById('lista-observacoes-container'); 
+    container.innerHTML = '<p class="text-muted center">A carregar...</p>'; 
+    try { 
+        const res = await getDocs(query(collection(db, "utilizadores", alunoAtualId, "observacoes"))); 
+        if(res.empty) { 
+            container.innerHTML = '<p class="text-muted center">Sem avaliações registadas.</p>'; 
+            return; 
+        } 
+        let arr = []; 
+        res.forEach(d => arr.push(d.data())); 
+        arr.sort((a,b) => b.timestamp - a.timestamp); 
+        let html = ''; 
+        arr.forEach(o => { 
+            html += `
+            <div class="card" style="margin-bottom:10px; border-left:4px solid #0099ff;">
+                <div style="display:flex; justify-content:space-between;">
+                    <strong>${o.momento}</strong>
+                    <span style="font-size:0.75rem; color:var(--text-muted);">${o.data}</span>
+                </div>
+                <p style="margin-top:8px; font-size:0.9rem;">${o.descricao}</p>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px; text-align:right;">Prof. ${o.autor}</div>
+            </div>`; 
+        }); 
+        container.innerHTML = html; 
+    } catch(e) {} 
+}
+
+// ==========================================
+// GESTÃO DE COMPORTAMENTO / OCORRÊNCIAS (ADMIN)
+// ==========================================
 document.getElementById('btn-hub-comportamento')?.addEventListener('click', () => {
     if(!alunoAtualId) return;
-    document.getElementById('student-detail-view').style.display = 'none';
-    if(viewComportamento) viewComportamento.style.display = 'block';
+    esconderTudoMenos(viewComportamento);
     carregarComportamento();
-});
-
-document.getElementById('btn-voltar-hub-comportamento')?.addEventListener('click', () => {
-    if(viewComportamento) viewComportamento.style.display = 'none';
-    document.getElementById('student-detail-view').style.display = 'block';
 });
 
 document.getElementById('btn-tipo-negativo')?.addEventListener('click', (e) => { 
@@ -911,9 +1008,21 @@ document.getElementById('btn-gravar-ocorrencia')?.addEventListener('click', asyn
             tipo: tipoOcorrenciaAtual, 
             titulo: titulo, 
             descricao: desc, 
-            autor: (typeof myUserName !== 'undefined') ? myUserName : "Gestão", 
+            autor: (typeof myUserName !== 'undefined') ? myUserName : "Direção", 
             timestamp: Date.now() 
         });
+
+        // Aplicar a Gamificação!
+        if (tipoOcorrenciaAtual === "positiva") {
+            const alunoRef = doc(db, "utilizadores", alunoAtualId);
+            const alunoSnap = await getDoc(alunoRef);
+            let currentXp = 0;
+            if(alunoSnap.exists() && alunoSnap.data().xp) {
+                currentXp = alunoSnap.data().xp;
+            }
+            await updateDoc(alunoRef, { xp: currentXp + 50 });
+        }
+
         btnRef.innerHTML = '<i class="fa-solid fa-check"></i>';
         setTimeout(() => { 
             document.getElementById('modal-nova-ocorrencia').style.display = 'none'; 
@@ -944,7 +1053,7 @@ async function carregarComportamento() {
         
         let regs = []; 
         res.forEach(d => regs.push(d.data())); 
-        regs.sort((a,b) => b.data.localeCompare(a.data));
+        regs.sort((a,b) => b.data.localeCompare(a.data)); 
         
         let html = '';
         regs.forEach(r => {
@@ -956,7 +1065,7 @@ async function carregarComportamento() {
                     <div style="display:flex; align-items:center; gap:8px; color:${cor}; margin-bottom:5px;">
                         ${ic} <strong>${r.titulo}</strong>
                     </div>
-                    <span style="font-size:0.75rem; color:var(--text-muted);">Data: ${r.data} | Prof. ${r.autor}</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted);">Data: ${r.data} | Por: ${r.autor}</span>
                     ${r.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px; background:var(--bg-dark); padding:8px; border-radius:6px;">${r.descricao}</p>` : ''}
                 </div>
             </div>`;
