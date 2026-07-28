@@ -310,3 +310,68 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .alert-info { display: flex; flex-direction: column; }
 .alert-info h4 { font-size: 1rem; color: white; margin-bottom: 2px; }
 .alert-info span { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: bold; }
+
+/* 1. ANIMAÇÕES DE TRANSIÇÃO SUAVE */
+@keyframes fadeAndSlideIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(15px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+/* Aplica a animação a todas as vistas (views) do aluno e professor */
+[id^="view-"], #student-dashboard, #prof-dashboard, #class-hub-view, #class-view, #student-detail-view {
+    animation: fadeAndSlideIn 0.35s cubic-bezier(0.1, 0.82, 0.25, 1);
+}
+
+/* 2. MENU INFERIOR PREMIUM */
+.bottom-nav {
+    background: rgba(26, 26, 26, 0.85) !important; /* Cor escura com transparência */
+    backdrop-filter: blur(12px); /* O famoso efeito de vidro / blur */
+    -webkit-backdrop-filter: blur(12px); /* Suporte para iPhones */
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.4);
+    padding-bottom: env(safe-area-inset-bottom, 10px); /* Evita a barra de "home" dos iPhones novos */
+}
+
+.nav-item {
+    transition: all 0.2s ease;
+}
+
+.nav-item.active {
+    transform: scale(1.1); /* Faz o ícone ativo crescer ligeiramente */
+    color: var(--primary-green, #38ef7d); /* Garante que usa o teu verde */
+}
+
+/* 3. FEEDBACK TÁTIL EM BOTÕES E CARTÕES */
+.card, .alert-card, .lms-btn, .primary-btn, .secondary-btn {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    border-radius: 14px; /* Cantos um pouco mais redondos e modernos */
+}
+
+/* Quando o utilizador clica/toca no cartão ou botão */
+.card:active, .alert-card:active, .lms-btn:active, .primary-btn:active, .secondary-btn:active {
+    transform: scale(0.97); /* Afunda 3% */
+    opacity: 0.9;
+}
+
+.card {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+/* 4. MARGENS E ESPAÇAMENTO RESPONSIVO */
+.app-content, .dashboard-container {
+    padding: 20px 15px; /* Mais espaço nas laterais */
+    padding-bottom: 100px !important; /* Garante que nada fica preso atrás da bottom-nav */
+    max-width: 800px; /* Se abrirem no PC, não estica infinitamente */
+    margin: 0 auto; /* Centra no ecrã de um PC ou Tablet */
+}
+
+.class-header {
+    margin-bottom: 20px;
+}
