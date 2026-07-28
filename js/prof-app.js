@@ -1,6 +1,7 @@
 import { auth, db } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, collection, query, where, getDocs, setDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+// ATENÇÃO: Adicionei o updateDoc a esta lista de importações para a Gamificação funcionar
+import { doc, getDoc, collection, query, where, getDocs, setDoc, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const matrizCurso = { 
     "Sociocultural": { "PORT": {"M1": 27, "M2": 24, "M3": 27}, "ING": {"M1": 24, "M2": 24, "M3": 24}, "AI": {"M1": 30, "M2": 30}, "EF": {"M1": 20, "M2": 20, "M3": 20, "M4": 20, "M5": 20}, "TIC": {"M1": 24, "M2": 24, "M3": 27, "M4": 24} }, 
@@ -574,7 +575,7 @@ async function carregarSumarios() {
 }
 
 // ==========================================
-// 7. COMPORTAMENTO / OCORRÊNCIAS
+// 7. COMPORTAMENTO / OCORRÊNCIAS (ATUALIZADO COM GAMIFICAÇÃO)
 // ==========================================
 let tipoOc = "negativa"; 
 
@@ -624,6 +625,18 @@ document.getElementById('btn-gravar-ocorrencia')?.addEventListener('click', asyn
             autor: myUserName, 
             timestamp: Date.now() 
         }); 
+
+        // 🌟 LÓGICA DE GAMIFICAÇÃO: Dar +50 XP se a ocorrência for positiva!
+        if (tipoOc === "positiva") {
+            const alunoRef = doc(db, "utilizadores", alunoAtualId);
+            const alunoSnap = await getDoc(alunoRef);
+            let currentXp = 0;
+            if(alunoSnap.exists() && alunoSnap.data().xp) {
+                currentXp = alunoSnap.data().xp;
+            }
+            await updateDoc(alunoRef, { xp: currentXp + 50 });
+        }
+
         br.innerHTML = '<i class="fa-solid fa-check"></i>'; 
         setTimeout(() => { 
             document.getElementById('modal-nova-ocorrencia').style.display = 'none'; 
