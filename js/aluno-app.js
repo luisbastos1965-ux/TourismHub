@@ -112,7 +112,7 @@ document.getElementById('btn-voltar-passaporte')?.addEventListener('click', () =
 });
 
 // ==========================================
-// 3. PASSAPORTE (FCT & PAP)
+// 3. PASSAPORTE (FCT & PAP) - COM COMPRESSÃO
 // ==========================================
 let ficheiroPapBase64 = "";
 
@@ -135,13 +135,24 @@ function carregarDadosPassaporte(dados) {
     }
 }
 
-document.getElementById('aluno-upload-pap')?.addEventListener('change', (e) => {
-    const file = e.target.files[0];
+document.getElementById('aluno-upload-pap')?.addEventListener('change', async (e) => {
+    let file = e.target.files[0];
     if(!file) return;
     
-    if(file.size > 716800) { 
-        alert("Ficheiro demasiado grande! O limite é 700KB."); 
-        return; 
+    // Compressão se for imagem
+    if (file.type.startsWith('image/')) {
+        const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1920, useWebWorker: true };
+        try { 
+            file = await imageCompression(file, options); 
+        } catch (err) { 
+            console.error("Erro ao comprimir imagem:", err); 
+        }
+    } else {
+        // Regra PDF/DOC limite 2MB
+        if(file.size > 2097152) { 
+            alert("O teu documento é demasiado pesado! O limite é 2MB. Tenta guardá-lo como PDF reduzido no Word."); 
+            return; 
+        }
     }
     
     document.getElementById('aluno-pap-file-name').innerText = file.name;
