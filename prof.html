@@ -7,6 +7,7 @@
     
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- FullCalendar Biblioteca e Idioma Português -->
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
@@ -34,7 +35,7 @@
 
         <section class="card">
             <div id="area-eventos">
-                <h3>📅 Marcar Novo Teste/Evento</h3>
+                <h3><i class="fa-solid fa-calendar-plus"></i> Marcar Novo Teste/Evento</h3>
                 <div class="form-group">
                     <label for="nome-evento">Título do Evento:</label>
                     <input type="text" id="nome-evento" placeholder="Ex: Teste de Matemática" class="input-padrao">
@@ -45,118 +46,208 @@
                     <input type="date" id="data-evento" class="input-padrao">
                 </div>
                 
-                <button id="btn-criar-evento" class="btn-principal">Marcar na Agenda</button>
+                <button id="btn-criar-evento" class="btn-principal"><i class="fa-solid fa-calendar-check"></i> Marcar na Agenda</button>
             </div>
         </section>
 
         <section class="card">
-            <h3>👥 Gestão de Turmas</h3>
-            <div class="turmas-grid">
-                <div class="turma-card-large" data-turma="10A">
-                    <h4>Turma 10ºA</h4>
-                    <p>Abrir Hub da Turma</p>
-                </div>
+            <h3><i class="fa-solid fa-users-rectangle"></i> As Minhas Turmas</h3>
+            <!-- A div agora tem o ID "prof-turmas-grid" para o JS injetar as turmas reais -->
+            <div class="turmas-grid" id="prof-turmas-grid">
+                <p class="text-muted" style="text-align: center; width: 100%;">A carregar turmas...</p>
             </div>
         </section>
 
     </main>
 
     <div id="class-hub-view" style="display: none;">
-        <h2 id="class-hub-title">Turma Atual</h2>
-        <button id="btn-voltar-turmas-hub">Voltar</button>
-        <button id="btn-hub-alunos">Ver Alunos</button>
-        <button id="btn-hub-avaliacoes">Avaliações</button>
-        <button id="btn-hub-calendario">Calendário</button>
-        <button id="btn-hub-sumarios">Sumários</button>
+        <h2 id="class-hub-title" style="margin-bottom: 20px; color: var(--primary-green);">Turma Atual</h2>
+        <div class="lms-action-grid">
+            <button id="btn-hub-alunos" class="lms-btn"><i class="fa-solid fa-users"></i><span>Ver Alunos</span></button>
+            <button id="btn-hub-avaliacoes" class="lms-btn"><i class="fa-solid fa-graduation-cap"></i><span>Pauta Escolar</span></button>
+            <button id="btn-hub-calendario" class="lms-btn"><i class="fa-regular fa-calendar-days"></i><span>Calendário</span></button>
+            <button id="btn-hub-sumarios" class="lms-btn"><i class="fa-solid fa-book-open"></i><span>Sumários</span></button>
+        </div>
+        <button id="btn-voltar-turmas-hub" class="secondary-btn"><i class="fa-solid fa-arrow-left"></i> Voltar ao Início</button>
     </div>
 
     <div id="class-view" style="display: none;">
-        <button id="btn-voltar-lista">Voltar</button>
+        <button id="btn-voltar-lista" class="secondary-btn small-btn" style="margin-bottom: 15px;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
         <div class="students-list-container"></div>
     </div>
     
     <div id="student-detail-view" style="display: none;">
-        <button id="btn-voltar-class-hub">Voltar</button>
-        <h3 id="detail-student-name"></h3>
-        <p id="detail-student-number"></p>
-        <button id="btn-hub-faltas">Faltas</button>
-        <button id="btn-hub-prhf">PRHF</button>
-        <button id="btn-hub-comportamento">Comportamento</button>
-        <button id="btn-hub-musai">MUSAI</button>
-        <button id="btn-hub-observacoes">Observações de Reunião</button>
+        <button id="btn-voltar-class-hub" class="secondary-btn small-btn" style="margin-bottom: 15px;"><i class="fa-solid fa-arrow-left"></i> Voltar à Turma</button>
+        <div style="text-align: center; margin-bottom: 20px;">
+            <div class="profile-avatar" style="margin: 0 auto 10px auto;"><i class="fa-solid fa-user"></i></div>
+            <h3 id="detail-student-name" style="font-size: 1.2rem;">Nome do Aluno</h3>
+            <p id="detail-student-number" style="color: var(--primary-green); font-weight: bold;"></p>
+        </div>
+        
+        <div class="admin-hub-grid" style="margin-bottom: 20px;">
+            <div class="hub-card" id="btn-hub-faltas"><i class="fa-solid fa-user-xmark"></i><span>Faltas</span></div>
+            <div class="hub-card" id="btn-hub-prhf"><i class="fa-solid fa-file-contract"></i><span>PRHFs</span></div>
+            <div class="hub-card" id="btn-hub-comportamento"><i class="fa-solid fa-scale-balanced"></i><span>Disciplina</span></div>
+            <div class="hub-card" id="btn-hub-musai"><i class="fa-solid fa-puzzle-piece"></i><span>MUSAI</span></div>
+            <div class="hub-card" id="btn-hub-observacoes"><i class="fa-solid fa-file-signature"></i><span>Reuniões</span></div>
+        </div>
     </div>
     
     <div id="view-avaliacoes" style="display: none;">
-        <button id="btn-voltar-hub-avaliacoes">Voltar</button>
+        <button id="btn-voltar-hub-avaliacoes" class="secondary-btn small-btn" style="margin-bottom: 15px;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
         <div id="matriz-disciplinas-container"></div>
     </div>
     
     <div id="view-disciplina-modulos" style="display: none;">
-        <button id="btn-voltar-disciplinas">Voltar</button>
-        <h3 id="titulo-disciplina"></h3>
+        <button id="btn-voltar-disciplinas" class="secondary-btn small-btn" style="margin-bottom: 15px;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+        <h3 id="titulo-disciplina" style="margin-bottom: 15px; color: var(--primary-green);">Disciplina</h3>
         <div id="lista-modulos-disciplina"></div>
     </div>
     
+    <!-- FALTAS -->
     <div id="view-faltas" style="display: none;">
-        <button id="btn-voltar-hub-faltas">Voltar</button>
+        <button id="btn-voltar-hub-faltas" class="secondary-btn small-btn" style="margin-bottom: 15px;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+        <h3 style="margin-bottom: 15px; color: var(--primary-green);">Faltas do Aluno</h3>
+        
+        <button id="btn-nova-falta" class="primary-btn" style="margin-bottom: 20px; background-color: var(--danger-red); color: white;"><i class="fa-solid fa-plus"></i> Marcar Nova Falta</button>
+        
         <div id="lista-historico-faltas-container"></div>
     </div>
     
+    <!-- PRHF -->
     <div id="view-prhf" style="display: none;">
-        <button id="btn-voltar-hub-prhf">Voltar</button>
+        <button id="btn-voltar-hub-prhf" class="secondary-btn small-btn" style="margin-bottom: 15px;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+        <h3 style="margin-bottom: 15px; color: var(--primary-green);">Planos de Recuperação (PRHF)</h3>
+        
+        <div class="card" style="border: 2px dashed var(--warning-yellow); margin-bottom: 20px;">
+            <h4 style="margin-bottom: 15px;">Criar Novo Plano (PRHF)</h4>
+            <div class="form-group"><select id="prhf-disciplina" class="input-padrao"></select></div>
+            <div class="form-group"><select id="prhf-modulo" class="input-padrao"><option value="">Módulo</option></select></div>
+            <div class="form-group"><label style="color: var(--text-muted); font-size: 0.85rem;">Prazo Limite:</label><input type="date" id="prhf-prazo" class="input-padrao"></div>
+            <div class="form-group"><textarea id="prhf-descricao" class="input-padrao" placeholder="Descrição do trabalho ou tarefas a realizar..." rows="3"></textarea></div>
+            <div class="form-group"><label style="color: var(--text-muted); font-size: 0.85rem;">Horas Presenciais Obrigatórias:</label><input type="number" id="prhf-horas" class="input-padrao" value="0"></div>
+            <div class="form-group" style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
+                <input type="checkbox" id="prhf-modulo-terminado" style="width:20px; height:20px; margin:0; accent-color: var(--primary-green);">
+                <label for="prhf-modulo-terminado">O módulo desta falta já terminou</label>
+            </div>
+            <button id="btn-guardar-prhf" class="primary-btn">Gravar Plano</button>
+        </div>
+
         <div id="lista-prhf-container"></div>
     </div>
 
+    <!-- CALENDÁRIO -->
     <div id="view-class-calendario" style="display: none;">
-        <button id="btn-voltar-cal-hub">Voltar</button>
+        <button id="btn-voltar-cal-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
         <div id="calendario-prof" style="margin-top: 15px; background: white; padding: 15px; border-radius: 8px; color: black;">
             <!-- O calendário do professor vai nascer aqui -->
         </div>
     </div>
 
+    <!-- SUMÁRIOS -->
     <div id="view-sumarios" style="display: none;">
-        <button id="btn-voltar-sumarios-hub">Voltar</button>
+        <button id="btn-voltar-sumarios-hub" class="secondary-btn small-btn" style="margin-bottom: 15px;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+        <h3 style="margin-bottom: 15px; color: var(--primary-green);">Sumários e Materiais</h3>
+        
+        <button id="btn-novo-sumario" class="primary-btn" style="margin-bottom: 20px;"><i class="fa-solid fa-plus"></i> Publicar Sumário ou Anexo</button>
+        
+        <div style="margin-bottom:15px;">
+            <select id="filtro-sumarios-disc" class="input-padrao" style="margin:0; padding:10px;">
+                <option value="">Todas as Disciplinas</option>
+            </select>
+        </div>
+        
         <div id="lista-sumarios-container"></div>
     </div>
 
+    <!-- COMPORTAMENTO / OCORRÊNCIAS -->
     <div id="view-comportamento" style="display: none;">
-        <button id="btn-voltar-hub-comportamento">Voltar</button>
+        <button id="btn-voltar-hub-comportamento" class="secondary-btn small-btn" style="margin-bottom: 15px;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+        <h3 style="margin-bottom: 15px; color: var(--primary-green);">Registo Disciplinar</h3>
+        
+        <button id="btn-nova-ocorrencia" class="primary-btn" style="margin-bottom: 20px;"><i class="fa-solid fa-plus"></i> Registar Nova Ocorrência</button>
+
         <div id="lista-comportamento-container"></div>
     </div>
 
+    <!-- MUSAI (Agora apenas de visualização) -->
     <div id="view-musai" style="display: none;">
-        <button id="btn-voltar-hub-musai">Voltar</button>
-        <h3>🧩 Medidas de Apoio (MUSAI)</h3>
-        <div id="lista-musai-container" style="margin-bottom: 20px;"></div>
+        <button id="btn-voltar-hub-musai" class="secondary-btn small-btn" style="margin-bottom: 15px;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+        <h3 style="margin-bottom: 15px; color: var(--primary-green);">🧩 Medidas de Apoio (MUSAI)</h3>
+        <p class="text-muted" style="margin-bottom: 15px; font-size: 0.85rem;"><i class="fa-solid fa-info-circle"></i> A criação e edição destas medidas é gerida pelo Admin e DT.</p>
         
-        <div class="card" style="border: 2px dashed var(--primary-color);">
-            <h4>Adicionar Informação MUSAI</h4>
-            <div class="form-group">
-                <textarea id="novo-musai-texto" placeholder="Descreve a medida ou adaptação necessária..." class="input-padrao" rows="3" style="width: 100%;"></textarea>
+        <div id="lista-musai-container" style="margin-bottom: 20px;"></div>
+    </div>
+
+    <!-- OBSERVAÇÕES (Agora apenas de visualização) -->
+    <div id="view-observacoes" style="display: none;">
+        <button id="btn-voltar-hub-observacoes" class="secondary-btn small-btn" style="margin-bottom: 15px;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+        <h3 style="margin-bottom: 15px; color: var(--primary-green);">📑 Observações de Reunião</h3>
+        <p class="text-muted" style="margin-bottom: 15px; font-size: 0.85rem;"><i class="fa-solid fa-info-circle"></i> As sínteses de avaliação são geridas pelo Admin e DT.</p>
+        
+        <div id="lista-observacoes-container" style="margin-bottom: 20px;"></div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAIS DO PROFESSOR (INVISÍVEIS POR DEFEITO) -->
+    <!-- ========================================== -->
+
+    <!-- Modal Nova Falta -->
+    <div id="modal-nova-falta" class="modal-overlay" style="display: none;">
+        <div class="action-sheet">
+            <h3 style="color: var(--danger-red); margin-bottom: 15px;"><i class="fa-solid fa-user-xmark"></i> Registar Nova Falta</h3>
+            <div class="form-group"><input type="date" id="nf-data" class="input-padrao" style="margin-bottom:10px;"></div>
+            <div class="form-group"><select id="nf-disc" class="input-padrao" style="margin-bottom:10px;"></select></div>
+            <div class="form-group"><select id="nf-mod" class="input-padrao" style="margin-bottom:10px;"><option value="">Módulo</option></select></div>
+            
+            <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin-bottom: 20px;">
+                <label style="color: white; font-weight: bold;">Nº de Horas:</label>
+                <button id="btn-menos-hora" class="secondary-btn small-btn" style="width: 45px; border-radius: 50%;">-</button>
+                <input type="number" id="nf-horas" value="1" min="1" max="8" style="width: 60px; margin:0; text-align: center; font-weight: bold;" readonly>
+                <button id="btn-mais-hora" class="secondary-btn small-btn" style="width: 45px; border-radius: 50%;">+</button>
             </div>
-            <button id="btn-gravar-musai" class="btn-principal">Gravar Medida</button>
+
+            <button id="btn-gravar-nova-falta" class="primary-btn" style="background-color: var(--danger-red); color: white;">Confirmar Falta</button>
+            <button class="secondary-btn btn-fechar-modal" style="margin-top:10px;">Cancelar</button>
         </div>
     </div>
 
-    <div id="view-observacoes" style="display: none;">
-        <button id="btn-voltar-hub-observacoes">Voltar</button>
-        <h3>📑 Observações de Reunião</h3>
-        <div id="lista-observacoes-container" style="margin-bottom: 20px;"></div>
-        
-        <div class="card" style="border: 2px dashed var(--primary-color);">
-            <h4>Escrever nova Síntese</h4>
-            <div class="form-group">
-                <select id="novo-obs-momento" class="input-padrao" style="width: 100%; margin-bottom: 10px;">
-                    <option value="Intercalar 1 (Nov)">Intercalar 1 (Nov)</option>
-                    <option value="1º Semestre">1º Semestre</option>
-                    <option value="Intercalar 2 (Abr)">Intercalar 2 (Abr)</option>
-                    <option value="2º Semestre">2º Semestre</option>
-                </select>
+    <!-- Modal Novo Sumário -->
+    <div id="modal-novo-sumario" class="modal-overlay" style="display: none;">
+        <div class="action-sheet">
+            <h3 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-book-open"></i> Novo Sumário/Material</h3>
+            <div class="form-group"><input type="date" id="ns-data" class="input-padrao" style="margin-bottom:10px;"></div>
+            <div class="form-group"><select id="ns-disc" class="input-padrao" style="margin-bottom:10px;"></select></div>
+            <div class="form-group"><input type="text" id="ns-titulo" placeholder="Título da Aula ou Material" class="input-padrao" style="margin-bottom:10px;"></div>
+            <div class="form-group"><textarea id="ns-descricao" placeholder="Escreve aqui o resumo da aula..." class="input-padrao" rows="3" style="margin-bottom:10px;"></textarea></div>
+            
+            <label for="ns-upload-material" class="secondary-btn" style="border-style: dashed; margin-bottom: 10px; cursor: pointer;">
+                <i class="fa-solid fa-paperclip"></i> Anexar Documento (Opcional)
+            </label>
+            <input type="file" id="ns-upload-material" style="display:none;" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg">
+            <span id="ns-file-name" style="display:block; text-align:center; color: var(--warning-yellow); margin-bottom: 15px; font-size: 0.85rem;"></span>
+
+            <button id="btn-gravar-sumario" class="primary-btn">Publicar Sumário</button>
+            <button class="secondary-btn btn-fechar-modal" style="margin-top:10px;">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal Nova Ocorrência -->
+    <div id="modal-nova-ocorrencia" class="modal-overlay" style="display: none;">
+        <div class="action-sheet">
+            <h3 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-scale-balanced"></i> Registar Ocorrência</h3>
+            
+            <div style="display:flex; gap:10px; margin-bottom:20px;">
+                <button id="btn-tipo-negativo" class="falta-tab-btn active" style="flex:1;">Negativa</button>
+                <button id="btn-tipo-positivo" class="falta-tab-btn" style="flex:1;">Positiva (Bónus XP)</button>
             </div>
-            <div class="form-group">
-                <textarea id="novo-obs-texto" placeholder="O aluno revelou empenho e..." class="input-padrao" rows="4" style="width: 100%;"></textarea>
-            </div>
-            <button id="btn-gravar-obs" class="btn-principal">Publicar Observação</button>
+
+            <div class="form-group"><input type="date" id="no-data" class="input-padrao" style="margin-bottom:10px;"></div>
+            <div class="form-group"><input type="text" id="no-titulo" placeholder="Motivo (ex: Participação excelente)" class="input-padrao" style="margin-bottom:10px;"></div>
+            <div class="form-group"><textarea id="no-descricao" placeholder="Detalhes adicionais (opcional)..." class="input-padrao" rows="3" style="margin-bottom:10px;"></textarea></div>
+            
+            <button id="btn-gravar-ocorrencia" class="primary-btn">Registar na Caderneta</button>
+            <button class="secondary-btn btn-fechar-modal" style="margin-top:10px;">Cancelar</button>
         </div>
     </div>
 
