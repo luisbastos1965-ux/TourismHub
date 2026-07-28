@@ -20,6 +20,8 @@ const viewPrhf = document.getElementById('view-prhf');
 const viewClassCalendario = document.getElementById('view-class-calendario'); 
 const viewSumarios = document.getElementById('view-sumarios'); 
 const viewComportamento = document.getElementById('view-comportamento');
+const viewMusai = document.getElementById('view-musai');
+const viewObservacoes = document.getElementById('view-observacoes');
 
 let turmaAtual = ""; 
 let alunoAtualId = ""; 
@@ -27,7 +29,7 @@ let myUserName = "";
 
 // Função Global de Navegação
 function esconderTudoMenos(ecraAtivo) { 
-    [profDashboard, classHubView, classView, studentDetailView, viewAvaliacoes, viewDisciplinaModulos, viewFaltas, viewPrhf, viewClassCalendario, viewSumarios, viewComportamento].forEach(el => { 
+    [profDashboard, classHubView, classView, studentDetailView, viewAvaliacoes, viewDisciplinaModulos, viewFaltas, viewPrhf, viewClassCalendario, viewSumarios, viewComportamento, viewMusai, viewObservacoes].forEach(el => { 
         if(el) el.style.display = 'none'; 
     }); 
     if(ecraAtivo) ecraAtivo.style.display = 'block'; 
@@ -81,6 +83,8 @@ document.getElementById('btn-voltar-hub-prhf')?.addEventListener('click', () => 
 document.getElementById('btn-voltar-cal-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView)); 
 document.getElementById('btn-voltar-sumarios-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView)); 
 document.getElementById('btn-voltar-hub-comportamento')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
+document.getElementById('btn-voltar-hub-musai')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
+document.getElementById('btn-voltar-hub-observacoes')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
 
 // ==========================================
 // 2. CARREGAR ALUNOS DA TURMA
@@ -661,6 +665,161 @@ async function carregarComportamento() {
                     <span style="font-size:0.75rem; color:var(--text-muted);">Data: ${r.data} | Prof. ${r.autor}</span>
                     ${r.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px; background:var(--bg-dark); padding:8px; border-radius:6px;">${r.descricao}</p>` : ''}
                 </div>
+            </div>`; 
+        }); 
+        container.innerHTML = html; 
+    } catch(e) {} 
+}
+
+// ==========================================
+// 8. CRIAR EVENTOS / TESTES (PROFESSOR)
+// ==========================================
+const btnCriarEvento = document.getElementById("btn-criar-evento");
+
+if (btnCriarEvento) {
+    btnCriarEvento.addEventListener("click", async () => {
+        const nome = document.getElementById("nome-evento").value;
+        const data = document.getElementById("data-evento").value;
+
+        if (nome === "" || data === "") {
+            alert("Por favor, preenche o nome e a data do teste!");
+            return;
+        }
+
+        try {
+            console.log("A guardar evento na base de dados...");
+            await addDoc(collection(db, "eventos"), {
+                titulo: nome,
+                data: data,
+                criadoEm: new Date(),
+                tipo: "teste"
+            });
+            alert("✅ Teste marcado com sucesso!");
+            document.getElementById("nome-evento").value = "";
+            document.getElementById("data-evento").value = "";
+        } catch (error) {
+            console.error("Erro ao marcar teste: ", error);
+            alert("Erro ao marcar o teste. Vê a consola.");
+        }
+    });
+}
+
+// ==========================================
+// 9. MUSAI (MEDIDAS DE APOIO)
+// ==========================================
+document.getElementById('btn-hub-musai')?.addEventListener('click', () => { 
+    if(!alunoAtualId) return; 
+    esconderTudoMenos(viewMusai); 
+    carregarMusai(); 
+}); 
+
+document.getElementById('btn-gravar-musai')?.addEventListener('click', async (e) => { 
+    const texto = document.getElementById('novo-musai-texto').value.trim(); 
+    if(!texto) return alert("Preenche a descrição da medida!"); 
+    
+    const br = e.currentTarget; 
+    br.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; 
+    br.disabled = true; 
+    
+    try { 
+        await addDoc(collection(db, "utilizadores", alunoAtualId, "musai"), { 
+            descricao: texto, 
+            autor: myUserName, 
+            data: new Date().toISOString().split('T')[0],
+            timestamp: Date.now() 
+        }); 
+        document.getElementById('novo-musai-texto').value = "";
+        br.innerText = "Gravar Medida"; 
+        br.disabled = false; 
+        carregarMusai(); 
+    } catch(err) { 
+        br.innerText = "Erro!"; 
+        setTimeout(() => { br.innerText = "Gravar Medida"; br.disabled = false; }, 2000); 
+    } 
+}); 
+
+async function carregarMusai() { 
+    const container = document.getElementById('lista-musai-container'); 
+    container.innerHTML = '<p class="text-muted center">A carregar medidas...</p>'; 
+    try { 
+        const res = await getDocs(query(collection(db, "utilizadores", alunoAtualId, "musai"))); 
+        if(res.empty) { 
+            container.innerHTML = '<p class="text-muted center">Sem medidas MUSAI registadas.</p>'; 
+            return; 
+        } 
+        let arr = []; 
+        res.forEach(d => arr.push(d.data())); 
+        arr.sort((a,b) => b.timestamp - a.timestamp); 
+        let html = ''; 
+        arr.forEach(m => { 
+            html += `
+            <div class="card" style="margin-bottom:10px; border-left:4px solid var(--primary-color); background:var(--bg-dark);">
+                <span style="font-size:0.75rem; color:var(--text-muted);">Por ${m.autor} a ${m.data}</span>
+                <p style="margin-top:5px; font-size:0.9rem;">${m.descricao}</p>
+            </div>`; 
+        }); 
+        container.innerHTML = html; 
+    } catch(e) {} 
+}
+
+// ==========================================
+// 10. OBSERVAÇÕES DE REUNIÃO
+// ==========================================
+document.getElementById('btn-hub-observacoes')?.addEventListener('click', () => { 
+    if(!alunoAtualId) return; 
+    esconderTudoMenos(viewObservacoes); 
+    carregarObservacoesProf(); 
+}); 
+
+document.getElementById('btn-gravar-obs')?.addEventListener('click', async (e) => { 
+    const momento = document.getElementById('novo-obs-momento').value;
+    const texto = document.getElementById('novo-obs-texto').value.trim(); 
+    if(!texto) return alert("Preenche o texto da observação!"); 
+    
+    const br = e.currentTarget; 
+    br.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; 
+    br.disabled = true; 
+    
+    try { 
+        await addDoc(collection(db, "utilizadores", alunoAtualId, "observacoes"), { 
+            momento: momento,
+            descricao: texto, 
+            autor: myUserName, 
+            data: new Date().toISOString().split('T')[0],
+            timestamp: Date.now() 
+        }); 
+        document.getElementById('novo-obs-texto').value = "";
+        br.innerText = "Publicar Observação"; 
+        br.disabled = false; 
+        carregarObservacoesProf(); 
+    } catch(err) { 
+        br.innerText = "Erro!"; 
+        setTimeout(() => { br.innerText = "Publicar Observação"; br.disabled = false; }, 2000); 
+    } 
+}); 
+
+async function carregarObservacoesProf() { 
+    const container = document.getElementById('lista-observacoes-container'); 
+    container.innerHTML = '<p class="text-muted center">A carregar...</p>'; 
+    try { 
+        const res = await getDocs(query(collection(db, "utilizadores", alunoAtualId, "observacoes"))); 
+        if(res.empty) { 
+            container.innerHTML = '<p class="text-muted center">Sem avaliações registadas.</p>'; 
+            return; 
+        } 
+        let arr = []; 
+        res.forEach(d => arr.push(d.data())); 
+        arr.sort((a,b) => b.timestamp - a.timestamp); 
+        let html = ''; 
+        arr.forEach(o => { 
+            html += `
+            <div class="card" style="margin-bottom:10px; border-left:4px solid var(--primary-green);">
+                <div style="display:flex; justify-content:space-between;">
+                    <strong>${o.momento}</strong>
+                    <span style="font-size:0.75rem; color:var(--text-muted);">${o.data}</span>
+                </div>
+                <p style="margin-top:8px; font-size:0.9rem;">${o.descricao}</p>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px; text-align:right;">Prof. ${o.autor}</div>
             </div>`; 
         }); 
         container.innerHTML = html; 
