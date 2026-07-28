@@ -31,6 +31,7 @@ onAuthStateChanged(auth, async (user) => {
                 }
 
                 carregarDadosPassaporte(dados);
+                carregarGamificacao(dados); // INICIA A GAMIFICAÇÃO
                 carregarAgendaDashboard();
             }
         } catch (e) { console.error("Erro ao ler perfil", e); }
@@ -42,6 +43,30 @@ onAuthStateChanged(auth, async (user) => {
 document.getElementById('btn-logout-aluno')?.addEventListener('click', () => {
     signOut(auth).then(() => window.location.href = "index.html");
 });
+
+// ==========================================
+// 1.1. LÓGICA DE GAMIFICAÇÃO (XP & NÍVEIS)
+// ==========================================
+function carregarGamificacao(dados) {
+    const xp = dados.xp || 0; // Se não tiver XP, começa com 0
+    const nivel = Math.floor(xp / 100) + 1; // Cada 100 XP sobe 1 Nível
+    const xpProximoNivel = nivel * 100;
+    const xpNivelAtual = (nivel - 1) * 100;
+    const progresso = ((xp - xpNivelAtual) / (xpProximoNivel - xpNivelAtual)) * 100;
+
+    document.getElementById('aluno-nivel').innerText = nivel;
+    document.getElementById('aluno-xp-atual').innerText = xp;
+    document.getElementById('aluno-xp-progress').style.width = `${progresso}%`;
+    document.getElementById('aluno-xp-falta').innerText = xpProximoNivel - xp;
+
+    // Títulos de Ranking
+    let rank = "Novato";
+    if (nivel >= 2) rank = "Aprendiz";
+    if (nivel >= 5) rank = "Estudante PRO";
+    if (nivel >= 10) rank = "Veterano";
+    if (nivel >= 20) rank = "Lenda da Turma";
+    document.getElementById('aluno-rank-title').innerText = rank;
+}
 
 // ==========================================
 // 2. NAVEGAÇÃO DA BARRA INFERIOR
@@ -137,15 +162,24 @@ document.getElementById('btn-enviar-pap')?.addEventListener('click', async (e) =
     btnRef.disabled = true;
 
     try {
+        // Ao enviar a PAP ganha 200 XP de Bónus Automático!
+        const docSnap = await getDoc(doc(db, "utilizadores", myUserId));
+        let atualXp = 0;
+        if(docSnap.exists() && docSnap.data().xp) atualXp = docSnap.data().xp;
+
         await updateDoc(doc(db, "utilizadores", myUserId), {
             papFicheiroEnviado: true,
             papFicheiroBase64: ficheiroPapBase64,
-            papDataEnvio: new Date().toISOString()
+            papDataEnvio: new Date().toISOString(),
+            xp: atualXp + 200 // O Bónus da Gamificação!
         });
         
         btnRef.style.backgroundColor = "var(--success-green)";
-        btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Submetido!';
+        btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Submetido (+200 XP!)';
         
+        // Recarregar a Gamificação visual no ecrã
+        carregarGamificacao({xp: atualXp + 200});
+
         setTimeout(() => {
             btnRef.style.display = 'none';
             btnRef.disabled = false;
@@ -216,7 +250,7 @@ const tabNotas = document.getElementById('tab-aluno-notas');
 const tabFaltas = document.getElementById('tab-aluno-faltas');
 const tabPrhfs = document.getElementById('tab-aluno-prhfs');
 const tabComportamento = document.getElementById('tab-aluno-comportamento');
-const tabObservacoes = document.getElementById('tab-aluno-observacoes'); // NOVA ABA
+const tabObservacoes = document.getElementById('tab-aluno-observacoes'); 
 const cadernetaContent = document.getElementById('aluno-caderneta-content');
 
 tabNotas?.addEventListener('click', (e) => { 
@@ -237,7 +271,7 @@ tabComportamento?.addEventListener('click', (e) => {
 });
 tabObservacoes?.addEventListener('click', (e) => { 
     ativarTab(e.currentTarget, ['tab-aluno-notas', 'tab-aluno-faltas', 'tab-aluno-prhfs', 'tab-aluno-comportamento']); 
-    carregarObservacoesAluno(); // NOVA FUNÇÃO
+    carregarObservacoesAluno(); 
 });
 
 document.querySelector('.nav-item[data-target="view-aluno-caderneta"]')?.addEventListener('click', () => {
@@ -356,7 +390,6 @@ async function carregarComportamentoAluno() {
     } catch(e) { cadernetaContent.innerHTML = '<p class="text-danger center">Erro ao carregar dados.</p>'; }
 }
 
-// NOVA FUNÇÃO: CARREGAR OBSERVAÇÕES DE REUNIÃO
 async function carregarObservacoesAluno() {
     if(!myUserId) return;
     try {
@@ -368,7 +401,7 @@ async function carregarObservacoesAluno() {
         
         let obsArr = []; 
         res.forEach(d => obsArr.push(d.data())); 
-        obsArr.sort((a,b) => b.timestamp - a.timestamp); // Mais recente primeiro
+        obsArr.sort((a,b) => b.timestamp - a.timestamp); 
         
         let html = '';
         obsArr.forEach(o => {
@@ -410,7 +443,7 @@ document.getElementById('tab-aluno-horario')?.addEventListener('click', (e) => {
 async function carregarAgendaDashboard() {
     if(!minhaTurma) return;
     try {
-        const evDb = await getDocs(collection(db, "eventos")); // Alterado para procurar na coleção global "eventos" que o professor criou
+        const evDb = await getDocs(collection(db, "eventos"));
         if(!evDb.empty) {
             let evArr = [];
             evDb.forEach(d => evArr.push(d.data()));
@@ -430,7 +463,7 @@ async function carregarAgendaAluno() {
     container.innerHTML = '<p class="text-muted center">A carregar calendário...</p>';
 
     try {
-        const evDb = await getDocs(collection(db, "eventos")); // Alterado para coleção global
+        const evDb = await getDocs(collection(db, "eventos"));
         if(evDb.empty) { container.innerHTML = '<p class="text-muted center">Sem eventos agendados.</p>'; return; }
         
         let evArr = [];
@@ -621,46 +654,26 @@ async function carregarSumariosAluno() {
 // ==========================================
 async function pedirPermissaoNotificacoes() {
     try {
-        console.log("A tentar pedir permissão...");
         const permission = await Notification.requestPermission();
-        
         if (permission === 'granted') {
-            console.log("Permissão concedida! A registar Service Worker e gerar token...");
-            
-            // A MAGIA ESTÁ AQUI: Forçar o browser a procurar o ficheiro na pasta atual do GitHub Pages
             const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
-            
-            // Pedir o token associado a este registo correto
             const currentToken = await getToken(messaging, { 
                 vapidKey: VAPID_KEY,
                 serviceWorkerRegistration: registration 
             });
-            
             if (currentToken) {
-                console.log("🔑 O teu Token de Notificação é:", currentToken);
                 await updateDoc(doc(db, "utilizadores", myUserId), {
                     tokenNotificacao: currentToken
                 });
-                console.log("Token guardado na base de dados com sucesso!");
-            } else {
-                console.warn("Nenhum token gerado. Verifica a VAPID_KEY.");
             }
-        } else {
-            console.warn("O utilizador bloqueou as notificações.");
         }
-    } catch (error) {
-        console.error("🚨 Erro fatal ao ativar notificações:", error);
-    }
+    } catch (error) { console.error("Erro Notificações:", error); }
 }
 
-// Escutar notificações quando a app está aberta no ecrã
 if(typeof onMessage !== "undefined" && messaging) {
     onMessage(messaging, (payload) => {
         alert(`NOVA NOTIFICAÇÃO:\n\n${payload.notification.title}\n${payload.notification.body}`);
     });
 }
 
-// Chamar a função 4 segundos após o ecrã carregar
-setTimeout(() => {
-    if(myUserId) pedirPermissaoNotificacoes();
-}, 4000);
+setTimeout(() => { if(myUserId) pedirPermissaoNotificacoes(); }, 4000);
