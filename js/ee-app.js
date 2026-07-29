@@ -327,7 +327,15 @@ document.querySelectorAll('#btn-voltar-chat-ee, #btn-voltar-justificar, #btn-vol
 document.getElementById('btn-open-notificacoes')?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); esconderTodasAsVistas(); document.getElementById('view-ee-notificacoes').style.display = 'block'; document.getElementById('ee-notificacoes-container').innerHTML = '<p class="text-muted center">Alertas futuros aparecerão aqui.</p>'; });
 
 // 4. CADERNETA E TIMELINE
-const tabTimeline = document.getElementById('tab-ee-timeline'); const tabNotas = document.getElementById('tab-ee-notas'); const tabFaltas = document.getElementById('tab-ee-faltas'); const tabPrhfs = document.getElementById('tab-ee-prhfs'); const tabComportamento = document.getElementById('tab-ee-comportamento'); const cadernetaContent = document.getElementById('ee-caderneta-content'); const filtroContainer = document.getElementById('filtro-caderneta-container'); const filtroDisc = document.getElementById('filtro-caderneta-disc');
+const tabTimeline = document.getElementById('tab-ee-timeline'); 
+const tabNotas = document.getElementById('tab-ee-notas'); 
+const tabFaltas = document.getElementById('tab-ee-faltas'); 
+const tabPrhfs = document.getElementById('tab-ee-prhfs'); 
+const tabComportamento = document.getElementById('tab-ee-comportamento'); 
+const tabReunioes = document.getElementById('tab-ee-reunioes'); // NOVO
+const cadernetaContent = document.getElementById('ee-caderneta-content'); 
+const filtroContainer = document.getElementById('filtro-caderneta-container'); 
+const filtroDisc = document.getElementById('filtro-caderneta-disc');
 let currentCadernetaTab = tabTimeline;
 
 function preencherFiltrosDisciplinas() {
@@ -337,13 +345,20 @@ function preencherFiltrosDisciplinas() {
 }
 filtroDisc.addEventListener('change', () => ativarTabCadernetaAtual());
 function ativarTabCadernetaAtual() { if(currentCadernetaTab) currentCadernetaTab.click(); }
-function switchTabConfig(tabClicada, tabsParaDesativar, showFilter) { currentCadernetaTab = tabClicada; tabClicada.classList.add('active'); tabsParaDesativar.forEach(t => t.classList.remove('active')); filtroContainer.style.display = showFilter ? 'block' : 'none'; cadernetaContent.innerHTML = '<p class="text-muted center">A carregar...</p>'; }
+function switchTabConfig(tabClicada, tabsParaDesativar, showFilter) { 
+    currentCadernetaTab = tabClicada; 
+    tabClicada.classList.add('active'); 
+    tabsParaDesativar.forEach(t => t.classList.remove('active')); 
+    filtroContainer.style.display = showFilter ? 'block' : 'none'; 
+    cadernetaContent.innerHTML = '<p class="text-muted center">A carregar...</p>'; 
+}
 
-tabTimeline?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabNotas, tabFaltas, tabPrhfs, tabComportamento], false); carregarTimelineEE(); });
-tabNotas?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabTimeline, tabFaltas, tabPrhfs, tabComportamento], false); carregarNotasEE(); });
-tabFaltas?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabTimeline, tabNotas, tabPrhfs, tabComportamento], true); carregarFaltasEE(); });
-tabPrhfs?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabTimeline, tabNotas, tabFaltas, tabComportamento], true); carregarPrhfsEE(); });
-tabComportamento?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabTimeline, tabNotas, tabFaltas, tabPrhfs], true); carregarComportamentoEE(); });
+tabTimeline?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabNotas, tabFaltas, tabPrhfs, tabComportamento, tabReunioes], false); carregarTimelineEE(); });
+tabNotas?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabTimeline, tabFaltas, tabPrhfs, tabComportamento, tabReunioes], false); carregarNotasEE(); });
+tabFaltas?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabTimeline, tabNotas, tabPrhfs, tabComportamento, tabReunioes], true); carregarFaltasEE(); });
+tabPrhfs?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabTimeline, tabNotas, tabFaltas, tabComportamento, tabReunioes], true); carregarPrhfsEE(); });
+tabComportamento?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabTimeline, tabNotas, tabFaltas, tabPrhfs, tabReunioes], true); carregarComportamentoEE(); });
+tabReunioes?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabTimeline, tabNotas, tabFaltas, tabPrhfs, tabComportamento], false); carregarReunioesEE(); });
 
 async function carregarTimelineEE() {
     if(!educandoAtualId) return;
@@ -370,25 +385,33 @@ async function carregarTimelineEE() {
 async function carregarNotasEE() {
     try {
         const notasDb = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
-        if(notasDb.empty) { cadernetaContent.innerHTML = '<p class="text-muted center">Sem notas.</p>'; return; }
         let disciplinas = {};
         notasDb.forEach(d => { const n = d.data(); if(!disciplinas[n.disciplina]) disciplinas[n.disciplina] = []; disciplinas[n.disciplina].push(n); });
         
+        const ordemDisciplinas = ['PORT', 'ING', 'AI', 'EF', 'TIC', 'GEO', 'HCA', 'MAT', 'CF', 'TIAT', 'TCAT', 'OTET'];
         let html = '';
-        Object.keys(disciplinas).forEach(disc => {
-            let sum = 0; let c = 0; let modsHtml = '';
-            disciplinas[disc].forEach(n => {
-                if(n.nota !== 'REP' && !isNaN(n.nota)) { sum += Number(n.nota); c++; }
-                const cor = (n.nota === 'REP' || Number(n.nota) < 10) ? 'var(--danger-red)' : 'var(--success-green)';
-                modsHtml += `<div class="modulo-row"><span>Módulo ${n.modulo}</span><span style="font-weight:bold; color:${cor};">${n.nota}</span></div>`;
-            });
-            const med = c > 0 ? (sum/c).toFixed(1) : '-';
-            const medCor = (med !== '-' && med < 10) ? 'var(--danger-red)' : 'white';
-            
-            html += `<div class="disciplina-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'">
-                        <span class="disciplina-title">${disc}</span>
-                        <span><span style="font-size:0.75rem; color:var(--text-muted); margin-right:8px;">Média:</span><span class="disciplina-media" style="color:${medCor};">${med}</span> <i class="fa-solid fa-chevron-down" style="font-size:0.8rem; margin-left:5px;"></i></span>
-                     </div><div class="disciplina-modules">${modsHtml}</div>`;
+        
+        ordemDisciplinas.forEach(disc => {
+            if(disciplinas[disc] && disciplinas[disc].length > 0) {
+                let sum = 0; let c = 0; let modsHtml = '';
+                disciplinas[disc].forEach(n => {
+                    if(n.nota !== 'REP' && !isNaN(n.nota)) { sum += Number(n.nota); c++; }
+                    const cor = (n.nota === 'REP' || Number(n.nota) < 10) ? 'var(--danger-red)' : 'var(--success-green)';
+                    modsHtml += `<div class="modulo-row"><span>Módulo ${n.modulo}</span><span style="font-weight:bold; color:${cor};">${n.nota}</span></div>`;
+                });
+                const med = c > 0 ? (sum/c).toFixed(1) : '-';
+                const medCor = (med !== '-' && med < 10) ? 'var(--danger-red)' : 'white';
+                
+                html += `<div class="disciplina-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'">
+                            <span class="disciplina-title">${disc}</span>
+                            <span><span style="font-size:0.75rem; color:var(--text-muted); margin-right:8px;">Média:</span><span class="disciplina-media" style="color:${medCor};">${med}</span> <i class="fa-solid fa-chevron-down" style="font-size:0.8rem; margin-left:5px;"></i></span>
+                         </div><div class="disciplina-modules">${modsHtml}</div>`;
+            } else {
+                html += `<div class="disciplina-header" style="cursor:default;">
+                            <span class="disciplina-title" style="color:var(--text-muted);">${disc}</span>
+                            <span><span class="disciplina-media" style="color:var(--text-muted); font-size:0.9rem;">SN</span></span>
+                         </div>`;
+            }
         });
         cadernetaContent.innerHTML = html;
     } catch(e) {}
@@ -450,6 +473,60 @@ async function carregarComportamentoEE() {
         });
         cadernetaContent.innerHTML = html;
     } catch(e) {}
+}
+
+async function carregarReunioesEE(reuniaoSelecionada = '1_avaliacao') {
+    const reunioesMenu = [
+        {id: '1_intercalar', label: '1ª Intercalar'},
+        {id: '1_avaliacao', label: '1ª Avaliação'},
+        {id: '2_intercalar', label: '2ª Intercalar'},
+        {id: '2_avaliacao', label: '2ª Avaliação'},
+        {id: '3_avaliacao', label: '3ª Avaliação'}
+    ];
+    
+    let html = '<div style="display:flex; overflow-x:auto; gap:10px; margin-bottom:20px; padding-bottom:10px;">';
+    reunioesMenu.forEach(r => {
+        const bg = r.id === reuniaoSelecionada ? 'var(--primary-green)' : 'var(--bg-dark)';
+        const color = r.id === reuniaoSelecionada ? 'var(--bg-dark)' : 'var(--text-muted)';
+        html += `<button class="btn-select-reuniao" data-id="${r.id}" style="background:${bg}; color:${color}; border:1px solid #333; padding:8px 15px; border-radius:20px; cursor:pointer; font-weight:bold; white-space:nowrap; transition:0.2s; flex-shrink:0;">${r.label}</button>`;
+    });
+    html += '</div><div id="reuniao-content-area"><p class="text-muted center">A carregar dados...</p></div>';
+    
+    cadernetaContent.innerHTML = html;
+
+    document.querySelectorAll('.btn-select-reuniao').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            carregarReunioesEE(e.currentTarget.getAttribute('data-id'));
+        });
+    });
+
+    try {
+        const docSnap = await getDoc(doc(db, "utilizadores", educandoAtualId, "reunioes", reuniaoSelecionada));
+        let dadosReuniao = docSnap.exists() ? docSnap.data() : {};
+        
+        const ordemDisciplinas = ['PORT', 'ING', 'AI', 'EF', 'TIC', 'GEO', 'HCA', 'MAT', 'CF', 'TIAT', 'TCAT', 'OTET'];
+        let contentHtml = '<div style="display:flex; flex-direction:column; gap:10px;">';
+        
+        ordemDisciplinas.forEach(disc => {
+            const comentario = dadosReuniao.disciplinas && dadosReuniao.disciplinas[disc] ? dadosReuniao.disciplinas[disc] : '<span style="color:var(--text-muted);">Sem comentário (SN)</span>';
+            contentHtml += `
+            <div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;">
+                <h4 style="margin-bottom:8px; color:white; font-size:1rem;">${disc}</h4>
+                <p style="color:var(--text-light); font-size:0.9rem; line-height:1.4; margin:0;">${comentario}</p>
+            </div>`;
+        });
+        
+        const global = dadosReuniao.global || '<span style="color:var(--text-muted);">Sem observações globais registadas (SN).</span>';
+        contentHtml += `
+        <div class="card" style="margin-top:15px; border:1px solid var(--warning-yellow); background:rgba(255,204,0,0.05); padding:15px;">
+            <h3 style="color:var(--warning-yellow); margin-bottom:10px; font-size:1.1rem;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3>
+            <p style="color:white; font-size:0.95rem; line-height:1.5; margin:0;">${global}</p>
+        </div></div>`;
+        
+        document.getElementById('reuniao-content-area').innerHTML = contentHtml;
+    } catch(e) {
+        document.getElementById('reuniao-content-area').innerHTML = '<p class="text-danger center">Erro ao carregar a reunião.</p>';
+    }
 }
 
 // 5. AGENDA E HORÁRIO
