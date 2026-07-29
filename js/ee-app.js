@@ -10,6 +10,9 @@ const matrizCursoMap = {
     "Técnica": ["CF", "TIAT", "TCAT", "OTET"] 
 };
 
+// ==========================================
+// 1. INICIALIZAÇÃO
+// ==========================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         myUserId = user.email.split('@')[0];
@@ -22,7 +25,7 @@ onAuthStateChanged(auth, async (user) => {
                 else if (dados.educando) educandosArray = [dados.educando];
 
                 if(educandosArray.length > 0) await construirSeletorEducandos();
-                else document.getElementById('ee-dashboard').innerHTML = '<p class="text-muted center" style="margin-top:50px;">Sem educandos associados.</p>';
+                else document.getElementById('ee-dashboard').innerHTML = '<p class="text-muted center" style="margin-top:50px;">A tua conta não tem nenhum educando associado. Contacta a Direção.</p>';
             } else window.location.href = "index.html"; 
         } catch (e) {}
     } else window.location.href = "index.html"; 
@@ -107,7 +110,7 @@ async function carregarResumoDashboard() {
         const ocSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "ocorrencias"));
         document.getElementById('resumo-ocorrencias').innerText = ocSnap.size;
         const prhfSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "prhfs"));
-        prhfSnap.forEach(d => { if(d.data().status !== 'concluida') nPrhf++; });
+        prhfSnap.forEach(d => { if((d.data().status || 'ativa') === 'ativa') nPrhf++; });
         document.getElementById('resumo-prhfs').innerText = nPrhf;
     } catch(e) {}
 
@@ -118,7 +121,7 @@ async function carregarResumoDashboard() {
         if(futuros.length > 0) {
             futuros.sort((a,b) => a.data.localeCompare(b.data));
             const dp = futuros[0].data.split('-');
-            document.getElementById('resumo-proximo-evento').innerHTML = `<strong>${dp[2]}/${dp[1]}</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">${futuros[0].titulo}</span>`;
+            document.getElementById('resumo-proximo-evento').innerHTML = `<strong>${dp[2]}/${dp[1]}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${futuros[0].titulo}</span>`;
         } else document.getElementById('resumo-proximo-evento').innerText = "Agenda limpa";
     } catch(e) {}
 }
@@ -141,9 +144,7 @@ navItems.forEach(item => {
 document.getElementById('btn-quick-mensagem')?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); esconderTodasAsVistas(); document.getElementById('view-ee-chat').style.display = 'flex'; iniciarChatEE(); });
 document.getElementById('btn-quick-justificar')?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); esconderTodasAsVistas(); document.getElementById('view-ee-justificar').style.display = 'block'; carregarAtestadosEE(); });
 document.querySelectorAll('#btn-voltar-chat-ee, #btn-voltar-justificar, #btn-voltar-notificacoes').forEach(btn => { btn?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); document.querySelector('.nav-item[data-target="ee-dashboard"]').classList.add('active'); esconderTodasAsVistas(); document.getElementById('ee-dashboard').style.display = 'block'; }); });
-
-// Botão do Sino
-document.getElementById('btn-open-notificacoes')?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); esconderTodasAsVistas(); document.getElementById('view-ee-notificacoes').style.display = 'block'; document.getElementById('ee-notificacoes-container').innerHTML = '<p class="text-muted center">Central ativa. Notificações futuras aparecerão aqui.</p>'; });
+document.getElementById('btn-open-notificacoes')?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); esconderTodasAsVistas(); document.getElementById('view-ee-notificacoes').style.display = 'block'; document.getElementById('ee-notificacoes-container').innerHTML = '<p class="text-muted center">Central ativa. Alertas futuros aparecerão aqui.</p>'; });
 
 // ==========================================
 // 4. CADERNETA E TIMELINE
@@ -157,7 +158,6 @@ function preencherFiltrosDisciplinas() {
     filtroDisc.innerHTML = opt;
 }
 filtroDisc.addEventListener('change', () => ativarTabCadernetaAtual());
-
 function ativarTabCadernetaAtual() { if(currentCadernetaTab) currentCadernetaTab.click(); }
 function switchTabConfig(tabClicada, tabsParaDesativar, showFilter) { currentCadernetaTab = tabClicada; tabClicada.classList.add('active'); tabsParaDesativar.forEach(t => t.classList.remove('active')); filtroContainer.style.display = showFilter ? 'block' : 'none'; cadernetaContent.innerHTML = '<p class="text-muted center">A carregar...</p>'; }
 
@@ -249,16 +249,12 @@ async function carregarPrhfsEE() {
         let prhfsArr = []; prhfsDb.forEach(d => { const p = d.data(); if(p.status !== 'concluida' && (!fDisc || p.disciplina === fDisc)) prhfsArr.push(p); });
         if(prhfsArr.length === 0) { cadernetaContent.innerHTML = '<p class="text-muted center">Nenhum PRHF ativo.</p>'; return; }
         
-        // Ordenar do prazo mais curto para o mais alargado
         prhfsArr.sort((a,b) => new Date(a.prazo) - new Date(b.prazo));
-        
         let html = '';
         prhfsArr.forEach(p => {
-            // Urgência baseada no módulo terminado
             const isUrgente = p.moduloTerminado === true || p.moduloTerminado === "true"; 
             const cor = isUrgente ? 'var(--danger-red)' : 'var(--warning-yellow)';
             const txtSt = isUrgente ? 'URGENTE (Mód. Terminado)' : 'EM CURSO';
-            
             html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${cor};"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong>${p.disciplina} (Mod. ${p.modulo})</strong><span style="color:${cor}; font-size:0.75rem; font-weight:bold;">${txtSt}</span></div><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">${p.descricao}</p><div style="font-size:0.8rem;">Data Limite: <strong style="color:${cor};">${p.prazo}</strong> | Presenciais: <strong>${p.horasPresenciais||0}h</strong></div></div>`;
         });
         cadernetaContent.innerHTML = html;
@@ -282,7 +278,7 @@ async function carregarComportamentoEE() {
 }
 
 // ==========================================
-// 5. AGENDA (LISTA) E HORÁRIO (NOVA GRELHA MOBILE)
+// 5. AGENDA (CAIXAS) E HORÁRIO (DIA/GRELHA)
 // ==========================================
 document.getElementById('filtro-agenda-testes')?.addEventListener('change', carregarAgendaEE);
 document.getElementById('filtro-agenda-trabalhos')?.addEventListener('change', carregarAgendaEE);
@@ -319,23 +315,24 @@ async function carregarAgendaEE() {
 
         const renderEv = (ev) => {
             const dp = ev.data.split('-'); const mes = mesArr[parseInt(dp[1])-1];
-            return `<div class="horario-list-item" style="border-left-color:${ev.cor}; padding: 10px 15px;"><div style="display:flex; align-items:center; gap:15px;"><div style="text-align:center; min-width:40px;"><div style="font-size:1.3rem; font-weight:bold; color:white;">${dp[2]}</div><div style="font-size:0.7rem; color:${ev.cor}; text-transform:uppercase;">${mes}</div></div><div><div style="font-weight:bold; color:white;">${ev.titulo}</div><div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">${ev.txt}</div></div></div></div>`;
+            return `<div class="calendar-event-card" style="border-left-color:${ev.cor}; margin-bottom:10px;"><div class="calendar-date-box"><span class="day">${dp[2]}</span><span class="month" style="color:${ev.cor};">${mes}</span></div><div class="calendar-info"><h4 style="margin:0; color:white;">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt||'evento').toUpperCase()}</span></div></div>`;
         };
 
-        if(futuros.length > 0) { futuros.forEach(e => html += renderEv(e)); }
-        else { html += '<p class="text-muted center">Sem eventos futuros.</p>'; }
-        
-        if(passados.length > 0) {
-            html += '<div class="horario-dia-titulo" style="color: var(--text-muted); border-color:#222;">Eventos Passados</div>';
-            passados.forEach(e => html += renderEv(e));
-        }
+        if(futuros.length > 0) { futuros.forEach(e => html += renderEv(e)); } else { html += '<p class="text-muted center">Sem eventos futuros.</p>'; }
+        if(passados.length > 0) { html += '<div class="calendar-divider" style="margin-top:20px;"><span>Passados</span></div>'; passados.forEach(e => html += renderEv(e)); }
         subContainer.innerHTML = html;
     } catch(e) {}
 }
 
-let eeHW = 0;
-document.getElementById('btn-ee-prev-week')?.addEventListener('click', () => { eeHW--; carregarHorarioEE(); });
-document.getElementById('btn-ee-next-week')?.addEventListener('click', () => { eeHW++; carregarHorarioEE(); });
+let eeHorarioModo = 'dia'; 
+let eeHorarioDiaOffset = 0;
+let eeHorarioSemanaOffset = 0;
+
+document.getElementById('btn-horario-dia')?.addEventListener('click', (e) => { eeHorarioModo = 'dia'; e.currentTarget.classList.add('active'); document.getElementById('btn-horario-grelha').classList.remove('active'); carregarHorarioEE(); });
+document.getElementById('btn-horario-grelha')?.addEventListener('click', (e) => { eeHorarioModo = 'grelha'; e.currentTarget.classList.add('active'); document.getElementById('btn-horario-dia').classList.remove('active'); carregarHorarioEE(); });
+
+document.getElementById('btn-ee-prev-horario')?.addEventListener('click', () => { if(eeHorarioModo === 'dia') eeHorarioDiaOffset--; else eeHorarioSemanaOffset--; carregarHorarioEE(); });
+document.getElementById('btn-ee-next-horario')?.addEventListener('click', () => { if(eeHorarioModo === 'dia') eeHorarioDiaOffset++; else eeHorarioSemanaOffset++; carregarHorarioEE(); });
 
 async function carregarHorarioEE() {
     const subContainer = document.getElementById('ee-horario-content');
@@ -346,47 +343,49 @@ async function carregarHorarioEE() {
         const docSnap = await getDoc(doc(db, "turmas", turmaAtual));
         let hb = {}; if(docSnap.exists() && docSnap.data().horario) hb = docSnap.data().horario;
         
-        // Array ordenado para corrigir o 13:00 no fim
         const blocosKeys = ['1', '2', '3', '4', '1300', '5', '6', '7'];
         const blocosTempo = { '1': '08:30', '2': '09:35', '3': '10:50', '4': '11:55', '1300': '13:00', '5': '14:05', '6': '15:15', '7': '16:20' };
-        const diasMap = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira'];
-        
-        let dtT = new Date(); dtT.setDate(dtT.getDate() + (eeHW * 7));
-        dtT.setDate(dtT.getDate() - (dtT.getDay() === 0 ? 6 : dtT.getDay() - 1));
-        
-        let dEnd = new Date(dtT); dEnd.setDate(dEnd.getDate() + 4);
+        const diasMap = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
         const fDt = (dt) => `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;
-        document.getElementById('ee-week-display').innerText = `${fDt(dtT)} a ${fDt(dEnd)}`;
-        
-        let html = ''; let temAulasGeral = false;
-        
-        let currDate = new Date(dtT);
-        for(let i=0; i<5; i++) {
-            const dataStr = `${currDate.getFullYear()}-${String(currDate.getMonth()+1).padStart(2,'0')}-${String(currDate.getDate()).padStart(2,'0')}`;
-            let diaHtml = ''; let temAulasDia = false;
-            
+
+        if (eeHorarioModo === 'dia') {
+            let targetDate = new Date(); targetDate.setDate(targetDate.getDate() + eeHorarioDiaOffset);
+            document.getElementById('ee-horario-display').innerText = `${diasMap[targetDate.getDay()]}, ${fDt(targetDate)}`;
+
+            let html = ''; let temAulasDia = false;
+            const dataStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth()+1).padStart(2,'0')}-${String(targetDate.getDate()).padStart(2,'0')}`;
+
             blocosKeys.forEach(bId => {
                 const disc = hb[`${dataStr}_${bId}`];
                 if(disc) {
-                    // Placeholder para o Professor que virá do Firebase futuramente
-                    diaHtml += `<div class="horario-list-item">
-                                    <div class="horario-time-col">${blocosTempo[bId]}</div>
-                                    <div class="horario-disc-col">
-                                        <div class="horario-disc-name">${disc}</div>
-                                        <div class="horario-prof">Prof. A Atribuir</div>
-                                    </div>
-                                </div>`;
-                    temAulasDia = true; temAulasGeral = true;
+                    html += `<div class="horario-list-item"><div class="horario-time-col">${blocosTempo[bId]}</div><div class="horario-disc-col"><div class="horario-disc-name">${disc}</div><div class="horario-prof">Prof. A Atribuir</div></div></div>`;
+                    temAulasDia = true;
                 }
             });
+            subContainer.innerHTML = temAulasDia ? html : '<p class="text-muted center" style="margin-top:30px;">Sem aulas agendadas para este dia.</p>';
+        } else {
+            let dtT = new Date(); dtT.setDate(dtT.getDate() + (eeHorarioSemanaOffset * 7));
+            dtT.setDate(dtT.getDate() - (dtT.getDay() === 0 ? 6 : dtT.getDay() - 1));
+            let dEnd = new Date(dtT); dEnd.setDate(dEnd.getDate() + 4);
+            document.getElementById('ee-horario-display').innerText = `${fDt(dtT)} a ${fDt(dEnd)}`;
+
+            let html = '<div class="horario-grid" style="min-width: 500px;"><div class="horario-header"></div>';
+            let dtIter = new Date(dtT);
+            ['SEG','TER','QUA','QUI','SEX'].forEach(d => { html += `<div class="horario-header">${d}<span>${fDt(dtIter)}</span></div>`; dtIter.setDate(dtIter.getDate()+1); });
             
-            if(temAulasDia) {
-                html += `<div class="horario-dia-titulo">${diasMap[i]} <span style="font-size:0.8rem; color:var(--text-muted); float:right;">${fDt(currDate)}</span></div>${diaHtml}`;
-            }
-            currDate.setDate(currDate.getDate() + 1);
+            blocosKeys.forEach(bId => {
+                html += `<div class="horario-time">${blocosTempo[bId]}</div>`;
+                dtIter = new Date(dtT);
+                for(let i=0; i<5; i++) {
+                    const dStr = `${dtIter.getFullYear()}-${String(dtIter.getMonth()+1).padStart(2,'0')}-${String(dtIter.getDate()).padStart(2,'0')}`;
+                    const disc = hb[`${dStr}_${bId}`];
+                    if(disc) html += `<div class="horario-slot filled" style="padding:2px;"><strong>${disc}</strong></div>`;
+                    else html += `<div class="horario-slot"></div>`;
+                    dtIter.setDate(dtIter.getDate()+1);
+                }
+            });
+            subContainer.innerHTML = html + '</div>';
         }
-        
-        subContainer.innerHTML = temAulasGeral ? html : '<p class="text-muted center" style="margin-top:30px;">Sem aulas agendadas nesta semana.</p>';
     } catch(e) {}
 }
 
