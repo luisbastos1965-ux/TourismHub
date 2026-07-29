@@ -23,7 +23,6 @@ onAuthStateChanged(auth, async (user) => {
                     return;
                 }
                 
-                // Preparar dados do Pai/Mãe
                 myUserName = dados.nome;
                 
                 // Suporte para 1 ou Múltiplos filhos!
@@ -37,6 +36,7 @@ onAuthStateChanged(auth, async (user) => {
                     await construirSeletorEducandos();
                 } else {
                     document.getElementById('header-ee-student-selector').innerHTML = '<option>Sem educandos associados.</option>';
+                    document.getElementById('ee-dashboard').innerHTML = '<p class="text-muted center" style="margin-top:50px;">A tua conta não tem nenhum educando associado. Contacta a Direção.</p>';
                 }
             }
         } catch (e) { console.error("Erro ao ler perfil", e); }
@@ -55,21 +55,18 @@ async function construirSeletorEducandos() {
             if (snap.exists()) {
                 const opt = document.createElement('option');
                 opt.value = id;
-                // Ex: "👧 Maria (10T)"
                 opt.text = `👩‍🎓 ${snap.data().nome.split(' ')[0]} (${snap.data().turma})`;
                 selector.appendChild(opt);
             }
         } catch(e) {}
     }
     
-    // Iniciar com o primeiro filho da lista
     educandoAtualId = selector.value;
     carregarDadosDoFilhoSelecionado();
 
-    // Quando o EE muda de filho na dropdown:
     selector.addEventListener('change', (e) => {
         educandoAtualId = e.target.value;
-        carregarDadosDoFilhoSelecionado(); // Refaz a magia toda!
+        carregarDadosDoFilhoSelecionado(); 
     });
 }
 
@@ -83,9 +80,7 @@ async function carregarDadosDoFilhoSelecionado() {
         const docSnap = await getDoc(doc(db, "utilizadores", educandoAtualId));
         if (docSnap.exists()) {
             turmaAtual = docSnap.data().turma;
-            // Disparar cálculos para o Dashboard e Vistas
             carregarResumoDashboard();
-            // Se estiver numa aba específica, recarregamos também
             const abaAtiva = document.querySelector('.bottom-nav .nav-item.active').getAttribute('data-target');
             if(abaAtiva === 'view-ee-caderneta') ativarTabCadernetaAtual();
             if(abaAtiva === 'view-ee-agenda') carregarAgendaEE();
@@ -101,7 +96,6 @@ async function carregarResumoDashboard() {
     let somaNotas = 0; let countNotas = 0;
     let faltasEstaSemana = 0;
     let numOcorrencias = 0;
-    let numPrhfs = 0;
 
     // A. Calcular Média
     try {
@@ -118,7 +112,6 @@ async function carregarResumoDashboard() {
     try {
         const hj = new Date();
         const umaSemanaAtras = new Date(hj.getTime() - (7 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
-        
         const faltasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
         faltasSnap.forEach(d => {
             if(d.data().dataInicio >= umaSemanaAtras) { faltasEstaSemana += d.data().horas; }
@@ -127,14 +120,14 @@ async function carregarResumoDashboard() {
         document.getElementById('resumo-faltas').style.color = faltasEstaSemana > 0 ? 'var(--danger-red)' : 'white';
     } catch(e) {}
 
-    // C. Ocorrências / Disciplina
+    // C. Ocorrências
     try {
         const ocSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "ocorrencias"));
         numOcorrencias = ocSnap.size;
         document.getElementById('resumo-ocorrencias').innerText = numOcorrencias;
     } catch(e) {}
 
-    // D. Próximo Evento / Avaliação
+    // D. Próximo Evento
     try {
         const evSnap = await getDocs(collection(db, "turmas", turmaAtual, "eventos"));
         const hojeIso = new Date().toISOString().split('T')[0];
@@ -151,13 +144,12 @@ async function carregarResumoDashboard() {
         }
     } catch(e) {}
     
-    // E. Mensagens
-    document.getElementById('resumo-mensagens').innerHTML = `<i class="fa-solid fa-arrow-right"></i> Ver Caixa`;
-    document.getElementById('resumo-proxima-aula').innerText = "Consultar Horário";
+    document.getElementById('resumo-mensagens').innerHTML = `<i class="fa-solid fa-arrow-right"></i> Caixa de Entrada`;
+    document.getElementById('resumo-proxima-aula').innerHTML = `<i class="fa-solid fa-arrow-right"></i> Ver Horário`;
 }
 
 // ==========================================
-// 3. NAVEGAÇÃO DA BARRA INFERIOR
+// 3. NAVEGAÇÃO DA BARRA INFERIOR E AÇÕES RÁPIDAS
 // ==========================================
 const navItems = document.querySelectorAll('.nav-item');
 const views = [
@@ -223,7 +215,6 @@ document.getElementById('btn-open-notificacoes')?.addEventListener('click', () =
     navItems.forEach(nav => nav.classList.remove('active'));
     esconderTodasAsVistas();
     document.getElementById('view-ee-notificacoes').style.display = 'block';
-    // Aqui no futuro podes carregar um array de notificações
     document.getElementById('ee-notificacoes-container').innerHTML = '<p class="text-muted center">A central de notificações está ativa. Os alertas aparecerão aqui.</p>';
 });
 
@@ -250,26 +241,11 @@ function switchTabConfig(tabClicada, tabsParaDesativar) {
     cadernetaContent.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>';
 }
 
-tabTimeline?.addEventListener('click', (e) => { 
-    switchTabConfig(e.currentTarget, [tabNotas, tabFaltas, tabPrhfs, tabComportamento]); 
-    carregarTimelineEE(); 
-});
-tabNotas?.addEventListener('click', (e) => { 
-    switchTabConfig(e.currentTarget, [tabTimeline, tabFaltas, tabPrhfs, tabComportamento]); 
-    carregarNotasEE(); 
-});
-tabFaltas?.addEventListener('click', (e) => { 
-    switchTabConfig(e.currentTarget, [tabTimeline, tabNotas, tabPrhfs, tabComportamento]); 
-    carregarFaltasEE(); 
-});
-tabPrhfs?.addEventListener('click', (e) => { 
-    switchTabConfig(e.currentTarget, [tabTimeline, tabNotas, tabFaltas, tabComportamento]); 
-    carregarPrhfsEE(); 
-});
-tabComportamento?.addEventListener('click', (e) => { 
-    switchTabConfig(e.currentTarget, [tabTimeline, tabNotas, tabFaltas, tabPrhfs]); 
-    carregarComportamentoEE(); 
-});
+tabTimeline?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabNotas, tabFaltas, tabPrhfs, tabComportamento]); carregarTimelineEE(); });
+tabNotas?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabTimeline, tabFaltas, tabPrhfs, tabComportamento]); carregarNotasEE(); });
+tabFaltas?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabTimeline, tabNotas, tabPrhfs, tabComportamento]); carregarFaltasEE(); });
+tabPrhfs?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabTimeline, tabNotas, tabFaltas, tabComportamento]); carregarPrhfsEE(); });
+tabComportamento?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabTimeline, tabNotas, tabFaltas, tabPrhfs]); carregarComportamentoEE(); });
 
 // MAGIA: LINHA TEMPORAL
 async function carregarTimelineEE() {
@@ -401,7 +377,6 @@ async function carregarComportamentoEE() {
     } catch(e) {}
 }
 
-
 // ==========================================
 // 5. AGENDA E HORÁRIO (MENUS SEPARADOS E FILTROS)
 // ==========================================
@@ -423,22 +398,16 @@ async function carregarAgendaEE() {
         let eventosFormatados = [];
         evDb.forEach(d => { 
             const e = d.data();
-            let inc = false;
-            let bgC = '#b82bf2'; // roxo para outros
+            let inc = false; let bgC = '#b82bf2'; 
 
             if(e.tipo === 'teste' || e.tipo === 'avaliacao') {
-                if(mostraTestes) { inc = true; bgC = '#ffaa00'; } // amarelo/laranja
+                if(mostraTestes) { inc = true; bgC = '#ffaa00'; } 
             } else {
                 if(mostraOutros) { inc = true; }
             }
 
             if(inc) {
-                eventosFormatados.push({
-                    title: e.titulo,
-                    start: e.data,
-                    backgroundColor: bgC,
-                    borderColor: bgC
-                });
+                eventosFormatados.push({ title: e.titulo, start: e.data, backgroundColor: bgC, borderColor: bgC });
             }
         });
         
@@ -474,7 +443,6 @@ async function carregarHorarioEE() {
         
         let targetDate = new Date(); 
         targetDate.setDate(targetDate.getDate() + (eeHorarioWeekOffset * 7));
-        // Recuar para a Segunda-feira dessa semana
         targetDate.setDate(targetDate.getDate() - (targetDate.getDay() === 0 ? 6 : targetDate.getDay() - 1));
         
         let endOfWeek = new Date(targetDate); endOfWeek.setDate(endOfWeek.getDate() + 4);
