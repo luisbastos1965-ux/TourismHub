@@ -1,6 +1,6 @@
 import { auth, db, messaging, VAPID_KEY, getToken, onMessage } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, collection, updateDoc, getDocs, query, addDoc, onSnapshot, orderBy, setDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { doc, getDoc, collection, updateDoc, getDocs, query, addDoc, onSnapshot, orderBy, setDoc, enableIndexedDbPersistence, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // Ativar modo Offline da base de dados
 try {
@@ -29,19 +29,21 @@ onAuthStateChanged(auth, async (user) => {
                 myUserName = dados.nome.split(' ')[0];
                 minhaTurma = dados.turma;
                 document.getElementById('header-user-name-aluno').innerText = myUserName;
+                document.getElementById('perfil-nome-central').innerText = dados.nome || myUserName;
                 
                 if(dados.fotoPerfil) {
-                    const avatarCircle = document.getElementById('header-avatar-circle');
-                    avatarCircle.innerHTML = `<img src="${dados.fotoPerfil}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                    const circle = document.getElementById('header-avatar-circle');
+                    circle.innerHTML = `<img src="${dados.fotoPerfil}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                    document.getElementById('perfil-avatar-img').src = dados.fotoPerfil;
+                } else {
+                    document.getElementById('perfil-avatar-img').src = `https://ui-avatars.com/api/?name=${myUserName}&background=00cc88&color=fff&size=100`;
                 }
 
-                // Chamar Módulos do Dashboard
                 carregarDadosPassaporte(dados);
                 carregarGamificacao(dados);
                 carregarAgendaDashboard();
                 carregarCheckInEmocional(dados);
                 
-                // Atualizar o sino de notificações se houver novidades
                 const timelineEvents = await obterEventosLinhaTemporal();
                 if (timelineEvents.length > 0) {
                     const badge = document.getElementById('badge-notificacoes');
@@ -49,7 +51,6 @@ onAuthStateChanged(auth, async (user) => {
                     badge.style.display = 'flex';
                 }
 
-                // LER DADOS DA TURMA (Missão e Época de Exames)
                 if (minhaTurma) {
                     const turmaSnap = await getDoc(doc(db, "turmas", minhaTurma));
                     if (turmaSnap.exists()) {
@@ -91,7 +92,7 @@ onAuthStateChanged(auth, async (user) => {
 document.getElementById('btn-logout-aluno')?.addEventListener('click', () => { signOut(auth).then(() => window.location.href = "index.html"); });
 
 // ----------------------------------------------------
-// GAMIFICAÇÃO (Nível e XP)
+// GAMIFICAÇÃO E PERFIL COMPLETO (Nível, XP, Títulos)
 // ----------------------------------------------------
 function carregarGamificacao(dados) {
     const xp = dados.xp || 0;
@@ -100,21 +101,46 @@ function carregarGamificacao(dados) {
     const xpNivelAtual = (nivel - 1) * 100;
     const progresso = ((xp - xpNivelAtual) / (xpProximoNivel - xpNivelAtual)) * 100;
 
+    // Home
     document.getElementById('aluno-nivel').innerText = nivel;
     document.getElementById('aluno-xp-atual').innerText = xp;
     document.getElementById('aluno-xp-progress').style.width = `${progresso}%`;
     document.getElementById('aluno-xp-falta').innerText = xpProximoNivel - xp;
+
+    // Perfil
+    document.getElementById('perfil-xp-totais').innerText = xp;
+    document.getElementById('perfil-xp-progress').style.width = `${progresso}%`;
 
     let rank = "Novato";
     if (nivel >= 2) rank = "Aprendiz";
     if (nivel >= 5) rank = "Estudante PRO";
     if (nivel >= 10) rank = "Veterano";
     if (nivel >= 20) rank = "Lenda da Turma";
+    
     document.getElementById('aluno-rank-title').innerText = rank;
+    document.getElementById('perfil-titulo-central').innerText = rank;
 }
 
+// Upload de Avatar no Perfil
+document.getElementById('upload-avatar')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const options = { maxSizeMB: 0.2, maxWidthOrHeight: 500, useWebWorker: true };
+    try {
+        const compressedFile = await imageCompression(file, options);
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+            const base64 = ev.target.result;
+            document.getElementById('perfil-avatar-img').src = base64;
+            document.getElementById('header-avatar-circle').innerHTML = `<img src="${base64}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+            await updateDoc(doc(db, "utilizadores", myUserId), { fotoPerfil: base64 });
+        };
+        reader.readAsDataURL(compressedFile);
+    } catch(err) { console.error(err); }
+});
+
 // ----------------------------------------------------
-// NAVEGAÇÃO ENTRE VISTAS E NOTIFICAÇÕES
+// NAVEGAÇÃO ENTRE VISTAS
 // ----------------------------------------------------
 const navItems = document.querySelectorAll('.nav-item');
 const views = [
@@ -126,7 +152,8 @@ const views = [
     document.getElementById('view-study-mode'),
     document.getElementById('view-aluno-sumarios'),
     document.getElementById('view-aluno-caderno'),
-    document.getElementById('view-aluno-notificacoes') // NOVO
+    document.getElementById('view-aluno-notificacoes'),
+    document.getElementById('view-aluno-perfil') // NOVO
 ];
 
 function esconderTodasAsVistas() {
@@ -143,6 +170,12 @@ navItems.forEach(item => {
         const targetId = e.currentTarget.getAttribute('data-target');
         const targetView = document.getElementById(targetId);
         if(targetView) targetView.style.display = 'block';
+
+        // Disparar funções específicas de ecrãs:
+        if(targetId === 'view-aluno-perfil') {
+            carregarObjetivosPessoais();
+            renderizarGraficoNotas();
+        }
     });
 });
 
@@ -158,6 +191,123 @@ document.getElementById('btn-voltar-notificacoes')?.addEventListener('click', ()
     document.querySelector('.nav-item[data-target="student-dashboard"]').classList.add('active');
     document.getElementById('student-dashboard').style.display = 'block';
 });
+
+// ----------------------------------------------------
+// OBJETIVOS PESSOAIS (PERFIL)
+// ----------------------------------------------------
+async function carregarObjetivosPessoais() {
+    const cont = document.getElementById('lista-objetivos-container');
+    cont.innerHTML = '<p class="text-muted center">A carregar os teus objetivos...</p>';
+    try {
+        const snap = await getDocs(query(collection(db, "utilizadores", myUserId, "objetivos"), orderBy("timestamp", "desc")));
+        let html = '';
+        snap.forEach(d => {
+            const obj = d.data();
+            const checkColor = obj.concluido ? 'var(--success-green)' : '#444';
+            const textDec = obj.concluido ? 'line-through' : 'none';
+            const textColor = obj.concluido ? 'var(--text-muted)' : 'white';
+            html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left: 3px solid ${checkColor};">
+                        <div style="display:flex; align-items:center; gap:12px; flex:1;">
+                            <div onclick="toggleObjetivo('${d.id}', ${!obj.concluido})" style="width:24px; height:24px; border-radius:50%; border:2px solid ${checkColor}; background:${obj.concluido ? checkColor : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                                ${obj.concluido ? '<i class="fa-solid fa-check" style="color:var(--bg-dark); font-size:0.75rem;"></i>' : ''}
+                            </div>
+                            <span style="text-decoration:${textDec}; color:${textColor}; font-size:0.95rem; flex:1;">${obj.texto}</span>
+                        </div>
+                        <i class="fa-solid fa-trash" style="color:var(--danger-red); cursor:pointer; font-size:0.9rem; padding: 5px;" onclick="apagarObjetivo('${d.id}')"></i>
+                     </div>`;
+        });
+        if(html==='') html = '<p class="text-muted center" style="font-size:0.85rem;">Não tens metas ativas. Começa a desafiar-te!</p>';
+        cont.innerHTML = html;
+    } catch(e) {}
+}
+
+document.getElementById('btn-add-objetivo')?.addEventListener('click', async () => {
+    const val = document.getElementById('input-novo-objetivo').value.trim();
+    if(!val) return;
+    try {
+        await addDoc(collection(db, "utilizadores", myUserId, "objetivos"), { texto: val, concluido: false, timestamp: Date.now() });
+        document.getElementById('input-novo-objetivo').value = '';
+        carregarObjetivosPessoais();
+    } catch(e) {}
+});
+
+window.toggleObjetivo = async (id, status) => {
+    try {
+        await updateDoc(doc(db, "utilizadores", myUserId, "objetivos", id), { concluido: status });
+        if(status) {
+            const snap = await getDoc(doc(db, "utilizadores", myUserId));
+            let xp = snap.exists() && snap.data().xp ? snap.data().xp : 0;
+            await updateDoc(doc(db, "utilizadores", myUserId), { xp: xp + 50 });
+            carregarGamificacao({xp: xp+50});
+            alert("🎯 Objetivo alcançado! +50 XP!");
+        }
+        carregarObjetivosPessoais();
+    } catch(e) {}
+};
+
+window.apagarObjetivo = async (id) => {
+    if(confirm("Queres mesmo eliminar este objetivo?")) {
+        try {
+            await deleteDoc(doc(db, "utilizadores", myUserId, "objetivos", id));
+            carregarObjetivosPessoais();
+        } catch(e) {}
+    }
+};
+
+// ----------------------------------------------------
+// ESTATÍSTICAS E GRÁFICOS (CHART.JS) NO PERFIL
+// ----------------------------------------------------
+let chartInstance = null;
+async function renderizarGraficoNotas() {
+    const ctx = document.getElementById('chart-notas-aluno');
+    if(!ctx) return;
+    try {
+        const notasDb = await getDocs(collection(db, "utilizadores", myUserId, "notas"));
+        let mapNotas = {};
+        notasDb.forEach(d => {
+            const n = d.data();
+            if(n.nota !== 'REP' && !isNaN(n.nota)) {
+                if(!mapNotas[n.disciplina]) mapNotas[n.disciplina] = { soma: 0, cont: 0 };
+                mapNotas[n.disciplina].soma += Number(n.nota);
+                mapNotas[n.disciplina].cont++;
+            }
+        });
+        
+        let labels = [];
+        let data = [];
+        let bgColors = [];
+        
+        Object.keys(mapNotas).forEach(disc => {
+            labels.push(disc);
+            const media = (mapNotas[disc].soma / mapNotas[disc].cont).toFixed(1);
+            data.push(media);
+            bgColors.push(media >= 10 ? '#00cc88' : '#ff4d4d'); // Verde se positiva, vermelho se negativa
+        });
+
+        if(labels.length === 0) {
+            // Desenhar gráfico vazio de exemplo se não houver notas
+            labels = ["Sem Dados"]; data = [0]; bgColors = ["#333"];
+        }
+
+        if(chartInstance) chartInstance.destroy();
+        chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{ label: 'Média Atual', data: data, backgroundColor: bgColors, borderRadius: 6 }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, max: 20, ticks: { color: '#a0a0a0', stepSize: 5 }, grid: { color: '#333' } },
+                    x: { ticks: { color: '#e0e0e0', font: { size: 10 } }, grid: { display: false } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    } catch(e) {}
+}
 
 // ----------------------------------------------------
 // CHECK-IN EMOCIONAL E GRÁFICO (HISTÓRICO)
@@ -405,7 +555,7 @@ document.getElementById('btn-save-study-log')?.addEventListener('click', async (
 });
 
 // ----------------------------------------------------
-// CADERNETA, TIMELINE (HISTÓRICO) E NOTIFICAÇÕES
+// CADERNETA, TIMELINE E NOTIFICAÇÕES
 // ----------------------------------------------------
 const tabTimeline = document.getElementById('tab-aluno-timeline');
 const tabNotas = document.getElementById('tab-aluno-notas'); 
@@ -434,16 +584,16 @@ async function obterEventosLinhaTemporal() {
     if(!myUserId) return eventos;
     
     const notasSnap = await getDocs(collection(db, "utilizadores", myUserId, "notas"));
-    notasSnap.forEach(d => { const n = d.data(); eventos.push({ time: new Date(n.data).getTime(), icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação Lançada', desc: `${n.disciplina} (Mod. ${n.modulo}): <strong>${n.nota}</strong>` }); });
+    notasSnap.forEach(d => { const n = d.data(); eventos.push({ time: new Date(n.data).getTime(), icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação', desc: `${n.disciplina} (Mod. ${n.modulo}): <strong>${n.nota}</strong>` }); });
     
     const faltasSnap = await getDocs(collection(db, "utilizadores", myUserId, "faltas"));
-    faltasSnap.forEach(d => { const f = d.data(); eventos.push({ time: new Date(f.criadoEm || f.dataInicio).getTime(), icon: '<i class="fa-solid fa-user-xmark"></i>', cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Falta a ${f.disciplina} (${f.horas}h)`, desc: f.justificada ? `Estado: Justificada` : `Atenção: Falta por justificar!` }); });
+    faltasSnap.forEach(d => { const f = d.data(); eventos.push({ time: new Date(f.criadoEm || f.dataInicio).getTime(), icon: '<i class="fa-solid fa-user-xmark"></i>', cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Falta a ${f.disciplina} (${f.horas}h)`, desc: f.justificada ? `Justificada` : `Por justificar` }); });
     
     const ocSnap = await getDocs(collection(db, "utilizadores", myUserId, "ocorrencias"));
-    ocSnap.forEach(d => { const o = d.data(); eventos.push({ time: o.timestamp, icon: o.tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>', cor: o.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Registo de Comportamento`, desc: `<strong>${o.titulo}</strong><br><span style="font-size:0.8rem; color:#aaa;">${o.descricao || ''}</span>` }); });
+    ocSnap.forEach(d => { const o = d.data(); eventos.push({ time: o.timestamp, icon: o.tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>', cor: o.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Registo Disciplinar`, desc: `<strong>${o.titulo}</strong><br><span style="font-size:0.8rem; color:#aaa;">${o.descricao || ''}</span>` }); });
     
     const humorSnap = await getDocs(collection(db, "utilizadores", myUserId, "humor"));
-    humorSnap.forEach(d => { const h = d.data(); eventos.push({ time: h.timestamp, icon: '<i class="fa-solid fa-heart-pulse"></i>', cor: '#b82bf2', titulo: `Check-in Emocional`, desc: `Sentiste-te ${h.humor}. (+10 XP)` }); });
+    humorSnap.forEach(d => { const h = d.data(); eventos.push({ time: h.timestamp, icon: '<i class="fa-solid fa-heart-pulse"></i>', cor: '#b82bf2', titulo: `Check-in Emocional`, desc: `Sentiste-te ${h.humor} (+10 XP)` }); });
 
     eventos.sort((a,b) => b.time - a.time);
     return eventos;
@@ -454,38 +604,20 @@ async function carregarTimelineAluno() {
     try {
         const eventos = await obterEventosLinhaTemporal();
         if(eventos.length === 0) { cadernetaContent.innerHTML = '<p class="text-muted center" style="margin-top:40px;">O teu histórico está limpo.</p>'; return; }
-        
         let html = '<div class="timeline">';
-        eventos.forEach(ev => { 
-            html += `<div class="timeline-item"><div class="timeline-icon" style="color: ${ev.cor}; border-color: ${ev.cor};">${ev.icon}</div><div class="timeline-content" style="border-left: 3px solid ${ev.cor};"><span class="timeline-date">${new Date(ev.time).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}</span><strong style="color:white; display:block; margin-bottom:5px;">${ev.titulo}</strong><p style="font-size:0.85rem; color:var(--text-light); margin:0;">${ev.desc}</p></div></div>`; 
-        });
+        eventos.forEach(ev => { html += `<div class="timeline-item"><div class="timeline-icon" style="color: ${ev.cor}; border-color: ${ev.cor};">${ev.icon}</div><div class="timeline-content" style="border-left: 3px solid ${ev.cor};"><span class="timeline-date">${new Date(ev.time).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}</span><strong style="color:white; display:block; margin-bottom:5px;">${ev.titulo}</strong><p style="font-size:0.85rem; color:var(--text-light); margin:0;">${ev.desc}</p></div></div>`; });
         cadernetaContent.innerHTML = html + '</div>';
     } catch(e) { cadernetaContent.innerHTML = '<p class="text-danger center">Erro ao carregar histórico.</p>'; }
 }
 
 async function carregarNotificacoesAluno() {
-    const container = document.getElementById('aluno-notificacoes-container');
-    container.innerHTML = '<p class="text-muted center">A ler notificações...</p>';
+    const container = document.getElementById('aluno-notificacoes-container'); container.innerHTML = '<p class="text-muted center">A ler notificações...</p>';
     try {
-        const eventos = await obterEventosLinhaTemporal();
-        const recentes = eventos.slice(0, 15);
-        
+        const eventos = await obterEventosLinhaTemporal(); const recentes = eventos.slice(0, 15);
         if(recentes.length === 0) { container.innerHTML = '<p class="text-muted center" style="margin-top:40px;">Sem alertas recentes.</p>'; return; }
-        
         let html = '';
-        recentes.forEach(ev => {
-            html += `
-            <div class="card" style="margin-bottom:10px; border-left: 4px solid ${ev.cor}; display:flex; align-items:flex-start; gap: 15px; padding: 15px;">
-                <div style="font-size: 1.5rem; color: ${ev.cor};">${ev.icon}</div>
-                <div>
-                    <strong style="color:white; font-size:1rem; display:block; margin-bottom:3px;">${ev.titulo}</strong>
-                    <span style="font-size:0.85rem; color:var(--text-light);">${ev.desc}</span>
-                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px;">${new Date(ev.time).toLocaleString('pt-PT')}</div>
-                </div>
-            </div>`;
-        });
-        container.innerHTML = html;
-        document.getElementById('badge-notificacoes').style.display = 'none';
+        recentes.forEach(ev => { html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${ev.cor}; display:flex; align-items:flex-start; gap: 15px; padding: 15px;"><div style="font-size: 1.5rem; color: ${ev.cor};">${ev.icon}</div><div><strong style="color:white; font-size:1rem; display:block; margin-bottom:3px;">${ev.titulo}</strong><span style="font-size:0.85rem; color:var(--text-light);">${ev.desc}</span><div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px;">${new Date(ev.time).toLocaleString('pt-PT')}</div></div></div>`; });
+        container.innerHTML = html; document.getElementById('badge-notificacoes').style.display = 'none';
     } catch(e) { container.innerHTML = '<p class="text-danger center">Erro ao carregar notificações.</p>'; }
 }
 
