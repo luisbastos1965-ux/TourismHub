@@ -163,13 +163,17 @@
 
             <!-- RESTANTES VISTAS (Inalteradas) -->
             <!-- 2. CADERNETA E LINHA TEMPORAL -->
+            <!-- 2. CADERNETA E LINHA TEMPORAL -->
             <div id="view-ee-caderneta" style="display: none;">
-                <div class="falta-tabs">
-                    <button class="falta-tab-btn active" id="tab-ee-timeline" style="flex: 1 1 100%; border-color: var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-clock-rotate-left"></i> Linha Temporal</button>
-                    <button class="falta-tab-btn" id="tab-ee-notas" style="flex: 1 1 45%;">Notas</button>
-                    <button class="falta-tab-btn" id="tab-ee-faltas" style="flex: 1 1 45%;">Faltas</button>
-                    <button class="falta-tab-btn" id="tab-ee-prhfs" style="flex: 1 1 45%;">PRHFs</button>
-                    <button class="falta-tab-btn" id="tab-ee-comportamento" style="flex: 1 1 45%;">Comportamento</button>
+                <div class="class-header"><h2 class="section-title">Caderneta do Aluno</h2></div>
+                <!-- Nova Grelha 2x3 -->
+                <div class="falta-tabs" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; justify-content:center; margin-bottom: 20px;">
+                    <button class="falta-tab-btn active" id="tab-ee-timeline">Linha Temporal</button>
+                    <button class="falta-tab-btn" id="tab-ee-notas">Notas</button>
+                    <button class="falta-tab-btn" id="tab-ee-faltas">Faltas</button>
+                    <button class="falta-tab-btn" id="tab-ee-prhfs">PRHFs</button>
+                    <button class="falta-tab-btn" id="tab-ee-comportamento">Comportamento</button>
+                    <button class="falta-tab-btn" id="tab-ee-reunioes">Reuniões</button>
                 </div>
                 <div id="filtro-caderneta-container" style="display:none; margin-bottom: 15px;">
                     <select id="filtro-caderneta-disc" style="margin:0; background-color: var(--bg-dark); border-radius: 8px;"><option value="">Todas as Disciplinas</option></select>
