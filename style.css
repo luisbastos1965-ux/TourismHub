@@ -306,12 +306,12 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .timeline-content { background: var(--bg-dark); border: 1px solid #333; border-radius: 8px; padding: 12px; }
 .timeline-date { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 5px; display: block; }
 
-/* Os Novos Filtros de Pílula - Agora FORÇADOS NUMA SÓ LINHA COM SCROLL */
-.agenda-filters { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 10px; justify-content: flex-start; margin-bottom: 20px; background: var(--bg-dark); padding: 15px; border-radius: 12px; border: 1px solid #333; scrollbar-width: none; }
+/* Os Novos Filtros de Pílula - FORÇADOS NUMA SÓ LINHA COM SCROLL */
+.agenda-filters { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 10px; justify-content: flex-start; margin-bottom: 20px; background: var(--bg-dark); padding: 15px; border-radius: 12px; border: 1px solid #333; scrollbar-width: none; -ms-overflow-style: none; }
 .agenda-filters::-webkit-scrollbar { display: none; }
-.agenda-filter-label { font-size: 0.85rem; color: var(--text-light); display: flex; align-items: center; gap: 6px; cursor: pointer; background: rgba(255, 255, 255, 0.05); padding: 10px 14px; border-radius: 25px; border: 1px solid #444; transition: 0.2s; font-weight: bold; white-space: nowrap; }
+.agenda-filter-label { font-size: 0.85rem; color: var(--text-light); display: flex; flex-direction: row; align-items: center; gap: 6px; cursor: pointer; background: rgba(255, 255, 255, 0.05); padding: 10px 14px; border-radius: 25px; border: 1px solid #444; transition: 0.2s; font-weight: bold; white-space: nowrap; flex-shrink: 0; }
 .agenda-filter-label:hover { background: rgba(255, 255, 255, 0.1); border-color: #555; }
-.agenda-filter-label input { width: 16px; height: 16px; margin: 0; accent-color: var(--primary-green); cursor: pointer; }
+.agenda-filter-label input { width: 16px; height: 16px; margin: 0; accent-color: var(--primary-green); cursor: pointer; flex-shrink: 0; }
 
 /* Caderneta */
 .falta-tabs { display: flex; flex-wrap:wrap; gap:5px; justify-content:center; margin-bottom: 15px; }
@@ -335,4 +335,10 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .horario-prof { font-size: 0.75rem; color: #888; margin-top: 4px; }
 .horario-dia-titulo { color: var(--warning-yellow); margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #333; margin-top: 20px; font-size: 1.1rem; }
 
+.horario-grid { display: grid; grid-template-columns: 55px repeat(5, minmax(0, 1fr)); gap: 4px; padding-bottom: 10px; min-width: 500px;}
+.horario-header { background: #222; text-align: center; padding: 8px 2px; font-size: 0.75rem; font-weight: bold; color: var(--primary-green); border-radius: 4px; display: flex; flex-direction: column;}
+.horario-header span { color: white; font-size: 0.9rem; margin-top: 2px;}
+.horario-time { background: transparent; text-align: center; padding: 4px 0; font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; justify-content: center;}
+.horario-slot { background: var(--bg-card); border: 1px solid #333; border-radius: 4px; min-height: 42px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: 0.75rem; padding: 2px; transition: 0.2s; cursor: pointer; position: relative;}
+.horario-slot.filled { background: rgba(0, 204, 136, 0.1); border-color: var(--primary-green); color: white; }
 .horario-slot.special { background: rgba(184, 43, 242, 0.15); border-color: #b82bf2; color: white; }
