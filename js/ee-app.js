@@ -53,7 +53,11 @@ async function carregarDadosDoFilhoSelecionado() {
     try {
         const docSnap = await getDoc(doc(db, "utilizadores", educandoAtualId));
         if (docSnap.exists()) {
-            turmaAtual = docSnap.data().turma; carregarResumoDashboard(); preencherFiltrosDisciplinas();
+            turmaAtual = docSnap.data().turma; 
+            carregarResumoDashboard(); 
+            carregarPercursoProfissional(docSnap.data()); // NOVO!
+            preencherFiltrosDisciplinas();
+            
             const abaAtivaEl = document.querySelector('.bottom-nav .nav-item.active');
             if(abaAtivaEl) {
                 const abaAtiva = abaAtivaEl.getAttribute('data-target');
@@ -65,17 +69,121 @@ async function carregarDadosDoFilhoSelecionado() {
     } catch(e) {}
 }
 
+/* NOVO: LÓGICA DO PERCURSO PROFISSIONAL (FCT & PAP) */
+function getRiscoBadge(status) {
+    if(status === 'verde' || status === 'normal') return { cor: 'var(--success-green)', txt: '🟢 Normal', icon: '✅', cIcon: 'var(--success-green)'};
+    if(status === 'amarelo' || status === 'atrasado') return { cor: 'var(--warning-yellow)', txt: '🟡 Atenção', icon: '🟡', cIcon: 'var(--warning-yellow)'};
+    return { cor: 'var(--danger-red)', txt: '🔴 Crítico', icon: '❌', cIcon: 'var(--danger-red)'};
+}
+
+function carregarPercursoProfissional(alunoData) {
+    const cardResumo = document.getElementById('card-percurso-prof');
+    const miniFct = document.getElementById('resumo-mini-fct');
+    const miniPap = document.getElementById('resumo-mini-pap');
+    const btnPap = document.getElementById('btn-tab-pap');
+    
+    // Reset Views
+    cardResumo.style.display = 'none';
+    miniFct.style.display = 'none';
+    miniPap.style.display = 'none';
+    btnPap.style.display = 'none';
+
+    let hasFct = false; let hasPap = false;
+    let riscoGeral = 'verde';
+
+    // FCT PROCESSAMENTO
+    if (alunoData.fct) {
+        hasFct = true; miniFct.style.display = 'block';
+        const f = alunoData.fct;
+        const hr = f.horasRealizadas || 0; const ht = f.horasTotal || 600;
+        const perc = ht > 0 ? Math.round((hr/ht)*100) : 0;
+        document.getElementById('txt-mini-fct').innerText = `${hr}/${ht} h (${perc}%)`;
+        
+        // Vista Detalhada
+        document.getElementById('fct-horas-txt').innerText = `${hr} / ${ht} h`;
+        document.getElementById('fct-perc-txt').innerText = `${perc}%`;
+        document.getElementById('fct-progresso').style.width = `${perc}%`;
+        document.getElementById('fct-prev').innerText = f.horasPrevistas || hr; // Exemplo
+        document.getElementById('fct-falta').innerText = ht - hr;
+        
+        const riscoF = getRiscoBadge(f.estadoRisco || 'verde');
+        document.getElementById('fct-badge-risco').innerText = riscoF.txt;
+        document.getElementById('fct-card-risco').style.borderLeftColor = riscoF.cor;
+        if(f.estadoRisco === 'amarelo') riscoGeral = 'amarelo';
+        if(f.estadoRisco === 'vermelho') riscoGeral = 'vermelho';
+
+        let docsHtml = '';
+        const dNames = { protocolo: 'Protocolo', plano: 'Plano de Estágio', folhas: 'Folhas de Estágio', registos: 'Registos de Visita', avaliacao: 'Avaliação', autoavaliacao: 'Autoavaliação'};
+        if(f.docs) {
+            for(let key in dNames) {
+                let st = f.docs[key]; 
+                let b = getRiscoBadge(st === true ? 'verde' : (st === 'amarelo' ? 'amarelo' : 'vermelho'));
+                docsHtml += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #222; padding-bottom:5px;"><span>${dNames[key]}</span> <span>${b.icon}</span></div>`;
+            }
+        }
+        document.getElementById('fct-docs-lista').innerHTML = docsHtml;
+    }
+
+    // PAP PROCESSAMENTO
+    if (alunoData.pap) {
+        hasPap = true; miniPap.style.display = 'block'; btnPap.style.display = 'block';
+        const p = alunoData.pap;
+        document.getElementById('txt-mini-pap').innerText = p.faseAtual || 'Fase de Desenvolvimento';
+        
+        // Vista Detalhada
+        document.getElementById('pap-tema').innerText = p.tema || 'A aguardar tema...';
+        document.getElementById('pap-orientador').innerText = p.orientador || '-';
+        document.getElementById('pap-data').innerText = p.dataDefesa || '-';
+        document.getElementById('pap-obs-txt').innerText = p.notasOrientador || 'Sem observações recentes.';
+        
+        const riscoP = getRiscoBadge(p.estadoRisco || 'verde');
+        document.getElementById('pap-badge-risco').innerText = riscoP.txt;
+        document.getElementById('pap-card-risco').style.borderLeftColor = riscoP.cor;
+        if(p.estadoRisco === 'amarelo' && riscoGeral !== 'vermelho') riscoGeral = 'amarelo';
+        if(p.estadoRisco === 'vermelho') riscoGeral = 'vermelho';
+
+        let fasesHtml = '';
+        const fNames = { escolha: 'Escolha do Tema', aprovacao: 'Aprovação', pesquisa: 'Pesquisa', desenvolvimento: 'Desenvolvimento', relatorio: 'Relatório', defesa: 'Defesa'};
+        if(p.fases) {
+            for(let key in fNames) {
+                let st = p.fases[key];
+                let b = getRiscoBadge(st === true ? 'verde' : (st === 'amarelo' ? 'amarelo' : 'vermelho'));
+                fasesHtml += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #222; padding-bottom:5px;"><span>${fNames[key]}</span> <span>${b.icon}</span></div>`;
+            }
+        }
+        document.getElementById('pap-fases-lista').innerHTML = fasesHtml;
+    }
+
+    if(hasFct || hasPap) {
+        cardResumo.style.display = 'block';
+        const rg = getRiscoBadge(riscoGeral);
+        const b = document.getElementById('badge-risco-geral');
+        b.innerText = rg.txt; b.style.color = rg.cor;
+        cardResumo.style.borderLeftColor = rg.cor;
+    }
+}
+
+// Navegação FCT/PAP
+document.getElementById('card-percurso-prof')?.addEventListener('click', () => { 
+    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+    esconderTodasAsVistas(); document.getElementById('view-ee-profissional').style.display = 'block'; 
+});
+document.getElementById('btn-voltar-prof')?.addEventListener('click', () => { 
+    esconderTodasAsVistas(); document.getElementById('ee-dashboard').style.display = 'block'; 
+    document.querySelector('.nav-item[data-target="ee-dashboard"]').classList.add('active');
+});
+
+const btnTabFct = document.getElementById('btn-tab-fct'); const btnTabPap = document.getElementById('btn-tab-pap');
+const contentFct = document.getElementById('content-prof-fct'); const contentPap = document.getElementById('content-prof-pap');
+btnTabFct?.addEventListener('click', () => { btnTabFct.classList.add('active'); btnTabPap.classList.remove('active'); contentFct.style.display = 'block'; contentPap.style.display = 'none'; });
+btnTabPap?.addEventListener('click', () => { btnTabPap.classList.add('active'); btnTabFct.classList.remove('active'); contentPap.style.display = 'block'; contentFct.style.display = 'none'; });
+
+// ==========================================
+// RESTANTE LÓGICA (Inalterada)
+// ==========================================
 async function carregarResumoDashboard() {
     let sumG = 0, countG = 0, sumS = 0, countS = 0, sumC = 0, countC = 0, sumT = 0, countT = 0;
     let faltasTotais = 0; let nOcorrencias = 0; let nPrhf = 0;
-
-    try {
-        const alunoSnap = await getDoc(doc(db, "utilizadores", educandoAtualId));
-        if(alunoSnap.exists()) {
-            document.getElementById('resumo-fct').innerText = alunoSnap.data().notaFCT || '-';
-            document.getElementById('resumo-pap').innerText = alunoSnap.data().notaPAP || '-';
-        }
-    } catch(e){}
 
     try {
         const notasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
@@ -123,7 +231,7 @@ async function carregarResumoDashboard() {
 }
 
 const navItems = document.querySelectorAll('.nav-item');
-const views = [ document.getElementById('ee-dashboard'), document.getElementById('view-ee-caderneta'), document.getElementById('view-ee-agenda'), document.getElementById('view-ee-horario'), document.getElementById('view-ee-chat'), document.getElementById('view-ee-justificar'), document.getElementById('view-ee-notificacoes') ];
+const views = [ document.getElementById('ee-dashboard'), document.getElementById('view-ee-caderneta'), document.getElementById('view-ee-agenda'), document.getElementById('view-ee-horario'), document.getElementById('view-ee-chat'), document.getElementById('view-ee-justificar'), document.getElementById('view-ee-notificacoes'), document.getElementById('view-ee-profissional') ];
 function esconderTodasAsVistas() { views.forEach(v => { if(v) v.style.display = 'none'; }); }
 
 navItems.forEach(item => {
@@ -142,9 +250,7 @@ document.getElementById('btn-quick-justificar')?.addEventListener('click', () =>
 document.querySelectorAll('#btn-voltar-chat-ee, #btn-voltar-justificar, #btn-voltar-notificacoes').forEach(btn => { btn?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); document.querySelector('.nav-item[data-target="ee-dashboard"]').classList.add('active'); esconderTodasAsVistas(); document.getElementById('ee-dashboard').style.display = 'block'; }); });
 document.getElementById('btn-open-notificacoes')?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); esconderTodasAsVistas(); document.getElementById('view-ee-notificacoes').style.display = 'block'; document.getElementById('ee-notificacoes-container').innerHTML = '<p class="text-muted center">Central ativa. Alertas futuros aparecerão aqui.</p>'; });
 
-// ==========================================
 // 4. CADERNETA E TIMELINE
-// ==========================================
 const tabTimeline = document.getElementById('tab-ee-timeline'); const tabNotas = document.getElementById('tab-ee-notas'); const tabFaltas = document.getElementById('tab-ee-faltas'); const tabPrhfs = document.getElementById('tab-ee-prhfs'); const tabComportamento = document.getElementById('tab-ee-comportamento'); const cadernetaContent = document.getElementById('ee-caderneta-content'); const filtroContainer = document.getElementById('filtro-caderneta-container'); const filtroDisc = document.getElementById('filtro-caderneta-disc');
 let currentCadernetaTab = tabTimeline;
 
@@ -270,9 +376,7 @@ async function carregarComportamentoEE() {
     } catch(e) {}
 }
 
-// ==========================================
 // 5. AGENDA E HORÁRIO
-// ==========================================
 document.getElementById('filtro-agenda-testes')?.addEventListener('change', carregarAgendaEE);
 document.getElementById('filtro-agenda-trabalhos')?.addEventListener('change', carregarAgendaEE);
 document.getElementById('filtro-agenda-outros')?.addEventListener('change', carregarAgendaEE);
@@ -326,7 +430,6 @@ document.getElementById('btn-horario-grelha')?.addEventListener('click', (e) => 
 document.getElementById('btn-ee-prev-horario')?.addEventListener('click', () => { if(eeHorarioModo === 'dia') eeHorarioDiaOffset--; else eeHorarioSemanaOffset--; carregarHorarioEE(); });
 document.getElementById('btn-ee-next-horario')?.addEventListener('click', () => { if(eeHorarioModo === 'dia') eeHorarioDiaOffset++; else eeHorarioSemanaOffset++; carregarHorarioEE(); });
 
-// NOVA LÓGICA DE CORES PARA EVENTOS
 const getCorEspecial = (dsc) => {
     const d = dsc.toLowerCase();
     if(d.includes('alm')) return { c: 'var(--warning-yellow)', bg: 'rgba(255, 204, 0, 0.15)' };
@@ -395,9 +498,7 @@ async function carregarHorarioEE() {
     } catch(e) {}
 }
 
-// ==========================================
 // 6. CHAT E JUSTIFICAÇÕES 
-// ==========================================
 let chatUnsubscribeEE = null;
 function iniciarChatEE() {
     const chatContainer = document.getElementById('ee-chat-messages-container');
