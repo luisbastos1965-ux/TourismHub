@@ -181,13 +181,32 @@ function carregarPercursoProfissional(alunoData) {
         if(p.estadoRisco === 'vermelho') riscoGeral = 'vermelho';
 
         let fasesHtml = '';
-        const fNames = { escolha: 'Escolha do Tema', aprovacao: 'Aprovação', pesquisa: 'Pesquisa', desenvolvimento: 'Desenvolvimento', relatorio: 'Relatório', defesa: 'Defesa'};
+        const fNames = { escolha: 'Escolha do Tema', aprovacao: 'Aprovação', desenvolvimento: 'Desenvolvimento', relatorio: 'Relatório', apresentacao: 'Apresentação'};
         if(p.fases) {
             for(let key in fNames) {
                 let st = p.fases[key];
-                let b = getRiscoBadge(st === true ? 'verde' : (st === 'amarelo' ? 'amarelo' : 'vermelho'));
-                fasesHtml += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #222; padding-bottom:5px;"><span>${fNames[key]}</span> <span>${b.icon}</span></div>`;
+                if (st === undefined) continue;
+
+                let statusVal = st;
+                let prazoVal = "";
+                
+                if (typeof st === 'object' && st !== null) {
+                    statusVal = st.status;
+                    prazoVal = st.prazo || "";
+                }
+
+                let b;
+                if(statusVal === true || statusVal === 'verde') b = getRiscoBadge('verde');
+                else if(statusVal === 'amarelo') b = getRiscoBadge('amarelo');
+                else if(statusVal === false || statusVal === 'vermelho') b = getRiscoBadge('vermelho');
+                else b = { icon: '⏳', cor: 'var(--text-muted)' };
+
+                let prazoHtml = prazoVal ? `<br><span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;"><i class="fa-regular fa-calendar"></i> Até: ${prazoVal}</span>` : '';
+
+                fasesHtml += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; padding-bottom:8px; margin-bottom:5px;"><div><strong style="color:var(--text-light); font-size:0.9rem;">${fNames[key]}</strong>${prazoHtml}</div> <span style="font-size:1.1rem;">${b.icon}</span></div>`;
             }
+        } else {
+            fasesHtml = '<div class="text-muted center">A aguardar fases do projeto...</div>';
         }
         document.getElementById('pap-fases-lista').innerHTML = fasesHtml;
     }
