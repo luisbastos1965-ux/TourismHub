@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Turma PRO - Família</title>
     <link rel="icon" type="image/png" href="logo_tur.png">
-    <link rel="stylesheet" href="style.css?v=8">
+    <link rel="stylesheet" href="style.css?v=10">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -41,10 +41,6 @@
                             <div class="sub-media-box"><span class="sub-media-label">Científica</span><span class="sub-media-value" id="resumo-med-cient">-</span></div>
                             <div class="sub-media-box"><span class="sub-media-label">Técnica</span><span class="sub-media-value" id="resumo-med-tec">-</span></div>
                         </div>
-                        <div style="display:flex; justify-content:space-around; margin-top: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
-                            <div style="text-align:center;"><span style="font-size:0.8rem; color:var(--text-muted);">FCT:</span> <strong id="resumo-fct" style="color:white;">-</strong></div>
-                            <div style="text-align:center;"><span style="font-size:0.8rem; color:var(--text-muted);">PAP:</span> <strong id="resumo-pap" style="color:white;">-</strong></div>
-                        </div>
                     </div>
 
                     <div class="ee-summary-card">
@@ -65,6 +61,21 @@
                     </div>
                 </div>
 
+                <!-- NOVO: RESUMO PERCURSO PROFISSIONAL (FCT / PAP) -->
+                <div class="card" id="card-percurso-prof" style="display:none; border-left: 4px solid #0099ff; cursor: pointer; transition: 0.2s;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <h3 style="font-size: 1.1rem; color: #0099ff; margin:0;"><i class="fa-solid fa-briefcase"></i> Percurso Profissional</h3>
+                        <span id="badge-risco-geral" style="font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; font-weight:bold; background: rgba(0,204,136,0.1); color: var(--primary-green);">🟢 Tudo em dia</span>
+                    </div>
+                    <div id="resumo-mini-fct" style="display:none; font-size:0.9rem; margin-bottom:8px; color:var(--text-light); border-bottom: 1px dashed #333; padding-bottom: 8px;">
+                        <strong>FCT:</strong> <span id="txt-mini-fct">A carregar...</span>
+                    </div>
+                    <div id="resumo-mini-pap" style="display:none; font-size:0.9rem; color:var(--text-light);">
+                        <strong>PAP:</strong> <span id="txt-mini-pap">A carregar...</span>
+                    </div>
+                    <div style="text-align:center; margin-top:12px; font-size:0.75rem; color:var(--text-muted);"><i class="fa-solid fa-hand-pointer"></i> Tocar para ver detalhes da FCT e PAP</div>
+                </div>
+
                 <div style="display: flex; gap: 10px; margin-top: 15px;">
                     <button class="primary-btn" id="btn-quick-justificar" style="background-color: var(--success-green); flex: 1; padding: 18px 10px;">
                         <i class="fa-solid fa-file-medical"></i><br><span style="font-size:0.8rem; font-weight:normal; margin-top:5px;">Justificar Falta</span>
@@ -75,6 +86,82 @@
                 </div>
             </div>
 
+            <!-- VISTA DETALHADA: FCT & PAP -->
+            <div id="view-ee-profissional" style="display: none;">
+                <div class="class-header" style="margin-bottom: 15px;"><button id="btn-voltar-prof" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Início</button></div>
+                
+                <div class="falta-tabs" style="margin-bottom: 15px;">
+                    <button class="falta-tab-btn active" id="btn-tab-fct">FCT (Estágio)</button>
+                    <button class="falta-tab-btn" id="btn-tab-pap" style="display:none;">PAP (Projeto Final)</button>
+                </div>
+
+                <!-- CONTEÚDO FCT -->
+                <div id="content-prof-fct" style="display:block;">
+                    <div class="card" style="border-left: 4px solid var(--primary-green);" id="fct-card-risco">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3 style="margin:0; font-size:1.1rem;">Estado Geral</h3>
+                            <span id="fct-badge-risco" style="font-size: 1rem;">🟢 No prazo</span>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 style="margin-bottom:15px; font-size:1rem; color:var(--text-light);"><i class="fa-solid fa-clock"></i> Horas Realizadas</h3>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:5px;">
+                            <span style="font-size:1.4rem; font-weight:bold; color:var(--primary-green);" id="fct-horas-txt">0 / 0 h</span>
+                            <span style="font-size:0.9rem; color:var(--text-muted);" id="fct-perc-txt">0%</span>
+                        </div>
+                        <div class="progress-bar-bg"><div class="progress-bar-fill" id="fct-progresso" style="width: 0%;"></div></div>
+                        <div style="display:flex; justify-content:space-between; margin-top:15px; font-size:0.85rem; color:var(--text-muted); border-top:1px dashed #333; padding-top:10px;">
+                            <div>Previstas: <strong style="color:white;" id="fct-prev">0</strong></div>
+                            <div>Em Falta: <strong style="color:var(--warning-yellow);" id="fct-falta">0</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 style="margin-bottom:15px; font-size:1rem; color:var(--text-light);"><i class="fa-solid fa-file-signature"></i> Documentação</h3>
+                        <div id="fct-docs-lista" style="display:flex; flex-direction:column; gap:10px; font-size:0.9rem;">
+                            <!-- Preenchido via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONTEÚDO PAP -->
+                <div id="content-prof-pap" style="display:none;">
+                    <div class="card" style="border-left: 4px solid var(--warning-yellow);" id="pap-card-risco">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3 style="margin:0; font-size:1.1rem;">Estado do Projeto</h3>
+                            <span id="pap-badge-risco" style="font-size: 1rem;">🟡 Atrasado</span>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <span style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Tema da PAP</span>
+                        <h3 style="margin:5px 0 15px 0; font-size:1.2rem; color:var(--primary-green); line-height:1.3;" id="pap-tema">A carregar...</h3>
+                        <div style="display:flex; justify-content:space-between; font-size:0.85rem; border-top:1px dashed #333; padding-top:10px; margin-bottom:5px;">
+                            <span style="color:var(--text-muted);">Orientador:</span> <strong style="color:white;" id="pap-orientador">-</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+                            <span style="color:var(--text-muted);">Data de Defesa:</span> <strong style="color:white;" id="pap-data">-</strong>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 style="margin-bottom:15px; font-size:1rem; color:var(--text-light);"><i class="fa-solid fa-bars-progress"></i> Fases do Projeto</h3>
+                        <div id="pap-fases-lista" style="display:flex; flex-direction:column; gap:10px; font-size:0.9rem;">
+                            <!-- Preenchido via JS -->
+                        </div>
+                    </div>
+
+                    <div class="card" id="pap-obs-container">
+                        <h3 style="margin-bottom:10px; font-size:1rem; color:var(--text-light);"><i class="fa-solid fa-comment-dots"></i> Observações do Orientador</h3>
+                        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border-left: 3px solid var(--primary-green); font-size:0.9rem; line-height:1.4;" id="pap-obs-txt">
+                            Sem observações recentes.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RESTANTES VISTAS (Inalteradas) -->
             <!-- 2. CADERNETA E LINHA TEMPORAL -->
             <div id="view-ee-caderneta" style="display: none;">
                 <div class="falta-tabs">
@@ -114,6 +201,7 @@
                 <div id="ee-horario-content" style="margin-top:15px; overflow-x: auto;"></div>
             </div>
 
+            <!-- CHAT, JUSTIFICAR, NOTIFICAÇÕES -->
             <div id="view-ee-chat" style="display: none; flex-direction: column; height: 75vh;">
                 <div class="class-header" style="margin-bottom: 10px;"><button id="btn-voltar-chat-ee" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Início</button></div>
                 <div class="forum-messages" id="ee-chat-messages-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:15px; background: var(--bg-card); border-radius: 12px 12px 0 0; border: 1px solid #333; border-bottom: none;"></div>
@@ -155,7 +243,6 @@
         </nav>
     </div>
 
-    <!-- VACINA DO CACHE -->
-    <script type="module" src="./js/ee-app.js?v=8"></script>
+    <script type="module" src="./js/ee-app.js?v=11"></script>
 </body>
 </html>
