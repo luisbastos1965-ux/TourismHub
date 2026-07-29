@@ -122,7 +122,7 @@ async function construirHomeAdaptativa(dadosAluno) {
             heroHTML = `
                 <div class="card" style="background: linear-gradient(135deg, #ff4d4d, #cc0000); color: white; border: none; border-radius: 16px; margin-bottom: 20px;">
                     <h3 style="margin-bottom:10px; font-size: 1.3rem;"><i class="fa-solid fa-triangle-exclamation"></i> Ação Necessária</h3>
-                    <p style="font-size: 0.95rem; margin-bottom: 15px; opacity: 0.9;">Tens pendências que precisam da tua atenção imediata.</p>
+                    <p style="font-size: 0.95rem; margin-bottom: 15px; opacity: 0.9;">Assistente: Tens pendências urgentes que prejudicam a tua avaliação.</p>
                     <ul style="margin-bottom: 15px; padding-left: 20px; font-size: 0.9rem; font-weight: bold;">
                         ${temFaltas > 0 ? `<li>${temFaltas} Falta(s) por justificar</li>` : ''}
                         ${prhfsAtivos > 0 ? `<li>${prhfsAtivos} PRHF(s) em curso</li>` : ''}
@@ -138,7 +138,7 @@ async function construirHomeAdaptativa(dadosAluno) {
             heroHTML = `
                 <div class="card" style="background: linear-gradient(135deg, #ffaa00, #e67e22); color: white; border: none; border-radius: 16px; margin-bottom: 20px;">
                     <h3 style="margin-bottom:10px; font-size: 1.3rem;"><i class="fa-solid fa-calendar-exclamation"></i> Foco Total</h3>
-                    <p style="font-size: 0.95rem; margin-bottom: 15px; opacity: 0.9;">Tens <strong>${ev.titulo}</strong> no dia ${dataF}. Concentra-te hoje para não deixares para a véspera!</p>
+                    <p style="font-size: 0.95rem; margin-bottom: 15px; opacity: 0.9;">Assistente Inteligente: Tens <strong>${ev.titulo}</strong> no dia ${dataF}. Que tal iniciares um Pomodoro de 25m agora para adiantares estudo?</p>
                     <div style="display: flex; gap: 10px;">
                         <button class="primary-btn" style="background: white; color: #e67e22; flex: 1;" onclick="document.getElementById('btn-open-study-mode').click()"><i class="fa-solid fa-stopwatch"></i> Iniciar Pomodoro</button>
                     </div>
@@ -150,8 +150,8 @@ async function construirHomeAdaptativa(dadosAluno) {
         else {
             heroHTML = `
                 <div class="card" style="background: linear-gradient(135deg, #00cc88, #009966); color: white; border: none; border-radius: 16px; margin-bottom: 20px;">
-                    <h3 style="margin-bottom:5px; font-size: 1.3rem;"><i class="fa-solid fa-leaf"></i> Tudo em dia!</h3>
-                    <p style="font-size: 0.95rem; margin-bottom: 0; opacity: 0.9;">Não tens avaliações marcadas para os próximos dias nem pendências a resolver. Continua o bom trabalho.</p>
+                    <h3 style="margin-bottom:5px; font-size: 1.3rem;"><i class="fa-solid fa-leaf"></i> Dia Tranquilo</h3>
+                    <p style="font-size: 0.95rem; margin-bottom: 0; opacity: 0.9;">Assistente: Não tens avaliações marcadas para os próximos dias nem pendências. Excelente altura para fazeres resumos!</p>
                 </div>
             `;
             showHumorAndMission = true;
@@ -221,7 +221,7 @@ async function construirHomeAdaptativa(dadosAluno) {
 }
 
 // ----------------------------------------------------
-// GAMIFICAÇÃO E PERFIL COMPLETO (Nível, XP, Títulos)
+// GAMIFICAÇÃO, ESTATÍSTICAS ESTUDO E AVATAR
 // ----------------------------------------------------
 function carregarGamificacao(dados) {
     const xp = dados.xp || 0;
@@ -248,7 +248,49 @@ function carregarGamificacao(dados) {
     document.getElementById('perfil-titulo-central').innerText = rank;
 }
 
-// Upload de Avatar no Perfil
+async function carregarEstatisticasEstudo() {
+    try {
+        const estudosSnap = await getDocs(query(collection(db, "utilizadores", myUserId, "estudos")));
+        let totalSessions = 0;
+        let diasUnicos = new Set();
+        
+        estudosSnap.forEach(d => {
+            totalSessions++;
+            if(d.data().data) {
+                const dataIso = d.data().data.split('T')[0];
+                diasUnicos.add(dataIso);
+            }
+        });
+        
+        const totalMinutes = totalSessions * 25; // 25 min por Pomodoro
+        const horasFormatadas = totalMinutes > 60 ? `${Math.floor(totalMinutes/60)}h${totalMinutes%60}m` : `${totalMinutes}m`;
+        document.getElementById('total-minutos-foco').innerText = horasFormatadas;
+
+        let streak = 0;
+        let datasOrdenadas = Array.from(diasUnicos).sort((a,b) => b.localeCompare(a));
+        
+        if (datasOrdenadas.length > 0) {
+            let hoje = new Date();
+            let dataTeste = new Date(hoje);
+            const hojeStr = dataTeste.toISOString().split('T')[0];
+            dataTeste.setDate(dataTeste.getDate() - 1);
+            const ontemStr = dataTeste.toISOString().split('T')[0];
+            
+            if (datasOrdenadas.includes(hojeStr) || datasOrdenadas.includes(ontemStr)) {
+                let currentVerificacao = new Date(datasOrdenadas[0]);
+                for(let i=0; i<datasOrdenadas.length; i++) {
+                    const dataAtualStr = currentVerificacao.toISOString().split('T')[0];
+                    if(datasOrdenadas.includes(dataAtualStr)) {
+                        streak++;
+                        currentVerificacao.setDate(currentVerificacao.getDate() - 1);
+                    } else break;
+                }
+            }
+        }
+        document.getElementById('streak-dias').innerText = streak;
+    } catch(e) { console.error("Erro stats estudo", e); }
+}
+
 document.getElementById('upload-avatar')?.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if(!file) return;
@@ -302,6 +344,7 @@ navItems.forEach(item => {
             carregarObjetivosPessoais();
             renderizarGraficoNotas();
             carregarHistoricoHumor();
+            carregarEstatisticasEstudo();
         }
     });
 });
@@ -440,6 +483,8 @@ document.getElementById('btn-view-mood-history')?.addEventListener('click', carr
 async function carregarHistoricoHumor() {
     if(!myUserId) return;
     const cont = document.getElementById('mood-history-container');
+    cont.style.display = cont.style.display === 'none' ? 'block' : 'none';
+    if(cont.style.display === 'none') return;
     cont.innerHTML = '<p class="text-muted center" style="font-size: 0.85rem;">A atualizar...</p>';
     try {
         const res = await getDocs(query(collection(db, "utilizadores", myUserId, "humor"), orderBy("timestamp", "desc")));
@@ -600,37 +645,85 @@ document.getElementById('btn-save-study-log')?.addEventListener('click', async (
 });
 
 // ----------------------------------------------------
-// CADERNETA, TIMELINE E NOTIFICAÇÕES
+// CADERNETA, TIMELINE E NOTIFICAÇÕES (COM FILTROS)
 // ----------------------------------------------------
 const tabTimeline = document.getElementById('tab-aluno-timeline'); const tabNotas = document.getElementById('tab-aluno-notas'); const tabFaltas = document.getElementById('tab-aluno-faltas'); const tabPrhfs = document.getElementById('tab-aluno-prhfs'); const tabComportamento = document.getElementById('tab-aluno-comportamento'); const tabObservacoes = document.getElementById('tab-aluno-observacoes'); const cadernetaContent = document.getElementById('aluno-caderneta-content');
-tabTimeline?.addEventListener('click', (e) => { ativarTab(e.currentTarget, ['tab-aluno-notas', 'tab-aluno-faltas', 'tab-aluno-prhfs', 'tab-aluno-comportamento', 'tab-aluno-observacoes']); carregarTimelineAluno(); }); tabNotas?.addEventListener('click', (e) => { ativarTab(e.currentTarget, ['tab-aluno-timeline', 'tab-aluno-faltas', 'tab-aluno-prhfs', 'tab-aluno-comportamento', 'tab-aluno-observacoes']); carregarNotasAluno(); }); tabFaltas?.addEventListener('click', (e) => { ativarTab(e.currentTarget, ['tab-aluno-timeline', 'tab-aluno-notas', 'tab-aluno-prhfs', 'tab-aluno-comportamento', 'tab-aluno-observacoes']); carregarFaltasAluno(); }); tabPrhfs?.addEventListener('click', (e) => { ativarTab(e.currentTarget, ['tab-aluno-timeline', 'tab-aluno-notas', 'tab-aluno-faltas', 'tab-aluno-comportamento', 'tab-aluno-observacoes']); carregarPrhfsAluno(); }); tabComportamento?.addEventListener('click', (e) => { ativarTab(e.currentTarget, ['tab-aluno-timeline', 'tab-aluno-notas', 'tab-aluno-faltas', 'tab-aluno-prhfs', 'tab-aluno-observacoes']); carregarComportamentoAluno(); }); tabObservacoes?.addEventListener('click', (e) => { ativarTab(e.currentTarget, ['tab-aluno-timeline', 'tab-aluno-notas', 'tab-aluno-faltas', 'tab-aluno-prhfs', 'tab-aluno-comportamento']); carregarObservacoesAluno(); });
-document.querySelector('.nav-item[data-target="view-aluno-caderneta"]')?.addEventListener('click', () => { ativarTab(tabTimeline, ['tab-aluno-notas', 'tab-aluno-faltas', 'tab-aluno-prhfs', 'tab-aluno-comportamento', 'tab-aluno-observacoes']); carregarTimelineAluno(); });
-function ativarTab(tabAtiva, tabsInativasIds) { if(!tabAtiva) return; tabAtiva.classList.add('active'); tabsInativasIds.forEach(id => document.getElementById(id)?.classList.remove('active')); cadernetaContent.innerHTML = '<p class="text-muted" style="text-align:center;">A carregar...</p>'; }
+
+tabTimeline?.addEventListener('click', (e) => { ativarTab(e.currentTarget, ['tab-aluno-notas', 'tab-aluno-faltas', 'tab-aluno-prhfs', 'tab-aluno-comportamento', 'tab-aluno-observacoes'], true); carregarTimelineAluno(); }); 
+tabNotas?.addEventListener('click', (e) => { ativarTab(e.currentTarget, ['tab-aluno-timeline', 'tab-aluno-faltas', 'tab-aluno-prhfs', 'tab-aluno-comportamento', 'tab-aluno-observacoes'], false); carregarNotasAluno(); }); 
+tabFaltas?.addEventListener('click', (e) => { ativarTab(e.currentTarget, ['tab-aluno-timeline', 'tab-aluno-notas', 'tab-aluno-prhfs', 'tab-aluno-comportamento', 'tab-aluno-observacoes'], false); carregarFaltasAluno(); }); 
+tabPrhfs?.addEventListener('click', (e) => { ativarTab(e.currentTarget, ['tab-aluno-timeline', 'tab-aluno-notas', 'tab-aluno-faltas', 'tab-aluno-comportamento', 'tab-aluno-observacoes'], false); carregarPrhfsAluno(); }); 
+tabComportamento?.addEventListener('click', (e) => { ativarTab(e.currentTarget, ['tab-aluno-timeline', 'tab-aluno-notas', 'tab-aluno-faltas', 'tab-aluno-prhfs', 'tab-aluno-observacoes'], false); carregarComportamentoAluno(); }); 
+tabObservacoes?.addEventListener('click', (e) => { ativarTab(e.currentTarget, ['tab-aluno-timeline', 'tab-aluno-notas', 'tab-aluno-faltas', 'tab-aluno-prhfs', 'tab-aluno-comportamento'], false); carregarObservacoesAluno(); });
+
+document.querySelector('.nav-item[data-target="view-aluno-caderneta"]')?.addEventListener('click', () => { ativarTab(tabTimeline, ['tab-aluno-notas', 'tab-aluno-faltas', 'tab-aluno-prhfs', 'tab-aluno-comportamento', 'tab-aluno-observacoes'], true); carregarTimelineAluno(); });
+
+function ativarTab(tabAtiva, tabsInativasIds, mostrarFiltrosTimeline = false) { 
+    if(!tabAtiva) return; tabAtiva.classList.add('active'); 
+    tabsInativasIds.forEach(id => document.getElementById(id)?.classList.remove('active')); 
+    const filtrosEl = document.getElementById('timeline-filtros');
+    if(filtrosEl) filtrosEl.style.display = mostrarFiltrosTimeline ? 'flex' : 'none';
+    cadernetaContent.innerHTML = '<p class="text-muted" style="text-align:center;">A carregar...</p>'; 
+}
+
+// Filtros da Timeline
+let timelineFilterCat = 'all';
+document.querySelectorAll('#timeline-filtros .filter-chip').forEach(chip => {
+    chip.addEventListener('click', (e) => {
+        document.querySelectorAll('#timeline-filtros .filter-chip').forEach(c => c.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        timelineFilterCat = e.currentTarget.getAttribute('data-cat');
+        carregarTimelineAluno();
+    });
+});
 
 async function obterEventosLinhaTemporal() {
     let eventos = []; if(!myUserId) return eventos;
-    const notasSnap = await getDocs(collection(db, "utilizadores", myUserId, "notas")); notasSnap.forEach(d => { const n = d.data(); eventos.push({ time: new Date(n.data).getTime(), icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação Lançada', desc: `${n.disciplina} (Mod. ${n.modulo}): <strong>${n.nota}</strong>` }); });
-    const faltasSnap = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); faltasSnap.forEach(d => { const f = d.data(); eventos.push({ time: new Date(f.criadoEm || f.dataInicio).getTime(), icon: '<i class="fa-solid fa-user-xmark"></i>', cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Falta a ${f.disciplina} (${f.horas}h)`, desc: f.justificada ? `Estado: Justificada` : `Atenção: Falta por justificar!` }); });
-    const ocSnap = await getDocs(collection(db, "utilizadores", myUserId, "ocorrencias")); ocSnap.forEach(d => { const o = d.data(); eventos.push({ time: o.timestamp, icon: o.tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>', cor: o.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Registo Disciplinar`, desc: `<strong>${o.titulo}</strong><br><span style="font-size:0.8rem; color:#aaa;">${o.descricao || ''}</span>` }); });
-    const humorSnap = await getDocs(collection(db, "utilizadores", myUserId, "humor")); humorSnap.forEach(d => { const h = d.data(); eventos.push({ time: h.timestamp, icon: '<i class="fa-solid fa-heart-pulse"></i>', cor: '#b82bf2', titulo: `Check-in Emocional`, desc: `Sentiste-te ${h.humor}. (+10 XP)` }); });
+    const notasSnap = await getDocs(collection(db, "utilizadores", myUserId, "notas")); notasSnap.forEach(d => { const n = d.data(); eventos.push({ time: new Date(n.data).getTime(), cat: 'notas', icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação Lançada', desc: `${n.disciplina} (Mod. ${n.modulo}): <strong>${n.nota}</strong>` }); });
+    const faltasSnap = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); faltasSnap.forEach(d => { const f = d.data(); eventos.push({ time: new Date(f.criadoEm || f.dataInicio).getTime(), cat: 'faltas', icon: '<i class="fa-solid fa-user-xmark"></i>', cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Falta a ${f.disciplina} (${f.horas}h)`, desc: f.justificada ? `Estado: Justificada` : `Atenção: Falta por justificar!` }); });
+    const ocSnap = await getDocs(collection(db, "utilizadores", myUserId, "ocorrencias")); ocSnap.forEach(d => { const o = d.data(); eventos.push({ time: o.timestamp, cat: 'comportamento', icon: o.tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>', cor: o.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Registo Disciplinar`, desc: `<strong>${o.titulo}</strong><br><span style="font-size:0.8rem; color:#aaa;">${o.descricao || ''}</span>` }); });
+    const humorSnap = await getDocs(collection(db, "utilizadores", myUserId, "humor")); humorSnap.forEach(d => { const h = d.data(); eventos.push({ time: h.timestamp, cat: 'gamificacao', icon: '<i class="fa-solid fa-heart-pulse"></i>', cor: '#b82bf2', titulo: `Check-in Emocional`, desc: `Sentiste-te ${h.humor}. (+10 XP)` }); });
     eventos.sort((a,b) => b.time - a.time); return eventos;
 }
 
 async function carregarTimelineAluno() {
     cadernetaContent.innerHTML = '<p class="text-muted center">A construir o teu histórico...</p>';
     try {
-        const eventos = await obterEventosLinhaTemporal();
-        if(eventos.length === 0) { cadernetaContent.innerHTML = '<p class="text-muted center" style="margin-top:40px;">O teu histórico está limpo.</p>'; return; }
+        let eventos = await obterEventosLinhaTemporal();
+        if(timelineFilterCat !== 'all') { eventos = eventos.filter(e => e.cat === timelineFilterCat); }
+        if(eventos.length === 0) { cadernetaContent.innerHTML = '<p class="text-muted center" style="margin-top:40px;">O teu histórico está limpo nesta categoria.</p>'; return; }
         let html = '<div class="timeline">'; eventos.forEach(ev => { html += `<div class="timeline-item"><div class="timeline-icon" style="color: ${ev.cor}; border-color: ${ev.cor};">${ev.icon}</div><div class="timeline-content" style="border-left: 3px solid ${ev.cor};"><span class="timeline-date">${new Date(ev.time).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}</span><strong style="color:white; display:block; margin-bottom:5px;">${ev.titulo}</strong><p style="font-size:0.85rem; color:var(--text-light); margin:0;">${ev.desc}</p></div></div>`; }); cadernetaContent.innerHTML = html + '</div>';
     } catch(e) { cadernetaContent.innerHTML = '<p class="text-danger center">Erro ao carregar histórico.</p>'; }
 }
 
+// Filtros das Notificações
+let notifFilterCat = 'all';
+document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(chip => {
+    chip.addEventListener('click', (e) => {
+        document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(c => c.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        notifFilterCat = e.currentTarget.getAttribute('data-cat');
+        carregarNotificacoesAluno();
+    });
+});
+
 async function carregarNotificacoesAluno() {
-    const container = document.getElementById('aluno-notificacoes-container'); container.innerHTML = '<p class="text-muted center">A ler notificações...</p>';
+    const container = document.getElementById('aluno-notificacoes-container'); container.innerHTML = '<p class="text-muted center">A ler alertas...</p>';
     try {
-        const eventos = await obterEventosLinhaTemporal(); const recentes = eventos.slice(0, 15);
-        if(recentes.length === 0) { container.innerHTML = '<p class="text-muted center" style="margin-top:40px;">Sem alertas recentes.</p>'; return; }
-        let html = ''; recentes.forEach(ev => { html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${ev.cor}; display:flex; align-items:flex-start; gap: 15px; padding: 15px;"><div style="font-size: 1.5rem; color: ${ev.cor};">${ev.icon}</div><div><strong style="color:white; font-size:1rem; display:block; margin-bottom:3px;">${ev.titulo}</strong><span style="font-size:0.85rem; color:var(--text-light);">${ev.desc}</span><div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px;">${new Date(ev.time).toLocaleString('pt-PT')}</div></div></div>`; }); container.innerHTML = html; document.getElementById('badge-notificacoes').style.display = 'none';
+        let eventos = await obterEventosLinhaTemporal();
+        eventos = eventos.map(e => {
+            let nCat = 'escola';
+            if(e.cat === 'faltas' && e.cor === 'var(--danger-red)') nCat = 'importante';
+            if(e.cat === 'gamificacao') nCat = 'gamificacao';
+            return { ...e, nCat: nCat };
+        });
+
+        if(notifFilterCat !== 'all') { eventos = eventos.filter(e => e.nCat === notifFilterCat); }
+        const recentes = eventos.slice(0, 15);
+        if(recentes.length === 0) { container.innerHTML = '<p class="text-muted center" style="margin-top:40px;">Sem alertas nesta categoria.</p>'; return; }
+        
+        let html = ''; recentes.forEach(ev => { html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${ev.cor}; display:flex; align-items:flex-start; gap: 15px; padding: 15px;"><div style="font-size: 1.5rem; color: ${ev.cor};">${ev.icon}</div><div><strong style="color:white; font-size:1rem; display:block; margin-bottom:3px;">${ev.titulo}</strong><span style="font-size:0.85rem; color:var(--text-light);">${ev.desc}</span><div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px;">${new Date(ev.time).toLocaleString('pt-PT')}</div></div></div>`; }); container.innerHTML = html; 
+        if(notifFilterCat === 'all') document.getElementById('badge-notificacoes').style.display = 'none';
     } catch(e) { container.innerHTML = '<p class="text-danger center">Erro ao carregar notificações.</p>'; }
 }
 
