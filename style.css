@@ -5,6 +5,19 @@
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
 body { background-color: var(--bg-dark); color: var(--text-light); height: 100vh; display: flex; flex-direction: column; overscroll-behavior-y: contain; }
 
+/* 1. NATIVO: Prevenir Seleção de Texto e "Caixa Azul" Globalmente */
+body {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Permitir seleção APENAS onde o utilizador tem de escrever */
+input, textarea, select {
+    -webkit-user-select: auto !important;
+    user-select: auto !important;
+}
+
 /* =========================================
    BOTÕES, INPUTS E GERAIS
 ========================================= */
@@ -51,7 +64,6 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .login-box { background-color: var(--bg-card); padding: 30px; border-radius: 12px; width: 100%; max-width: 400px; text-align: center; border: 1px solid #333; }
 .login-box h2 { margin-bottom: 25px; color: var(--primary-green); }
 .error-msg { color: var(--danger-red); margin-bottom: 15px; font-size: 0.9rem; }
-.app-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background-color: var(--bg-card); border-bottom: 1px solid #333; }
 .logo { font-size: 1.2rem; font-weight: bold; color: var(--primary-green); }
 .user-profile { display: flex; align-items: center; gap: 15px; font-size: 0.9rem; }
 .logout-btn { background: none; border: none; color: var(--danger-red); cursor: pointer; font-size: 0.9rem; padding:0;}
@@ -179,7 +191,7 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .forum-send-btn { background: var(--primary-green); color: var(--bg-dark); border: none; border-radius: 50%; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 1.2rem; transition: 0.2s;}
 
 /* =========================================
-   CALENDÁRIO & HORÁRIO
+   CALENDÁRIO ORIGINAL (Prof/Admin)
 ========================================= */
 .calendar-event-card { display: flex; background: var(--bg-card); border: 1px solid #333; border-left: 4px solid var(--primary-green); border-radius: 8px; margin-bottom: 12px; overflow: hidden; align-items: stretch; position:relative; }
 .calendar-date-box { background: rgba(0,0,0,0.2); padding: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 80px; border-right: 1px solid #333;}
@@ -199,27 +211,20 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .calendar-divider { text-align: center; margin: 30px 0 15px 0; position: relative; }
 .calendar-divider::before { content: ""; position: absolute; top: 50%; left: 0; width: 100%; height: 1px; border-top: 1px dashed #555; z-index: 1; }
 .calendar-divider span { background-color: var(--bg-dark); padding: 0 15px; color: var(--text-muted); font-size: 0.85rem; font-weight: bold; text-transform: uppercase; position: relative; z-index: 2; }
-.event-actions { position: absolute; top: 10px; right: 10px; display: flex; gap: 5px; }
-.event-actions button { background: var(--bg-dark); border: 1px solid #444; color: var(--text-light); padding: 5px 8px; border-radius: 4px; cursor: pointer; transition: 0.2s;}
 
+/* HORÁRIO GRELHA (Admin/Prof) */
 .week-nav-bar { display: flex; justify-content: space-between; align-items: center; background: var(--bg-dark); padding: 10px; border-radius: 8px; border: 1px solid #333; margin-bottom: 15px;}
 .week-nav-bar button { background: none; border: 1px solid #444; color: white; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;}
-#week-display { font-weight: bold; color: var(--primary-green); font-size: 0.95rem; }
-
-/* HORÁRIO GRELHA: COLUNAS IGUAIS */
+#week-display, #ee-week-display { font-weight: bold; color: var(--primary-green); font-size: 0.95rem; }
 .horario-grid { display: grid; grid-template-columns: 55px repeat(5, minmax(0, 1fr)); gap: 4px; padding-bottom: 10px; }
 .horario-header { background: #222; text-align: center; padding: 8px 2px; font-size: 0.75rem; font-weight: bold; color: var(--primary-green); border-radius: 4px; display: flex; flex-direction: column;}
 .horario-header span { color: white; font-size: 0.9rem; margin-top: 2px;}
 .horario-time { background: transparent; text-align: center; padding: 10px 0; font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; justify-content: center;}
 .horario-slot { background: var(--bg-card); border: 1px solid #333; border-radius: 4px; min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: 0.8rem; padding: 5px; transition: 0.2s; cursor: pointer; position: relative;}
 .horario-slot.filled { background: rgba(0, 204, 136, 0.1); border-color: var(--primary-green); color: white; }
-.horario-slot.edit-mode { border-color: var(--warning-yellow); animation: pulseBorder 1.5s infinite; }
-@keyframes pulseBorder { 0% { box-shadow: 0 0 0 0 rgba(255, 204, 0, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(255, 204, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 204, 0, 0); } }
-.slot-event-badge { position: absolute; top: -5px; right: -5px; background: var(--danger-red); color: white; width: 22px; height: 22px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 0.7rem; box-shadow: 0 2px 5px rgba(0,0,0,0.5); z-index: 10; animation: blinkEvent 2s infinite; border: 2px solid var(--bg-dark);}
-@keyframes blinkEvent { 0% { transform: scale(1); } 50% { transform: scale(1.15); background: var(--warning-yellow); } 100% { transform: scale(1); } }
 
 /* =========================================
-   INFORMAÇÕES E PRHF
+   INFORMAÇÕES E PRHF (Gerais)
 ========================================= */
 .info-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 15px; }
 .input-row { display: flex; gap: 10px; align-items: center;}
@@ -227,174 +232,42 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .data-display-group { margin-bottom: 12px; }
 .data-label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 3px; }
 .data-value { display: block; font-size: 1.05rem; font-weight: 500; color: white; padding: 8px 0; border-bottom: 1px dashed #333; }
-.clickable-contact { color: var(--primary-green); cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
-.action-buttons-row { display: flex; gap: 10px; margin-top: 15px; }
 
 .tabs-container { display: flex; gap: 10px; margin-bottom: 15px; }
 .tab-btn { flex: 1; padding: 10px; background-color: var(--bg-dark); color: var(--text-muted); border: 1px solid #333; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
 .tab-btn.active { background-color: rgba(0, 204, 136, 0.1); border-color: var(--primary-green); color: var(--primary-green); }
-.prhf-mini-card { background-color: var(--bg-card); border: 1px solid #333; border-radius: 8px; padding: 15px; margin-bottom: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
-.prhf-mini-card.ativa-decorrer { border-left: 4px solid var(--warning-yellow); }
-.prhf-mini-card.ativa-terminado { border-left: 4px solid var(--danger-red); }
-.prhf-mini-card.concluida { border-left: 4px solid var(--success-green); }
 
-.paper-sheet { background-color: #fdfdfd; color: #333; width: 90%; max-width: 450px; border-radius: 12px; padding: 25px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-.paper-header { border-bottom: 2px solid #ddd; padding-bottom: 15px; margin-bottom: 15px; text-align: center; }
-.paper-status { font-size: 0.85rem; font-weight: bold; padding: 3px 10px; border-radius: 20px; display: inline-block; margin-top: 5px; }
-.paper-status.ativa-decorrer { background-color: rgba(255, 204, 0, 0.2); color: #d4a000; }
-.paper-status.ativa-terminado { background-color: rgba(255, 77, 77, 0.2); color: var(--danger-red); }
-.paper-status.concluida { background-color: rgba(40, 167, 69, 0.2); color: var(--success-green); }
-.paper-details p { margin-bottom: 10px; font-size: 0.95rem; line-height: 1.5; }
-.paper-desc { background-color: #f5f5f5; padding: 15px; border-radius: 8px; border-left: 3px solid #ccc; font-style: italic; margin-top: 15px; margin-bottom: 20px; }
-.paper-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; border-top: 1px dashed #ccc; padding-top: 20px;}
-.btn-close-paper { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.2rem; color: #888; cursor: pointer; }
-@keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-
-.manual-presence-form { display: none; background: #f0f0f0; padding: 15px; border-radius: 8px; margin-top: 10px; border: 1px solid #ccc; }
-.manual-presence-form input { background: white; color: #333; border: 1px solid #aaa; padding: 10px; margin-bottom: 8px; }
-.registo-item { display: flex; justify-content: space-between; align-items:center; background-color: white; padding: 10px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 5px; font-size: 0.9rem; }
-.registo-item-del { color: var(--danger-red); cursor: pointer; padding: 5px;}
-.btn-progress-container { position: relative; overflow: hidden; width: 100%; border-radius: 8px; background-color: #444; border: none; cursor: not-allowed; transition: 0.3s; }
-.btn-progress-fill { position: absolute; top: 0; left: 0; height: 100%; background-color: var(--primary-green); transition: width 0.5s ease-in-out; z-index: 1; }
-.btn-progress-text { position: relative; z-index: 2; padding: 12px; font-weight: bold; color: white; display: flex; justify-content: center; align-items: center; gap: 8px; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
-.btn-progress-container.ready { cursor: pointer; background-color: var(--primary-green); }
-
-/* MODALS E NAV */
+/* =========================================
+   MODALS E NAV
+========================================= */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
 .modal-overlay.bottom { align-items: flex-end; }
 .action-sheet { background-color: var(--bg-card); width: 100%; border-radius: 20px 20px 0 0; padding: 25px; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 12px; animation: slideUp 0.3s ease-out; max-height: 90vh; overflow-y:auto;}
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-.bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--bg-card); display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #333; }
-.nav-item { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: var(--text-muted); font-size: 0.75rem; gap: 5px; }
-.nav-item.active { color: var(--primary-green); }
+
+/* Animações e Navegação Inferior */
+@keyframes fadeAndSlideIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+[id^="view-"], #student-dashboard, #prof-dashboard, #class-hub-view, #class-view, #student-detail-view { animation: fadeAndSlideIn 0.35s cubic-bezier(0.1, 0.82, 0.25, 1); }
+
+.bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(26, 26, 26, 0.85) !important; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.4); padding-bottom: env(safe-area-inset-bottom, 10px); display: flex; justify-content: space-around; padding-top: 12px; z-index: 99; }
+.nav-item { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: var(--text-muted); font-size: 0.75rem; gap: 5px; transition: all 0.2s ease; }
+.nav-item.active { transform: scale(1.1); color: var(--primary-green); }
+
+/* Feedback tátil em botões/cartões */
+.card, .alert-card, .lms-btn, .primary-btn, .secondary-btn { transition: transform 0.15s ease, box-shadow 0.15s ease; border-radius: 14px; }
+.card:active, .alert-card:active, .lms-btn:active, .primary-btn:active, .secondary-btn:active { transform: scale(0.97); opacity: 0.9; }
+.card { box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); border: 1px solid rgba(255, 255, 255, 0.03); }
+
+.app-content, .dashboard-container { padding: 20px 15px; padding-bottom: 100px !important; max-width: 800px; margin: 0 auto; }
+.class-header { margin-bottom: 20px; }
 
 /* =========================================
-   DASHBOARD DO ALUNO (RESUMO DO DIA)
-========================================= */
-.student-alerts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
-.alert-card { background: var(--bg-card); border: 1px solid #333; border-radius: 12px; padding: 15px; display: flex; align-items: center; gap: 15px; transition: 0.2s; cursor: default; }
-.alert-card:hover { border-color: var(--primary-green); transform: translateY(-2px); }
-.alert-icon { width: 45px; height: 45px; border-radius: 10px; background: rgba(0, 204, 136, 0.1); color: var(--primary-green); display: flex; justify-content: center; align-items: center; font-size: 1.3rem; flex-shrink: 0; }
-.alert-info { display: flex; flex-direction: column; }
-.alert-info h4 { font-size: 1.05rem; color: white; margin-bottom: 2px; }
-.alert-info span { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: bold; }
-
-/* =========================================
-   NOVO HEADER E PASSAPORTE ESCOLAR
-========================================= */
-.header-passaporte-btn { display: flex; align-items: center; gap: 10px; background: none; border: none; cursor: pointer; color: white; text-align: right; }
-.header-passaporte-btn:hover .header-avatar { border-color: white; transform: scale(1.05); }
-.header-avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--bg-dark); border: 2px solid var(--primary-green); display: flex; justify-content: center; align-items: center; font-size: 1.2rem; color: var(--primary-green); overflow: hidden; transition: 0.2s; }
-.header-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.header-user-info { display: flex; flex-direction: column; align-items: flex-end; }
-.header-user-name { font-weight: bold; font-size: 0.95rem; }
-.header-user-tag { font-size: 0.75rem; color: var(--primary-green); text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; }
-
-/* =========================================
-   DASHBOARD DO ALUNO E CHECK-IN EMOCIONAL
-========================================= */
-.checkin-card { background: var(--bg-card); border: 1px dashed #444; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 25px; transition: 0.3s; }
-.checkin-card h3 { color: white; font-size: 1.1rem; margin-bottom: 15px; }
-.emoji-row { display: flex; justify-content: center; gap: 20px; }
-.emoji-btn { background: var(--bg-dark); border: 1px solid #444; border-radius: 50%; width: 55px; height: 55px; font-size: 2rem; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; }
-.emoji-btn:hover { transform: scale(1.15); border-color: var(--primary-green); }
-.emoji-btn.sad:hover { border-color: var(--danger-red); }
-.emoji-btn.neutral:hover { border-color: var(--warning-yellow); }
-
-.pomodoro-btn-large { background: linear-gradient(135deg, #8a2be2 0%, #6a1b9a 100%); color: white; border: none; border-radius: 12px; padding: 20px; font-size: 1.2rem; font-weight: bold; width: 100%; display: flex; justify-content: center; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(138, 43, 226, 0.3); }
-.pomodoro-btn-large:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(138, 43, 226, 0.5); }
-
-.student-alerts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
-.alert-card { background: var(--bg-dark); border: 1px solid #333; border-radius: 12px; padding: 15px; display: flex; align-items: center; gap: 12px; transition: 0.2s; cursor: default; }
-.alert-icon { width: 45px; height: 45px; border-radius: 10px; background: rgba(0, 204, 136, 0.1); color: var(--primary-green); display: flex; justify-content: center; align-items: center; font-size: 1.3rem; flex-shrink: 0; }
-.alert-info { display: flex; flex-direction: column; }
-.alert-info h4 { font-size: 1rem; color: white; margin-bottom: 2px; }
-.alert-info span { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: bold; }
-
-/* 1. ANIMAÇÕES DE TRANSIÇÃO SUAVE */
-@keyframes fadeAndSlideIn {
-    from { 
-        opacity: 0; 
-        transform: translateY(15px); 
-    }
-    to { 
-        opacity: 1; 
-        transform: translateY(0); 
-    }
-}
-
-/* Aplica a animação a todas as vistas (views) do aluno e professor */
-[id^="view-"], #student-dashboard, #prof-dashboard, #class-hub-view, #class-view, #student-detail-view {
-    animation: fadeAndSlideIn 0.35s cubic-bezier(0.1, 0.82, 0.25, 1);
-}
-
-/* 2. MENU INFERIOR PREMIUM */
-.bottom-nav {
-    background: rgba(26, 26, 26, 0.85) !important; /* Cor escura com transparência */
-    backdrop-filter: blur(12px); /* O famoso efeito de vidro / blur */
-    -webkit-backdrop-filter: blur(12px); /* Suporte para iPhones */
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.4);
-    padding-bottom: env(safe-area-inset-bottom, 10px); /* Evita a barra de "home" dos iPhones novos */
-}
-
-.nav-item {
-    transition: all 0.2s ease;
-}
-
-.nav-item.active {
-    transform: scale(1.1); /* Faz o ícone ativo crescer ligeiramente */
-    color: var(--primary-green, #38ef7d); /* Garante que usa o teu verde */
-}
-
-/* 3. FEEDBACK TÁTIL EM BOTÕES E CARTÕES */
-.card, .alert-card, .lms-btn, .primary-btn, .secondary-btn {
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    border-radius: 14px; /* Cantos um pouco mais redondos e modernos */
-}
-
-/* Quando o utilizador clica/toca no cartão ou botão */
-.card:active, .alert-card:active, .lms-btn:active, .primary-btn:active, .secondary-btn:active {
-    transform: scale(0.97); /* Afunda 3% */
-    opacity: 0.9;
-}
-
-.card {
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.03);
-}
-
-/* 4. MARGENS E ESPAÇAMENTO RESPONSIVO */
-.app-content, .dashboard-container {
-    padding: 20px 15px; /* Mais espaço nas laterais */
-    padding-bottom: 100px !important; /* Garante que nada fica preso atrás da bottom-nav */
-    max-width: 800px; /* Se abrirem no PC, não estica infinitamente */
-    margin: 0 auto; /* Centra no ecrã de um PC ou Tablet */
-}
-
-.class-header {
-    margin-bottom: 20px;
-}
-
-/* =========================================
-   ATUALIZAÇÃO EE: DESIGN NATIVO E TIMELINE
+   ATUALIZAÇÕES EE - MELHORIAS VISUAIS (NOVO DESIGN EE)
 ========================================= */
 
-/* 1. NATIVO: Prevenir Seleção de Texto e "Caixa Azul" Globalmente */
-body {
-    -webkit-user-select: none !important;
-    user-select: none !important;
-    -webkit-tap-highlight-color: transparent !important;
-}
-
-/* Permitir seleção APENAS onde o utilizador tem de escrever */
-input, textarea, select {
-    -webkit-user-select: auto !important;
-    user-select: auto !important;
-}
-
-/* 2. Seletor de Múltiplos Educandos (EE) Melhorado */
-.ee-student-selector {
+/* Top Bar e Sino */
+.app-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background-color: var(--bg-card); border-bottom: 1px solid #333; height: 70px; }
+.ee-student-selector { 
     background: rgba(255, 255, 255, 0.1) url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E") no-repeat right 12px top 50%;
     background-size: 10px auto;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -402,44 +275,47 @@ input, textarea, select {
     font-size: 0.95rem; outline: none; cursor: pointer; -webkit-appearance: none;
     appearance: none; text-align: left;
     width: auto; display: inline-flex; align-items: center;
-    max-width: 250px;
+    max-width: 250px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
 }
 .ee-student-selector option { background: var(--bg-dark); color: white; }
+.notification-bell { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: none; border: none; color: white; font-size: 1.4rem; position: relative; cursor: pointer; padding: 0; }
+.notification-badge { position: absolute; top: -4px; right: -6px; background: var(--danger-red); color: white; font-size: 0.65rem; font-weight: bold; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg-card); }
 
-/* Dashboard EE - Cartão Média Estendido */
-.ee-card-extended { grid-column: 1 / -1; }
+/* Dashboard - Cartões Esticados */
+.ee-summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); grid-auto-rows: 1fr; gap: 12px; margin-bottom: 25px; }
+.ee-summary-card { background: var(--bg-dark); border: 1px solid #333; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; min-height: 130px; }
+.ee-card-extended { grid-column: 1 / -1; min-height: auto; }
+.ee-summary-card i { font-size: 1.4rem; margin-bottom: 10px; color: var(--primary-green); }
+.ee-summary-value { font-size: 1.2rem; font-weight: bold; color: white; line-height: 1.2; margin-bottom: 2px; }
+.ee-summary-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 .sub-media-box { text-align: center; }
 .sub-media-label { font-size: 0.7rem; color: var(--text-muted); display: block; }
 .sub-media-value { font-size: 1.1rem; font-weight: bold; color: white; }
 
-/* 3. Sino de Notificações */
-.notification-bell { background: none; border: none; color: white; font-size: 1.4rem; position: relative; cursor: pointer; padding: 0;}
-.notification-badge {
-    position: absolute; top: -4px; right: -6px; background: var(--danger-red); color: white;
-    font-size: 0.65rem; font-weight: bold; width: 18px; height: 18px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg-card);
-}
-
-/* 4. Dashboard EE - Cartões de Resumo */
-.ee-summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 25px; }
-.ee-summary-card { background: var(--bg-dark); border: 1px solid #333; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; justify-content: center; }
-.ee-summary-card i { font-size: 1.4rem; margin-bottom: 10px; color: var(--primary-green); }
-.ee-summary-value { font-size: 1.2rem; font-weight: bold; color: white; line-height: 1.2; margin-bottom: 2px; }
-.ee-summary-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-
-/* 5. Linha Temporal (Timeline) */
+/* Timeline e Checkboxes */
 .timeline { position: relative; padding-left: 25px; margin-top: 15px; }
 .timeline::before { content: ''; position: absolute; top: 0; left: 9px; width: 2px; height: 100%; background: #333; }
 .timeline-item { position: relative; margin-bottom: 20px; }
-.timeline-icon {
-    position: absolute; left: -25px; top: 0; width: 20px; height: 20px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: white;
-    background: var(--bg-dark); border: 2px solid #333; z-index: 2;
-}
+.timeline-icon { position: absolute; left: -25px; top: 0; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: white; background: var(--bg-dark); border: 2px solid #333; z-index: 2; }
 .timeline-content { background: var(--bg-dark); border: 1px solid #333; border-radius: 8px; padding: 12px; }
 .timeline-date { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 5px; display: block; }
-
-/* 6. Checkboxes Agenda Inteligente */
 .agenda-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; background: var(--bg-dark); padding: 10px; border-radius: 8px; border: 1px solid #333; }
 .agenda-filter-label { font-size: 0.8rem; color: var(--text-light); display: flex; align-items: center; gap: 5px; cursor: pointer; }
 .agenda-filter-label input { width: 14px; height: 14px; margin: 0; accent-color: var(--primary-green); }
+
+/* Hierarquia de Notas */
+.disciplina-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: var(--bg-dark); border: 1px solid #333; border-radius: 8px; cursor: pointer; margin-bottom: 5px; transition: 0.2s; }
+.disciplina-header:active { transform: scale(0.98); }
+.disciplina-title { font-weight: bold; font-size: 1.05rem; color: white; }
+.disciplina-media { font-size: 1.1rem; font-weight: bold; }
+.disciplina-modules { display: none; padding: 10px; background: rgba(255,255,255,0.02); border: 1px dashed #333; border-radius: 8px; margin-bottom: 15px; }
+.modulo-row { display: flex; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid #222; }
+.modulo-row:last-child { border-bottom: none; }
+
+/* Horário Otimizado para Mobile (Lista Diária do EE) */
+.horario-list-item { display: flex; justify-content: space-between; align-items: center; background: var(--bg-dark); padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid var(--primary-green); }
+.horario-time-col { font-weight: bold; color: var(--text-muted); font-size: 0.95rem; }
+.horario-disc-col { text-align: right; }
+.horario-disc-name { font-weight: bold; font-size: 1.1rem; color: white; }
+.horario-prof { font-size: 0.75rem; color: #888; margin-top: 4px; }
+.horario-dia-titulo { color: var(--warning-yellow); margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #333; margin-top: 20px; font-size: 1.1rem; }
