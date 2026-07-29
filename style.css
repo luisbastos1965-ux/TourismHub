@@ -380,37 +380,30 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
    ATUALIZAÇÃO EE: DESIGN NATIVO E TIMELINE
 ========================================= */
 
-/* 1. Prevenir Seleção de Texto e "Tap Highlight" (Caixa Azul mobile) */
-button, a, .nav-item, .card, .hub-card, .alert-card, .lms-btn {
-    user-select: none;
-    -webkit-user-select: none;
-    -webkit-tap-highlight-color: transparent;
+/* 1. NATIVO: Prevenir Seleção de Texto e "Caixa Azul" Globalmente */
+body {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Permitir seleção APENAS onde o utilizador tem de escrever */
+input, textarea, select {
+    -webkit-user-select: auto !important;
+    user-select: auto !important;
 }
 
 /* 2. Seletor de Múltiplos Educandos (EE) */
 .ee-student-selector {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-weight: bold;
-    font-size: 0.95rem;
-    outline: none;
-    cursor: pointer;
-    -webkit-appearance: none;
-    appearance: none;
-    text-align: center;
+    background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white; padding: 6px 12px; border-radius: 20px; font-weight: bold;
+    font-size: 0.95rem; outline: none; cursor: pointer; -webkit-appearance: none;
+    appearance: none; text-align: center;
 }
-.ee-student-selector option {
-    background: var(--bg-dark);
-    color: white;
-}
+.ee-student-selector option { background: var(--bg-dark); color: white; }
 
 /* 3. Sino de Notificações */
-.notification-bell {
-    background: none; border: none; color: white; font-size: 1.4rem; position: relative; cursor: pointer;
-}
+.notification-bell { background: none; border: none; color: white; font-size: 1.4rem; position: relative; cursor: pointer; padding: 0;}
 .notification-badge {
     position: absolute; top: -4px; right: -6px; background: var(--danger-red); color: white;
     font-size: 0.65rem; font-weight: bold; width: 18px; height: 18px; border-radius: 50%;
@@ -418,52 +411,25 @@ button, a, .nav-item, .card, .hub-card, .alert-card, .lms-btn {
 }
 
 /* 4. Dashboard EE - Cartões de Resumo */
-.ee-summary-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin-bottom: 25px;
-}
-.ee-summary-card {
-    background: var(--bg-dark);
-    border: 1px solid #333;
-    border-radius: 12px;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
+.ee-summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 25px; }
+.ee-summary-card { background: var(--bg-dark); border: 1px solid #333; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; justify-content: center; }
 .ee-summary-card i { font-size: 1.4rem; margin-bottom: 10px; color: var(--primary-green); }
 .ee-summary-value { font-size: 1.2rem; font-weight: bold; color: white; line-height: 1.2; margin-bottom: 2px; }
 .ee-summary-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 
 /* 5. Linha Temporal (Timeline) */
-.timeline {
-    position: relative; padding-left: 25px; margin-top: 15px;
-}
-.timeline::before {
-    content: ''; position: absolute; top: 0; left: 9px; width: 2px; height: 100%; background: #333;
-}
-.timeline-item {
-    position: relative; margin-bottom: 20px;
-}
+.timeline { position: relative; padding-left: 25px; margin-top: 15px; }
+.timeline::before { content: ''; position: absolute; top: 0; left: 9px; width: 2px; height: 100%; background: #333; }
+.timeline-item { position: relative; margin-bottom: 20px; }
 .timeline-icon {
     position: absolute; left: -25px; top: 0; width: 20px; height: 20px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: white;
     background: var(--bg-dark); border: 2px solid #333; z-index: 2;
 }
-.timeline-content {
-    background: var(--bg-dark); border: 1px solid #333; border-radius: 8px; padding: 12px;
-}
-.timeline-date {
-    font-size: 0.75rem; color: var(--text-muted); margin-bottom: 5px; display: block;
-}
+.timeline-content { background: var(--bg-dark); border: 1px solid #333; border-radius: 8px; padding: 12px; }
+.timeline-date { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 5px; display: block; }
 
-/* Checkboxes Agenda Inteligente */
-.agenda-filters {
-    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; background: var(--bg-dark); padding: 10px; border-radius: 8px; border: 1px solid #333;
-}
-.agenda-filter-label {
-    font-size: 0.8rem; color: var(--text-light); display: flex; align-items: center; gap: 5px; cursor: pointer;
-}
+/* 6. Checkboxes Agenda Inteligente */
+.agenda-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; background: var(--bg-dark); padding: 10px; border-radius: 8px; border: 1px solid #333; }
+.agenda-filter-label { font-size: 0.8rem; color: var(--text-light); display: flex; align-items: center; gap: 5px; cursor: pointer; }
 .agenda-filter-label input { width: 14px; height: 14px; margin: 0; accent-color: var(--primary-green); }
