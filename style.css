@@ -292,7 +292,7 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .sub-media-label { font-size: 0.7rem; color: var(--text-muted); display: block; }
 .sub-media-value { font-size: 1.1rem; font-weight: bold; color: white; }
 
-/* Timeline */
+/* Timeline e Os Novos Filtros de Pílula (Agenda) - FORÇADOS NUMA SÓ LINHA SEM CHECKBOX VISÍVEL */
 .timeline { position: relative; padding-left: 25px; margin-top: 15px; }
 .timeline::before { content: ''; position: absolute; top: 0; left: 9px; width: 2px; height: 100%; background: #333; }
 .timeline-item { position: relative; margin-bottom: 20px; }
@@ -300,9 +300,9 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .timeline-content { background: var(--bg-dark); border: 1px solid #333; border-radius: 8px; padding: 12px; }
 .timeline-date { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 5px; display: block; }
 
-/* Os Novos Filtros de Pílula - CABEM NA LARGURA DO ECRÃ SEM CHECKBOX VISÍVEL */
-.agenda-filters { display: flex; flex-wrap: nowrap; gap: 5px; margin-bottom: 20px; background: var(--bg-dark); padding: 12px; border-radius: 12px; border: 1px solid #333; }
-.agenda-filter-label { flex: 1; font-size: 0.8rem; color: var(--text-muted); display: flex; justify-content: center; align-items: center; cursor: pointer; background: rgba(255, 255, 255, 0.05); padding: 10px 0; border-radius: 8px; border: 1px solid #444; transition: 0.2s; font-weight: bold; text-align: center; }
+.agenda-filters { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 10px; justify-content: flex-start; margin-bottom: 20px; background: var(--bg-dark); padding: 15px; border-radius: 12px; border: 1px solid #333; scrollbar-width: none; -ms-overflow-style: none; }
+.agenda-filters::-webkit-scrollbar { display: none; }
+.agenda-filter-label { font-size: 0.85rem; color: var(--text-muted); display: flex; flex-direction: row; align-items: center; gap: 6px; cursor: pointer; background: rgba(255, 255, 255, 0.05); padding: 10px 14px; border-radius: 25px; border: 1px solid #333; transition: 0.2s; font-weight: bold; white-space: nowrap; flex-shrink: 0; }
 .agenda-filter-label:has(input:checked) { background: rgba(0, 204, 136, 0.1); border-color: var(--primary-green); color: white; }
 .agenda-filter-label input { display: none; }
 
@@ -320,7 +320,7 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .modulo-row { display: flex; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid #222; }
 .modulo-row:last-child { border-bottom: none; }
 
-/* Horário Otimizado (Grelha Ajustada para 52px) */
+/* Horário Otimizado (Lista Reduzida e Grelha para 52px) */
 .horario-list-item { display: flex; justify-content: space-between; align-items: center; background: var(--bg-dark); padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid var(--primary-green); }
 .horario-time-col { font-weight: bold; color: var(--text-muted); font-size: 0.95rem; }
 .horario-disc-col { text-align: right; }
