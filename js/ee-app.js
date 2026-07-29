@@ -96,7 +96,6 @@ async function carregarResumoDashboard() {
         document.getElementById('resumo-med-tec').innerText = countT > 0 ? (sumT/countT).toFixed(1) : '-';
     } catch(e) {}
 
-    // Faltas (TODAS)
     try {
         const faltasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
         faltasSnap.forEach(d => { faltasTotais += d.data().horas; });
@@ -272,7 +271,7 @@ async function carregarComportamentoEE() {
 }
 
 // ==========================================
-// 5. AGENDA (CAIXAS) E HORÁRIO (DIA/GRELHA COM CORES ESPECIAIS)
+// 5. AGENDA E HORÁRIO
 // ==========================================
 document.getElementById('filtro-agenda-testes')?.addEventListener('change', carregarAgendaEE);
 document.getElementById('filtro-agenda-trabalhos')?.addEventListener('change', carregarAgendaEE);
@@ -324,9 +323,19 @@ let eeHorarioSemanaOffset = 0;
 
 document.getElementById('btn-horario-dia')?.addEventListener('click', (e) => { eeHorarioModo = 'dia'; e.currentTarget.classList.add('active'); document.getElementById('btn-horario-grelha').classList.remove('active'); carregarHorarioEE(); });
 document.getElementById('btn-horario-grelha')?.addEventListener('click', (e) => { eeHorarioModo = 'grelha'; e.currentTarget.classList.add('active'); document.getElementById('btn-horario-dia').classList.remove('active'); carregarHorarioEE(); });
-
 document.getElementById('btn-ee-prev-horario')?.addEventListener('click', () => { if(eeHorarioModo === 'dia') eeHorarioDiaOffset--; else eeHorarioSemanaOffset--; carregarHorarioEE(); });
 document.getElementById('btn-ee-next-horario')?.addEventListener('click', () => { if(eeHorarioModo === 'dia') eeHorarioDiaOffset++; else eeHorarioSemanaOffset++; carregarHorarioEE(); });
+
+// NOVA LÓGICA DE CORES PARA EVENTOS
+const getCorEspecial = (dsc) => {
+    const d = dsc.toLowerCase();
+    if(d.includes('alm')) return { c: 'var(--warning-yellow)', bg: 'rgba(255, 204, 0, 0.15)' };
+    if(d.includes('vis')) return { c: '#00d2ff', bg: 'rgba(0, 210, 255, 0.15)' };
+    if(d.includes('prhf')) return { c: 'var(--danger-red)', bg: 'rgba(255, 77, 77, 0.15)' };
+    if(d.includes('pap') || d.includes('fct')) return { c: '#ff9900', bg: 'rgba(255, 153, 0, 0.15)' };
+    if(['reunião','reuniao','livre','estudo'].some(k => d.includes(k))) return { c: '#b82bf2', bg: 'rgba(184, 43, 242, 0.15)' };
+    return { c: 'var(--primary-green)', bg: 'rgba(0, 204, 136, 0.1)' };
+};
 
 async function carregarHorarioEE() {
     const subContainer = document.getElementById('ee-horario-content');
@@ -342,13 +351,6 @@ async function carregarHorarioEE() {
         const diasMap = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
         const fDt = (dt) => `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;
 
-        // Verificação Avançada para as Siglas!
-        const checkEspecial = (dsc) => {
-            const kw = ['alm', 'almoço', 'pap', 'fct', 'prhf', 'vis', 'visita', 'reunião', 'reuniao', 'livre', 'estudo'];
-            const dscLower = dsc.toLowerCase();
-            return kw.some(k => dscLower.includes(k));
-        };
-
         if (eeHorarioModo === 'dia') {
             let targetDate = new Date(); targetDate.setDate(targetDate.getDate() + eeHorarioDiaOffset);
             document.getElementById('ee-horario-display').innerText = `${diasMap[targetDate.getDay()]}, ${fDt(targetDate)}`;
@@ -359,9 +361,8 @@ async function carregarHorarioEE() {
             blocosKeys.forEach(bId => {
                 const disc = hb[`${dataStr}_${bId}`];
                 if(disc) {
-                    const isSpec = checkEspecial(disc);
-                    const brdCor = isSpec ? '#b82bf2' : 'var(--primary-green)';
-                    html += `<div class="horario-list-item" style="border-left-color:${brdCor};"><div class="horario-time-col">${blocosTempo[bId]}</div><div class="horario-disc-col"><div class="horario-disc-name">${disc}</div><div class="horario-prof">Prof. A Atribuir</div></div></div>`;
+                    const sty = getCorEspecial(disc);
+                    html += `<div class="horario-list-item" style="border-left-color:${sty.c}; background-color:${sty.bg};"><div class="horario-time-col">${blocosTempo[bId]}</div><div class="horario-disc-col"><div class="horario-disc-name">${disc}</div><div class="horario-prof">Prof. A Atribuir</div></div></div>`;
                     temAulasDia = true;
                 }
             });
@@ -383,8 +384,8 @@ async function carregarHorarioEE() {
                     const dStr = `${dtIter.getFullYear()}-${String(dtIter.getMonth()+1).padStart(2,'0')}-${String(dtIter.getDate()).padStart(2,'0')}`;
                     const disc = hb[`${dStr}_${bId}`];
                     if(disc) {
-                        const cssClass = checkEspecial(disc) ? 'special' : 'filled';
-                        html += `<div class="horario-slot ${cssClass}" style="padding:2px;"><strong>${disc}</strong></div>`;
+                        const sty = getCorEspecial(disc);
+                        html += `<div class="horario-slot" style="padding:2px; border: 1px solid ${sty.c}; background-color: ${sty.bg}; color: white;"><strong>${disc}</strong></div>`;
                     } else html += `<div class="horario-slot"></div>`;
                     dtIter.setDate(dtIter.getDate()+1);
                 }
