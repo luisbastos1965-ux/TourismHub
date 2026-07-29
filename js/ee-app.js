@@ -23,9 +23,9 @@ onAuthStateChanged(auth, async (user) => {
                     return;
                 }
                 
-                myUserName = dados.nome;
+                myUserName = dados.nome || "Encarregado";
                 
-                // Suporte para 1 ou Múltiplos filhos
+                educandosArray = [];
                 if(dados.educandos && Array.isArray(dados.educandos)) {
                     educandosArray = dados.educandos;
                 } else if (dados.educandoId) {
@@ -38,8 +38,12 @@ onAuthStateChanged(auth, async (user) => {
                     document.getElementById('header-ee-student-selector').innerHTML = '<option>Sem educandos associados.</option>';
                     document.getElementById('ee-dashboard').innerHTML = '<p class="text-muted center" style="margin-top:50px;">A tua conta não tem nenhum educando associado. Contacta a Direção.</p>';
                 }
+            } else {
+                alert("Erro: Perfil EE não encontrado na base de dados!");
             }
-        } catch (e) { console.error("Erro ao ler perfil", e); }
+        } catch (e) { 
+            console.error("Erro a ler base de dados:", e); 
+        }
     } else { 
         window.location.href = "index.html"; 
     }
@@ -61,13 +65,15 @@ async function construirSeletorEducandos() {
         } catch(e) {}
     }
     
-    educandoAtualId = selector.value;
-    carregarDadosDoFilhoSelecionado();
+    if(selector.options.length > 0) {
+        educandoAtualId = selector.value;
+        carregarDadosDoFilhoSelecionado();
 
-    selector.addEventListener('change', (e) => {
-        educandoAtualId = e.target.value;
-        carregarDadosDoFilhoSelecionado(); 
-    });
+        selector.addEventListener('change', (e) => {
+            educandoAtualId = e.target.value;
+            carregarDadosDoFilhoSelecionado(); 
+        });
+    }
 }
 
 document.getElementById('btn-logout-ee')?.addEventListener('click', () => {
@@ -81,10 +87,14 @@ async function carregarDadosDoFilhoSelecionado() {
         if (docSnap.exists()) {
             turmaAtual = docSnap.data().turma;
             carregarResumoDashboard();
-            const abaAtiva = document.querySelector('.bottom-nav .nav-item.active').getAttribute('data-target');
-            if(abaAtiva === 'view-ee-caderneta') ativarTabCadernetaAtual();
-            if(abaAtiva === 'view-ee-agenda') carregarAgendaEE();
-            if(abaAtiva === 'view-ee-horario') carregarHorarioEE();
+            
+            const abaAtivaEl = document.querySelector('.bottom-nav .nav-item.active');
+            if(abaAtivaEl) {
+                const abaAtiva = abaAtivaEl.getAttribute('data-target');
+                if(abaAtiva === 'view-ee-caderneta') ativarTabCadernetaAtual();
+                if(abaAtiva === 'view-ee-agenda') carregarAgendaEE();
+                if(abaAtiva === 'view-ee-horario') carregarHorarioEE();
+            }
         }
     } catch(e) {}
 }
@@ -179,7 +189,6 @@ navItems.forEach(item => {
         if(targetId === 'view-ee-chat') { targetView.style.display = 'flex'; }
         else if (targetView) { targetView.style.display = 'block'; }
 
-        // Ações locais ao mudar de tab
         if(targetId === 'view-ee-caderneta') ativarTabCadernetaAtual();
         if(targetId === 'view-ee-agenda') carregarAgendaEE();
         if(targetId === 'view-ee-horario') carregarHorarioEE();
@@ -461,7 +470,7 @@ async function carregarHorarioEE() {
         }
         
         html += '</div>';
-        subContainer.innerHTML = temAulas ? html : '<p class="text-muted center" style="margin-top:30px;">Sem aulas marcadas para esta semana.</p>';
+        subContainer.innerHTML = temAulas ? html : '<p class="text-muted center" style="margin-top:30px;">O DT ainda não registou aulas para esta semana.</p>';
     } catch(e) {}
 }
 
