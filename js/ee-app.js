@@ -1,15 +1,15 @@
-import { auth, db, messaging, VAPID_KEY, getToken, onMessage } from "./firebase.js";
+import { auth, db } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, collection, getDocs, query, addDoc, onSnapshot, orderBy, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 let myUserId = "";
 let myUserName = "";
-let educandosArray = []; // Lista de IDs dos filhos
-let educandoAtualId = ""; // O filho selecionado no momento
+let educandosArray = []; 
+let educandoAtualId = ""; 
 let turmaAtual = "";
 
 // ==========================================
-// 1. SEGURANÇA, INICIALIZAÇÃO E MÚLTIPLOS EDUCANDOS
+// 1. SEGURANÇA E INICIALIZAÇÃO
 // ==========================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -25,11 +25,11 @@ onAuthStateChanged(auth, async (user) => {
                 
                 myUserName = dados.nome;
                 
-                // Suporte para 1 ou Múltiplos filhos!
+                // Suporte para 1 ou Múltiplos filhos
                 if(dados.educandos && Array.isArray(dados.educandos)) {
                     educandosArray = dados.educandos;
                 } else if (dados.educandoId) {
-                    educandosArray = [dados.educandoId]; // Retrocompatibilidade
+                    educandosArray = [dados.educandoId];
                 }
 
                 if(educandosArray.length > 0) {
@@ -106,7 +106,7 @@ async function carregarResumoDashboard() {
         });
         document.getElementById('resumo-media').innerText = countNotas > 0 ? (somaNotas/countNotas).toFixed(1) : '-';
         document.getElementById('resumo-media').style.color = (countNotas > 0 && (somaNotas/countNotas) < 10) ? 'var(--danger-red)' : 'white';
-    } catch(e) {}
+    } catch(e) { document.getElementById('resumo-media').innerText = '-'; }
 
     // B. Calcular Faltas (apenas da última semana)
     try {
@@ -118,14 +118,14 @@ async function carregarResumoDashboard() {
         });
         document.getElementById('resumo-faltas').innerText = `${faltasEstaSemana}h`;
         document.getElementById('resumo-faltas').style.color = faltasEstaSemana > 0 ? 'var(--danger-red)' : 'white';
-    } catch(e) {}
+    } catch(e) { document.getElementById('resumo-faltas').innerText = '0h'; }
 
     // C. Ocorrências
     try {
         const ocSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "ocorrencias"));
         numOcorrencias = ocSnap.size;
         document.getElementById('resumo-ocorrencias').innerText = numOcorrencias;
-    } catch(e) {}
+    } catch(e) { document.getElementById('resumo-ocorrencias').innerText = '0'; }
 
     // D. Próximo Evento
     try {
@@ -140,16 +140,16 @@ async function carregarResumoDashboard() {
             const dia = ev.data.split('-')[2]; const mes = ev.data.split('-')[1];
             document.getElementById('resumo-proximo-evento').innerHTML = `<strong>${dia}/${mes}</strong><br><span style="font-size:0.75rem; font-weight:normal; color:var(--text-muted);">${ev.titulo}</span>`;
         } else {
-            document.getElementById('resumo-proximo-evento').innerText = "Nenhum agendado";
+            document.getElementById('resumo-proximo-evento').innerText = "Sem eventos";
         }
-    } catch(e) {}
+    } catch(e) { document.getElementById('resumo-proximo-evento').innerText = "Sem eventos"; }
     
-    document.getElementById('resumo-mensagens').innerHTML = `<i class="fa-solid fa-arrow-right"></i> Caixa de Entrada`;
+    document.getElementById('resumo-mensagens').innerHTML = `<i class="fa-solid fa-arrow-right"></i> Ver Caixa`;
     document.getElementById('resumo-proxima-aula').innerHTML = `<i class="fa-solid fa-arrow-right"></i> Ver Horário`;
 }
 
 // ==========================================
-// 3. NAVEGAÇÃO DA BARRA INFERIOR E AÇÕES RÁPIDAS
+// 3. NAVEGAÇÃO DA BARRA INFERIOR
 // ==========================================
 const navItems = document.querySelectorAll('.nav-item');
 const views = [
@@ -186,7 +186,6 @@ navItems.forEach(item => {
     });
 });
 
-// Ações Rápidas do Dashboard
 document.getElementById('btn-quick-mensagem')?.addEventListener('click', () => {
     navItems.forEach(nav => nav.classList.remove('active'));
     esconderTodasAsVistas();
@@ -201,7 +200,6 @@ document.getElementById('btn-quick-justificar')?.addEventListener('click', () =>
     carregarAtestadosEE();
 });
 
-// Botões de Voltar Genéricos
 document.querySelectorAll('#btn-voltar-chat-ee, #btn-voltar-justificar, #btn-voltar-notificacoes').forEach(btn => {
     btn?.addEventListener('click', () => {
         navItems.forEach(nav => nav.classList.remove('active'));
@@ -215,11 +213,11 @@ document.getElementById('btn-open-notificacoes')?.addEventListener('click', () =
     navItems.forEach(nav => nav.classList.remove('active'));
     esconderTodasAsVistas();
     document.getElementById('view-ee-notificacoes').style.display = 'block';
-    document.getElementById('ee-notificacoes-container').innerHTML = '<p class="text-muted center">A central de notificações está ativa. Os alertas aparecerão aqui.</p>';
+    document.getElementById('ee-notificacoes-container').innerHTML = '<p class="text-muted center">As notificações aparecerão aqui futuramente.</p>';
 });
 
 // ==========================================
-// 4. CADERNETA E LINHA TEMPORAL (TIMELINE)
+// 4. CADERNETA E LINHA TEMPORAL
 // ==========================================
 const tabTimeline = document.getElementById('tab-ee-timeline');
 const tabNotas = document.getElementById('tab-ee-notas');
@@ -247,25 +245,21 @@ tabFaltas?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [
 tabPrhfs?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabTimeline, tabNotas, tabFaltas, tabComportamento]); carregarPrhfsEE(); });
 tabComportamento?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabTimeline, tabNotas, tabFaltas, tabPrhfs]); carregarComportamentoEE(); });
 
-// MAGIA: LINHA TEMPORAL
 async function carregarTimelineEE() {
     if(!educandoAtualId) return;
     try {
         let eventos = [];
         
-        // Buscar Notas
         const notasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
         notasSnap.forEach(d => {
             const n = d.data();
             eventos.push({
                 time: new Date(n.data).getTime(), dateStr: n.data,
                 icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)',
-                titulo: 'Nova Avaliação Lançada',
-                desc: `${n.disciplina} (Mod. ${n.modulo}): <strong>${n.nota}</strong>`
+                titulo: 'Nova Avaliação Lançada', desc: `${n.disciplina} (Mod. ${n.modulo}): <strong>${n.nota}</strong>`
             });
         });
 
-        // Buscar Faltas
         const faltasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
         faltasSnap.forEach(d => {
             const f = d.data();
@@ -274,12 +268,10 @@ async function carregarTimelineEE() {
             eventos.push({
                 time: new Date(f.criadoEm || f.dataInicio).getTime(), dateStr: f.dataInicio,
                 icon: '<i class="fa-solid fa-user-xmark"></i>', cor: corF,
-                titulo: `Falta de ${f.horas}h a ${f.disciplina} ${txtF}`,
-                desc: `Registada no sistema.`
+                titulo: `Falta de ${f.horas}h a ${f.disciplina} ${txtF}`, desc: `Registada no sistema.`
             });
         });
 
-        // Buscar Ocorrências
         const ocSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "ocorrencias"));
         ocSnap.forEach(d => {
             const o = d.data();
@@ -288,12 +280,11 @@ async function carregarTimelineEE() {
             eventos.push({
                 time: o.timestamp, dateStr: o.data,
                 icon: icO, cor: corO,
-                titulo: `Registo de Comportamento (${o.tipo.toUpperCase()})`,
+                titulo: `Registo Disciplinar (${o.tipo.toUpperCase()})`,
                 desc: `<strong>${o.titulo}</strong><br><span style="font-size:0.8rem; color:#aaa;">${o.descricao || ''}</span>`
             });
         });
 
-        // Ordenar do mais recente para o mais antigo
         eventos.sort((a,b) => b.time - a.time);
 
         if(eventos.length === 0) {
@@ -304,19 +295,15 @@ async function carregarTimelineEE() {
         let html = '<div class="timeline">';
         eventos.forEach(ev => {
             const dtRelativa = new Date(ev.time).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' });
-            html += `
-            <div class="timeline-item">
+            html += `<div class="timeline-item">
                 <div class="timeline-icon" style="color: ${ev.cor}; border-color: ${ev.cor};">${ev.icon}</div>
                 <div class="timeline-content" style="border-left: 3px solid ${ev.cor};">
                     <span class="timeline-date">${dtRelativa}</span>
                     <strong style="color:white; display:block; margin-bottom:5px;">${ev.titulo}</strong>
                     <p style="font-size:0.85rem; color:var(--text-light); margin:0;">${ev.desc}</p>
-                </div>
-            </div>`;
+                </div></div>`;
         });
-        html += '</div>';
-        cadernetaContent.innerHTML = html;
-
+        cadernetaContent.innerHTML = html + '</div>';
     } catch(e) { cadernetaContent.innerHTML = '<p class="text-danger center">Erro a gerar cronologia.</p>'; }
 }
 
@@ -342,7 +329,7 @@ async function carregarFaltasEE() {
         let html = '';
         faltasArr.forEach(f => {
             const statusColor = f.justificada ? 'var(--success-green)' : 'var(--danger-red)';
-            const statusTxt = f.justificada ? 'Justificada' : (f.comprovativoEnviado ? 'Em Análise (DT)' : 'Injustificada');
+            const statusTxt = f.justificada ? 'Justificada' : (f.comprovativoEnviado ? 'Em Análise' : 'Injustificada');
             html += `<div class="card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;"><div><strong>${f.disciplina}</strong> (${f.horas}h)<br><span style="font-size:0.8rem; color:var(--text-muted);">${f.dataInicio}</span></div><span style="font-size:0.8rem; font-weight:bold; color:${statusColor}; padding:5px 10px; background:rgba(255,255,255,0.05); border-radius:12px;">${statusTxt}</span></div>`;
         });
         cadernetaContent.innerHTML = html;
@@ -378,7 +365,7 @@ async function carregarComportamentoEE() {
 }
 
 // ==========================================
-// 5. AGENDA E HORÁRIO (MENUS SEPARADOS E FILTROS)
+// 5. AGENDA E HORÁRIO
 // ==========================================
 document.getElementById('filtro-agenda-testes')?.addEventListener('change', carregarAgendaEE);
 document.getElementById('filtro-agenda-outros')?.addEventListener('change', carregarAgendaEE);
@@ -393,7 +380,7 @@ async function carregarAgendaEE() {
 
     try {
         const evDb = await getDocs(collection(db, "turmas", turmaAtual, "eventos"));
-        if(evDb.empty) { subContainer.innerHTML = '<p class="text-muted center">Sem eventos agendados pela escola.</p>'; return; }
+        if(evDb.empty) { subContainer.innerHTML = '<p class="text-muted center">Sem eventos agendados.</p>'; return; }
         
         let eventosFormatados = [];
         evDb.forEach(d => { 
@@ -420,7 +407,6 @@ async function carregarAgendaEE() {
     } catch(e) {}
 }
 
-// HORÁRIO
 let eeHorarioWeekOffset = 0;
 document.getElementById('btn-ee-prev-week')?.addEventListener('click', () => { eeHorarioWeekOffset--; carregarHorarioEE(); });
 document.getElementById('btn-ee-next-week')?.addEventListener('click', () => { eeHorarioWeekOffset++; carregarHorarioEE(); });
@@ -475,12 +461,12 @@ async function carregarHorarioEE() {
         }
         
         html += '</div>';
-        subContainer.innerHTML = temAulas ? html : '<p class="text-muted center" style="margin-top:30px;">O DT ainda não registou aulas para esta semana.</p>';
+        subContainer.innerHTML = temAulas ? html : '<p class="text-muted center" style="margin-top:30px;">Sem aulas marcadas para esta semana.</p>';
     } catch(e) {}
 }
 
 // ==========================================
-// 6. CHAT E JUSTIFICAÇÕES (COM ETIQUETAS PREMIUM)
+// 6. CHAT E JUSTIFICAÇÕES 
 // ==========================================
 let chatUnsubscribeEE = null;
 
@@ -491,13 +477,12 @@ function iniciarChatEE() {
 
     if(chatUnsubscribeEE) chatUnsubscribeEE();
     
-    // Ler do nó unificado "chat_dt"
     chatUnsubscribeEE = onSnapshot(query(collection(db, "utilizadores", educandoAtualId, "chat_dt"), orderBy("timestamp")), (snapshot) => {
         let html = '';
         snapshot.forEach(doc => {
             const msg = doc.data();
             const isMe = msg.remetente === myUserName || msg.autor === 'ee';
-            const classe = isMe ? 'admin' : 'student'; // Admin fica à direita (verde), Student à esquerda (cinza)
+            const classe = isMe ? 'admin' : 'student'; 
             const autorLabel = isMe ? 'Tu' : (msg.autor === 'dt' ? 'Diretor de Turma' : msg.remetente);
             
             html += `
@@ -531,13 +516,13 @@ document.getElementById('btn-ee-send-msg')?.addEventListener('click', async () =
     } catch(e) {}
 });
 
-// JUSTIFICAR FALTAS E METADADOS
+// JUSTIFICAR FALTAS
 let atestadoBase64 = "";
 
 document.getElementById('ee-upload-atestado')?.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if(!file) return;
-    if(file.size > 2097152) { alert("Ficheiro demasiado grande! Máx 2MB."); return; } // Aumentei o limite para fotos dos atestados
+    if(file.size > 2097152) { alert("Ficheiro demasiado grande! Máx 2MB."); return; } 
     
     document.getElementById('ee-atestado-file-name').innerText = "Ficheiro Selecionado: " + file.name;
     document.getElementById('btn-ee-enviar-atestado').style.display = 'block';
@@ -619,43 +604,3 @@ async function carregarAtestadosEE() {
         container.innerHTML = html;
     } catch(e) {}
 }
-
-// ==========================================
-// 7. NOTIFICAÇÕES PUSH PARA EE
-// ==========================================
-async function pedirPermissaoNotificacoes() {
-    try {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-            const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
-            const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
-            if (currentToken && myUserId) {
-                await updateDoc(doc(db, "utilizadores", myUserId), { tokenNotificacao: currentToken });
-            }
-        }
-    } catch (error) {}
-}
-
-if(typeof onMessage !== "undefined" && messaging) {
-    onMessage(messaging, (payload) => {
-        // Mostrar badge no sino (efeito nativo)
-        const badge = document.getElementById('badge-notificacoes');
-        if(badge) {
-            badge.style.display = 'flex';
-            let atuais = parseInt(badge.innerText) || 0;
-            badge.innerText = atuais + 1;
-        }
-        // Injetar no array temporário do modal de notificações (Front-End)
-        const container = document.getElementById('ee-notificacoes-container');
-        if(container) {
-            if(container.innerHTML.includes('A central de notificações')) container.innerHTML = '';
-            container.innerHTML = `
-            <div class="card" style="border-left: 4px solid var(--primary-green); margin-bottom: 10px;">
-                <strong>${payload.notification.title}</strong>
-                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 5px;">${payload.notification.body}</p>
-                <div style="font-size: 0.7rem; color: #666; margin-top: 8px; text-align: right;">Agora mesmo</div>
-            </div>` + container.innerHTML;
-        }
-    });
-}
-setTimeout(() => { if(myUserId) pedirPermissaoNotificacoes(); }, 4000);
