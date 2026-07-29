@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Turma PRO - Família</title>
     <link rel="icon" type="image/png" href="logo_tur.png">
-    <link rel="stylesheet" href="style.css?v=7">
+    <link rel="stylesheet" href="style.css?v=8">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div id="app-content">
-        <!-- HEADER INTACTO -->
+        <!-- HEADER ESTÁTICO -->
         <header id="header-ee" class="app-header">
             <div class="user-profile" style="flex: 1; min-width: 0;">
                 <select id="header-ee-student-selector" class="ee-student-selector">
@@ -26,7 +26,7 @@
             </div>
         </header>
 
-        <main class="app-content" style="padding-bottom: 100px; padding-top: 15px;">
+        <main class="app-content">
             
             <!-- 1. DASHBOARD PRINCIPAL -->
             <div id="ee-dashboard">
@@ -66,10 +66,10 @@
                 </div>
 
                 <div style="display: flex; gap: 10px; margin-top: 15px;">
-                    <button class="primary-btn" id="btn-quick-justificar" style="background-color: var(--success-green); flex: 1; padding: 15px 10px;">
+                    <button class="primary-btn" id="btn-quick-justificar" style="background-color: var(--success-green); flex: 1; padding: 18px 10px;">
                         <i class="fa-solid fa-file-medical"></i><br><span style="font-size:0.8rem; font-weight:normal; margin-top:5px;">Justificar Falta</span>
                     </button>
-                    <button class="primary-btn" id="btn-quick-mensagem" style="background-color: var(--warning-yellow); color: black; flex: 1; padding: 15px 10px;">
+                    <button class="primary-btn" id="btn-quick-mensagem" style="background-color: var(--warning-yellow); color: black; flex: 1; padding: 18px 10px;">
                         <i class="fa-solid fa-envelope"></i><br><span style="font-size:0.8rem; font-weight:normal; margin-top:5px;">Falar com DT</span>
                     </button>
                 </div>
@@ -156,6 +156,6 @@
     </div>
 
     <!-- VACINA DO CACHE -->
-    <script type="module" src="./js/ee-app.js?v=7"></script>
+    <script type="module" src="./js/ee-app.js?v=8"></script>
 </body>
 </html>
