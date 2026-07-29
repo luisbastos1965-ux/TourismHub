@@ -34,7 +34,13 @@
                 </div>
                 <span id="header-user-name-aluno">A carregar...</span>
             </div>
-            <button id="btn-logout-aluno" class="logout-btn" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <button id="btn-open-notificacoes" style="background:none; border:none; color:white; font-size:1.3rem; position:relative; cursor:pointer;">
+                    <i class="fa-solid fa-bell"></i>
+                    <span id="badge-notificacoes" style="display:none; position:absolute; top:-5px; right:-5px; background:var(--danger-red); color:white; font-size:0.6rem; font-weight:bold; border-radius:50%; padding:2px 5px;">0</span>
+                </button>
+                <button id="btn-logout-aluno" class="logout-btn" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button>
+            </div>
         </header>
 
         <main class="app-content" style="padding-bottom: 80px;">
@@ -55,7 +61,7 @@
                     <div id="aluno-search-results" style="display:none; position:absolute; top:50px; left:0; width:100%; background:#222; border:1px solid #444; border-radius:12px; z-index:10; max-height:250px; overflow-y:auto; box-shadow: 0 5px 15px rgba(0,0,0,0.5); padding: 10px;"></div>
                 </div>
 
-                <!-- MODO ÉPOCA DE EXAMES (Aparece magicamente via JS) -->
+                <!-- MODO ÉPOCA DE EXAMES -->
                 <div id="exam-mode-banner" style="display:none; background: linear-gradient(135deg, #8e2de2, #4a00e0); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 15px rgba(138, 43, 226, 0.3); border: 1px solid #9b59b6;">
                     <h3 style="margin-bottom: 5px; font-size: 1.2rem;"><i class="fa-solid fa-graduation-cap"></i> Época de Exames Ativada</h3>
                     <p style="font-size: 0.9rem; color: #e0e0e0; margin-bottom: 10px;">O Modo Foco está recomendado. Prepara-te!</p>
@@ -146,6 +152,17 @@
                 </div>
             </div>
 
+            <!-- VISTA CENTRO DE NOTIFICAÇÕES -->
+            <div id="view-aluno-notificacoes" style="display: none;">
+                <div class="class-header">
+                    <button id="btn-voltar-notificacoes" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Início</button>
+                    <h2 class="section-title"><i class="fa-solid fa-bell"></i> Centro de Alertas</h2>
+                </div>
+                <div id="aluno-notificacoes-container">
+                    <p class="text-muted" style="text-align:center;">A carregar histórico...</p>
+                </div>
+            </div>
+
             <!-- VISTA CADERNO DIGITAL -->
             <div id="view-aluno-caderno" style="display: none;">
                 <div class="class-header">
@@ -185,18 +202,19 @@
                 </div>
             </div>
 
-            <!-- VISTA CADERNETA -->
+            <!-- VISTA CADERNETA E LINHA TEMPORAL -->
             <div id="view-aluno-caderneta" style="display: none;">
                 <div class="class-header"><h2 class="section-title">Minha Caderneta</h2></div>
                 <div class="falta-tabs" style="display:flex; flex-wrap:wrap; gap:5px; justify-content:center;">
-                    <button class="falta-tab-btn active" id="tab-aluno-notas" style="flex: 1 1 30%;">Notas</button>
+                    <button class="falta-tab-btn active" id="tab-aluno-timeline" style="flex: 1 1 100%; border-color: var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-clock-rotate-left"></i> Linha Temporal</button>
+                    <button class="falta-tab-btn" id="tab-aluno-notas" style="flex: 1 1 30%;">Notas</button>
                     <button class="falta-tab-btn" id="tab-aluno-faltas" style="flex: 1 1 30%;">Faltas</button>
                     <button class="falta-tab-btn" id="tab-aluno-prhfs" style="flex: 1 1 30%;">PRHFs</button>
                     <button class="falta-tab-btn" id="tab-aluno-comportamento" style="flex: 1 1 45%;">Comportamento</button>
                     <button class="falta-tab-btn" id="tab-aluno-observacoes" style="flex: 1 1 45%;">Reuniões</button>
                 </div>
                 <div id="aluno-caderneta-content" style="margin-top:20px;">
-                    <p class="text-muted" style="text-align:center;">A carregar...</p>
+                    <p class="text-muted" style="text-align:center;">A carregar histórico...</p>
                 </div>
             </div>
 
