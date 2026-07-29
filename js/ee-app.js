@@ -67,7 +67,7 @@ async function carregarDadosDoFilhoSelecionado() {
 
 async function carregarResumoDashboard() {
     let sumG = 0, countG = 0, sumS = 0, countS = 0, sumC = 0, countC = 0, sumT = 0, countT = 0;
-    let faltasSemana = 0; let nOcorrencias = 0; let nPrhf = 0;
+    let faltasTotais = 0; let nOcorrencias = 0; let nPrhf = 0;
 
     try {
         const alunoSnap = await getDoc(doc(db, "utilizadores", educandoAtualId));
@@ -99,8 +99,8 @@ async function carregarResumoDashboard() {
     // Faltas (TODAS)
     try {
         const faltasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
-        faltasSnap.forEach(d => { faltasSemana += d.data().horas; });
-        document.getElementById('resumo-faltas').innerText = `${faltasSemana}h`;
+        faltasSnap.forEach(d => { faltasTotais += d.data().horas; });
+        document.getElementById('resumo-faltas').innerText = `${faltasTotais}h`;
     } catch(e) {}
 
     try {
@@ -342,8 +342,12 @@ async function carregarHorarioEE() {
         const diasMap = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
         const fDt = (dt) => `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;
 
-        // Palavras chave que ativam o fundo roxo especial
-        const checkEspecial = (dsc) => ['almoço','pap','prhf','visita','reunião','livre','estudo'].some(kw => dsc.toLowerCase().includes(kw));
+        // Verificação Avançada para as Siglas!
+        const checkEspecial = (dsc) => {
+            const kw = ['alm', 'almoço', 'pap', 'fct', 'prhf', 'vis', 'visita', 'reunião', 'reuniao', 'livre', 'estudo'];
+            const dscLower = dsc.toLowerCase();
+            return kw.some(k => dscLower.includes(k));
+        };
 
         if (eeHorarioModo === 'dia') {
             let targetDate = new Date(); targetDate.setDate(targetDate.getDate() + eeHorarioDiaOffset);
@@ -368,7 +372,7 @@ async function carregarHorarioEE() {
             let dEnd = new Date(dtT); dEnd.setDate(dEnd.getDate() + 4);
             document.getElementById('ee-horario-display').innerText = `${fDt(dtT)} a ${fDt(dEnd)}`;
 
-            let html = '<div class="horario-grid" style="min-width: 500px;"><div class="horario-header"></div>';
+            let html = '<div class="horario-grid"><div class="horario-header"></div>';
             let dtIter = new Date(dtT);
             ['SEG','TER','QUA','QUI','SEX'].forEach(d => { html += `<div class="horario-header">${d}<span>${fDt(dtIter)}</span></div>`; dtIter.setDate(dtIter.getDate()+1); });
             
