@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Turma PRO - Família</title>
     <link rel="icon" type="image/png" href="logo_tur.png">
-    <link rel="stylesheet" href="style.css">
+    
+    <!-- VACINA DO CACHE: ?v=3 obriga o browser a ler o CSS novo -->
+    <link rel="stylesheet" href="style.css?v=3">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- FullCalendar -->
@@ -17,7 +19,6 @@
         <!-- HEADER -->
         <header id="header-ee" class="app-header" style="align-items: center;">
             <div class="user-profile" style="flex: 1;">
-                <!-- SELETOR DE MULTI-EDUCANDOS -->
                 <select id="header-ee-student-selector" class="ee-student-selector">
                     <option value="">A carregar alunos...</option>
                 </select>
@@ -40,7 +41,6 @@
                     <h2 class="section-title" style="margin:0;">Ponto de Situação</h2>
                 </div>
 
-                <!-- CARTÕES DE RESUMO (DADOS REAIS DA BD) -->
                 <div class="ee-summary-grid">
                     <div class="ee-summary-card">
                         <i class="fa-solid fa-graduation-cap"></i>
@@ -74,7 +74,6 @@
                     </div>
                 </div>
 
-                <!-- AÇÕES RÁPIDAS -->
                 <h3 class="section-title" style="font-size: 1rem; color: var(--primary-green); margin-top: 10px;">Ações Rápidas</h3>
                 <div style="display: flex; gap: 10px;">
                     <button class="primary-btn" id="btn-quick-justificar" style="background-color: var(--success-green); flex: 1; padding: 15px 10px;">
@@ -104,12 +103,10 @@
             <!-- 3. AGENDA INTELIGENTE -->
             <div id="view-ee-agenda" style="display: none;">
                 <div class="class-header"><h2 class="section-title">Agenda Inteligente</h2></div>
-                
                 <div class="agenda-filters">
                     <label class="agenda-filter-label"><input type="checkbox" id="filtro-agenda-testes" checked> <span style="color:#ffaa00;">●</span> Testes/Avaliações</label>
                     <label class="agenda-filter-label"><input type="checkbox" id="filtro-agenda-outros" checked> <span style="color:#b82bf2;">●</span> Outros Eventos</label>
                 </div>
-
                 <div id="ee-agenda-content" style="background: white; padding: 10px; border-radius: 8px; color: black;">
                     <p class="text-muted" style="text-align:center;">A carregar calendário escolar...</p>
                 </div>
@@ -149,11 +146,9 @@
                     <button id="btn-voltar-justificar" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Início</button>
                     <h2 class="section-title" style="color: var(--success-green); margin-bottom: 0;"><i class="fa-solid fa-file-medical"></i> Justificar</h2>
                 </div>
-                
                 <div class="card" style="margin-bottom: 20px;">
                     <h3 style="margin-bottom: 15px; font-size: 1rem;"><i class="fa-solid fa-cloud-arrow-up"></i> Enviar Comprovativo</h3>
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Selecione o atestado médico ou declaração para justificar as ausências recentes do seu educando.</p>
-                    
                     <div style="background:var(--bg-dark); padding:20px; border-radius:8px; border:1px dashed #555; text-align:center; margin-bottom:15px;">
                         <label for="ee-upload-atestado" class="secondary-btn" style="margin:0 auto; width:fit-content; border-color: var(--success-green); color: var(--success-green); cursor: pointer;">
                             <i class="fa-solid fa-camera"></i> Tirar Foto / Escolher Ficheiro
@@ -161,18 +156,16 @@
                         <input type="file" id="ee-upload-atestado" style="display:none;" accept="image/*,.pdf">
                         <span id="ee-atestado-file-name" class="file-name-display" style="display:block; margin-top:10px; font-size:0.85rem; color:white;"></span>
                     </div>
-
                     <textarea id="ee-atestado-obs" class="input-field" placeholder="Observações breves (ex: Doença de 2ª a 4ª feira)..." style="min-height: 80px; margin-bottom: 15px;"></textarea>
                     <button id="btn-ee-enviar-atestado" class="primary-btn" style="width:100%; background-color: var(--success-green); display:none;"><i class="fa-solid fa-paper-plane"></i> Enviar para Análise</button>
                 </div>
-
                 <h3 style="color: var(--primary-green); font-size: 1rem; margin-bottom: 15px;">Histórico de Envios</h3>
                 <div id="ee-lista-atestados-container">
                     <p class="text-muted" style="text-align:center;">A procurar histórico na base de dados...</p>
                 </div>
             </div>
 
-            <!-- 7. CENTRAL DE NOTIFICAÇÕES (MODAL/VISTA) -->
+            <!-- 7. CENTRAL DE NOTIFICAÇÕES -->
             <div id="view-ee-notificacoes" style="display: none;">
                 <div class="class-header">
                     <button id="btn-voltar-notificacoes" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
@@ -193,5 +186,8 @@
             <a href="#" class="nav-item" data-target="view-ee-horario"><i class="fa-solid fa-clock"></i><span>Horário</span></a>
         </nav>
     </div>
+
+    <!-- VACINA DO CACHE: ?v=3 obriga o browser a ler o JS novo -->
+    <script type="module" src="./js/ee-app.js?v=3"></script>
 </body>
 </html>
