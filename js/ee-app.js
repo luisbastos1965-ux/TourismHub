@@ -10,9 +10,6 @@ const matrizCursoMap = {
     "Técnica": ["CF", "TIAT", "TCAT", "OTET"] 
 };
 
-// ==========================================
-// 1. INICIALIZAÇÃO
-// ==========================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         myUserId = user.email.split('@')[0];
@@ -25,7 +22,7 @@ onAuthStateChanged(auth, async (user) => {
                 else if (dados.educando) educandosArray = [dados.educando];
 
                 if(educandosArray.length > 0) await construirSeletorEducandos();
-                else document.getElementById('ee-dashboard').innerHTML = '<p class="text-muted center" style="margin-top:50px;">A tua conta não tem nenhum educando associado. Contacta a Direção.</p>';
+                else document.getElementById('ee-dashboard').innerHTML = '<p class="text-muted center" style="margin-top:50px;">Sem educandos associados.</p>';
             } else window.location.href = "index.html"; 
         } catch (e) {}
     } else window.location.href = "index.html"; 
@@ -99,10 +96,10 @@ async function carregarResumoDashboard() {
         document.getElementById('resumo-med-tec').innerText = countT > 0 ? (sumT/countT).toFixed(1) : '-';
     } catch(e) {}
 
+    // Faltas (TODAS)
     try {
-        const umaSemanaAtras = new Date(Date.now() - 7*24*60*60*1000).toISOString().split('T')[0];
         const faltasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
-        faltasSnap.forEach(d => { if(d.data().dataInicio >= umaSemanaAtras) faltasSemana += d.data().horas; });
+        faltasSnap.forEach(d => { faltasSemana += d.data().horas; });
         document.getElementById('resumo-faltas').innerText = `${faltasSemana}h`;
     } catch(e) {}
 
@@ -121,7 +118,7 @@ async function carregarResumoDashboard() {
         if(futuros.length > 0) {
             futuros.sort((a,b) => a.data.localeCompare(b.data));
             const dp = futuros[0].data.split('-');
-            document.getElementById('resumo-proximo-evento').innerHTML = `<strong>${dp[2]}/${dp[1]}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${futuros[0].titulo}</span>`;
+            document.getElementById('resumo-proximo-evento').innerHTML = `<strong>${dp[2]}/${dp[1]}</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">${futuros[0].titulo}</span>`;
         } else document.getElementById('resumo-proximo-evento').innerText = "Agenda limpa";
     } catch(e) {}
 }
@@ -173,13 +170,10 @@ async function carregarTimelineEE() {
         let eventos = [];
         const notasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
         notasSnap.forEach(d => { const n = d.data(); eventos.push({ time: new Date(n.data).getTime(), icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação', desc: `${n.disciplina} (Mod. ${n.modulo}): <strong>${n.nota}</strong>` }); });
-        
         const faltasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
         faltasSnap.forEach(d => { const f = d.data(); eventos.push({ time: new Date(f.criadoEm || f.dataInicio).getTime(), icon: '<i class="fa-solid fa-user-xmark"></i>', cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Falta a ${f.disciplina} (${f.horas}h)`, desc: f.justificada ? `Justificada` : `Falta registada.` }); });
-        
         const ocSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "ocorrencias"));
         ocSnap.forEach(d => { const o = d.data(); eventos.push({ time: o.timestamp, icon: o.tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>', cor: o.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Registo Disciplinar`, desc: `<strong>${o.titulo}</strong><br><span style="font-size:0.8rem; color:#aaa;">${o.descricao || ''}</span>` }); });
-        
         const prhfSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "prhfs"));
         prhfSnap.forEach(d => { const p = d.data(); eventos.push({ time: new Date(p.dataRegisto || Date.now()).getTime(), icon: '<i class="fa-solid fa-book-medical"></i>', cor: 'var(--warning-yellow)', titulo: `Plano de Recuperação Criado`, desc: `${p.disciplina} (Mod. ${p.modulo})` }); });
         
@@ -278,7 +272,7 @@ async function carregarComportamentoEE() {
 }
 
 // ==========================================
-// 5. AGENDA (CAIXAS) E HORÁRIO (DIA/GRELHA)
+// 5. AGENDA (CAIXAS) E HORÁRIO (DIA/GRELHA COM CORES ESPECIAIS)
 // ==========================================
 document.getElementById('filtro-agenda-testes')?.addEventListener('change', carregarAgendaEE);
 document.getElementById('filtro-agenda-trabalhos')?.addEventListener('change', carregarAgendaEE);
@@ -348,6 +342,9 @@ async function carregarHorarioEE() {
         const diasMap = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
         const fDt = (dt) => `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;
 
+        // Palavras chave que ativam o fundo roxo especial
+        const checkEspecial = (dsc) => ['almoço','pap','prhf','visita','reunião','livre','estudo'].some(kw => dsc.toLowerCase().includes(kw));
+
         if (eeHorarioModo === 'dia') {
             let targetDate = new Date(); targetDate.setDate(targetDate.getDate() + eeHorarioDiaOffset);
             document.getElementById('ee-horario-display').innerText = `${diasMap[targetDate.getDay()]}, ${fDt(targetDate)}`;
@@ -358,7 +355,9 @@ async function carregarHorarioEE() {
             blocosKeys.forEach(bId => {
                 const disc = hb[`${dataStr}_${bId}`];
                 if(disc) {
-                    html += `<div class="horario-list-item"><div class="horario-time-col">${blocosTempo[bId]}</div><div class="horario-disc-col"><div class="horario-disc-name">${disc}</div><div class="horario-prof">Prof. A Atribuir</div></div></div>`;
+                    const isSpec = checkEspecial(disc);
+                    const brdCor = isSpec ? '#b82bf2' : 'var(--primary-green)';
+                    html += `<div class="horario-list-item" style="border-left-color:${brdCor};"><div class="horario-time-col">${blocosTempo[bId]}</div><div class="horario-disc-col"><div class="horario-disc-name">${disc}</div><div class="horario-prof">Prof. A Atribuir</div></div></div>`;
                     temAulasDia = true;
                 }
             });
@@ -379,8 +378,10 @@ async function carregarHorarioEE() {
                 for(let i=0; i<5; i++) {
                     const dStr = `${dtIter.getFullYear()}-${String(dtIter.getMonth()+1).padStart(2,'0')}-${String(dtIter.getDate()).padStart(2,'0')}`;
                     const disc = hb[`${dStr}_${bId}`];
-                    if(disc) html += `<div class="horario-slot filled" style="padding:2px;"><strong>${disc}</strong></div>`;
-                    else html += `<div class="horario-slot"></div>`;
+                    if(disc) {
+                        const cssClass = checkEspecial(disc) ? 'special' : 'filled';
+                        html += `<div class="horario-slot ${cssClass}" style="padding:2px;"><strong>${disc}</strong></div>`;
+                    } else html += `<div class="horario-slot"></div>`;
                     dtIter.setDate(dtIter.getDate()+1);
                 }
             });
