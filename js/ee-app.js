@@ -16,33 +16,68 @@ onAuthStateChanged(auth, async (user) => {
         try {
             const docSnap = await getDoc(doc(db, "utilizadores", myUserId));
             if (docSnap.exists() && docSnap.data().papel === 'ee') {
-                const dados = docSnap.data(); myUserName = dados.nome || "Encarregado";
-                if(dados.educandos && Array.isArray(dados.educandos)) educandosArray = dados.educandos;
-                else if (dados.educandoId) educandosArray = [dados.educandoId];
-                else if (dados.educando) educandosArray = [dados.educando];
+                const dados = docSnap.data(); 
+                myUserName = dados.nome || "Encarregado";
+                
+                // SISTEMA BLINDADO PARA LER O TEU ARRAY NO FIREBASE
+                let arr = [];
+                if (dados.educandos && Array.isArray(dados.educandos)) {
+                    arr = dados.educandos;
+                } else if (dados.educandoId && Array.isArray(dados.educandoId)) {
+                    arr = dados.educandoId; // Lê a tua estrutura exata da imagem!
+                } else if (dados.educandoId && typeof dados.educandoId === 'string') {
+                    arr = [dados.educandoId];
+                } else if (dados.educando) {
+                    arr = [dados.educando];
+                }
+                
+                educandosArray = arr;
 
-                if(educandosArray.length > 0) await construirSeletorEducandos();
-                else document.getElementById('ee-dashboard').innerHTML = '<p class="text-muted center" style="margin-top:50px;">Sem educandos associados.</p>';
+                if(educandosArray.length > 0) {
+                    await construirSeletorEducandos();
+                } else {
+                    document.getElementById('header-ee-student-selector').innerHTML = '<option value="">Sem alunos</option>';
+                    document.getElementById('ee-dashboard').innerHTML = '<p class="text-muted center" style="margin-top:50px;">Sem educandos associados na base de dados.</p>';
+                }
             } else window.location.href = "index.html"; 
-        } catch (e) {}
+        } catch (e) {
+            console.error("Erro no Auth:", e);
+        }
     } else window.location.href = "index.html"; 
 });
 
 async function construirSeletorEducandos() {
-    const selector = document.getElementById('header-ee-student-selector'); selector.innerHTML = '';
+    const selector = document.getElementById('header-ee-student-selector'); 
+    selector.innerHTML = '';
+    
     for (let id of educandosArray) {
+        if(!id) continue;
         try {
             const snap = await getDoc(doc(db, "utilizadores", id));
             if (snap.exists()) {
-                const opt = document.createElement('option'); opt.value = id;
-                opt.text = `${snap.data().nome.split(' ')[0]} (${snap.data().turma})`;
+                const data = snap.data();
+                const nomeAluno = data.nome ? data.nome.split(' ')[0] : "Aluno";
+                const turmaAluno = data.turma || "S/ Turma";
+                
+                const opt = document.createElement('option'); 
+                opt.value = id;
+                opt.text = `${nomeAluno} (${turmaAluno})`;
                 selector.appendChild(opt);
             }
-        } catch(e) {}
+        } catch(e) {
+            console.error("Erro ao procurar aluno:", id, e);
+        }
     }
+    
     if(selector.options.length > 0) {
-        educandoAtualId = selector.value; carregarDadosDoFilhoSelecionado();
-        selector.addEventListener('change', (e) => { educandoAtualId = e.target.value; carregarDadosDoFilhoSelecionado(); });
+        educandoAtualId = selector.value; 
+        carregarDadosDoFilhoSelecionado();
+        selector.onchange = (e) => { 
+            educandoAtualId = e.target.value; 
+            carregarDadosDoFilhoSelecionado(); 
+        };
+    } else {
+        selector.innerHTML = '<option value="">Alunos não encontrados</option>';
     }
 }
 
@@ -55,7 +90,7 @@ async function carregarDadosDoFilhoSelecionado() {
         if (docSnap.exists()) {
             turmaAtual = docSnap.data().turma; 
             carregarResumoDashboard(); 
-            carregarPercursoProfissional(docSnap.data()); // NOVO!
+            carregarPercursoProfissional(docSnap.data());
             preencherFiltrosDisciplinas();
             
             const abaAtivaEl = document.querySelector('.bottom-nav .nav-item.active');
@@ -66,10 +101,14 @@ async function carregarDadosDoFilhoSelecionado() {
                 if(abaAtiva === 'view-ee-horario') carregarHorarioEE();
             }
         }
-    } catch(e) {}
+    } catch(e) {
+        console.error("Erro ao carregar dados do aluno:", e);
+    }
 }
 
-/* NOVO: LÓGICA DO PERCURSO PROFISSIONAL (FCT & PAP) */
+/* ==========================================
+   PERCURSO PROFISSIONAL (FCT & PAP) 
+========================================== */
 function getRiscoBadge(status) {
     if(status === 'verde' || status === 'normal') return { cor: 'var(--success-green)', txt: '🟢 Normal', icon: '✅', cIcon: 'var(--success-green)'};
     if(status === 'amarelo' || status === 'atrasado') return { cor: 'var(--warning-yellow)', txt: '🟡 Atenção', icon: '🟡', cIcon: 'var(--warning-yellow)'};
@@ -82,7 +121,8 @@ function carregarPercursoProfissional(alunoData) {
     const miniPap = document.getElementById('resumo-mini-pap');
     const btnPap = document.getElementById('btn-tab-pap');
     
-    // Reset Views
+    if(!cardResumo) return;
+
     cardResumo.style.display = 'none';
     miniFct.style.display = 'none';
     miniPap.style.display = 'none';
@@ -95,15 +135,14 @@ function carregarPercursoProfissional(alunoData) {
     if (alunoData.fct) {
         hasFct = true; miniFct.style.display = 'block';
         const f = alunoData.fct;
-        const hr = f.horasRealizadas || 0; const ht = f.horasTotal || 600;
+        const hr = Number(f.horasRealizadas) || 0; const ht = Number(f.horasTotal) || 600;
         const perc = ht > 0 ? Math.round((hr/ht)*100) : 0;
         document.getElementById('txt-mini-fct').innerText = `${hr}/${ht} h (${perc}%)`;
         
-        // Vista Detalhada
         document.getElementById('fct-horas-txt').innerText = `${hr} / ${ht} h`;
         document.getElementById('fct-perc-txt').innerText = `${perc}%`;
         document.getElementById('fct-progresso').style.width = `${perc}%`;
-        document.getElementById('fct-prev').innerText = f.horasPrevistas || hr; // Exemplo
+        document.getElementById('fct-prev').innerText = f.horasPrevistas || hr; 
         document.getElementById('fct-falta').innerText = ht - hr;
         
         const riscoF = getRiscoBadge(f.estadoRisco || 'verde');
@@ -130,7 +169,6 @@ function carregarPercursoProfissional(alunoData) {
         const p = alunoData.pap;
         document.getElementById('txt-mini-pap').innerText = p.faseAtual || 'Fase de Desenvolvimento';
         
-        // Vista Detalhada
         document.getElementById('pap-tema').innerText = p.tema || 'A aguardar tema...';
         document.getElementById('pap-orientador').innerText = p.orientador || '-';
         document.getElementById('pap-data').innerText = p.dataDefesa || '-';
@@ -179,7 +217,7 @@ btnTabFct?.addEventListener('click', () => { btnTabFct.classList.add('active'); 
 btnTabPap?.addEventListener('click', () => { btnTabPap.classList.add('active'); btnTabFct.classList.remove('active'); contentPap.style.display = 'block'; contentFct.style.display = 'none'; });
 
 // ==========================================
-// RESTANTE LÓGICA (Inalterada)
+// RESTANTE LÓGICA
 // ==========================================
 async function carregarResumoDashboard() {
     let sumG = 0, countG = 0, sumS = 0, countS = 0, sumC = 0, countC = 0, sumT = 0, countT = 0;
