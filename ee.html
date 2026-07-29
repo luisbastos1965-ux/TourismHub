@@ -7,57 +7,132 @@
     <link rel="icon" type="image/png" href="logo_tur.png">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- FullCalendar -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/locales/pt.global.min.js'></script>
 </head>
 <body>
     <div id="app-content">
         <!-- HEADER -->
-        <header id="header-ee" class="app-header">
-            <div class="user-profile">
-                <div class="profile-avatar" style="width: 35px; height: 35px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                    <i class="fa-solid fa-user-tie" style="color: white; font-size: 1rem;"></i>
-                </div>
-                <span id="header-user-name-ee">A carregar...</span>
+        <header id="header-ee" class="app-header" style="align-items: center;">
+            <div class="user-profile" style="flex: 1;">
+                <!-- SELETOR DE MULTI-EDUCANDOS -->
+                <select id="header-ee-student-selector" class="ee-student-selector">
+                    <option value="">A carregar alunos...</option>
+                </select>
             </div>
-            <button id="btn-logout-ee" class="logout-btn" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button>
+            
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <button id="btn-open-notificacoes" class="notification-bell">
+                    <i class="fa-solid fa-bell"></i>
+                    <span id="badge-notificacoes" class="notification-badge" style="display:none;">0</span>
+                </button>
+                <button id="btn-logout-ee" class="logout-btn" title="Sair" style="font-size: 1.2rem; margin: 0; padding: 0;"><i class="fa-solid fa-right-from-bracket"></i></button>
+            </div>
         </header>
 
         <main class="app-content" style="padding-bottom: 80px;">
-            <!-- DASHBOARD EE -->
+            
+            <!-- 1. DASHBOARD PRINCIPAL -->
             <div id="ee-dashboard">
-                <div class="student-profile-header" style="text-align: left; background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
-                    <div style="width: 50px; height: 50px; background: var(--primary-green); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                        <i class="fa-solid fa-user-graduate" style="color: white; font-size: 1.5rem;"></i>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                    <h2 class="section-title" style="margin:0;">Ponto de Situação</h2>
+                </div>
+
+                <!-- CARTÕES DE RESUMO (DADOS REAIS DA BD) -->
+                <div class="ee-summary-grid">
+                    <div class="ee-summary-card">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                        <div class="ee-summary-value" id="resumo-media">A calcular...</div>
+                        <div class="ee-summary-label">Média Atual</div>
                     </div>
-                    <div>
-                        <h2 style="font-size: 1.1rem; margin: 0; color: white;">O Meu Educando</h2>
-                        <p id="ee-educando-nome" style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">A carregar dados...</p>
+                    <div class="ee-summary-card">
+                        <i class="fa-solid fa-user-xmark" style="color: var(--danger-red);"></i>
+                        <div class="ee-summary-value" id="resumo-faltas">A calcular...</div>
+                        <div class="ee-summary-label">Faltas (Semana)</div>
+                    </div>
+                    <div class="ee-summary-card">
+                        <i class="fa-solid fa-chalkboard-user" style="color: #0099ff;"></i>
+                        <div class="ee-summary-value" id="resumo-proxima-aula" style="font-size: 0.9rem;">A carregar...</div>
+                        <div class="ee-summary-label">Próxima Aula</div>
+                    </div>
+                    <div class="ee-summary-card">
+                        <i class="fa-regular fa-calendar-check" style="color: var(--warning-yellow);"></i>
+                        <div class="ee-summary-value" id="resumo-proximo-evento" style="font-size: 0.9rem;">A procurar...</div>
+                        <div class="ee-summary-label">Próximo Evento</div>
+                    </div>
+                    <div class="ee-summary-card">
+                        <i class="fa-solid fa-envelope" style="color: #9b59b6;"></i>
+                        <div class="ee-summary-value" id="resumo-mensagens">...</div>
+                        <div class="ee-summary-label">Mensagens DT</div>
+                    </div>
+                    <div class="ee-summary-card">
+                        <i class="fa-solid fa-triangle-exclamation" style="color: #e67e22;"></i>
+                        <div class="ee-summary-value" id="resumo-ocorrencias">...</div>
+                        <div class="ee-summary-label">Ocorrências</div>
                     </div>
                 </div>
 
-                <div class="student-alerts-grid">
-                    <div class="alert-card" id="btn-open-chat-dt" style="border-color: var(--warning-yellow); cursor: pointer;">
-                        <div class="alert-icon" style="color: var(--warning-yellow);"><i class="fa-solid fa-envelope"></i></div>
-                        <div class="alert-info">
-                            <h4 style="color: white;">Mensagens</h4>
-                            <span>Falar com Diretor de Turma</span>
-                        </div>
-                    </div>
-                    
-                    <div class="alert-card" id="btn-open-justificar" style="border-color: var(--success-green); cursor: pointer;">
-                        <div class="alert-icon" style="color: var(--success-green);"><i class="fa-solid fa-file-medical"></i></div>
-                        <div class="alert-info">
-                            <h4 style="color: white;">Justificar Faltas</h4>
-                            <span>Enviar Atestado Médico</span>
-                        </div>
-                    </div>
+                <!-- AÇÕES RÁPIDAS -->
+                <h3 class="section-title" style="font-size: 1rem; color: var(--primary-green); margin-top: 10px;">Ações Rápidas</h3>
+                <div style="display: flex; gap: 10px;">
+                    <button class="primary-btn" id="btn-quick-justificar" style="background-color: var(--success-green); flex: 1; padding: 15px 10px;">
+                        <i class="fa-solid fa-file-medical"></i><br><span style="font-size:0.8rem; font-weight:normal; margin-top:5px;">Justificar Falta</span>
+                    </button>
+                    <button class="primary-btn" id="btn-quick-mensagem" style="background-color: var(--warning-yellow); color: black; flex: 1; padding: 15px 10px;">
+                        <i class="fa-solid fa-envelope"></i><br><span style="font-size:0.8rem; font-weight:normal; margin-top:5px;">Falar com DT</span>
+                    </button>
                 </div>
             </div>
 
-            <!-- CHAT COM O DT (MENSAGENS) -->
+            <!-- 2. CADERNETA E LINHA TEMPORAL -->
+            <div id="view-ee-caderneta" style="display: none;">
+                <div class="class-header"><h2 class="section-title">Caderneta Escolar</h2></div>
+                <div class="falta-tabs" style="display:flex; flex-wrap:wrap; gap:5px; justify-content:center;">
+                    <button class="falta-tab-btn active" id="tab-ee-timeline" style="flex: 1 1 100%; border-color: var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-clock-rotate-left"></i> Linha Temporal</button>
+                    <button class="falta-tab-btn" id="tab-ee-notas" style="flex: 1 1 45%;">Notas</button>
+                    <button class="falta-tab-btn" id="tab-ee-faltas" style="flex: 1 1 45%;">Faltas</button>
+                    <button class="falta-tab-btn" id="tab-ee-prhfs" style="flex: 1 1 45%;">PRHFs</button>
+                    <button class="falta-tab-btn" id="tab-ee-comportamento" style="flex: 1 1 45%;">Comportamento</button>
+                </div>
+                <div id="ee-caderneta-content" style="margin-top:20px;">
+                    <p class="text-muted" style="text-align:center;">A carregar dados...</p>
+                </div>
+            </div>
+
+            <!-- 3. AGENDA INTELIGENTE -->
+            <div id="view-ee-agenda" style="display: none;">
+                <div class="class-header"><h2 class="section-title">Agenda Inteligente</h2></div>
+                
+                <div class="agenda-filters">
+                    <label class="agenda-filter-label"><input type="checkbox" id="filtro-agenda-testes" checked> <span style="color:#ffaa00;">●</span> Testes/Avaliações</label>
+                    <label class="agenda-filter-label"><input type="checkbox" id="filtro-agenda-outros" checked> <span style="color:#b82bf2;">●</span> Outros Eventos</label>
+                </div>
+
+                <div id="ee-agenda-content" style="background: white; padding: 10px; border-radius: 8px; color: black;">
+                    <p class="text-muted" style="text-align:center;">A carregar calendário escolar...</p>
+                </div>
+            </div>
+
+            <!-- 4. HORÁRIO -->
+            <div id="view-ee-horario" style="display: none;">
+                <div class="class-header"><h2 class="section-title">Horário Semanal</h2></div>
+                <div class="week-nav-bar">
+                    <button id="btn-ee-prev-week"><i class="fa-solid fa-chevron-left"></i></button>
+                    <span id="ee-week-display">A carregar...</span>
+                    <button id="btn-ee-next-week"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+                <div id="ee-horario-content" style="margin-top:15px;">
+                    <p class="text-muted" style="text-align:center;">A procurar horário na base de dados...</p>
+                </div>
+            </div>
+
+            <!-- 5. CHAT COM O DT -->
             <div id="view-ee-chat" style="display: none; flex-direction: column; height: 75vh;">
                 <div class="class-header">
-                    <button id="btn-voltar-chat-ee" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
-                    <h2 class="section-title" style="color: var(--warning-yellow);"><i class="fa-solid fa-envelope"></i> Mensagens (DT)</h2>
+                    <button id="btn-voltar-chat-ee" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Início</button>
+                    <h2 class="section-title" style="color: var(--warning-yellow); margin-bottom: 0;"><i class="fa-solid fa-envelope"></i> Mensagens (DT)</h2>
                 </div>
                 <div class="forum-messages" id="ee-chat-messages-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:15px; background: var(--bg-card); border-radius: 12px 12px 0 0; border: 1px solid #333; border-bottom: none;">
                     <p class="text-muted center">A carregar mensagens...</p>
@@ -68,11 +143,11 @@
                 </div>
             </div>
 
-            <!-- JUSTIFICAR FALTAS -->
+            <!-- 6. JUSTIFICAR FALTAS -->
             <div id="view-ee-justificar" style="display: none;">
                 <div class="class-header">
-                    <button id="btn-voltar-justificar" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
-                    <h2 class="section-title" style="color: var(--success-green);"><i class="fa-solid fa-file-medical"></i> Justificar</h2>
+                    <button id="btn-voltar-justificar" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Início</button>
+                    <h2 class="section-title" style="color: var(--success-green); margin-bottom: 0;"><i class="fa-solid fa-file-medical"></i> Justificar</h2>
                 </div>
                 
                 <div class="card" style="margin-bottom: 20px;">
@@ -80,42 +155,31 @@
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Selecione o atestado médico ou declaração para justificar as ausências recentes do seu educando.</p>
                     
                     <div style="background:var(--bg-dark); padding:20px; border-radius:8px; border:1px dashed #555; text-align:center; margin-bottom:15px;">
-                        <label for="ee-upload-atestado" class="secondary-btn" style="margin:0 auto; width:fit-content; border-color: var(--success-green); color: var(--success-green);">
+                        <label for="ee-upload-atestado" class="secondary-btn" style="margin:0 auto; width:fit-content; border-color: var(--success-green); color: var(--success-green); cursor: pointer;">
                             <i class="fa-solid fa-camera"></i> Tirar Foto / Escolher Ficheiro
                         </label>
                         <input type="file" id="ee-upload-atestado" style="display:none;" accept="image/*,.pdf">
                         <span id="ee-atestado-file-name" class="file-name-display" style="display:block; margin-top:10px; font-size:0.85rem; color:white;"></span>
                     </div>
 
-                    <textarea id="ee-atestado-obs" class="input-field" placeholder="Observações breves (ex: Doença de 2ª a 4ª feira)..." style="min-height: 80px;"></textarea>
+                    <textarea id="ee-atestado-obs" class="input-field" placeholder="Observações breves (ex: Doença de 2ª a 4ª feira)..." style="min-height: 80px; margin-bottom: 15px;"></textarea>
                     <button id="btn-ee-enviar-atestado" class="primary-btn" style="width:100%; background-color: var(--success-green); display:none;"><i class="fa-solid fa-paper-plane"></i> Enviar para Análise</button>
                 </div>
 
                 <h3 style="color: var(--primary-green); font-size: 1rem; margin-bottom: 15px;">Histórico de Envios</h3>
                 <div id="ee-lista-atestados-container">
-                    <p class="text-muted" style="text-align:center;">A carregar...</p>
+                    <p class="text-muted" style="text-align:center;">A procurar histórico na base de dados...</p>
                 </div>
             </div>
 
-            <!-- CADERNETA DO EDUCANDO -->
-            <div id="view-ee-caderneta" style="display: none;">
-                <div class="class-header"><h2 class="section-title">Caderneta</h2></div>
-                <div class="falta-tabs">
-                    <button class="falta-tab-btn active" id="tab-ee-notas">Notas</button>
-                    <button class="falta-tab-btn" id="tab-ee-faltas">Faltas</button>
-                    <button class="falta-tab-btn" id="tab-ee-prhfs">PRHFs</button>
-                    <button class="falta-tab-btn" id="tab-ee-comportamento">Comportamento</button>
+            <!-- 7. CENTRAL DE NOTIFICAÇÕES (MODAL/VISTA) -->
+            <div id="view-ee-notificacoes" style="display: none;">
+                <div class="class-header">
+                    <button id="btn-voltar-notificacoes" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+                    <h2 class="section-title"><i class="fa-solid fa-bell"></i> Central de Alertas</h2>
                 </div>
-                <div id="ee-caderneta-content" style="margin-top:20px;">
-                    <p class="text-muted" style="text-align:center;">A carregar...</p>
-                </div>
-            </div>
-
-            <!-- AGENDA DO EDUCANDO -->
-            <div id="view-ee-agenda" style="display: none;">
-                <div class="class-header"><h2 class="section-title">Calendário Escolar</h2></div>
-                <div id="ee-agenda-content" style="margin-top:20px;">
-                    <p class="text-muted" style="text-align:center;">A carregar...</p>
+                <div id="ee-notificacoes-container">
+                    <p class="text-muted center">A sincronizar alertas...</p>
                 </div>
             </div>
 
@@ -125,10 +189,9 @@
         <nav class="bottom-nav">
             <a href="#" class="nav-item active" data-target="ee-dashboard"><i class="fa-solid fa-house"></i><span>Início</span></a>
             <a href="#" class="nav-item" data-target="view-ee-caderneta"><i class="fa-solid fa-book-open"></i><span>Caderneta</span></a>
-            <a href="#" class="nav-item" data-target="view-ee-agenda"><i class="fa-regular fa-calendar"></i><span>Agenda</span></a>
+            <a href="#" class="nav-item" data-target="view-ee-agenda"><i class="fa-regular fa-calendar-check"></i><span>Agenda</span></a>
+            <a href="#" class="nav-item" data-target="view-ee-horario"><i class="fa-solid fa-clock"></i><span>Horário</span></a>
         </nav>
     </div>
-
-    <script type="module" src="./js/ee-app.js"></script>
 </body>
 </html>
