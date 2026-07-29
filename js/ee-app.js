@@ -19,12 +19,11 @@ onAuthStateChanged(auth, async (user) => {
                 const dados = docSnap.data(); 
                 myUserName = dados.nome || "Encarregado";
                 
-                // SISTEMA BLINDADO PARA LER O TEU ARRAY NO FIREBASE
                 let arr = [];
                 if (dados.educandos && Array.isArray(dados.educandos)) {
                     arr = dados.educandos;
                 } else if (dados.educandoId && Array.isArray(dados.educandoId)) {
-                    arr = dados.educandoId; // Lê a tua estrutura exata da imagem!
+                    arr = dados.educandoId;
                 } else if (dados.educandoId && typeof dados.educandoId === 'string') {
                     arr = [dados.educandoId];
                 } else if (dados.educando) {
@@ -109,10 +108,21 @@ async function carregarDadosDoFilhoSelecionado() {
 /* ==========================================
    PERCURSO PROFISSIONAL (FCT & PAP) 
 ========================================== */
+
+// Uniformização visual de bolas de estado (🟢 🔴 🟡 ⚪)
+function getUniformCircle(status) {
+    if(status === true || status === 'verde') return '🟢';
+    if(status === false || status === 'vermelho') return '🔴';
+    if(status === 'amarelo') return '🟡';
+    return '⚪'; // Vazio / Pendente
+}
+
+// Emblema principal de estado
 function getRiscoBadge(status) {
-    if(status === 'verde' || status === 'normal') return { cor: 'var(--success-green)', txt: '🟢 Normal', icon: '✅', cIcon: 'var(--success-green)'};
-    if(status === 'amarelo' || status === 'atrasado') return { cor: 'var(--warning-yellow)', txt: '🟡 Atenção', icon: '🟡', cIcon: 'var(--warning-yellow)'};
-    return { cor: 'var(--danger-red)', txt: '🔴 Crítico', icon: '❌', cIcon: 'var(--danger-red)'};
+    if(status === 'verde') return { cor: 'var(--success-green)', txt: '🟢 Normal' };
+    if(status === 'amarelo') return { cor: 'var(--warning-yellow)', txt: '🟡 Atenção' };
+    if(status === 'vermelho') return { cor: 'var(--danger-red)', txt: '🔴 Crítico' };
+    return { cor: 'var(--text-muted)', txt: '⚪ Aguardar dados...' };
 }
 
 function carregarPercursoProfissional(alunoData) {
@@ -129,91 +139,92 @@ function carregarPercursoProfissional(alunoData) {
     btnPap.style.display = 'none';
 
     let hasFct = false; let hasPap = false;
-    let riscoGeral = 'verde';
+    let riscoGeral = null;
 
-    // FCT PROCESSAMENTO
+    // FCT PROCESSAMENTO (Sem dados fictícios)
     if (alunoData.fct) {
         hasFct = true; miniFct.style.display = 'block';
         const f = alunoData.fct;
-        const hr = Number(f.horasRealizadas) || 0; const ht = Number(f.horasTotal) || 600;
-        const perc = ht > 0 ? Math.round((hr/ht)*100) : 0;
-        document.getElementById('txt-mini-fct').innerText = `${hr}/${ht} h (${perc}%)`;
         
-        document.getElementById('fct-horas-txt').innerText = `${hr} / ${ht} h`;
-        document.getElementById('fct-perc-txt').innerText = `${perc}%`;
-        document.getElementById('fct-progresso').style.width = `${perc}%`;
-        document.getElementById('fct-prev').innerText = f.horasPrevistas || hr; 
-        document.getElementById('fct-falta').innerText = ht - hr;
+        const hr = f.horasRealizadas !== undefined ? Number(f.horasRealizadas) : 0; 
+        const ht = f.horasTotal !== undefined ? Number(f.horasTotal) : '-'; // Se não houver, mostra '-'
+        const perc = (ht !== '-' && ht > 0) ? Math.round((hr/ht)*100) : 0;
         
-        const riscoF = getRiscoBadge(f.estadoRisco || 'verde');
+        document.getElementById('txt-mini-fct').innerText = ht !== '-' ? `${hr}/${ht} h (${perc}%)` : `${hr} h registadas`;
+        
+        // Vista Detalhada
+        document.getElementById('fct-horas-txt').innerText = ht !== '-' ? `${hr} / ${ht} h` : `${hr} h`;
+        document.getElementById('fct-perc-txt').innerText = ht !== '-' ? `${perc}%` : '';
+        document.getElementById('fct-progresso').style.width = ht !== '-' ? `${perc}%` : '0%';
+        document.getElementById('fct-prev').innerText = f.horasPrevistas !== undefined ? f.horasPrevistas : '-'; 
+        document.getElementById('fct-falta').innerText = ht !== '-' ? (ht - hr) : '-';
+        
+        const riscoF = getRiscoBadge(f.estadoRisco);
         document.getElementById('fct-badge-risco').innerText = riscoF.txt;
         document.getElementById('fct-card-risco').style.borderLeftColor = riscoF.cor;
-        if(f.estadoRisco === 'amarelo') riscoGeral = 'amarelo';
-        if(f.estadoRisco === 'vermelho') riscoGeral = 'vermelho';
+        
+        riscoGeral = f.estadoRisco || 'branco';
 
         let docsHtml = '';
         const dNames = { protocolo: 'Protocolo', plano: 'Plano de Estágio', folhas: 'Folhas de Estágio', registos: 'Registos de Visita', avaliacao: 'Avaliação', autoavaliacao: 'Autoavaliação'};
-        if(f.docs) {
-            for(let key in dNames) {
-                let st = f.docs[key]; 
-                let b = getRiscoBadge(st === true ? 'verde' : (st === 'amarelo' ? 'amarelo' : 'vermelho'));
-                docsHtml += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #222; padding-bottom:5px;"><span>${dNames[key]}</span> <span>${b.icon}</span></div>`;
-            }
+        for(let key in dNames) {
+            let st = (f.docs && f.docs[key] !== undefined) ? f.docs[key] : null; 
+            let ic = getUniformCircle(st);
+            docsHtml += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #222; padding-bottom:5px;"><span>${dNames[key]}</span> <span style="font-size:1.1rem;">${ic}</span></div>`;
         }
         document.getElementById('fct-docs-lista').innerHTML = docsHtml;
     }
 
-    // PAP PROCESSAMENTO
+    // PAP PROCESSAMENTO (Sem dados fictícios, com suporte a datas)
     if (alunoData.pap) {
         hasPap = true; miniPap.style.display = 'block'; btnPap.style.display = 'block';
         const p = alunoData.pap;
-        document.getElementById('txt-mini-pap').innerText = p.faseAtual || 'Fase de Desenvolvimento';
         
-        document.getElementById('pap-tema').innerText = p.tema || 'A aguardar tema...';
-        document.getElementById('pap-orientador').innerText = p.orientador || '-';
-        document.getElementById('pap-data').innerText = p.dataDefesa || '-';
-        document.getElementById('pap-obs-txt').innerText = p.notasOrientador || 'Sem observações recentes.';
+        document.getElementById('txt-mini-pap').innerText = p.faseAtual || 'A aguardar fase...';
         
-        const riscoP = getRiscoBadge(p.estadoRisco || 'verde');
+        document.getElementById('pap-tema').innerText = p.tema || 'A aguardar definição de tema...';
+        document.getElementById('pap-orientador').innerText = p.orientador || 'Não definido';
+        document.getElementById('pap-data').innerText = p.dataDefesa || 'Não definida';
+        document.getElementById('pap-obs-txt').innerText = p.notasOrientador || 'Sem observações registadas.';
+        
+        const riscoP = getRiscoBadge(p.estadoRisco);
         document.getElementById('pap-badge-risco').innerText = riscoP.txt;
         document.getElementById('pap-card-risco').style.borderLeftColor = riscoP.cor;
-        if(p.estadoRisco === 'amarelo' && riscoGeral !== 'vermelho') riscoGeral = 'amarelo';
-        if(p.estadoRisco === 'vermelho') riscoGeral = 'vermelho';
+        
+        if (riscoGeral !== 'vermelho') { // Vermelho sobrepõe-se sempre
+            if (p.estadoRisco === 'vermelho') riscoGeral = 'vermelho';
+            else if (p.estadoRisco === 'amarelo') riscoGeral = 'amarelo';
+            else if (!riscoGeral) riscoGeral = p.estadoRisco;
+        }
 
         let fasesHtml = '';
         const fNames = { escolha: 'Escolha do Tema', aprovacao: 'Aprovação', desenvolvimento: 'Desenvolvimento', relatorio: 'Relatório', apresentacao: 'Apresentação'};
-        if(p.fases) {
-            for(let key in fNames) {
-                let st = p.fases[key];
-                if (st === undefined) continue;
-
-                let statusVal = st;
-                let prazoVal = "";
-                
-                if (typeof st === 'object' && st !== null) {
-                    statusVal = st.status;
-                    prazoVal = st.prazo || "";
-                }
-
-                let b;
-                if(statusVal === true || statusVal === 'verde') b = getRiscoBadge('verde');
-                else if(statusVal === 'amarelo') b = getRiscoBadge('amarelo');
-                else if(statusVal === false || statusVal === 'vermelho') b = getRiscoBadge('vermelho');
-                else b = { icon: '⏳', cor: 'var(--text-muted)' };
-
-                let prazoHtml = prazoVal ? `<br><span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;"><i class="fa-regular fa-calendar"></i> Até: ${prazoVal}</span>` : '';
-
-                fasesHtml += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; padding-bottom:8px; margin-bottom:5px;"><div><strong style="color:var(--text-light); font-size:0.9rem;">${fNames[key]}</strong>${prazoHtml}</div> <span style="font-size:1.1rem;">${b.icon}</span></div>`;
+        
+        for(let key in fNames) {
+            let st = (p.fases && p.fases[key] !== undefined) ? p.fases[key] : null;
+            let statusVal = null;
+            let prazoVal = "";
+            
+            // Lógica para detetar se é apenas uma cor/booleano ou se traz uma "data-limite"
+            if (st !== null && typeof st === 'object') {
+                statusVal = st.status;
+                prazoVal = st.prazo || "";
+            } else {
+                statusVal = st;
             }
-        } else {
-            fasesHtml = '<div class="text-muted center">A aguardar fases do projeto...</div>';
+
+            let ic = getUniformCircle(statusVal);
+            let prazoHtml = prazoVal ? `<br><span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;"><i class="fa-regular fa-calendar"></i> Até: ${prazoVal}</span>` : '';
+
+            fasesHtml += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; padding-bottom:8px; margin-bottom:5px;"><div><strong style="color:var(--text-light); font-size:0.9rem;">${fNames[key]}</strong>${prazoHtml}</div> <span style="font-size:1.1rem;">${ic}</span></div>`;
         }
         document.getElementById('pap-fases-lista').innerHTML = fasesHtml;
     }
 
+    // Cor do Cartão Principal
     if(hasFct || hasPap) {
         cardResumo.style.display = 'block';
-        const rg = getRiscoBadge(riscoGeral);
+        const rg = getRiscoBadge(riscoGeral || 'verde');
         const b = document.getElementById('badge-risco-geral');
         b.innerText = rg.txt; b.style.color = rg.cor;
         cardResumo.style.borderLeftColor = rg.cor;
