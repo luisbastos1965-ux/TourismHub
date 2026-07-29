@@ -122,7 +122,7 @@ function getRiscoBadge(status) {
     if(status === 'verde') return { cor: 'var(--success-green)', txt: '🟢 Normal' };
     if(status === 'amarelo') return { cor: 'var(--warning-yellow)', txt: '🟡 Atenção' };
     if(status === 'vermelho') return { cor: 'var(--danger-red)', txt: '🔴 Crítico' };
-    return { cor: 'var(--text-muted)', txt: '⚪ Aguardar dados...' };
+    return { cor: 'var(--text-muted)', txt: '⚪ Pendente' };
 }
 
 function carregarPercursoProfissional(alunoData) {
@@ -224,9 +224,17 @@ function carregarPercursoProfissional(alunoData) {
     // Cor do Cartão Principal
     if(hasFct || hasPap) {
         cardResumo.style.display = 'block';
-        const rg = getRiscoBadge(riscoGeral || 'verde');
+        const rg = getRiscoBadge(riscoGeral || 'branco');
         const b = document.getElementById('badge-risco-geral');
-        b.innerText = rg.txt; b.style.color = rg.cor;
+        
+        // Ajuste visual para o badge principal
+        let bgColor = rg.cor === 'var(--text-muted)' ? 'rgba(255,255,255,0.05)' : 
+                      rg.cor === 'var(--success-green)' ? 'rgba(40,167,69,0.1)' : 
+                      rg.cor === 'var(--warning-yellow)' ? 'rgba(255,204,0,0.1)' : 'rgba(255,77,77,0.1)';
+                      
+        b.innerText = rg.txt; 
+        b.style.color = rg.cor;
+        b.style.background = bgColor;
         cardResumo.style.borderLeftColor = rg.cor;
     }
 }
