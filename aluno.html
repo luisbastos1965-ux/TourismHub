@@ -18,6 +18,9 @@
     <!-- Quill.js (Caderno Digital) -->
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+
+    <!-- Chart.js (Estatísticas e Gráficos) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
         .ql-toolbar.ql-snow { background: #f1f2f6; border-radius: 8px 8px 0 0; border: none; }
@@ -29,7 +32,7 @@
     <div id="app-content">
         <header id="header-aluno" class="app-header">
             <div class="user-profile">
-                <div class="profile-avatar" id="header-avatar-circle" style="width: 35px; height: 35px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <div class="profile-avatar" id="header-avatar-circle" style="width: 35px; height: 35px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                     <i class="fa-solid fa-user" style="color: white; font-size: 1rem;"></i>
                 </div>
                 <span id="header-user-name-aluno">A carregar...</span>
@@ -44,6 +47,8 @@
         </header>
 
         <main class="app-content" style="padding-bottom: 80px;">
+            
+            <!-- VISTA INICIAL (DASHBOARD) -->
             <div id="student-dashboard">
                 <div class="student-welcome-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <div>
@@ -149,6 +154,46 @@
                         <i class="fa-solid fa-briefcase"></i>
                         <span>Estágio / PAP</span>
                     </button>
+                </div>
+            </div>
+
+            <!-- VISTA PERFIL, ESTATÍSTICAS E OBJETIVOS (NOVO) -->
+            <div id="view-aluno-perfil" style="display: none;">
+                <div class="class-header"><h2 class="section-title"><i class="fa-solid fa-user-astronaut"></i> O Meu Perfil</h2></div>
+                
+                <!-- Avatar & XP -->
+                <div class="card" style="text-align: center;">
+                    <div style="position:relative; width: 100px; height: 100px; margin: 0 auto 15px auto;">
+                        <img id="perfil-avatar-img" src="https://via.placeholder.com/100" style="width:100%; height:100%; border-radius:50%; object-fit:cover; border: 3px solid var(--primary-green);">
+                        <label for="upload-avatar" style="position:absolute; bottom:0; right:0; background:var(--primary-green); color:var(--bg-dark); width:35px; height:35px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; border: 2px solid var(--bg-card);"><i class="fa-solid fa-camera"></i></label>
+                        <input type="file" id="upload-avatar" style="display:none;" accept="image/*">
+                    </div>
+                    <h3 id="perfil-nome-central" style="margin-bottom: 5px; font-size: 1.3rem;">Nome</h3>
+                    <p id="perfil-titulo-central" style="color: var(--warning-yellow); font-weight: bold; margin-bottom: 15px;">Novato</p>
+                    <div class="progress-bar-bg"><div class="progress-bar-fill" id="perfil-xp-progress" style="width: 0%;"></div></div>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;"><span id="perfil-xp-totais">0</span> XP totais alcançados</p>
+                </div>
+
+                <!-- Objetivos Pessoais -->
+                <div class="card" style="border-left: 4px solid var(--warning-yellow);">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-bullseye"></i> Os Meus Objetivos</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Define metas! Ganhas <strong style="color:var(--warning-yellow);">+50 XP</strong> por cada objetivo concluído.</p>
+                    <div style="display:flex; gap:10px; margin-bottom: 15px;">
+                        <input type="text" id="input-novo-objetivo" placeholder="Ex: Tirar 16 a Matemática..." style="margin:0; flex:1; border-radius: 8px;">
+                        <button id="btn-add-objetivo" class="primary-btn" style="width:auto; padding:0 20px; background:var(--warning-yellow); color:black;"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                    <div id="lista-objetivos-container">
+                        <!-- Gerado via JS -->
+                    </div>
+                </div>
+
+                <!-- Estatísticas Gráficas -->
+                <div class="card">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-chart-pie"></i> Desempenho por Disciplina</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Média atual baseada nas notas lançadas.</p>
+                    <div style="position: relative; height: 220px; width: 100%;">
+                        <canvas id="chart-notas-aluno"></canvas>
+                    </div>
                 </div>
             </div>
 
@@ -327,6 +372,7 @@
             <a href="#" class="nav-item" data-target="view-aluno-caderneta"><i class="fa-solid fa-book-open"></i><span>Caderneta</span></a>
             <a href="#" class="nav-item" data-target="view-aluno-agenda"><i class="fa-regular fa-calendar"></i><span>Agenda</span></a>
             <a href="#" class="nav-item" data-target="view-aluno-forum"><i class="fa-regular fa-comments"></i><span>Fórum</span></a>
+            <a href="#" class="nav-item" data-target="view-aluno-perfil"><i class="fa-solid fa-user-astronaut"></i><span>Perfil</span></a>
         </nav>
     </div>
 
