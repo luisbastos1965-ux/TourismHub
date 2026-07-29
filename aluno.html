@@ -48,12 +48,17 @@
 
         <main class="app-content" style="padding-bottom: 80px;">
             
-            <!-- VISTA INICIAL (DASHBOARD) -->
+            <!-- VISTA INICIAL (DASHBOARD ADAPTATIVO) -->
             <div id="student-dashboard">
-                <div class="student-welcome-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                
+                <!-- CABEÇALHO LIMPO COM EMBLEMA XP MINIMALISTA -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <div>
-                        <h2 id="welcome-message">Olá, <span id="welcome-nome">Aluno</span>!</h2>
-                        <p style="font-size: 0.9rem; color: var(--text-muted);">Aqui está o teu ponto de situação.</p>
+                        <h2 id="welcome-message" style="margin-bottom: 3px; font-size: 1.4rem;">Olá, <span id="welcome-nome">Aluno</span>!</h2>
+                        <p style="font-size: 0.85rem; color: var(--text-muted);"><span id="aluno-rank-title">Novato</span> • Lvl <span id="aluno-nivel">1</span></p>
+                    </div>
+                    <div style="background: rgba(0, 204, 136, 0.1); border: 1px solid var(--primary-green); padding: 6px 12px; border-radius: 20px; text-align: center; cursor: pointer;" onclick="document.querySelector('.nav-item[data-target=\'view-aluno-perfil\']').click()">
+                        <div style="font-weight: bold; color: var(--primary-green); font-size: 1rem;"><i class="fa-solid fa-bolt"></i> <span id="aluno-xp-atual">0</span> <span style="font-size: 0.7rem;">XP</span></div>
                     </div>
                 </div>
 
@@ -66,76 +71,20 @@
                     <div id="aluno-search-results" style="display:none; position:absolute; top:50px; left:0; width:100%; background:#222; border:1px solid #444; border-radius:12px; z-index:10; max-height:250px; overflow-y:auto; box-shadow: 0 5px 15px rgba(0,0,0,0.5); padding: 10px;"></div>
                 </div>
 
-                <!-- MODO ÉPOCA DE EXAMES -->
+                <!-- MODO ÉPOCA DE EXAMES (Aparece via JS) -->
                 <div id="exam-mode-banner" style="display:none; background: linear-gradient(135deg, #8e2de2, #4a00e0); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 15px rgba(138, 43, 226, 0.3); border: 1px solid #9b59b6;">
                     <h3 style="margin-bottom: 5px; font-size: 1.2rem;"><i class="fa-solid fa-graduation-cap"></i> Época de Exames Ativada</h3>
                     <p style="font-size: 0.9rem; color: #e0e0e0; margin-bottom: 10px;">O Modo Foco está recomendado. Prepara-te!</p>
                     <div id="exam-countdown" style="font-size: 1.5rem; font-weight: bold; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; display: inline-block;">Faltam X dias</div>
                 </div>
 
-                <!-- CARTÃO DE XP -->
-                <div class="card" style="background: linear-gradient(135deg, #11998e, #38ef7d); color: white; border: none; margin-bottom: 20px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <div>
-                            <h3 style="margin: 0; font-size: 1.2rem; color: white;"><i class="fa-solid fa-star" style="color: #ffd700;"></i> Nível <span id="aluno-nivel">1</span></h3>
-                            <span style="font-size: 0.85rem; opacity: 0.9;" id="aluno-rank-title">Novato</span>
-                        </div>
-                        <div style="font-size: 1.5rem; font-weight: bold;">
-                            <span id="aluno-xp-atual">0</span> <span style="font-size: 1rem; opacity: 0.8;">XP</span>
-                        </div>
-                    </div>
-                    <div class="progress-bar-bg" style="background: rgba(0,0,0,0.2); height: 8px; border-radius: 4px; width: 100%;">
-                        <div class="progress-bar-fill" id="aluno-xp-progress" style="background: white; width: 0%; height: 100%; border-radius: 4px;"></div>
-                    </div>
-                    <div style="text-align: right; font-size: 0.75rem; margin-top: 5px; opacity: 0.9;">
-                        Faltam <span id="aluno-xp-falta">100</span> XP
-                    </div>
+                <!-- ONDE A MAGIA DO DASHBOARD ADAPTATIVO ACONTECE -->
+                <div id="dynamic-hero-section">
+                    <p class="text-muted center">A preparar o teu assistente...</p>
                 </div>
 
-                <!-- RADAR ESCOLAR -->
-                <div class="card" id="radar-card" style="border-left: 5px solid var(--text-muted); position: relative; overflow: hidden; transition: 0.3s; margin-bottom: 20px;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
-                        <h3 style="font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
-                            <span id="radar-icon" style="font-size: 1.5rem;">⚪</span> Radar Escolar
-                        </h3>
-                        <span id="radar-status-badge" style="font-size: 0.75rem; font-weight: bold; padding: 4px 10px; border-radius: 12px; background: rgba(255,255,255,0.05); color: var(--text-muted);">A analisar...</span>
-                    </div>
-                    <h2 id="radar-mensagem-principal" style="font-size: 1.2rem; margin-bottom: 10px; color: white;">A recolher dados...</h2>
-                    <div id="radar-tarefas-lista" style="display: flex; flex-direction: column; gap: 8px; font-size: 0.9rem; color: var(--text-light); border-top: 1px dashed #333; padding-top: 12px; margin-top: 10px; display: none;"></div>
-                </div>
-
-                <!-- DESAFIO COOPERATIVO (MISSÃO DA TURMA) -->
-                <div class="card" id="missao-card" style="border-left: 4px solid var(--warning-yellow); margin-bottom: 20px;">
-                    <h3 style="font-size: 1rem; margin-bottom: 5px;"><i class="fa-solid fa-users"></i> Missão da Turma</h3>
-                    <p id="missao-texto" style="font-size:0.85rem; color:var(--text-muted);">A aguardar missão do Diretor de Turma...</p>
-                    <div class="progress-bar-bg" style="margin-top: 10px; display:none;" id="missao-progress-container"><div class="progress-bar-fill" id="missao-progress" style="width:0%; background:var(--warning-yellow);"></div></div>
-                </div>
-
-                <!-- CHECK-IN EMOCIONAL COM HISTÓRICO -->
-                <div class="card" id="checkin-card" style="border-left: 4px solid #b82bf2; margin-bottom: 25px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                        <h3 style="font-size: 1rem; margin:0;"><i class="fa-solid fa-heart-pulse"></i> Como te sentes hoje?</h3>
-                        <button id="btn-view-mood-history" style="background:none; border:none; color:#b82bf2; cursor:pointer; font-size:0.85rem; padding: 4px 8px; border-radius: 6px;"><i class="fa-solid fa-chart-simple"></i> Histórico</button>
-                    </div>
-                    
-                    <div style="display: flex; justify-content: space-around; font-size: 2.2rem;" id="mood-buttons">
-                        <span class="mood-btn" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;" data-mood="😡">😡</span>
-                        <span class="mood-btn" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;" data-mood="🙁">🙁</span>
-                        <span class="mood-btn" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;" data-mood="😐">😐</span>
-                        <span class="mood-btn" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;" data-mood="🙂">🙂</span>
-                        <span class="mood-btn" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;" data-mood="🤩">🤩</span>
-                    </div>
-                    <div id="checkin-thanks" style="display:none; text-align:center; color:var(--success-green); font-weight:bold; font-size:0.95rem; margin-top: 10px;">
-                        Obrigado pela partilha! <span style="color:var(--warning-yellow);">+10 XP</span>
-                    </div>
-
-                    <!-- Gráfico / Histórico -->
-                    <div id="mood-history-container" style="display:none; margin-top:15px; border-top:1px dashed #333; padding-top:15px;">
-                        <p class="text-muted center" style="font-size: 0.85rem;">A carregar histórico...</p>
-                    </div>
-                </div>
-
-                <h3 class="section-title" style="font-size:1.05rem; color:var(--primary-green); margin-top: 10px;"><i class="fa-solid fa-bolt"></i> Acesso Rápido</h3>
+                <!-- ACESSO RÁPIDO (FERRAMENTAS) -->
+                <h3 class="section-title" style="font-size:1rem; color:var(--text-muted); margin-top: 15px; border-bottom: 1px solid #333; padding-bottom: 8px;"><i class="fa-solid fa-shapes"></i> Ferramentas</h3>
                 
                 <div class="lms-action-grid">
                     <button class="lms-btn" id="btn-open-study-mode" style="border-color:#9b59b6; color:#9b59b6; background: rgba(155, 89, 182, 0.05);">
@@ -195,6 +144,17 @@
                         <canvas id="chart-notas-aluno"></canvas>
                     </div>
                 </div>
+
+                <!-- Histórico Emocional -->
+                <div class="card" style="border-left: 4px solid #b82bf2; margin-top: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                        <h3 style="font-size: 1.1rem; color: white; margin:0;"><i class="fa-solid fa-heart-pulse"></i> Histórico Emocional</h3>
+                        <button id="btn-view-mood-history" style="background:rgba(255,255,255,0.05); border:1px solid #333; color:white; cursor:pointer; font-size:0.85rem; padding: 4px 10px; border-radius: 6px; transition:0.2s;"><i class="fa-solid fa-arrows-rotate"></i> Atualizar</button>
+                    </div>
+                    <div id="mood-history-container">
+                        <p class="text-muted center" style="font-size: 0.85rem;">A carregar histórico...</p>
+                    </div>
+                </div>
             </div>
 
             <!-- VISTA CENTRO DE NOTIFICAÇÕES -->
@@ -214,17 +174,14 @@
                     <button id="btn-voltar-caderno" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Início</button>
                     <h2 class="section-title"><i class="fa-solid fa-book"></i> Caderno Digital</h2>
                 </div>
-                
                 <div class="card" style="margin-bottom: 20px; padding: 15px;">
                     <h3 style="font-size: 1rem; margin-bottom: 10px;">Criar Novo Resumo</h3>
                     <div class="form-group">
-                        <input type="text" id="caderno-titulo" placeholder="Título (ex: Resumo de História - Rev. Francesa)" class="input-padrao" style="width:100%; margin-bottom:10px;">
+                        <input type="text" id="caderno-titulo" placeholder="Título (ex: Resumo de História)" class="input-padrao" style="width:100%; margin-bottom:10px;">
                     </div>
                     <div id="quill-editor" style="height: 180px; background: white; color: black; border-radius: 0 0 8px 8px;"></div>
-                    
                     <button id="btn-gravar-apontamento" class="primary-btn" style="width: 100%; margin-top: 15px; background-color: #e67e22;"><i class="fa-solid fa-save"></i> Gravar na Nuvem</button>
                 </div>
-
                 <h3 style="color: var(--primary-green); font-size: 1rem; margin-bottom: 15px;"><i class="fa-solid fa-folder-open"></i> Os Meus Resumos</h3>
                 <div id="lista-apontamentos-container">
                     <p class="text-muted" style="text-align:center;">A carregar resumos...</p>
