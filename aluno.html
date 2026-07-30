@@ -19,7 +19,7 @@
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 
-    <!-- Chart.js (Estatísticas e Gráficos) -->
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
@@ -64,6 +64,7 @@
                     </div>
                 </div>
 
+                <!-- PESQUISA UNIVERSAL -->
                 <div style="margin-bottom: 20px; position: relative;">
                     <div style="display:flex; align-items:center; background: var(--bg-card); border: 1px solid #333; border-radius: 20px; padding: 0 15px;">
                         <i class="fa-solid fa-magnifying-glass" style="color:var(--text-muted);"></i>
@@ -72,6 +73,7 @@
                     <div id="aluno-search-results" style="display:none; position:absolute; top:50px; left:0; width:100%; background:#222; border:1px solid #444; border-radius:12px; z-index:10; max-height:250px; overflow-y:auto; box-shadow: 0 5px 15px rgba(0,0,0,0.5); padding: 10px;"></div>
                 </div>
 
+                <!-- MODO ÉPOCA DE EXAMES -->
                 <div id="exam-mode-banner" style="display:none; background: linear-gradient(135deg, #8e2de2, #4a00e0); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 15px rgba(138, 43, 226, 0.3); border: 1px solid #9b59b6;">
                     <h3 style="margin-bottom: 5px; font-size: 1.2rem;"><i class="fa-solid fa-graduation-cap"></i> Época de Exames Ativada</h3>
                     <p style="font-size: 0.9rem; color: #e0e0e0; margin-bottom: 10px;">O Modo Foco está recomendado. Prepara-te!</p>
@@ -83,7 +85,7 @@
                     <div class="card"><p class="text-muted center">A preparar o teu assistente...</p></div>
                 </div>
 
-                <!-- ACESSO RÁPIDO -->
+                <!-- ACESSO RÁPIDO (Ícones Limpos) -->
                 <div class="lms-action-grid" style="margin-top: 20px;">
                     <button class="lms-btn" id="btn-open-study-mode" style="border-color:#9b59b6; color:#9b59b6; background: rgba(155, 89, 182, 0.05);">
                         <i class="fa-solid fa-stopwatch"></i><span>Modo Foco</span>
@@ -134,7 +136,8 @@
 
                 <div class="card" style="border-left: 4px solid var(--warning-yellow);">
                     <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-bullseye"></i> Metas Inteligentes</h3>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Escolhe a nota que queres atingir! A app verifica as tuas notas e dá-te <strong style="color:var(--warning-yellow);">+50 XP</strong> automaticamente quando a alcançares.</p>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Escolhe a nota alvo! A app dá-te <strong style="color:var(--warning-yellow);">+50 XP</strong> automaticamente quando a alcançares.</p>
+                    
                     <div style="display:flex; gap:10px; margin-bottom: 15px;">
                         <select id="obj-disciplina" style="flex:2; margin:0; padding:10px; font-size:0.9rem;"></select>
                         <input type="number" id="obj-nota-alvo" placeholder="Nota" style="flex:1; margin:0; padding:10px; font-size:0.9rem;" min="10" max="20">
@@ -166,17 +169,14 @@
                 <div class="class-header" style="margin-bottom: 10px;">
                     <button id="btn-voltar-notificacoes" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                 </div>
-                
+                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-bell"></i> Central de Alertas</h2>
                 <div class="filter-chips-container" id="notificacoes-filtros">
                     <div class="filter-chip active" data-cat="all">Todas</div>
                     <div class="filter-chip" data-cat="importante">Importantes</div>
                     <div class="filter-chip" data-cat="escola">Escola</div>
                     <div class="filter-chip" data-cat="gamificacao">Gamificação</div>
                 </div>
-
-                <div id="aluno-notificacoes-container">
-                    <p class="text-muted" style="text-align:center;">A carregar histórico...</p>
-                </div>
+                <div id="aluno-notificacoes-container"></div>
             </div>
 
             <!-- VISTA CADERNO DIGITAL -->
@@ -205,7 +205,6 @@
                         <h3 style="font-size: 1rem; margin-bottom: 10px; color: #e67e22;"><i class="fa-solid fa-camera"></i> Guardar Foto do Quadro</h3>
                         <input type="text" id="foto-titulo" placeholder="Título da Foto" style="width:100%; margin-bottom:15px; border-radius:8px; padding:10px;">
                         
-                        <!-- BOTÕES DE TIRAR FOTO VS GALERIA -->
                         <div style="display:flex; gap:10px; justify-content:center; margin-bottom:15px;">
                             <label for="upload-foto-quadro" class="primary-btn" style="background-color: #e67e22; width: auto; display: inline-block; cursor: pointer; padding: 10px 20px; flex:1;"><i class="fa-solid fa-images"></i> Galeria</label>
                             <input type="file" id="upload-foto-quadro" style="display:none;" accept="image/*">
@@ -250,7 +249,7 @@
                     <div class="filter-chip" data-cat="gamificacao">Gamificação</div>
                 </div>
 
-                <div id="aluno-caderneta-content"><p class="text-muted" style="text-align:center;">A carregar histórico...</p></div>
+                <div id="aluno-caderneta-content"><p class="text-muted" style="text-align:center;">A carregar...</p></div>
             </div>
 
             <!-- VISTA AÇÃO PRHF -->
@@ -263,8 +262,10 @@
                         <span>Data Limite: <strong id="prhf-acao-prazo" style="color:var(--warning-yellow);">...</strong></span>
                     </div>
                     
-                    <h4 style="font-size: 0.95rem; margin-bottom: 10px; color:var(--primary-green);">Proposta de Horas Presenciais</h4>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Indica o dia e o horário para validação do Professor.</p>
+                    <div id="prhf-docs-container"></div>
+                    
+                    <h4 style="font-size: 0.95rem; margin-bottom: 10px; margin-top: 15px; color:var(--primary-green);">Agendar Sessão Presencial</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Indica o dia e o horário para o Professor validar.</p>
                     
                     <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                         <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Data</label><input type="date" id="aluno-prhf-proposta-data" style="margin:0; width:100%;"></div>
@@ -274,7 +275,7 @@
                         <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Fim</label><input type="time" id="aluno-prhf-proposta-hora-fim" style="margin:0; width:100%;"></div>
                     </div>
                     
-                    <button id="btn-enviar-proposta-prhf" class="primary-btn" style="width:100%; background-color: var(--primary-green);">Enviar Proposta ao Professor</button>
+                    <button id="btn-enviar-proposta-prhf" class="primary-btn" style="width:100%; background-color: var(--primary-green);">Enviar Proposta</button>
                 </div>
             </div>
 
@@ -310,9 +311,9 @@
 
             <!-- VISTA FÓRUM -->
             <div id="view-aluno-forum" style="display: none;">
-                <div class="class-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                <div class="class-header" style="display:flex; flex-direction:column; align-items:flex-start; margin-bottom: 20px; gap: 15px;">
                     <h2 class="section-title" style="margin:0;"><i class="fa-solid fa-comments"></i> Fóruns</h2>
-                    <button id="btn-create-chat-aluno" class="primary-btn small-btn" style="background:var(--bg-dark); border:1px solid var(--primary-green); color:var(--primary-green);"><i class="fa-solid fa-plus"></i> Novo Chat</button>
+                    <button id="btn-create-chat-aluno" class="primary-btn" style="background:var(--bg-dark); border:1px dashed var(--primary-green); color:var(--primary-green); width: 100%;"><i class="fa-solid fa-plus"></i> Criar Novo Grupo de Estudo</button>
                 </div>
                 
                 <div id="aluno-forum-channel-list"></div>
@@ -390,22 +391,13 @@
                 </div>
             </div>
 
-            <!-- MODO FOCO -->
-            <div id="view-study-mode" style="display: none; flex-direction: column; align-items: center; justify-content: flex-start; height: 80vh; overflow-y:auto; padding-top: 20px;">
+            <!-- MODO FOCO (Reconstruído 30 Min e Sem quebrar) -->
+            <div id="view-study-mode" style="display: none; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 20px;">
                 <h2 style="color: #9b59b6; margin-bottom: 20px;"><i class="fa-solid fa-stopwatch"></i> Modo Foco</h2>
-                <div style="font-size: 5rem; font-weight: bold; font-family: monospace; color: white; margin-bottom: 20px;" id="study-timer-text">25:00</div>
+                <div style="font-size: 5rem; font-weight: bold; font-family: monospace; color: white; margin-bottom: 30px;" id="study-timer-text">30:00</div>
                 
-                <div id="pomodoro-music-container" style="margin-bottom: 20px; width: 100%; max-width: 350px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; border: 1px dashed #9b59b6;">
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px; text-align:center;">Cola aqui o link da tua playlist (Spotify ou YouTube) para estudares com música.</p>
-                    <div style="display:flex; gap:8px;">
-                        <input type="text" id="pomodoro-music-url" placeholder="https://open.spotify.com/..." style="margin:0; flex:1; padding:8px; font-size:0.8rem; border-radius:6px;">
-                        <button id="btn-load-music" class="secondary-btn small-btn" style="border-color:#9b59b6; color:#9b59b6;"><i class="fa-solid fa-play"></i></button>
-                    </div>
-                    <div id="music-player-frame" style="margin-top: 15px; display: none; width: 100%; border-radius: 8px; overflow:hidden;"></div>
-                </div>
-
                 <div id="study-controls" style="text-align: center; width:100%; max-width: 350px;">
-                    <button id="btn-start-study" class="primary-btn" style="background-color: #9b59b6; font-size: 1.2rem; padding: 15px 40px; border-radius: 30px; display: inline-block;"><i class="fa-solid fa-play"></i> Iniciar</button>
+                    <button id="btn-start-study" class="primary-btn" style="background-color: #9b59b6; font-size: 1.2rem; padding: 15px 40px; border-radius: 30px; display: inline-block;"><i class="fa-solid fa-play"></i> Iniciar Pomodoro</button>
                     <button id="btn-stop-study" class="danger-btn" style="display: none; font-size: 1.2rem; padding: 15px 40px; border-radius: 30px; margin: 0 auto;"><i class="fa-solid fa-stop"></i> Parar</button>
                     <br><button id="btn-voltar-study" class="secondary-btn" style="margin-top: 20px; border: none; width: auto; margin-left: auto; margin-right: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                 </div>
@@ -429,7 +421,7 @@
         </nav>
     </div>
 
-    <!-- SCRIPT ÚNICO -->
+    <!-- SCRIPT ÚNICO CONSOLIDADO E OTIMIZADO -->
     <script type="module" src="./js/aluno-app.js"></script>
 </body>
 </html>
