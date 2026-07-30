@@ -76,7 +76,7 @@
                     <div id="aluno-search-results" style="display:none; position:absolute; top:50px; left:0; width:100%; background:#222; border:1px solid #444; border-radius:12px; z-index:10; max-height:250px; overflow-y:auto; box-shadow: 0 5px 15px rgba(0,0,0,0.5); padding: 10px;"></div>
                 </div>
 
-                <!-- MODO ÉPOCA DE EXAMES -->
+                <!-- MODO ÉPOCA DE EXAMES (Aparece via JS) -->
                 <div id="exam-mode-banner" style="display:none; background: linear-gradient(135deg, #8e2de2, #4a00e0); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 15px rgba(138, 43, 226, 0.3); border: 1px solid #9b59b6;">
                     <h3 style="margin-bottom: 5px; font-size: 1.2rem;"><i class="fa-solid fa-graduation-cap"></i> Época de Exames Ativada</h3>
                     <p style="font-size: 0.9rem; color: #e0e0e0; margin-bottom: 10px;">O Modo Foco está recomendado. Prepara-te!</p>
@@ -179,10 +179,10 @@
 
             <!-- VISTA CENTRO DE NOTIFICAÇÕES -->
             <div id="view-aluno-notificacoes" style="display: none;">
-                <div class="class-header">
-                    <button id="btn-voltar-notificacoes" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Início</button>
-                    <h2 class="section-title"><i class="fa-solid fa-bell"></i> Centro de Alertas</h2>
+                <div class="class-header" style="margin-bottom: 10px;">
+                    <button id="btn-voltar-notificacoes" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                 </div>
+                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-bell"></i> Central de Alertas</h2>
                 
                 <div class="filter-chips-container" id="notificacoes-filtros">
                     <div class="filter-chip active" data-cat="all">Todas</div>
@@ -198,10 +198,11 @@
 
             <!-- VISTA CADERNO DIGITAL -->
             <div id="view-aluno-caderno" style="display: none;">
-                <div class="class-header">
-                    <button id="btn-voltar-caderno" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Início</button>
-                    <h2 class="section-title"><i class="fa-solid fa-book"></i> Caderno Digital</h2>
+                <div class="class-header" style="margin-bottom: 10px;">
+                    <button id="btn-voltar-caderno" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                 </div>
+                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-book"></i> Caderno Digital</h2>
+                
                 <div class="card" style="margin-bottom: 20px; padding: 15px;">
                     <h3 style="font-size: 1rem; margin-bottom: 10px;">Criar Novo Resumo</h3>
                     <div class="form-group"><input type="text" id="caderno-titulo" placeholder="Título (ex: Resumo de História)" class="input-padrao" style="width:100%; margin-bottom:10px;"></div>
@@ -214,19 +215,21 @@
 
             <!-- VISTA SUMÁRIOS -->
             <div id="view-aluno-sumarios" style="display: none;">
-                <div class="class-header">
-                    <button id="btn-voltar-sumarios" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Início</button>
-                    <h2 class="section-title"><i class="fa-solid fa-book-open"></i> Sumários</h2>
+                <div class="class-header" style="margin-bottom: 10px;">
+                    <button id="btn-voltar-sumarios" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                 </div>
+                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-book-open"></i> Sumários</h2>
+                
                 <div style="margin-bottom:15px;"><select id="aluno-filtro-sumarios-disc" style="margin:0; padding:8px;"><option value="">Todas as Disciplinas</option></select></div>
                 <div id="aluno-lista-sumarios-container"><p class="text-muted" style="text-align:center;">A procurar materiais...</p></div>
             </div>
 
             <!-- VISTA CADERNETA E LINHA TEMPORAL -->
             <div id="view-aluno-caderneta" style="display: none;">
-                <div class="class-header"><h2 class="section-title">Minha Caderneta</h2></div>
+                <!-- TÍTULO REMOVIDO COMO PEDIDO -->
+                
                 <div class="falta-tabs" style="display:flex; flex-wrap:wrap; gap:5px; justify-content:center; margin-bottom: 15px;">
-                    <button class="falta-tab-btn active" id="tab-aluno-timeline" style="flex: 1 1 100%; border-color: var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-clock-rotate-left"></i> Linha Temporal</button>
+                    <button class="falta-tab-btn active" id="tab-aluno-timeline" style="flex: 1 1 100%; border-color: var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-clock-rotate-left"></i> Histórico</button>
                     <button class="falta-tab-btn" id="tab-aluno-notas" style="flex: 1 1 30%;">Notas</button>
                     <button class="falta-tab-btn" id="tab-aluno-faltas" style="flex: 1 1 30%;">Faltas</button>
                     <button class="falta-tab-btn" id="tab-aluno-prhfs" style="flex: 1 1 30%;">PRHFs</button>
@@ -246,25 +249,10 @@
                 <div id="aluno-caderneta-content"><p class="text-muted" style="text-align:center;">A carregar histórico...</p></div>
             </div>
 
-            <!-- VISTA JUSTIFICAR (NOVO) -->
-            <div id="view-aluno-justificar" style="display: none;">
-                <div class="class-header" style="margin-bottom: 15px;"><button id="btn-voltar-justificar" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
-                <div class="card" style="margin-bottom: 20px;">
-                    <h3 style="margin-bottom: 15px; font-size: 1rem;"><i class="fa-solid fa-cloud-arrow-up"></i> Enviar Comprovativo</h3>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Tira uma foto do atestado para justificar ausências.</p>
-                    <div style="background:var(--bg-dark); padding:20px; border-radius:8px; border:1px dashed #555; text-align:center; margin-bottom:15px;">
-                        <label for="aluno-upload-atestado" class="secondary-btn" style="margin:0 auto; width:fit-content; border-color: var(--success-green); color: var(--success-green); cursor: pointer;"><i class="fa-solid fa-camera"></i> Anexar Foto</label>
-                        <input type="file" id="aluno-upload-atestado" style="display:none;" accept="image/*,.pdf">
-                        <span id="aluno-atestado-file-name" class="file-name-display" style="display:block; margin-top:10px; font-size:0.85rem; color:white;"></span>
-                    </div>
-                    <textarea id="aluno-atestado-obs" class="input-field" placeholder="Observações (Opcional)" style="min-height: 80px; margin-bottom: 15px;"></textarea>
-                    <button id="btn-aluno-enviar-atestado" class="primary-btn" style="width:100%; background-color: var(--success-green); display:none;"><i class="fa-solid fa-paper-plane"></i> Enviar Atestado</button>
-                </div>
-            </div>
-
-            <!-- VISTA AÇÃO PRHF (NOVO) -->
+            <!-- VISTA AÇÃO PRHF (INTERATIVIDADE) -->
             <div id="view-aluno-acao-prhf" style="display: none;">
-                <div class="class-header" style="margin-bottom: 15px;"><button id="btn-voltar-acao-prhf" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
+                <div class="class-header" style="margin-bottom: 10px;"><button id="btn-voltar-acao-prhf" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar aos Planos</button></div>
+                
                 <div class="card" style="margin-bottom: 20px; border-left: 4px solid var(--warning-yellow);">
                     <h3 style="margin-bottom: 5px; font-size: 1.1rem; color: white;" id="prhf-acao-titulo">Disciplina (Módulo)</h3>
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;" id="prhf-acao-desc">A carregar detalhes...</p>
@@ -274,17 +262,24 @@
                     </div>
                     
                     <h4 style="font-size: 0.95rem; margin-bottom: 10px; color:var(--primary-green);">Proposta de Horas Presenciais</h4>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Indica os dias e blocos em que podes realizar o PRHF.</p>
-                    <textarea id="aluno-prhf-proposta-txt" class="input-field" placeholder="Ex: Posso realizar às terças à tarde e quintas de manhã..." style="min-height: 80px; margin-bottom: 15px;"></textarea>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Indica o dia e a hora em que pretendes realizar a sessão para validação do Professor.</p>
+                    
+                    <!-- Substituído textarea por Data/Hora como pedido -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <input type="date" id="aluno-prhf-proposta-data" style="margin:0; flex: 1;">
+                        <input type="time" id="aluno-prhf-proposta-hora" style="margin:0; flex: 1;">
+                    </div>
+                    
                     <button id="btn-enviar-proposta-prhf" class="primary-btn" style="width:100%; background-color: var(--primary-green);"><i class="fa-solid fa-paper-plane"></i> Enviar Proposta ao DT</button>
                 </div>
             </div>
 
             <!-- VISTA AGENDA / HORÁRIO -->
             <div id="view-aluno-agenda" style="display: none;">
-                <div class="class-header"><h2 class="section-title">Minha Agenda</h2></div>
-                <div class="falta-tabs">
-                    <button class="falta-tab-btn active" id="tab-aluno-eventos">Testes / Eventos</button>
+                <!-- TÍTULO REMOVIDO COMO PEDIDO -->
+                
+                <div class="falta-tabs" style="margin-bottom: 15px;">
+                    <button class="falta-tab-btn active" id="tab-aluno-eventos">Calendário</button>
                     <button class="falta-tab-btn" id="tab-aluno-horario">Horário</button>
                 </div>
                 
@@ -295,7 +290,7 @@
                     <label class="agenda-filter-label"><input type="checkbox" id="aluno-filtro-agenda-outros" checked> <span style="color:#b82bf2;">●</span> Outros</label>
                 </div>
                 
-                <!-- Grelha do Horário (Escondida por defeito) -->
+                <!-- Grelha do Horário (Escondida por defeito, encolhida) -->
                 <div id="aluno-horario-container" style="display:none;">
                     <div class="falta-tabs" style="margin-bottom: 15px;">
                         <button class="falta-tab-btn active" id="btn-aluno-horario-dia">Vista Diária</button>
@@ -308,28 +303,30 @@
                     </div>
                 </div>
 
-                <div id="aluno-agenda-content" style="margin-top:20px; overflow-x: auto;">
+                <div id="aluno-agenda-content" style="margin-top:10px; overflow-x: auto;">
                     <p class="text-muted" style="text-align:center;">A carregar dados...</p>
                 </div>
             </div>
 
-            <!-- VISTA FÓRUM -->
+            <!-- VISTA FÓRUM (CANAIS MÁGICOS DA TURMA E DISCIPLINAS) -->
             <div id="view-aluno-forum" style="display: none;">
-                <div class="class-header" style="display:flex; justify-content:space-between; align-items:center;">
-                    <h2 class="section-title" style="margin:0;">Os Meus Canais</h2>
+                <div class="class-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                    <h2 class="section-title" style="margin:0;"><i class="fa-solid fa-comments"></i> Fóruns</h2>
                     <button id="btn-create-chat-aluno" class="primary-btn small-btn" style="background:var(--bg-dark); border:1px solid var(--primary-green); color:var(--primary-green);"><i class="fa-solid fa-plus"></i> Novo</button>
                 </div>
+                
                 <div id="aluno-forum-channel-list">
-                    <p class="text-muted" style="text-align:center;">A carregar fóruns...</p>
+                    <p class="text-muted" style="text-align:center;">A carregar canais da escola...</p>
                 </div>
+
                 <div id="aluno-forum-chat-view" style="display:none; flex-direction:column; height:70vh; background:var(--bg-card); border-radius:12px; border:1px solid #333; overflow:hidden;">
                     <div style="background:#222; padding:15px; display:flex; align-items:center; gap:10px; border-bottom:1px solid #333;">
                         <button id="btn-aluno-voltar-canais" class="secondary-btn small-btn" style="padding:5px 10px; width:auto; border:none;"><i class="fa-solid fa-arrow-left"></i></button>
-                        <h3 id="aluno-chat-active-title" style="color:var(--primary-green); font-size:1.1rem; margin:0; flex:1;">...</h3>
+                        <h3 id="aluno-chat-active-title" style="color:white; font-size:1.1rem; margin:0; flex:1;">...</h3>
                     </div>
                     <div class="forum-messages" id="aluno-chat-messages-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:15px;"></div>
                     <div class="forum-input-area" style="background:#1a1a1a; padding:10px; border-top:1px solid #333; display:flex; gap:8px; align-items:center;">
-                        <input type="text" id="aluno-input-forum-msg" placeholder="Escreve aqui..." style="margin:0; flex:1; border-radius:20px; padding:10px 15px;">
+                        <input type="text" id="aluno-input-forum-msg" placeholder="Escreve a tua mensagem..." style="margin:0; flex:1; border-radius:20px; padding:10px 15px;">
                         <button id="btn-aluno-send-msg" class="forum-send-btn" style="width:40px; height:40px;"><i class="fa-solid fa-paper-plane"></i></button>
                     </div>
                 </div>
@@ -337,7 +334,9 @@
 
             <!-- VISTA PASSAPORTE (INTERATIVA) -->
             <div id="view-aluno-passaporte" style="display: none;">
-                <div class="class-header"><button id="btn-voltar-passaporte" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Início</button><h2 class="section-title"><i class="fa-solid fa-passport"></i> Passaporte</h2></div>
+                <div class="class-header" style="margin-bottom: 10px;"><button id="btn-voltar-passaporte" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
+                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-passport"></i> Passaporte</h2>
+                
                 <div id="sec-aluno-fct">
                     <h3 style="color: var(--primary-green); font-size: 1rem; margin-bottom: 15px;"><i class="fa-solid fa-briefcase"></i> FCT (Estágio)</h3>
                     <div class="card">
