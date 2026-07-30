@@ -12,9 +12,9 @@ const ordemDisciplinasGlobal = ['PORT', 'ING', 'AI', 'EF', 'TIC', 'GEO', 'HCA', 
 
 try {
     await enableIndexedDbPersistence(db);
-    console.log("Modo Offline ativado com sucesso!");
+    console.log("Modo Offline ativado.");
 } catch (err) {
-    console.warn("Modo Offline não suportado pelo browser ou múltiplos separadores abertos.");
+    console.warn("Modo Offline indisponível.");
 }
 
 let myUserId = "";
@@ -47,7 +47,7 @@ onAuthStateChanged(auth, async (user) => {
                 carregarDadosPassaporte(dados);
                 carregarGamificacao(dados);
                 
-                // Chamada forçada após carregar os dados
+                // MÓDULO DASHBOARD ADAPTATIVO
                 await construirHomeAdaptativa(dados);
                 
                 const timelineEvents = await obterEventosLinhaTemporal();
@@ -86,23 +86,27 @@ document.getElementById('btn-logout-aluno')?.addEventListener('click', () => { s
 async function construirHomeAdaptativa(dadosAluno) {
     const container = document.getElementById('dynamic-hero-section');
     if(!container) return;
+    container.innerHTML = '<p class="text-muted center">A analisar o teu percurso...</p>';
 
     let temFaltas = 0; let eventosBreves = []; let prhfsAtivos = 0;
     try {
         const faltasSnap = await getDocs(collection(db, "utilizadores", myUserId, "faltas"));
         faltasSnap.forEach(d => { const f = d.data(); if (!f.justificada && !f.comprovativoEnviado) temFaltas++; });
 
-        const evSnap = await getDocs(collection(db, "eventos"));
-        const hoje = new Date(); const daquiA7Dias = new Date(); daquiA7Dias.setDate(hoje.getDate() + 7);
-        const hojeISO = hoje.toISOString().split('T')[0]; const limiteISO = daquiA7Dias.toISOString().split('T')[0];
-        
-        evSnap.forEach(d => {
-            const e = d.data();
-            if (e.data >= hojeISO && e.data <= limiteISO && ['teste','avaliacao','entrega','trabalho'].includes(e.tipo)) {
-                eventosBreves.push(e);
-            }
-        });
-        eventosBreves.sort((a,b) => a.data.localeCompare(b.data));
+        // CORREÇÃO: Ler os eventos na pasta da Turma
+        if (minhaTurma) {
+            const evSnap = await getDocs(collection(db, "turmas", minhaTurma, "eventos"));
+            const hoje = new Date(); const daquiA7Dias = new Date(); daquiA7Dias.setDate(hoje.getDate() + 7);
+            const hojeISO = hoje.toISOString().split('T')[0]; const limiteISO = daquiA7Dias.toISOString().split('T')[0];
+            
+            evSnap.forEach(d => {
+                const e = d.data();
+                if (e.data >= hojeISO && e.data <= limiteISO && ['teste','avaliacao','entrega','trabalho'].includes(e.tipo)) {
+                    eventosBreves.push(e);
+                }
+            });
+            eventosBreves.sort((a,b) => a.data.localeCompare(b.data));
+        }
 
         const prhfSnap = await getDocs(collection(db, "utilizadores", myUserId, "prhfs"));
         prhfSnap.forEach(d => { if (d.data().status !== 'concluida') prhfsAtivos++; });
@@ -185,7 +189,6 @@ async function construirHomeAdaptativa(dadosAluno) {
             }
         }
 
-        // INJETA O CONTEÚDO TODO
         container.innerHTML = heroHTML + secundariosHTML;
 
         // Ativar cliques no Humor Dinâmico
@@ -209,7 +212,10 @@ async function construirHomeAdaptativa(dadosAluno) {
                 });
             });
         }
-    } catch(e) { console.error("Erro ao gerar dashboard", e); }
+    } catch(e) { 
+        console.error("Erro ao gerar dashboard", e); 
+        container.innerHTML = '<p class="text-danger center">Ocorreu um erro a preparar a Home.</p>';
+    }
 }
 
 // ----------------------------------------------------
@@ -301,7 +307,10 @@ navItems.forEach(item => {
         if(targetView) targetView.style.display = 'block';
 
         if(targetId === 'view-aluno-perfil') { 
-            carregarObjetivosPessoais(); renderizarGraficoNotas(); carregarHistoricoHumor(); carregarEstatisticasEstudo();
+            carregarObjetivosPessoais(); 
+            carregarHistoricoHumor(); 
+            carregarEstatisticasEstudo();
+            renderizarGraficoNotas(); // Chamada do Gráfico
         }
         if(targetId === 'view-aluno-caderneta') { ativarTab(tabTimeline, ['tab-aluno-notas', 'tab-aluno-faltas', 'tab-aluno-prhfs', 'tab-aluno-comportamento', 'tab-aluno-observacoes'], true); carregarTimelineAluno(); }
         if(targetId === 'view-aluno-agenda') { document.getElementById('tab-aluno-eventos').click(); }
@@ -312,6 +321,171 @@ navItems.forEach(item => {
 document.getElementById('btn-open-notificacoes')?.addEventListener('click', () => { esconderTodasAsVistas(); navItems.forEach(nav => nav.classList.remove('active')); document.getElementById('view-aluno-notificacoes').style.display = 'block'; carregarNotificacoesAluno(); });
 document.querySelectorAll('#btn-voltar-notificacoes').forEach(btn => {
     btn?.addEventListener('click', () => { esconderTodasAsVistas(); document.querySelector('.nav-item[data-target="student-dashboard"]').classList.add('active'); document.getElementById('student-dashboard').style.display = 'block'; });
+});
+
+// ----------------------------------------------------
+// OBJETIVOS PESSOAIS (PERFIL)
+// ----------------------------------------------------
+async function carregarObjetivosPessoais() {
+    const cont = document.getElementById('lista-objetivos-container'); cont.innerHTML = '<p class="text-muted center">A carregar os teus objetivos...</p>';
+    try {
+        const snap = await getDocs(query(collection(db, "utilizadores", myUserId, "objetivos"), orderBy("timestamp", "desc")));
+        let html = '';
+        snap.forEach(d => {
+            const obj = d.data(); const checkColor = obj.concluido ? 'var(--success-green)' : '#444';
+            const textDec = obj.concluido ? 'line-through' : 'none'; const textColor = obj.concluido ? 'var(--text-muted)' : 'white';
+            html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left: 3px solid ${checkColor};">
+                        <div style="display:flex; align-items:center; gap:12px; flex:1;">
+                            <div onclick="toggleObjetivo('${d.id}', ${!obj.concluido})" style="width:24px; height:24px; border-radius:50%; border:2px solid ${checkColor}; background:${obj.concluido ? checkColor : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                                ${obj.concluido ? '<i class="fa-solid fa-check" style="color:var(--bg-dark); font-size:0.75rem;"></i>' : ''}
+                            </div>
+                            <span style="text-decoration:${textDec}; color:${textColor}; font-size:0.95rem; flex:1;">${obj.texto}</span>
+                        </div>
+                        <i class="fa-solid fa-trash" style="color:var(--danger-red); cursor:pointer; font-size:0.9rem; padding: 5px;" onclick="apagarObjetivo('${d.id}')"></i>
+                     </div>`;
+        });
+        if(html==='') html = '<p class="text-muted center" style="font-size:0.85rem;">Não tens metas ativas. Começa a desafiar-te!</p>';
+        cont.innerHTML = html;
+    } catch(e) {}
+}
+
+document.getElementById('btn-add-objetivo')?.addEventListener('click', async () => {
+    const val = document.getElementById('input-novo-objetivo').value.trim(); if(!val) return;
+    try { await addDoc(collection(db, "utilizadores", myUserId, "objetivos"), { texto: val, concluido: false, timestamp: Date.now() }); document.getElementById('input-novo-objetivo').value = ''; carregarObjetivosPessoais(); } catch(e) {}
+});
+
+window.toggleObjetivo = async (id, status) => {
+    try {
+        await updateDoc(doc(db, "utilizadores", myUserId, "objetivos", id), { concluido: status });
+        if(status) {
+            const snap = await getDoc(doc(db, "utilizadores", myUserId)); let xp = snap.exists() && snap.data().xp ? snap.data().xp : 0;
+            await updateDoc(doc(db, "utilizadores", myUserId), { xp: xp + 50 }); carregarGamificacao({xp: xp+50}); alert("🎯 Objetivo alcançado! +50 XP!");
+        }
+        carregarObjetivosPessoais();
+    } catch(e) {}
+};
+window.apagarObjetivo = async (id) => { if(confirm("Queres mesmo eliminar este objetivo?")) { try { await deleteDoc(doc(db, "utilizadores", myUserId, "objetivos", id)); carregarObjetivosPessoais(); } catch(e) {} } };
+
+// ----------------------------------------------------
+// ESTATÍSTICAS E GRÁFICOS (CHART.JS) NO PERFIL - CORRIGIDO
+// ----------------------------------------------------
+let chartInstance = null;
+function renderizarGraficoNotas() {
+    const ctx = document.getElementById('chart-notas-aluno'); 
+    if(!ctx) return;
+
+    // Atraso mágico de 150ms para garantir que a div "view-aluno-perfil" não está em display:none
+    setTimeout(async () => {
+        try {
+            const notasDb = await getDocs(collection(db, "utilizadores", myUserId, "notas"));
+            let mapNotas = {};
+            notasDb.forEach(d => {
+                const n = d.data();
+                if(n.nota !== 'REP' && !isNaN(n.nota)) {
+                    if(!mapNotas[n.disciplina]) mapNotas[n.disciplina] = { soma: 0, cont: 0 };
+                    mapNotas[n.disciplina].soma += Number(n.nota); mapNotas[n.disciplina].cont++;
+                }
+            });
+            
+            let labels = []; let data = []; let bgColors = [];
+            Object.keys(mapNotas).forEach(disc => {
+                labels.push(disc); const media = (mapNotas[disc].soma / mapNotas[disc].cont).toFixed(1);
+                data.push(media); bgColors.push(media >= 10 ? '#00cc88' : '#ff4d4d'); 
+            });
+
+            if(labels.length === 0) { labels = ["Sem Dados"]; data = [0]; bgColors = ["#333"]; }
+            
+            if(chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, { 
+                type: 'bar', 
+                data: { labels: labels, datasets: [{ label: 'Média Atual', data: data, backgroundColor: bgColors, borderRadius: 6 }] }, 
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 20, ticks: { color: '#a0a0a0', stepSize: 5 }, grid: { color: '#333' } }, x: { ticks: { color: '#e0e0e0', font: { size: 10 } }, grid: { display: false } } }, plugins: { legend: { display: false } } } 
+            });
+        } catch(e) { console.error("Erro no gráfico Chart.js:", e); }
+    }, 150);
+}
+
+document.getElementById('btn-view-mood-history')?.addEventListener('click', carregarHistoricoHumor);
+async function carregarHistoricoHumor() {
+    if(!myUserId) return; const cont = document.getElementById('mood-history-container'); cont.innerHTML = '<p class="text-muted center" style="font-size: 0.85rem;">A atualizar...</p>';
+    try {
+        const res = await getDocs(query(collection(db, "utilizadores", myUserId, "humor"), orderBy("timestamp", "desc")));
+        let html = '<div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:10px;">';
+        res.forEach(d => { const h = d.data(); const ptDate = h.dataIso.split('-').reverse().slice(0,2).join('/'); html += `<div style="text-align:center; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px; min-width:60px;"><div style="font-size:1.8rem;">${h.humor}</div><div style="font-size:0.7rem; color:var(--text-muted); margin-top:5px;">${ptDate}</div></div>`; });
+        html += '</div>'; if(res.empty) html = '<p class="text-muted center" style="font-size:0.85rem; margin:0;">Ainda não tens registos.</p>'; cont.innerHTML = html;
+    } catch(e) { cont.innerHTML = '<p class="text-danger center">Erro.</p>'; }
+}
+
+// ----------------------------------------------------
+// PESQUISA UNIVERSAL INTELIGENTE
+// ----------------------------------------------------
+document.getElementById('aluno-search-input')?.addEventListener('input', async (e) => {
+    const termo = e.target.value.toLowerCase().trim(); const box = document.getElementById('aluno-search-results');
+    if(termo.length < 2) { box.style.display = 'none'; return; } box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">A procurar...</p>'; box.style.display = 'block';
+    try {
+        let resultados = []; const resumosDb = await getDocs(query(collection(db, "utilizadores", myUserId, "apontamentos")));
+        resumosDb.forEach(d => { const data = d.data(); if(data.titulo && data.titulo.toLowerCase().includes(termo)) { resultados.push({ tipo: 'O Meu Resumo', texto: data.titulo, target: 'view-aluno-caderno' }); } });
+        if (minhaTurma) { const sumariosDb = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); sumariosDb.forEach(d => { const data = d.data(); if(data.titulo && data.titulo.toLowerCase().includes(termo) || (data.disciplina && data.disciplina.toLowerCase().includes(termo))) { resultados.push({ tipo: `Sumário - ${data.disciplina}`, texto: data.titulo, target: 'view-aluno-sumarios' }); } }); }
+        if(resultados.length === 0) { box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">Nenhum resultado encontrado.</p>'; } 
+        else { let html = ''; resultados.forEach(r => { html += `<div style="padding: 8px; border-bottom: 1px solid #333; cursor: pointer;" onclick="document.querySelector('.nav-item[data-target=\\'${r.target}\\']').click(); document.getElementById('aluno-search-results').style.display='none'; document.getElementById('aluno-search-input').value='';"><span style="font-size:0.7rem; color:var(--primary-green); text-transform:uppercase;">${r.tipo}</span><div style="font-size:0.9rem; color:white; margin-top:3px;">${r.texto}</div></div>`; }); box.innerHTML = html; }
+    } catch(err) { box.innerHTML = '<p class="text-danger" style="margin:0;">Erro na pesquisa.</p>'; }
+});
+document.addEventListener('click', (e) => { if (!e.target.closest('#aluno-search-input') && !e.target.closest('#aluno-search-results')) { document.getElementById('aluno-search-results').style.display = 'none'; } });
+
+// ----------------------------------------------------
+// PASSAPORTE FCT & PAP
+// ----------------------------------------------------
+document.getElementById('btn-abrir-passaporte')?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); esconderTodasAsVistas(); document.getElementById('view-aluno-passaporte').style.display = 'block'; });
+document.getElementById('btn-voltar-passaporte')?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); document.querySelector('.nav-item[data-target="student-dashboard"]').classList.add('active'); esconderTodasAsVistas(); document.getElementById('student-dashboard').style.display = 'block'; });
+
+function carregarDadosPassaporte(dados) {
+    const anoMatch = (dados.turma || "").match(/\d+/); const ano = anoMatch ? parseInt(anoMatch[0]) : 0;
+    if (ano === 10) { document.getElementById('btn-abrir-passaporte').style.display = 'none'; } 
+    else { document.getElementById('btn-abrir-passaporte').style.display = 'flex'; document.getElementById('btn-open-sumarios').style.display = 'flex';
+        if (ano === 11) document.getElementById('sec-aluno-pap').style.display = 'none'; else document.getElementById('sec-aluno-pap').style.display = 'block';
+    }
+    if(dados.fct) { const hr = dados.fct.horasRealizadas !== undefined ? Number(dados.fct.horasRealizadas) : 0; const ht = dados.fct.horasTotal !== undefined ? Number(dados.fct.horasTotal) : '-'; document.getElementById('aluno-fct-horas').innerText = ht !== '-' ? `${hr} / ${ht}h` : `${hr}h registadas`; let percFCT = ht !== '-' && ht > 0 ? (hr / ht) * 100 : 0; document.getElementById('aluno-fct-progress').style.width = `${Math.min(percFCT, 100)}%`; document.getElementById('input-fct-horas').value = hr > 0 ? hr : ''; }
+    if(dados.pap) { document.getElementById('input-pap-tema').value = dados.pap.tema || ''; }
+    if (dados.papFicheiroEnviado) document.getElementById('aluno-pap-file-name').innerText = "Ficheiro na posse da escola.";
+}
+
+document.getElementById('btn-save-fct')?.addEventListener('click', async (e) => { if(!myUserId) return; const inputVal = document.getElementById('input-fct-horas').value.trim(); if(inputVal === '') return; const btn = e.currentTarget; const iconOriginal = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "fct.horasRealizadas": inputVal }); btn.style.background = 'var(--success-green)'; btn.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { btn.style.background = 'var(--primary-green)'; btn.innerHTML = iconOriginal; btn.disabled = false; }, 2000); } catch(err) { btn.innerHTML = 'Erro'; setTimeout(() => { btn.innerHTML = iconOriginal; btn.disabled = false; }, 2000); } });
+document.getElementById('btn-save-pap-tema')?.addEventListener('click', async (e) => { if(!myUserId) return; const inputVal = document.getElementById('input-pap-tema').value.trim(); if(!inputVal) return; const btn = e.currentTarget; const iconOriginal = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "pap.tema": inputVal }); btn.style.background = 'var(--success-green)'; btn.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { btn.style.background = 'var(--primary-green)'; btn.innerHTML = iconOriginal; btn.disabled = false; }, 2000); } catch(err) { btn.innerHTML = 'Erro'; setTimeout(() => { btn.innerHTML = iconOriginal; btn.disabled = false; }, 2000); } });
+
+let ficheiroPapBase64 = "";
+document.getElementById('aluno-upload-pap')?.addEventListener('change', async (e) => { let file = e.target.files[0]; if(!file) return; if (file.type.startsWith('image/')) { const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1920, useWebWorker: true }; try { file = await imageCompression(file, options); } catch (err) {} } else { if(file.size > 2097152) { alert("O ficheiro excede os 2MB limite."); return; } } document.getElementById('aluno-pap-file-name').innerText = file.name; document.getElementById('aluno-pap-file-name').style.color = "var(--warning-yellow)"; document.getElementById('btn-enviar-pap').style.display = 'block'; const reader = new FileReader(); reader.onload = (ev) => { ficheiroPapBase64 = ev.target.result; }; reader.readAsDataURL(file); });
+document.getElementById('btn-enviar-pap')?.addEventListener('click', async (e) => { if(!ficheiroPapBase64 || !myUserId) return; const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A enviar...'; btnRef.disabled = true; try { const docSnap = await getDoc(doc(db, "utilizadores", myUserId)); let atualXp = docSnap.exists() && docSnap.data().xp ? docSnap.data().xp : 0; await updateDoc(doc(db, "utilizadores", myUserId), { papFicheiroEnviado: true, papFicheiroBase64: ficheiroPapBase64, papDataEnvio: new Date().toISOString(), xp: atualXp + 200 }); btnRef.style.backgroundColor = "var(--success-green)"; btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Submetido (+200 XP!)'; carregarGamificacao({xp: atualXp + 200}); setTimeout(() => { btnRef.style.display = 'none'; btnRef.disabled = false; btnRef.style.backgroundColor = "var(--primary-green)"; btnRef.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submeter à Escola'; document.getElementById('aluno-pap-file-name').innerText = "Ficheiro na posse da escola."; document.getElementById('aluno-pap-file-name').style.color = "var(--success-green)"; }, 3000); } catch(err) { btnRef.innerHTML = "Erro!"; setTimeout(() => { btnRef.disabled = false; btnRef.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submeter à Escola'; }, 2000); } });
+
+// ----------------------------------------------------
+// MODO FOCO & DIÁRIO DE ESTUDO
+// ----------------------------------------------------
+let pomodoroTimer; let pomodoroRestante = 25 * 60; 
+document.getElementById('btn-open-study-mode')?.addEventListener('click', () => { esconderTodasAsVistas(); navItems.forEach(nav => nav.classList.remove('active')); document.getElementById('view-study-mode').style.display = 'flex'; });
+document.getElementById('btn-voltar-study')?.addEventListener('click', () => { esconderTodasAsVistas(); document.querySelector('.nav-item[data-target="student-dashboard"]').classList.add('active'); document.getElementById('student-dashboard').style.display = 'block'; document.getElementById('post-study-log').style.display = 'none'; document.getElementById('study-controls').style.display = 'block'; });
+
+document.getElementById('btn-start-study')?.addEventListener('click', (e) => {
+    e.currentTarget.style.display = 'none'; document.getElementById('btn-stop-study').style.display = 'inline-block';
+    pomodoroTimer = setInterval(() => {
+        pomodoroRestante--;
+        const m = Math.floor(pomodoroRestante / 60).toString().padStart(2, '0'); const s = (pomodoroRestante % 60).toString().padStart(2, '0');
+        document.getElementById('study-timer-text').innerText = `${m}:${s}`;
+        if(pomodoroRestante <= 0) { clearInterval(pomodoroTimer); document.getElementById('study-controls').style.display = 'none'; document.getElementById('post-study-log').style.display = 'block'; }
+    }, 1000);
+});
+
+document.getElementById('btn-stop-study')?.addEventListener('click', resetPomodoro);
+function resetPomodoro() { clearInterval(pomodoroTimer); pomodoroRestante = 25 * 60; document.getElementById('study-timer-text').innerText = "25:00"; document.getElementById('btn-stop-study').style.display = 'none'; document.getElementById('btn-start-study').style.display = 'inline-block'; }
+
+document.getElementById('btn-save-study-log')?.addEventListener('click', async (e) => {
+    const texto = document.getElementById('study-log-text').value.trim(); if(!texto || !myUserId) return;
+    const btn = e.currentTarget; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A guardar...'; btn.disabled = true;
+    try {
+        const docSnap = await getDoc(doc(db, "utilizadores", myUserId)); let atualXp = docSnap.exists() && docSnap.data().xp ? docSnap.data().xp : 0;
+        await addDoc(collection(db, "utilizadores", myUserId, "estudos"), { texto: texto, data: new Date().toISOString() });
+        await updateDoc(doc(db, "utilizadores", myUserId), { xp: atualXp + 50 });
+        btn.style.backgroundColor = "var(--success-green)"; btn.innerHTML = '<i class="fa-solid fa-check"></i> Feito! +50 XP'; carregarGamificacao({xp: atualXp + 50});
+        setTimeout(() => { document.getElementById('study-log-text').value = ''; document.getElementById('post-study-log').style.display = 'none'; document.getElementById('study-controls').style.display = 'block'; btn.innerHTML = '<i class="fa-solid fa-save"></i> Guardar e Ganhar XP'; btn.style.backgroundColor = "var(--success-green)"; btn.disabled = false; resetPomodoro(); document.getElementById('btn-voltar-study').click(); }, 2000);
+    } catch(err) { btn.innerHTML = "Erro!"; setTimeout(() => { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-save"></i> Guardar e Ganhar XP'; }, 2000); }
 });
 
 // ----------------------------------------------------
@@ -439,7 +613,7 @@ async function carregarFaltasAluno() {
                 });
             }
 
-            const limiteVirtual = 50; // Total de horas virtuais por módulo para testar a barra
+            const limiteVirtual = 50; 
             let assiduidade = 100 - ((totalHorasFalta / limiteVirtual) * 100);
             if (assiduidade < 0) assiduidade = 0;
             
@@ -492,7 +666,6 @@ async function carregarPrhfsAluno() {
             const txtSt = p.status === 'concluida' ? 'CONCLUÍDO' : (isUrgente ? 'URGENTE' : 'EM CURSO');
             const corFinal = p.status === 'concluida' ? 'var(--success-green)' : cor;
 
-            // Tratamento das horas totais do módulo
             const horasTotais = p.horasTotais || 50; 
             const calcHorasPrhf = Math.ceil(horasTotais / 3);
 
@@ -576,7 +749,7 @@ async function carregarObservacoesAluno(reuniaoSelecionada = '1_avaliacao') {
 }
 
 // ----------------------------------------------------
-// AGENDA E HORÁRIO (Com Grelha ajustada)
+// AGENDA E HORÁRIO
 // ----------------------------------------------------
 document.querySelector('.nav-item[data-target="view-aluno-agenda"]')?.addEventListener('click', () => { document.getElementById('tab-aluno-eventos').click(); });
 document.getElementById('tab-aluno-eventos')?.addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('tab-aluno-horario').classList.remove('active'); document.getElementById('aluno-agenda-filtros').style.display = 'flex'; document.getElementById('aluno-horario-container').style.display = 'none'; carregarAgendaAlunoLista(); });
@@ -678,7 +851,7 @@ async function carregarHorarioAluno() {
             let dEnd = new Date(dtT); dEnd.setDate(dEnd.getDate() + 4);
             document.getElementById('aluno-horario-display').innerText = `${fDt(dtT)} a ${fDt(dEnd)}`;
 
-            // O estilo CSS .horario-grid garante o tamanho
+            // Removido o min-width: 500px para encolher no telemóvel
             let html = '<div class="horario-grid" style="min-width:100%;"><div class="horario-header"></div>';
             let dtIter = new Date(dtT);
             ['SEG','TER','QUA','QUI','SEX'].forEach(d => { html += `<div class="horario-header">${d}<span>${fDt(dtIter)}</span></div>`; dtIter.setDate(dtIter.getDate()+1); });
@@ -706,7 +879,6 @@ async function carregarHorarioAluno() {
 // ----------------------------------------------------
 let chatUnsubscribeAluno = null; let alunoForumAtivoId = null;
 
-// Controlos do Novo Modal de Fórum
 document.getElementById('btn-create-chat-aluno')?.addEventListener('click', () => {
     document.getElementById('modal-criar-forum').style.display = 'flex';
 });
@@ -725,11 +897,10 @@ document.getElementById('btn-confirmar-novo-forum')?.addEventListener('click', a
         });
         document.getElementById('modal-criar-forum').style.display = 'none';
         document.getElementById('input-nome-novo-forum').value = '';
-        alert("Grupo de Trabalho criado com sucesso! (Adição de colegas brevemente).");
+        alert("Grupo de Trabalho criado com sucesso!");
         carregarForuns();
     } catch(e) {}
 });
-
 
 async function carregarForuns() {
     const container = document.getElementById('aluno-forum-channel-list'); container.innerHTML = '<p class="text-muted center">A configurar fóruns mágicos...</p>'; 
