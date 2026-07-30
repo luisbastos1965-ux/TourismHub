@@ -67,10 +67,6 @@ document.body.addEventListener('click', (e) => {
     if(e.target.closest('#btn-open-study-mode')) {
         esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.getElementById('view-study-mode').style.display = 'flex';
-        // Auto-resume pomodoro on open
-        if(localStorage.getItem('pomodoroTarget') && localStorage.getItem('pomodoroTarget') > Date.now()) {
-            document.getElementById('btn-start-study').click();
-        }
     }
     if(e.target.closest('#btn-open-caderno')) {
         esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -162,7 +158,7 @@ async function construirHomeAdaptativa() {
         const hjIso = new Date().toISOString().split('T')[0];
         const hSnap = await getDoc(doc(db, "utilizadores", myUserId, "humor", hjIso));
         if(!hSnap.exists() && mMiss) {
-            html += `<div class="card" id="checkin-card-dinamico" style="border-left:4px solid #b82bf2; margin-bottom:20px;"><h3 style="font-size:1rem; margin-bottom:15px;"><i class="fa-solid fa-heart-pulse"></i> Como te sentes hoje?</h3><div style="display:flex; justify-content:space-around; font-size:2.2rem;" id="mood-buttons-dinamicos"><span class="mood-btn-dinamico" data-mood="😡" style="cursor:pointer; filter:grayscale(100%);">😡</span><span class="mood-btn-dinamico" data-mood="🙁" style="cursor:pointer; filter:grayscale(100%);">🙁</span><span class="mood-btn-dinamico" data-mood="😐" style="cursor:pointer; filter:grayscale(100%);">😐</span><span class="mood-btn-dinamico" data-mood="🙂" style="cursor:pointer; filter:grayscale(100%);">🙂</span><span class="mood-btn-dinamico" data-mood="🤩" style="cursor:pointer; filter:grayscale(100%);">🤩</span></div></div>`;
+            html += `<div class="card" id="checkin-card-dinamico" style="border-left:4px solid #b82bf2; margin-bottom:20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="font-size: 1rem; margin:0;"><i class="fa-solid fa-heart-pulse"></i> Como te sentes hoje?</h3></div><div style="display: flex; justify-content: space-around; font-size: 2.2rem;" id="mood-buttons-dinamicos"><span class="mood-btn-dinamico" data-mood="😡" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">😡</span><span class="mood-btn-dinamico" data-mood="🙁" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">🙁</span><span class="mood-btn-dinamico" data-mood="😐" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">😐</span><span class="mood-btn-dinamico" data-mood="🙂" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">🙂</span><span class="mood-btn-dinamico" data-mood="🤩" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">🤩</span></div></div>`;
         }
 
         cont.innerHTML = html;
@@ -310,7 +306,7 @@ document.getElementById('upload-avatar')?.addEventListener('change', async (e) =
 
 
 // ==========================================
-// 6. CADERNETA (Notas, Faltas, PRHF, Reuniões)
+// 6. CADERNETA COMPLETAS (Notas, Faltas, PRHF, Reuniões)
 // ==========================================
 const tabsCad = ['tab-aluno-timeline', 'tab-aluno-notas', 'tab-aluno-faltas', 'tab-aluno-prhfs', 'tab-aluno-comportamento', 'tab-aluno-observacoes'];
 tabsCad.forEach(t => {
@@ -414,7 +410,7 @@ async function carregarPrhfsAluno() {
     const cCont = document.getElementById('aluno-caderneta-content');
     try {
         const prhfsDb = await getDocs(collection(db, "utilizadores", myUserId, "prhfs"));
-        if(prhfsDb.empty) { cCont.innerHTML = '<p class="text-muted center">Não tens Planos de Recuperação.</p>'; return; }
+        if(prhfsDb.empty) { cCont.innerHTML = '<p class="text-muted" style="text-align:center;">Não tens Planos de Recuperação.</p>'; return; }
         let arr = []; prhfsDb.forEach(d => { arr.push({id: d.id, ...d.data()}); }); arr.sort((a,b) => new Date(a.prazo) - new Date(b.prazo));
         
         let pendentes = arr.filter(p => p.status !== 'concluida');
@@ -437,7 +433,7 @@ async function carregarPrhfsAluno() {
                 btn = `<button class="primary-btn small-btn" style="width:100%; background-color:${corFinal}; color:${corFinal === 'var(--warning-yellow)' ? 'black' : 'white'};" onclick="window.abrirAcaoPrhf('${p.id}', '${p.disciplina}', '${p.modulo}', '${p.prazo}')">Agendar Sessão Presencial</button>`;
             }
 
-            return `<div class="card" style="margin-bottom:15px; border-left: 4px solid ${corFinal};"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="font-size: 1.1rem; color:white;">${p.disciplina} (Mod. ${p.modulo})</strong><span style="color:${corFinal}; font-size:0.75rem; font-weight:bold;">${txtSt}</span></div><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">${p.descricao}</p>${aHtml} ${fpHtml} ${propHtml}<div style="font-size:0.8rem; margin-bottom: 15px; border-top:1px dashed #333; padding-top:10px;">Data Limite: <strong style="color:${corFinal};">${p.prazo}</strong><br>Presenciais: <strong>${hPres}h</strong></div>${btn}</div>`;
+            return `<div class="card" style="margin-bottom:15px; border-left: 4px solid ${corFinal};"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="font-size: 1.1rem; color:white;">${p.disciplina} (Mod. ${p.modulo})</strong><span style="color:${corFinal}; font-size:0.75rem; font-weight:bold;">${txtSt}</span></div><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">${p.descricao}</p>${aHtml} ${fpHtml} ${propHtml}<div style="font-size:0.8rem; margin-bottom: 15px; border-top:1px dashed #333; padding-top:10px;">Data Limite: <strong style="color:${corFinal};">${p.prazo}</strong><br>Horas Presenciais: <strong>${hPres}h</strong></div>${btn}</div>`;
         };
 
         pendentes.forEach(p => html += renderP(p));
@@ -523,7 +519,7 @@ document.getElementById('btn-aluno-horario-grelha')?.addEventListener('click', (
 document.getElementById('btn-aluno-prev-horario')?.addEventListener('click', () => { if(ahModo === 'dia') ahDOff--; else ahSOff--; carregarHorarioAluno(); });
 document.getElementById('btn-aluno-next-horario')?.addEventListener('click', () => { if(ahModo === 'dia') ahDOff++; else ahSOff++; carregarHorarioAluno(); });
 
-const getCorEspecial = (dsc) => { const d = dsc.toLowerCase(); if(d.includes('alm')) return { c: 'var(--warning-yellow)', bg: 'rgba(255, 204, 0, 0.15)' }; if(d.includes('vis')) return { c: '#00d2ff', bg: 'rgba(0, 210, 255, 0.15)' }; if(d.includes('prhf')) return { c: 'var(--danger-red)', bg: 'rgba(255, 77, 77, 0.15)' }; if(d.includes('pap') || d.includes('fct')) return { c: '#ff9900', bg: 'rgba(255, 153, 0, 0.15)' }; return { c: 'var(--primary-green)', bg: 'rgba(0, 204, 136, 0.1)' }; };
+const getCorEspecial = (dsc) => { const d = dsc.toLowerCase(); if(d.includes('alm')) return { c: 'var(--warning-yellow)', bg: 'rgba(255, 204, 0, 0.15)' }; if(d.includes('vis')) return { c: '#00d2ff', bg: 'rgba(0, 210, 255, 0.15)' }; if(d.includes('prhf')) return { c: 'var(--danger-red)', bg: 'rgba(255, 77, 77, 0.15)' }; if(d.includes('pap') || d.includes('fct')) return { c: '#ff9900', bg: 'rgba(255, 153, 0, 0.15)' }; if(['reunião','reuniao','livre','estudo'].some(k => d.includes(k))) return { c: '#b82bf2', bg: 'rgba(184, 43, 242, 0.15)' }; return { c: 'var(--primary-green)', bg: 'rgba(0, 204, 136, 0.1)' }; };
 
 async function carregarHorarioAluno() {
     const sC = document.getElementById('aluno-agenda-content'); sC.innerHTML = '<p class="text-muted center">A gerar horário...</p>'; if(!minhaTurma) return;
@@ -539,9 +535,9 @@ async function carregarHorarioAluno() {
         } else {
             let dT = new Date(); dT.setDate(dT.getDate() + (ahSOff * 7)); dT.setDate(dT.getDate() - (dT.getDay() === 0 ? 6 : dT.getDay() - 1)); let dE = new Date(dT); dE.setDate(dE.getDate() + 4);
             document.getElementById('aluno-horario-display').innerText = `${fDt(dT)} a ${fDt(dE)}`;
-            let h = '<div class="horario-grid" style="min-width:100%;"><div class="horario-header"></div>'; let dI = new Date(dT);
+            let h = '<div class="horario-grid" style="width:100%;"><div class="horario-header"></div>'; let dI = new Date(dT);
             ['SEG','TER','QUA','QUI','SEX'].forEach(d => { h += `<div class="horario-header">${d}<span>${fDt(dI)}</span></div>`; dI.setDate(dI.getDate()+1); });
-            bK.forEach(b => { h += `<div class="horario-time">${bT[b]}</div>`; dI = new Date(dT); for(let i=0; i<5; i++) { const dSStr = `${dI.getFullYear()}-${String(dI.getMonth()+1).padStart(2,'0')}-${String(dI.getDate()).padStart(2,'0')}`; const dc = hb[`${dSStr}_${b}`]; if(dc) { const sty = getCorEspecial(dc); h += `<div class="horario-slot" style="border: 1px solid ${sty.c}; background-color: ${sty.bg}; color: white;"><strong>${dc}</strong></div>`; } else h += `<div class="horario-slot"></div>`; dI.setDate(dI.getDate()+1); } });
+            bK.forEach(b => { h += `<div class="horario-time">${bT[b]}</div>`; dI = new Date(dT); for(let i=0; i<5; i++) { const dSStr = `${dI.getFullYear()}-${String(dI.getMonth()+1).padStart(2,'0')}-${String(dI.getDate()).padStart(2,'0')}`; const dc = hb[`${dSStr}_${b}`]; if(dc) { const sty = getCorEspecial(dc); h += `<div class="horario-slot" style="border:1px solid ${sty.c}; background-color:${sty.bg}; color:white;"><strong>${dc}</strong></div>`; } else h += `<div class="horario-slot"></div>`; dI.setDate(dI.getDate()+1); } });
             sC.innerHTML = h + '</div>';
         }
     } catch(e) {}
@@ -556,10 +552,10 @@ document.getElementById('btn-create-chat-aluno')?.addEventListener('click', asyn
     document.getElementById('modal-criar-forum').style.display = 'flex'; 
     const cCont = document.getElementById('lista-colegas-forum'); cCont.innerHTML = '<p class="text-muted center">A procurar colegas...</p>';
     try {
-        const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", minhaTurma), where("papel", "==", "aluno")));
-        let cH = ''; cS.forEach(d => { if(d.id !== myUserId) { cH += `<label style="display:flex; align-items:center; gap:10px; color:white; font-size:0.9rem; padding:8px 0; cursor:pointer;"><input type="checkbox" class="colegas-check" value="${d.id}" style="width:18px;height:18px;accent-color:var(--primary-green);"> ${d.data().nome}</label>`; } });
+        const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", minhaTurma)));
+        let cH = ''; cS.forEach(d => { if(d.data().papel === 'aluno' && d.id !== myUserId) { cH += `<label style="display:flex; align-items:center; gap:10px; color:white; font-size:0.9rem; padding:8px 0; cursor:pointer;"><input type="checkbox" class="colegas-check" value="${d.id}" style="width:18px;height:18px;accent-color:var(--primary-green);"> ${d.data().nome}</label>`; } });
         cCont.innerHTML = cH === '' ? '<p class="text-muted center">Sem colegas.</p>' : cH;
-    } catch(e) {}
+    } catch(e) { cCont.innerHTML = '<p class="text-danger center">Erro.</p>'; }
 });
 
 document.getElementById('btn-cancelar-novo-forum')?.addEventListener('click', () => { document.getElementById('modal-criar-forum').style.display = 'none'; document.getElementById('input-nome-novo-forum').value = ''; });
@@ -574,58 +570,53 @@ async function carregarForuns() {
     let html = `<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apoio & Turma</h3><div class="canal-card" data-id="turma_global" data-nome="Turma ${minhaTurma}" style="margin-bottom: 10px;"><div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-users"></i></div><div class="canal-info"><h4>Turma ${minhaTurma}</h4><p>Canal Geral</p></div></div><div class="canal-card" data-id="dt_${myUserId}" data-nome="Chat DT"><div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div><div class="canal-info"><h4>Diretor de Turma</h4><p>Mensagem Privada</p></div></div><h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Disciplinas</h3><div style="display:flex; flex-wrap:wrap; gap:10px;">`;
     ordemDisciplinasGlobal.forEach(disc => { html += `<div class="canal-card" data-id="disc_${disc}" data-nome="Fórum ${disc}" style="flex: 1 1 45%; padding: 10px;"><div class="canal-info" style="text-align:center;"><h4 style="margin:0; font-size:0.9rem; color:#00d2ff;"><i class="fa-solid fa-book-open"></i> ${disc}</h4></div></div>`; }); html += '</div>';
     try {
-        const res = await getDocs(collection(db, "turmas", minhaTurma, "foruns")); let extrasHtml = '';
-        res.forEach(docSnap => { const f = docSnap.data(); if(f.membros.includes(myUserId) && !f.isDefault) { extrasHtml += `<div class="canal-card" data-id="${docSnap.id}" data-nome="${f.nome}"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-comments"></i></div><div class="canal-info"><h4>${f.nome}</h4><p>Grupo de Trabalho</p></div></div>`; } });
-        if (extrasHtml !== '') html += `<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Os Meus Chats</h3>` + extrasHtml;
+        const res = await getDocs(collection(db, "turmas", minhaTurma, "foruns")); let extras = '';
+        res.forEach(d => { const f = d.data(); if(f.membros.includes(myUserId) && !f.isDefault) extras += `<div class="canal-card" data-id="${d.id}" data-nome="${f.nome}"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-comments"></i></div><div class="canal-info"><h4>${f.nome}</h4><p>Os Meus Chats</p></div></div>`; });
+        if(extras !== '') html += `<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Os Meus Chats</h3>` + extras;
     } catch(e) {}
     cont.innerHTML = html;
     
-    cont.querySelectorAll('.canal-card').forEach(card => card.addEventListener('click', (e) => { alunoForumAtivoId = e.currentTarget.getAttribute('data-id'); document.getElementById('aluno-chat-active-title').innerText = e.currentTarget.getAttribute('data-nome'); document.getElementById('aluno-forum-channel-list').style.display = 'none'; document.getElementById('aluno-forum-chat-view').style.display = 'flex'; document.getElementById('btn-create-chat-aluno').style.display = 'none'; iniciarChatAluno(alunoForumAtivoId); }));
+    cont.querySelectorAll('.canal-card').forEach(c => c.addEventListener('click', (e) => { alunoForumAtivoId = e.currentTarget.getAttribute('data-id'); document.getElementById('aluno-chat-active-title').innerText = e.currentTarget.getAttribute('data-nome'); document.getElementById('aluno-forum-channel-list').style.display = 'none'; document.getElementById('btn-create-chat-aluno').style.display = 'none'; document.getElementById('aluno-forum-chat-view').style.display = 'flex'; iniciarChatAluno(alunoForumAtivoId); }));
 }
 
 document.getElementById('btn-aluno-voltar-canais')?.addEventListener('click', () => { document.getElementById('aluno-forum-chat-view').style.display = 'none'; document.getElementById('aluno-forum-channel-list').style.display = 'block'; document.getElementById('btn-create-chat-aluno').style.display = 'block'; });
 
 function iniciarChatAluno(fId) {
-    const chatContainer = document.getElementById('aluno-chat-messages-container'); chatContainer.innerHTML = ''; if(chatUnsubscribeAluno) chatUnsubscribeAluno();
-    chatUnsubscribeAluno = onSnapshot(query(collection(db, "turmas", minhaTurma, "foruns", fId, "mensagens"), orderBy("timestamp")), (snapshot) => {
-        let html = ''; snapshot.forEach(doc => { const msg = doc.data(); const isMe = msg.remetente === myUserName; const classe = isMe ? 'admin' : 'student'; html += `<div class="chat-bubble ${classe}"><strong>${isMe ? 'Tu' : msg.remetente}</strong><br>${msg.texto}<span class="chat-meta">${new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span></div>`; });
-        chatContainer.innerHTML = html; chatContainer.scrollTop = chatContainer.scrollHeight;
-    });
+    const chatC = document.getElementById('aluno-chat-messages-container'); chatC.innerHTML = ''; if(chatUnsubscribeAluno) chatUnsubscribeAluno();
+    chatUnsubscribeAluno = onSnapshot(query(collection(db, "turmas", minhaTurma, "foruns", fId, "mensagens"), orderBy("timestamp")), (snap) => { let html = ''; snap.forEach(doc => { const m = doc.data(); const isMe = m.remetente === myUserName; html += `<div class="chat-bubble ${isMe ? 'admin' : 'student'}"><strong>${isMe ? 'Tu' : m.remetente}</strong><br>${m.texto}<span class="chat-meta">${new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span></div>`; }); chatC.innerHTML = html; chatC.scrollTop = chatC.scrollHeight; });
 }
-document.getElementById('btn-aluno-send-msg')?.addEventListener('click', async () => { const inp = document.getElementById('aluno-input-forum-msg'); const txt = inp.value.trim(); if(!txt || !alunoForumAtivoId) return; try { await addDoc(collection(db, "turmas", minhaTurma, "foruns", alunoForumAtivoId, "mensagens"), { remetente: myUserName, texto: txt, timestamp: Date.now() }); inp.value = ''; } catch(e) {} });
+document.getElementById('btn-aluno-send-msg')?.addEventListener('click', async () => { const inp = document.getElementById('aluno-input-forum-msg'); const t = inp.value.trim(); if(!t || !alunoForumAtivoId) return; try { await addDoc(collection(db, "turmas", minhaTurma, "foruns", alunoForumAtivoId, "mensagens"), { remetente: myUserName, texto: t, timestamp: Date.now() }); inp.value = ''; } catch(e) {} });
 
 // ==========================================
-// 9. POMODORO (Com Foco de Memória)
+// 9. POMODORO E RESTRIÇÃO DE FOCO
 // ==========================================
-let pTmr; const POMO_TIME = 30 * 60; // 30 Minutos
+let pTmr = null; let pRest = 30 * 60; 
 
-function formatTimer(segundos) {
-    if(segundos < 0) segundos = 0;
-    const m = Math.floor(segundos / 60).toString().padStart(2, '0'); const s = (segundos % 60).toString().padStart(2, '0');
-    document.getElementById('study-timer-text').innerText = `${m}:${s}`;
-}
-
-function renderTimerRunning() {
-    let target = localStorage.getItem('pomodoroEndTarget');
-    if(!target) return;
-    let left = Math.round((target - Date.now()) / 1000);
-    if(left <= 0) {
-        clearInterval(pTmr); localStorage.removeItem('pomodoroEndTarget'); formatTimer(0);
-        document.getElementById('study-controls').style.display = 'none'; document.getElementById('post-study-log').style.display = 'block';
-    } else {
-        formatTimer(left);
-    }
+function resetPomodoro() {
+    clearInterval(pTmr); pTmr = null; pRest = 30 * 60; 
+    document.getElementById('study-timer-text').innerText = "30:00"; 
+    document.getElementById('btn-stop-study').style.display = 'none'; document.getElementById('btn-start-study').style.display = 'inline-block';
 }
 
 document.getElementById('btn-start-study')?.addEventListener('click', (e) => {
     e.currentTarget.style.display = 'none'; document.getElementById('btn-stop-study').style.display = 'inline-block';
-    if(!localStorage.getItem('pomodoroEndTarget')) localStorage.setItem('pomodoroEndTarget', Date.now() + POMO_TIME * 1000);
-    renderTimerRunning(); clearInterval(pTmr); pTmr = setInterval(renderTimerRunning, 1000);
+    if(pTmr) clearInterval(pTmr);
+    pTmr = setInterval(() => { 
+        pRest--; 
+        const m = Math.floor(pRest / 60).toString().padStart(2, '0'); const s = (pRest % 60).toString().padStart(2, '0'); 
+        document.getElementById('study-timer-text').innerText = `${m}:${s}`; 
+        if(pRest <= 0) { clearInterval(pTmr); pTmr = null; document.getElementById('study-controls').style.display = 'none'; document.getElementById('post-study-log').style.display = 'block'; } 
+    }, 1000);
 });
 
-document.getElementById('btn-stop-study')?.addEventListener('click', () => { 
-    clearInterval(pTmr); localStorage.removeItem('pomodoroEndTarget'); formatTimer(POMO_TIME); 
-    document.getElementById('btn-stop-study').style.display = 'none'; document.getElementById('btn-start-study').style.display = 'inline-block'; 
+document.getElementById('btn-stop-study')?.addEventListener('click', resetPomodoro);
+
+// Restrição Modo Foco Anti-Distração
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && pTmr !== null) {
+        resetPomodoro();
+        setTimeout(() => alert("Modo Foco interrompido! Saíste da aplicação e a contagem foi reiniciada."), 500);
+    }
 });
 
 document.getElementById('btn-save-study-log')?.addEventListener('click', async (e) => {
@@ -636,12 +627,12 @@ document.getElementById('btn-save-study-log')?.addEventListener('click', async (
         await addDoc(collection(db, "utilizadores", myUserId, "estudos"), { texto: t, data: new Date().toISOString() });
         await updateDoc(doc(db, "utilizadores", myUserId), { xp: axp + 50 }); carregarGamificacao({xp: axp + 50});
         b.style.backgroundColor = "var(--success-green)"; b.innerHTML = '<i class="fa-solid fa-check"></i> Feito!';
-        setTimeout(() => { document.getElementById('study-log-text').value = ''; document.getElementById('post-study-log').style.display = 'none'; document.getElementById('study-controls').style.display = 'block'; b.innerHTML = '<i class="fa-solid fa-save"></i> Guardar e Ganhar XP'; b.disabled = false; b.style.backgroundColor = "var(--success-green)"; formatTimer(POMO_TIME); document.getElementById('btn-voltar-study').click(); }, 2000);
+        setTimeout(() => { document.getElementById('study-log-text').value = ''; document.getElementById('post-study-log').style.display = 'none'; document.getElementById('study-controls').style.display = 'block'; b.innerHTML = '<i class="fa-solid fa-save"></i> Guardar e Ganhar XP'; b.disabled = false; b.style.backgroundColor = "var(--success-green)"; resetPomodoro(); document.getElementById('btn-voltar-study').click(); }, 2000);
     } catch(err) { b.innerHTML = "Erro"; setTimeout(() => { b.disabled = false; }, 2000); }
 });
 
 // ==========================================
-// 10. CADERNO DIGITAL
+// 10. CADERNO DIGITAL (FOTOS)
 // ==========================================
 document.getElementById('btn-gravar-apontamento')?.addEventListener('click', async (e) => {
     const t = document.getElementById('caderno-titulo').value.trim(); const h = quillEditor.root.innerHTML; const txt = quillEditor.getText().trim(); 
@@ -656,10 +647,30 @@ async function carregarResumos() {
 }
 
 let fQB64 = "";
-const handleFotoQuadro = async (e) => { let file = e.target.files[0]; if(!file) return; if (file.type.startsWith('image/')) { const opt = { maxSizeMB: 0.8, maxWidthOrHeight: 1920, useWebWorker: true }; try { file = await imageCompression(file, opt); } catch (err) {} } document.getElementById('foto-quadro-file-name').innerText = file.name; document.getElementById('btn-gravar-foto-quadro').style.display = 'block'; const rd = new FileReader(); rd.onload = (ev) => { fQB64 = ev.target.result; }; rd.readAsDataURL(file); };
+const handleFotoQuadro = async (e) => { 
+    let file = e.target.files[0]; if(!file) return; 
+    if (file.type.startsWith('image/')) { const opt = { maxSizeMB: 0.8, maxWidthOrHeight: 1920, useWebWorker: true }; try { file = await imageCompression(file, opt); } catch (err) {} } 
+    document.getElementById('foto-quadro-file-name').innerText = file.name || 'foto_capturada.jpg'; 
+    document.getElementById('btn-gravar-foto-quadro').style.display = 'block'; 
+    const rd = new FileReader(); rd.onload = (ev) => { fQB64 = ev.target.result; }; rd.readAsDataURL(file); 
+};
 document.getElementById('upload-foto-quadro')?.addEventListener('change', handleFotoQuadro); document.getElementById('tirar-foto-quadro')?.addEventListener('change', handleFotoQuadro);
-document.getElementById('btn-gravar-foto-quadro')?.addEventListener('click', async (e) => { const t = document.getElementById('foto-titulo').value.trim(); if(!t || !fQB64) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await addDoc(collection(db, "utilizadores", myUserId, "caderno_fotos"), { titulo: t, fotoBase64: fQB64, timestamp: Date.now() }); b.innerHTML = '<i class="fa-solid fa-check"></i> Guardada'; setTimeout(() => { b.style.display = 'none'; b.disabled = false; b.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Guardar na Galeria'; document.getElementById('foto-quadro-file-name').innerText = ""; document.getElementById('foto-titulo').value = ""; fQB64 = ""; carregarFotosQuadro(); }, 2000); } catch(err) { b.innerHTML = "Erro"; setTimeout(() => { b.disabled = false; }, 2000); } });
+
+document.getElementById('btn-gravar-foto-quadro')?.addEventListener('click', async (e) => { 
+    const t = document.getElementById('foto-titulo').value.trim(); 
+    if(!t) { alert("Preenche o Título da Foto!"); return; }
+    if(!fQB64) { alert("Tira ou anexa uma foto primeiro!"); return; }
+    
+    const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; 
+    try { 
+        await addDoc(collection(db, "utilizadores", myUserId, "caderno_fotos"), { titulo: t, fotoBase64: fQB64, timestamp: Date.now() }); 
+        b.innerHTML = '<i class="fa-solid fa-check"></i> Guardada'; 
+        setTimeout(() => { b.style.display = 'none'; b.disabled = false; b.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Guardar na Galeria'; document.getElementById('foto-quadro-file-name').innerText = ""; document.getElementById('foto-titulo').value = ""; fQB64 = ""; carregarFotosQuadro(); }, 2000); 
+    } catch(err) { b.innerHTML = "Erro"; setTimeout(() => { b.disabled = false; }, 2000); } 
+});
+
 async function carregarFotosQuadro() { const c = document.getElementById('lista-fotos-quadro-container'); c.innerHTML = '<p class="text-muted" style="grid-column: span 2; text-align:center;">A carregar galeria...</p>'; try { const s = await getDocs(query(collection(db, "utilizadores", myUserId, "caderno_fotos"), orderBy("timestamp", "desc"))); let h = ''; s.forEach(d => { const dta = d.data(); h += `<div style="background:var(--bg-card); border:1px solid #333; border-radius:8px; overflow:hidden;"><div style="height:120px; background:url('${dta.fotoBase64}') center/cover no-repeat; cursor:pointer;" onclick="window.open('${dta.fotoBase64}')"></div><div style="padding:10px; font-size:0.85rem;"><strong style="color:white; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${dta.titulo}</strong><span style="color:var(--text-muted); font-size:0.7rem;">${new Date(dta.timestamp).toLocaleDateString('pt-PT')}</span></div></div>`; }); c.innerHTML = h===''?'<p class="text-muted" style="grid-column: span 2; text-align:center;">Sem fotos.</p>':h; } catch(e) {} }
+
 document.getElementById('tab-caderno-resumos')?.addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('tab-caderno-galeria').classList.remove('active'); document.getElementById('sec-caderno-resumos').style.display = 'block'; document.getElementById('sec-caderno-galeria').style.display = 'none'; });
 document.getElementById('tab-caderno-galeria')?.addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('tab-caderno-resumos').classList.remove('active'); document.getElementById('sec-caderno-resumos').style.display = 'none'; document.getElementById('sec-caderno-galeria').style.display = 'block'; carregarFotosQuadro(); });
 
@@ -674,9 +685,9 @@ async function carregarSumariosAluno() {
         let sum = []; let dU = new Set(); r.forEach(d => { const dt = d.data(); sum.push({id: d.id, ...dt}); dU.add(dt.disciplina); });
         const fS = document.getElementById('aluno-filtro-sumarios-disc'); if (fS.options.length <= 1) { let oH = '<option value="">Todas as Disciplinas</option>'; dU.forEach(dc => oH += `<option value="${dc}">${dc}</option>`); fS.innerHTML = oH; }
         const fA = fS.value; if(fA) sum = sum.filter(s => s.disciplina === fA); sum.sort((a,b) => b.data.localeCompare(a.data)); 
-        if(sum.length === 0) { c.innerHTML = '<p class="text-muted center">Sem sumários para esta disciplina.</p>'; return; }
+        if(sum.length === 0) { c.innerHTML = '<p class="text-muted" style="text-align:center;">Sem sumários para esta disciplina.</p>'; return; }
         let html = ''; sum.forEach(s => { const aB = s.anexoBase64 ? `<a href="${s.anexoBase64}" download="${s.anexoNome}" class="primary-btn small-btn" style="display:inline-block; margin-top:10px; width:auto; padding:8px 12px; background-color:#0099ff;"><i class="fa-solid fa-download"></i> Baixar ${s.anexoNome}</a>` : ''; html += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #0099ff;"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">${s.data} | ${s.disciplina} | Prof. ${s.professor}</span><h4 style="margin:5px 0;">${s.titulo}</h4>${s.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px;">${s.descricao}</p>` : ''}</div></div>${aB}</div>`; }); c.innerHTML = html;
-    } catch(e) { c.innerHTML = '<p class="text-danger center">Erro.</p>'; }
+    } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao carregar os dados.</p>'; }
 }
 
 function carregarDadosPassaporte(dados) {
