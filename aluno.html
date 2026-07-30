@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- FullCalendar -->
+    <!-- FullCalendar (Mantido para compatibilidade, embora o UI novo use o modelo do EE) -->
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/locales/pt.global.min.js'></script>
 
@@ -76,7 +76,7 @@
                     <div id="aluno-search-results" style="display:none; position:absolute; top:50px; left:0; width:100%; background:#222; border:1px solid #444; border-radius:12px; z-index:10; max-height:250px; overflow-y:auto; box-shadow: 0 5px 15px rgba(0,0,0,0.5); padding: 10px;"></div>
                 </div>
 
-                <!-- MODO ÉPOCA DE EXAMES (Aparece via JS) -->
+                <!-- MODO ÉPOCA DE EXAMES -->
                 <div id="exam-mode-banner" style="display:none; background: linear-gradient(135deg, #8e2de2, #4a00e0); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 15px rgba(138, 43, 226, 0.3); border: 1px solid #9b59b6;">
                     <h3 style="margin-bottom: 5px; font-size: 1.2rem;"><i class="fa-solid fa-graduation-cap"></i> Época de Exames Ativada</h3>
                     <p style="font-size: 0.9rem; color: #e0e0e0; margin-bottom: 10px;">O Modo Foco está recomendado. Prepara-te!</p>
@@ -128,7 +128,7 @@
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;"><span id="perfil-xp-totais">0</span> XP totais alcançados</p>
                 </div>
 
-                <!-- Estatísticas de Hábitos de Estudo (NOVO POLIMENTO) -->
+                <!-- Estatísticas de Hábitos de Estudo -->
                 <div class="card" style="border-left: 4px solid #00d2ff; margin-bottom: 20px;">
                     <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-fire"></i> Hábitos de Foco</h3>
                     <div style="display:flex; justify-content:space-between; text-align:center; gap:10px;">
@@ -153,9 +153,7 @@
                         <input type="text" id="input-novo-objetivo" placeholder="Ex: Tirar 16 a Matemática..." style="margin:0; flex:1; border-radius: 8px;">
                         <button id="btn-add-objetivo" class="primary-btn" style="width:auto; padding:0 20px; background:var(--warning-yellow); color:black;"><i class="fa-solid fa-plus"></i></button>
                     </div>
-                    <div id="lista-objetivos-container">
-                        <!-- Gerado via JS -->
-                    </div>
+                    <div id="lista-objetivos-container"></div>
                 </div>
 
                 <!-- Estatísticas Gráficas -->
@@ -186,7 +184,6 @@
                     <h2 class="section-title"><i class="fa-solid fa-bell"></i> Centro de Alertas</h2>
                 </div>
                 
-                <!-- Chips de Filtro Notificações -->
                 <div class="filter-chips-container" id="notificacoes-filtros">
                     <div class="filter-chip active" data-cat="all">Todas</div>
                     <div class="filter-chip" data-cat="importante">Importantes</div>
@@ -246,23 +243,85 @@
                     <div class="filter-chip" data-cat="gamificacao">Gamificação</div>
                 </div>
 
-                <div id="aluno-caderneta-content" style="margin-top:20px;"><p class="text-muted" style="text-align:center;">A carregar histórico...</p></div>
+                <div id="aluno-caderneta-content"><p class="text-muted" style="text-align:center;">A carregar histórico...</p></div>
             </div>
 
-            <!-- VISTA AGENDA -->
+            <!-- VISTA JUSTIFICAR (NOVO) -->
+            <div id="view-aluno-justificar" style="display: none;">
+                <div class="class-header" style="margin-bottom: 15px;"><button id="btn-voltar-justificar" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px; font-size: 1rem;"><i class="fa-solid fa-cloud-arrow-up"></i> Enviar Comprovativo</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Tira uma foto do atestado para justificar ausências.</p>
+                    <div style="background:var(--bg-dark); padding:20px; border-radius:8px; border:1px dashed #555; text-align:center; margin-bottom:15px;">
+                        <label for="aluno-upload-atestado" class="secondary-btn" style="margin:0 auto; width:fit-content; border-color: var(--success-green); color: var(--success-green); cursor: pointer;"><i class="fa-solid fa-camera"></i> Anexar Foto</label>
+                        <input type="file" id="aluno-upload-atestado" style="display:none;" accept="image/*,.pdf">
+                        <span id="aluno-atestado-file-name" class="file-name-display" style="display:block; margin-top:10px; font-size:0.85rem; color:white;"></span>
+                    </div>
+                    <textarea id="aluno-atestado-obs" class="input-field" placeholder="Observações (Opcional)" style="min-height: 80px; margin-bottom: 15px;"></textarea>
+                    <button id="btn-aluno-enviar-atestado" class="primary-btn" style="width:100%; background-color: var(--success-green); display:none;"><i class="fa-solid fa-paper-plane"></i> Enviar Atestado</button>
+                </div>
+            </div>
+
+            <!-- VISTA AÇÃO PRHF (NOVO) -->
+            <div id="view-aluno-acao-prhf" style="display: none;">
+                <div class="class-header" style="margin-bottom: 15px;"><button id="btn-voltar-acao-prhf" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
+                <div class="card" style="margin-bottom: 20px; border-left: 4px solid var(--warning-yellow);">
+                    <h3 style="margin-bottom: 5px; font-size: 1.1rem; color: white;" id="prhf-acao-titulo">Disciplina (Módulo)</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;" id="prhf-acao-desc">A carregar detalhes...</p>
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 15px; font-size:0.8rem; border-bottom: 1px dashed #333; padding-bottom:10px;">
+                        <span>Data Limite: <strong id="prhf-acao-prazo" style="color:var(--warning-yellow);">...</strong></span>
+                        <span>Presenciais: <strong id="prhf-acao-horas">...</strong></span>
+                    </div>
+                    
+                    <h4 style="font-size: 0.95rem; margin-bottom: 10px; color:var(--primary-green);">Proposta de Horas Presenciais</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Indica os dias e blocos em que podes realizar o PRHF.</p>
+                    <textarea id="aluno-prhf-proposta-txt" class="input-field" placeholder="Ex: Posso realizar às terças à tarde e quintas de manhã..." style="min-height: 80px; margin-bottom: 15px;"></textarea>
+                    <button id="btn-enviar-proposta-prhf" class="primary-btn" style="width:100%; background-color: var(--primary-green);"><i class="fa-solid fa-paper-plane"></i> Enviar Proposta ao DT</button>
+                </div>
+            </div>
+
+            <!-- VISTA AGENDA / HORÁRIO -->
             <div id="view-aluno-agenda" style="display: none;">
                 <div class="class-header"><h2 class="section-title">Minha Agenda</h2></div>
                 <div class="falta-tabs">
                     <button class="falta-tab-btn active" id="tab-aluno-eventos">Testes / Eventos</button>
                     <button class="falta-tab-btn" id="tab-aluno-horario">Horário</button>
                 </div>
-                <div id="aluno-agenda-content" style="margin-top:20px; background: white; padding: 15px; border-radius: 8px; color: black;"><p class="text-muted" style="text-align:center;">A carregar calendário...</p></div>
+                
+                <!-- Filtros para a Vista de Eventos -->
+                <div class="agenda-filters" id="aluno-agenda-filtros" style="display:flex;">
+                    <label class="agenda-filter-label"><input type="checkbox" id="aluno-filtro-agenda-testes" checked> <span style="color:#ffaa00;">●</span> Testes/Av.</label>
+                    <label class="agenda-filter-label"><input type="checkbox" id="aluno-filtro-agenda-trabalhos" checked> <span style="color:#00d2ff;">●</span> Entregas</label>
+                    <label class="agenda-filter-label"><input type="checkbox" id="aluno-filtro-agenda-outros" checked> <span style="color:#b82bf2;">●</span> Outros</label>
+                </div>
+                
+                <!-- Grelha do Horário (Escondida por defeito) -->
+                <div id="aluno-horario-container" style="display:none;">
+                    <div class="falta-tabs" style="margin-bottom: 15px;">
+                        <button class="falta-tab-btn active" id="btn-aluno-horario-dia">Vista Diária</button>
+                        <button class="falta-tab-btn" id="btn-aluno-horario-grelha">Grelha Semanal</button>
+                    </div>
+                    <div class="week-nav-bar">
+                        <button id="btn-aluno-prev-horario"><i class="fa-solid fa-chevron-left"></i></button>
+                        <span id="aluno-horario-display">A carregar...</span>
+                        <button id="btn-aluno-next-horario"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                </div>
+
+                <div id="aluno-agenda-content" style="margin-top:20px; overflow-x: auto;">
+                    <p class="text-muted" style="text-align:center;">A carregar dados...</p>
+                </div>
             </div>
 
             <!-- VISTA FÓRUM -->
             <div id="view-aluno-forum" style="display: none;">
-                <div class="class-header"><h2 class="section-title">Fóruns da Turma</h2></div>
-                <div id="aluno-forum-channel-list"><p class="text-muted" style="text-align:center;">A carregar fóruns...</p></div>
+                <div class="class-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2 class="section-title" style="margin:0;">Os Meus Canais</h2>
+                    <button id="btn-create-chat-aluno" class="primary-btn small-btn" style="background:var(--bg-dark); border:1px solid var(--primary-green); color:var(--primary-green);"><i class="fa-solid fa-plus"></i> Novo</button>
+                </div>
+                <div id="aluno-forum-channel-list">
+                    <p class="text-muted" style="text-align:center;">A carregar fóruns...</p>
+                </div>
                 <div id="aluno-forum-chat-view" style="display:none; flex-direction:column; height:70vh; background:var(--bg-card); border-radius:12px; border:1px solid #333; overflow:hidden;">
                     <div style="background:#222; padding:15px; display:flex; align-items:center; gap:10px; border-bottom:1px solid #333;">
                         <button id="btn-aluno-voltar-canais" class="secondary-btn small-btn" style="padding:5px 10px; width:auto; border:none;"><i class="fa-solid fa-arrow-left"></i></button>
