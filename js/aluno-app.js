@@ -26,8 +26,10 @@ onAuthStateChanged(auth, async (user) => {
                 if(d.fotoPerfil) {
                     document.getElementById('header-avatar-circle').innerHTML = `<img src="${d.fotoPerfil}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
                     document.getElementById('perfil-avatar-img').src = d.fotoPerfil;
+                } else {
+                    document.getElementById('perfil-avatar-img').src = `https://ui-avatars.com/api/?name=${myUserName}&background=00cc88&color=fff&size=100`;
                 }
-                
+
                 const objSelect = document.getElementById('obj-disciplina');
                 if(objSelect) objSelect.innerHTML = ordemDisciplinasGlobal.map(dc => `<option value="${dc}">${dc}</option>`).join('');
 
@@ -42,49 +44,19 @@ onAuthStateChanged(auth, async (user) => {
 document.getElementById('btn-logout-aluno')?.addEventListener('click', () => signOut(auth));
 
 // ==========================================
-// 2. ROUTING E BOTÕES GLOBAIS
+// 2. ROUTING E BOTÕES GLOBAIS (Delegação segura)
 // ==========================================
 function esconderTodasAsVistas() { document.querySelectorAll('.app-content > div').forEach(v => v.style.display = 'none'); }
 
 document.body.addEventListener('click', (e) => {
-    // Modo Foco (Home)
-    if(e.target.closest('#btn-open-study-mode')) {
-        esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        document.getElementById('view-study-mode').style.display = 'flex';
-    }
-    // Caderno Digital (Home)
-    if(e.target.closest('#btn-open-caderno')) {
-        esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        document.getElementById('view-aluno-caderno').style.display = 'block';
-        if(!quillEditor) quillEditor = new Quill('#quill-editor', { theme: 'snow' }); 
-        carregarResumos();
-    }
-    // Sumários (Home)
-    if(e.target.closest('#btn-open-sumarios')) {
-        esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        document.getElementById('view-aluno-sumarios').style.display = 'block'; carregarSumariosAluno();
-    }
-    // Passaporte (Home)
-    if(e.target.closest('#btn-abrir-passaporte')) {
-        esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        document.getElementById('view-aluno-passaporte').style.display = 'block';
-    }
-    // Notificações Sino
-    if(e.target.closest('#btn-open-notificacoes')) {
-        esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        document.getElementById('view-aluno-notificacoes').style.display = 'block'; carregarNotificacoesAluno();
-    }
-    // Botões de Voltar
-    if(e.target.closest('#btn-voltar-notificacoes') || e.target.closest('#btn-voltar-caderno') || e.target.closest('#btn-voltar-sumarios') || e.target.closest('#btn-voltar-passaporte') || e.target.closest('#btn-voltar-study')) {
-        document.querySelector('.nav-item[data-target="student-dashboard"]').click();
-    }
-});
-
-// Navegação da Tab Bar
-document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-        e.preventDefault(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); e.currentTarget.classList.add('active');
-        esconderTodasAsVistas(); const tId = e.currentTarget.getAttribute('data-target'); document.getElementById(tId).style.display = 'block';
+    // Nav Bar Inferior
+    const nav = e.target.closest('.nav-item');
+    if(nav) {
+        e.preventDefault(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); nav.classList.add('active');
+        esconderTodasAsVistas(); const tId = nav.getAttribute('data-target'); 
+        
+        // Modo Foco e Forum precisam de ser FLEX, o resto BLOCK
+        document.getElementById(tId).style.display = (tId === 'view-study-mode' || tId === 'view-aluno-forum') ? 'flex' : 'block';
         
         if(tId === 'view-aluno-perfil') { 
             carregarObjetivosPessoais(); carregarHistoricoHumor(); carregarEstatisticasEstudo();
@@ -93,8 +65,48 @@ document.querySelectorAll('.nav-item').forEach(item => {
         if(tId === 'view-aluno-caderneta') document.getElementById('tab-aluno-timeline').click();
         if(tId === 'view-aluno-agenda') document.getElementById('tab-aluno-eventos').click();
         if(tId === 'view-aluno-forum') carregarForuns();
-    });
+    }
+    
+    // Botões de Acesso Rápido na Home
+    if(e.target.closest('#btn-open-study-mode')) {
+        esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('view-study-mode').style.display = 'flex';
+    }
+    if(e.target.closest('#btn-open-caderno')) {
+        esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('view-aluno-caderno').style.display = 'block';
+        if(!quillEditor) quillEditor = new Quill('#quill-editor', { theme: 'snow' }); 
+        carregarResumos();
+    }
+    if(e.target.closest('#btn-open-sumarios')) {
+        esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('view-aluno-sumarios').style.display = 'block'; carregarSumariosAluno();
+    }
+    if(e.target.closest('#btn-abrir-passaporte')) {
+        esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('view-aluno-passaporte').style.display = 'block';
+    }
+    if(e.target.closest('#btn-open-notificacoes')) {
+        esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('view-aluno-notificacoes').style.display = 'block'; carregarNotificacoesAluno();
+    }
+    if(e.target.closest('#btn-voltar-notificacoes') || e.target.closest('#btn-voltar-caderno') || e.target.closest('#btn-voltar-sumarios') || e.target.closest('#btn-voltar-passaporte') || e.target.closest('#btn-voltar-study')) {
+        document.querySelector('.nav-item[data-target="student-dashboard"]').click();
+    }
+
+    // Filtros Timeline e Notificações (Delegação Global para evitar perdas)
+    const tChip = e.target.closest('#timeline-filtros .filter-chip');
+    if(tChip) {
+        document.querySelectorAll('#timeline-filtros .filter-chip').forEach(c => c.classList.remove('active'));
+        tChip.classList.add('active'); timelineFilterCat = tChip.getAttribute('data-cat'); carregarTimelineAluno();
+    }
+    const nChip = e.target.closest('#notificacoes-filtros .filter-chip');
+    if(nChip) {
+        document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(c => c.classList.remove('active'));
+        nChip.classList.add('active'); notifFilterCat = nChip.getAttribute('data-cat'); carregarNotificacoesAluno();
+    }
 });
+
 
 // ==========================================
 // 3. DASHBOARD ADAPTATIVO MÁGICO
@@ -107,6 +119,7 @@ async function construirHomeAdaptativa() {
         const fS = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); fS.forEach(d => { if(!d.data().justificada && !d.data().comprovativoEnviado) tFaltas++; });
         const nS = await getDocs(collection(db, "utilizadores", myUserId, "notas")); nS.forEach(d => { const n = d.data().nota; if(n==='REP'||Number(n)<10) mRep++; });
         const pS = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); pS.forEach(d => { if(d.data().status!=='concluida'){pAtivos++; pHoras+=Number(d.data().horasPresenciais||0);} });
+        
         if(minhaTurma) {
             const evSnap = await getDocs(collection(db, "turmas", minhaTurma, "eventos"));
             const hj = new Date().toISOString().split('T')[0]; let d7 = new Date(); d7.setDate(d7.getDate()+7); const lIso = d7.toISOString().split('T')[0];
@@ -120,7 +133,7 @@ async function construirHomeAdaptativa() {
                 <h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-triangle-exclamation"></i> Ação Necessária</h3>
                 <p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens pendências urgentes que prejudicam a tua avaliação.</p>
                 <ul style="margin-bottom:20px; padding-left:20px; font-size:1.1rem; font-weight:bold; line-height:1.6;">
-                    ${tFaltas>0?`<li>${tFaltas} Falta(s)</li>`:''}${mRep>0?`<li>${mRep} Módulo(s) Reprovado(s)</li>`:''}${pAtivos>0?`<li>${pAtivos} PRHF(s) pendentes (${pHoras}h presenciais)</li>`:''}
+                    ${tFaltas>0?`<li>${tFaltas} Falta(s)</li>`:''}${mRep>0?`<li>${mRep} Módulo(s) Reprovado(s)</li>`:''}${pAtivos>0?`<li>${pAtivos} PRHF(s) pendentes</li>`:''}
                 </ul>
                 <button class="primary-btn" style="background:white; color:#cc0000; font-size:1.1rem; padding:15px;" onclick="document.querySelector('.nav-item[data-target=\\'view-aluno-caderneta\\']').click()">Abrir Caderneta e Resolver</button>
             </div>`;
@@ -142,7 +155,7 @@ async function construirHomeAdaptativa() {
             const tSnap = await getDoc(doc(db, "turmas", minhaTurma));
             if(tSnap.exists() && tSnap.data().missaoTitulo) {
                 const tm = tSnap.data();
-                html += `<div class="card" id="missao-card" style="border-left:4px solid var(--warning-yellow); margin-bottom:20px;"><h3 style="font-size:1rem; margin-bottom:5px;"><i class="fa-solid fa-users"></i> Missão da Turma</h3><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:${tm.missaoProgresso!==undefined?'10px':'0'};">${tm.missaoTitulo}</p>${tm.missaoProgresso!==undefined?`<div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${tm.missaoProgresso}%; background:var(--warning-yellow);"></div></div>`:''}</div>`;
+                html += `<div class="card" style="border-left:4px solid var(--warning-yellow); margin-bottom:20px;"><h3 style="font-size:1rem; margin-bottom:5px;"><i class="fa-solid fa-users"></i> Missão da Turma</h3><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:${tm.missaoProgresso!==undefined?'10px':'0'};">${tm.missaoTitulo}</p>${tm.missaoProgresso!==undefined?`<div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${tm.missaoProgresso}%; background:var(--warning-yellow);"></div></div>`:''}</div>`;
             }
         }
 
@@ -206,9 +219,9 @@ document.addEventListener('click', (e) => { if (!e.target.closest('#aluno-search
 function carregarGamificacao(dados) {
     const xp = dados.xp || 0; const nivel = Math.floor(xp / 100) + 1; const prog = ((xp - ((nivel - 1) * 100)) / 100) * 100;
     document.getElementById('aluno-nivel').innerText = nivel; document.getElementById('aluno-xp-atual').innerText = xp;
-    document.getElementById('perfil-xp-totais').innerText = xp; document.getElementById('perfil-xp-progress').style.width = `${prog}%`;
+    if(document.getElementById('perfil-xp-totais')) { document.getElementById('perfil-xp-totais').innerText = xp; document.getElementById('perfil-xp-progress').style.width = `${prog}%`; }
     let r = "Novato"; if(nivel>=2)r="Aprendiz"; if(nivel>=5)r="Estudante PRO"; if(nivel>=10)r="Veterano"; if(nivel>=20)r="Lenda";
-    document.getElementById('aluno-rank-title').innerText = r; document.getElementById('perfil-titulo-central').innerText = r;
+    document.getElementById('aluno-rank-title').innerText = r; if(document.getElementById('perfil-titulo-central')) document.getElementById('perfil-titulo-central').innerText = r;
 }
 
 async function carregarObjetivosPessoais() {
@@ -219,6 +232,7 @@ async function carregarObjetivosPessoais() {
 
         const snap = await getDocs(query(collection(db, "utilizadores", myUserId, "objetivos"), orderBy("timestamp", "desc")));
         let html = ''; let objGanhouXP = false;
+
         for (const d of snap.docs) {
             const obj = d.data(); 
             if(!obj.concluido && mapNotas[obj.disciplina] && mapNotas[obj.disciplina] >= Number(obj.notaAlvo)) {
@@ -230,9 +244,9 @@ async function carregarObjetivosPessoais() {
         }
         if(objGanhouXP) {
             const userS = await getDoc(doc(db, "utilizadores", myUserId)); let axp = userS.exists()&&userS.data().xp?userS.data().xp:0;
-            await updateDoc(doc(db, "utilizadores", myUserId), { xp: axp + 50 }); carregarGamificacao({xp: axp+50}); alert("🎉 Parabéns! Um Objetivo Inteligente foi concluído com base nas tuas Notas! +50 XP");
+            await updateDoc(doc(db, "utilizadores", myUserId), { xp: axp + 50 }); carregarGamificacao({xp: axp+50}); alert("🎉 Um Objetivo Inteligente foi concluído com as tuas Notas! +50 XP");
         }
-        cont.innerHTML = html === '' ? '<p class="text-muted center" style="font-size:0.85rem;">Não tens metas ativas. Começa a desafiar-te!</p>' : html;
+        cont.innerHTML = html === '' ? '<p class="text-muted center" style="font-size:0.85rem;">Não tens metas ativas.</p>' : html;
     } catch(e) {}
 }
 
@@ -241,7 +255,7 @@ document.getElementById('btn-add-objetivo')?.addEventListener('click', async () 
     if(!disc || !nota) { alert("Preenche a Disciplina e a Nota Alvo."); return; }
     try { await addDoc(collection(db, "utilizadores", myUserId, "objetivos"), { disciplina: disc, notaAlvo: nota, concluido: false, timestamp: Date.now() }); document.getElementById('obj-nota-alvo').value = ''; carregarObjetivosPessoais(); } catch(e) {}
 });
-window.apagarObjetivo = async (id) => { if(confirm("Apagar objetivo?")) { try { await deleteDoc(doc(db, "utilizadores", myUserId, "objetivos", id)); carregarObjetivosPessoais(); } catch(e) {} } };
+window.apagarObjetivo = async (id) => { if(confirm("Queres mesmo eliminar este objetivo?")) { try { await deleteDoc(doc(db, "utilizadores", myUserId, "objetivos", id)); carregarObjetivosPessoais(); } catch(e) {} } };
 
 function renderizarGraficoNotas() {
     const ctx = document.getElementById('chart-notas-aluno'); if(!ctx) return;
@@ -279,6 +293,22 @@ async function carregarHistoricoHumor() {
     } catch(e){}
 }
 
+document.getElementById('upload-avatar')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0]; if(!file) return;
+    try {
+        const compressedFile = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 500, useWebWorker: true });
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+            const base64 = ev.target.result;
+            document.getElementById('perfil-avatar-img').src = base64;
+            document.getElementById('header-avatar-circle').innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+            await updateDoc(doc(db, "utilizadores", myUserId), { fotoPerfil: base64 });
+        };
+        reader.readAsDataURL(compressedFile);
+    } catch(err) {}
+});
+
+
 // ==========================================
 // 6. CADERNETA COMPLETAS (Notas, Faltas, PRHF, Reuniões)
 // ==========================================
@@ -293,19 +323,38 @@ tabsCad.forEach(t => {
 });
 
 let timelineFilterCat = 'all';
-document.querySelectorAll('#timeline-filtros .filter-chip').forEach(c => { c.addEventListener('click', (e) => { document.querySelectorAll('#timeline-filtros .filter-chip').forEach(ch => ch.classList.remove('active')); e.currentTarget.classList.add('active'); timelineFilterCat = e.currentTarget.getAttribute('data-cat'); carregarTimelineAluno(); }); });
+// Os Listeners estão no router Global no topo do ficheiro, usa a var timelineFilterCat
+
+async function obterEventosLinhaTemporal() {
+    let ev = [];
+    const nS = await getDocs(collection(db, "utilizadores", myUserId, "notas")); nS.forEach(d => { ev.push({ time: new Date(d.data().data).getTime(), cat: 'notas', icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação', desc: `${d.data().disciplina}: <strong>${d.data().nota}</strong>` }); });
+    const fS = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); fS.forEach(d => { ev.push({ time: new Date(d.data().criadoEm || d.data().dataInicio).getTime(), cat: 'faltas', icon: '<i class="fa-solid fa-user-xmark"></i>', cor: d.data().justificada ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Falta a ${d.data().disciplina} (${d.data().horas}h)`, desc: d.data().justificada ? `Justificada` : `Por justificar` }); });
+    const oS = await getDocs(collection(db, "utilizadores", myUserId, "ocorrencias")); oS.forEach(d => { ev.push({ time: d.data().timestamp, cat: 'comportamento', icon: d.data().tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>', cor: d.data().tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Registo Disciplinar`, desc: `<strong>${d.data().titulo}</strong>` }); });
+    const hS = await getDocs(collection(db, "utilizadores", myUserId, "humor")); hS.forEach(d => { ev.push({ time: d.data().timestamp, cat: 'gamificacao', icon: '<i class="fa-solid fa-heart-pulse"></i>', cor: '#b82bf2', titulo: `Check-in Emocional`, desc: `${d.data().humor} (+10 XP)` }); });
+    ev.sort((a,b) => b.time - a.time); return ev;
+}
 
 async function carregarTimelineAluno() {
     const cCont = document.getElementById('aluno-caderneta-content');
     try {
-        let ev = [];
-        const nS = await getDocs(collection(db, "utilizadores", myUserId, "notas")); nS.forEach(d => { ev.push({ time: new Date(d.data().data).getTime(), cat: 'notas', icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação Lançada', desc: `${d.data().disciplina}: <strong>${d.data().nota}</strong>` }); });
-        const fS = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); fS.forEach(d => { ev.push({ time: new Date(d.data().criadoEm || d.data().dataInicio).getTime(), cat: 'faltas', icon: '<i class="fa-solid fa-user-xmark"></i>', cor: d.data().justificada ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Falta a ${d.data().disciplina} (${d.data().horas}h)`, desc: d.data().justificada ? `Justificada` : `Falta registada` }); });
-        const oS = await getDocs(collection(db, "utilizadores", myUserId, "ocorrencias")); oS.forEach(d => { ev.push({ time: d.data().timestamp, cat: 'comportamento', icon: d.data().tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>', cor: d.data().tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Registo Disciplinar`, desc: `<strong>${d.data().titulo}</strong>` }); });
-        const hS = await getDocs(collection(db, "utilizadores", myUserId, "humor")); hS.forEach(d => { ev.push({ time: d.data().timestamp, cat: 'gamificacao', icon: '<i class="fa-solid fa-heart-pulse"></i>', cor: '#b82bf2', titulo: `Check-in Emocional`, desc: `${d.data().humor} (+10 XP)` }); });
-        ev.sort((a,b) => b.time - a.time); if(timelineFilterCat !== 'all') ev = ev.filter(e => e.cat === timelineFilterCat);
-        if(ev.length === 0) { cCont.innerHTML = '<p class="text-muted center" style="margin-top:40px;">O teu histórico está limpo.</p>'; return; }
-        let html = '<div class="timeline">'; ev.forEach(e => { html += `<div class="timeline-item"><div class="timeline-icon" style="color:${e.cor}; border-color:${e.cor};">${e.icon}</div><div class="timeline-content" style="border-left: 3px solid ${e.cor};"><span class="timeline-date">${new Date(e.time).toLocaleDateString('pt-PT')}</span><strong style="color:white; display:block; margin-bottom:5px;">${e.titulo}</strong><p style="font-size:0.85rem; color:var(--text-light); margin:0;">${e.desc}</p></div></div>`; }); cCont.innerHTML = html + '</div>';
+        let eventos = await obterEventosLinhaTemporal();
+        if(timelineFilterCat !== 'all') { eventos = eventos.filter(e => e.cat === timelineFilterCat); }
+        if(eventos.length === 0) { cCont.innerHTML = '<p class="text-muted center" style="margin-top:40px;">O teu histórico está limpo.</p>'; return; }
+        let html = '<div class="timeline">'; eventos.forEach(e => { html += `<div class="timeline-item"><div class="timeline-icon" style="color:${e.cor}; border-color:${e.cor};">${e.icon}</div><div class="timeline-content" style="border-left: 3px solid ${e.cor};"><span class="timeline-date">${new Date(e.time).toLocaleDateString('pt-PT')}</span><strong style="color:white; display:block; margin-bottom:5px;">${e.titulo}</strong><p style="font-size:0.85rem; color:var(--text-light); margin:0;">${e.desc}</p></div></div>`; }); cCont.innerHTML = html + '</div>';
+    } catch(e) {}
+}
+
+let notifFilterCat = 'all';
+async function carregarNotificacoesAluno() {
+    const cont = document.getElementById('aluno-notificacoes-container'); cont.innerHTML = '<p class="text-muted center">A ler alertas...</p>';
+    try {
+        let evs = await obterEventosLinhaTemporal();
+        evs = evs.map(e => { let c='escola'; if(e.cat==='faltas'&&e.cor==='var(--danger-red)') c='importante'; if(e.cat==='gamificacao') c='gamificacao'; return {...e, nCat: c}; });
+        if(notifFilterCat !== 'all') evs = evs.filter(e => e.nCat === notifFilterCat);
+        const rec = evs.slice(0, 15);
+        if(rec.length === 0) { cont.innerHTML = '<p class="text-muted center" style="margin-top:40px;">Sem alertas nesta categoria.</p>'; return; }
+        let h = ''; rec.forEach(ev => { h += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${ev.cor}; display:flex; align-items:flex-start; gap: 15px; padding: 15px;"><div style="font-size: 1.5rem; color: ${ev.cor};">${ev.icon}</div><div><strong style="color:white; font-size:1rem; display:block; margin-bottom:3px;">${ev.titulo}</strong><span style="font-size:0.85rem; color:var(--text-light);">${ev.desc}</span><div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px;">${new Date(ev.time).toLocaleString('pt-PT')}</div></div></div>`; }); cont.innerHTML = h; 
+        if(notifFilterCat === 'all') document.getElementById('badge-notificacoes').style.display = 'none';
     } catch(e) {}
 }
 
@@ -335,27 +384,27 @@ async function carregarNotasAluno() {
 async function carregarFaltasAluno() {
     const cCont = document.getElementById('aluno-caderneta-content');
     try {
-        const faltasDb = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); let faltasObj = {}; faltasDb.forEach(d => { const f = d.data(); if(!faltasObj[f.disciplina]) faltasObj[f.disciplina] = []; faltasObj[f.disciplina].push(f); });
-        const prhfsDb = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); let hrsRec = {}; prhfsDb.forEach(d => { const p = d.data(); if (p.status === 'concluida') { hrsRec[p.disciplina] = (hrsRec[p.disciplina] || 0) + Number(p.horasTotais || p.horas || 0); } });
+        const fDb = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); let fObj = {}; fDb.forEach(d => { const f = d.data(); if(!fObj[f.disciplina]) fObj[f.disciplina] = []; fObj[f.disciplina].push(f); });
+        const pDb = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); let hRec = {}; pDb.forEach(d => { const p = d.data(); if (p.status === 'concluida') { hRec[p.disciplina] = (hRec[p.disciplina] || 0) + Number(p.horasTotais || p.horas || 0); } });
 
         let html = '';
         ordemDisciplinasGlobal.forEach(disc => {
-            let totF = 0; let fHtml = '';
-            if(faltasObj[disc]) {
-                faltasObj[disc].sort((a,b) => b.dataInicio.localeCompare(a.dataInicio));
-                faltasObj[disc].forEach(f => {
-                    totF += Number(f.horas || 0); // Todas as faltas abatem assiduidade até fazer PRHF
+            let totF = 0; let fH = '';
+            if(fObj[disc]) {
+                fObj[disc].sort((a,b) => b.dataInicio.localeCompare(a.dataInicio));
+                fObj[disc].forEach(f => {
+                    totF += Number(f.horas || 0); 
                     const sc = f.justificada ? 'var(--success-green)' : 'var(--danger-red)'; const st = f.justificada ? 'Justificada' : 'Injustificada'; 
-                    fHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 0; border-bottom: 1px dashed #333;"><div><strong style="color:white; font-size:0.9rem;">Falta (${f.horas}h)</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${f.dataInicio}</span></div><span style="font-size:0.75rem; font-weight:bold; color:${sc}; padding:4px 8px; background:rgba(255,255,255,0.05); border-radius:12px;">${st}</span></div>`;
+                    fH += `<div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 0; border-bottom: 1px dashed #333;"><div><strong style="color:white; font-size:0.9rem;">Falta (${f.horas}h)</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${f.dataInicio}</span></div><span style="font-size:0.75rem; font-weight:bold; color:${sc}; padding:4px 8px; background:rgba(255,255,255,0.05); border-radius:12px;">${st}</span></div>`;
                 });
             }
 
-            const rec = hrsRec[disc] || 0; let fEfetivas = totF - rec; if(fEfetivas < 0) fEfetivas = 0;
-            let assiduidade = 100 - ((fEfetivas / 50) * 100); if(assiduidade < 0) assiduidade = 0; if(assiduidade > 100) assiduidade = 100;
-            let barraColor = assiduidade < 80 ? 'var(--danger-red)' : (assiduidade < 90 ? 'var(--warning-yellow)' : 'var(--success-green)');
+            const rec = hRec[disc] || 0; let fEf = totF - rec; if(fEf < 0) fEf = 0;
+            let ass = 100 - ((fEf / 50) * 100); if(ass < 0) ass = 0; if(ass > 100) ass = 100;
+            let bC = ass < 80 ? 'var(--danger-red)' : (ass < 90 ? 'var(--warning-yellow)' : 'var(--success-green)');
 
-            if(faltasObj[disc] && faltasObj[disc].length > 0) {
-                html += `<div class="card" style="margin-bottom:15px; padding:15px; border-left: 4px solid ${barraColor};"><div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'"><div><strong style="font-size: 1.1rem; color:white;">${disc}</strong><div style="font-size: 0.8rem; color:var(--text-muted); margin-top:3px;">${totF}h Faltadas ${rec>0? `(<span style="color:var(--success-green);">${rec}h Recup.</span>)`:''}</div></div><div style="text-align:right;"><div style="font-weight:bold; color:${barraColor};">${assiduidade.toFixed(0)}%</div><div style="font-size:0.7rem; color:var(--text-muted);">Assiduidade</div></div></div><div style="display:none; margin-top:15px; border-top:1px solid #333; padding-top:10px;">${fHtml}</div></div>`;
+            if(fObj[disc] && fObj[disc].length > 0) {
+                html += `<div class="card" style="margin-bottom:15px; padding:15px; border-left: 4px solid ${bC};"><div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'"><div><strong style="font-size: 1.1rem; color:white;">${disc}</strong><div style="font-size: 0.8rem; color:var(--text-muted); margin-top:3px;">${totF}h Faltadas ${rec>0? `(<span style="color:var(--success-green);">${rec}h Recup.</span>)`:''}</div></div><div style="text-align:right;"><div style="font-weight:bold; color:${bC};">${ass.toFixed(0)}%</div><div style="font-size:0.7rem; color:var(--text-muted);">Assiduidade</div></div></div><div style="display:none; margin-top:15px; border-top:1px solid #333; padding-top:10px;">${fH}</div></div>`;
             } else { html += `<div class="card" style="margin-bottom:10px; padding:15px; border-left: 4px solid var(--success-green); display:flex; justify-content:space-between; align-items:center;"><strong style="font-size: 1rem; color:var(--text-muted);">${disc}</strong><div style="text-align:right;"><div style="font-weight:bold; color:var(--success-green);">100%</div></div></div>`; }
         });
         cCont.innerHTML = html;
@@ -366,11 +415,11 @@ async function carregarPrhfsAluno() {
     const cCont = document.getElementById('aluno-caderneta-content');
     try {
         const prhfsDb = await getDocs(collection(db, "utilizadores", myUserId, "prhfs"));
-        if(prhfsDb.empty) { cCont.innerHTML = '<p class="text-muted center">Não tens Planos de Recuperação.</p>'; return; }
-        let prhfsArr = []; prhfsDb.forEach(d => { prhfsArr.push({id: d.id, ...d.data()}); }); prhfsArr.sort((a,b) => new Date(a.prazo) - new Date(b.prazo));
+        if(prhfsDb.empty) { cCont.innerHTML = '<p class="text-muted" style="text-align:center;">Não tens Planos de Recuperação.</p>'; return; }
+        let arr = []; prhfsDb.forEach(d => { arr.push({id: d.id, ...d.data()}); }); arr.sort((a,b) => new Date(a.prazo) - new Date(b.prazo));
         
-        let pendentes = prhfsArr.filter(p => p.status !== 'concluida');
-        let concluidos = prhfsArr.filter(p => p.status === 'concluida');
+        let pendentes = arr.filter(p => p.status !== 'concluida');
+        let concluidos = arr.filter(p => p.status === 'concluida');
 
         let html = ''; 
         const renderP = (p) => {
@@ -380,18 +429,15 @@ async function carregarPrhfsAluno() {
             const corFinal = p.status === 'concluida' ? 'var(--success-green)' : cor;
             const hPres = Number(p.horasPresenciais || 0); 
             
-            const anexoHTML = p.anexoBase64 ? `<a href="${p.anexoBase64}" download="PRHF_${p.disciplina}" class="secondary-btn small-btn" style="margin-bottom:10px; color:var(--primary-green); border-color:var(--primary-green);"><i class="fa-solid fa-download"></i> Documento do Professor</a>` : '';
-            const fpHTML = p.feedbackProfessor ? `<div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:10px; font-size:0.85rem;"><strong style="color:var(--primary-green);">Prof:</strong> ${p.feedbackProfessor}</div>` : '';
-            const propHTML = p.propostaAluno ? `<div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:15px; font-size:0.85rem;"><strong style="color:var(--warning-yellow);">A tua Proposta:</strong> ${p.propostaAluno} <br><span style="color:${p.propostaLidaDT ? 'var(--success-green)' : 'var(--text-muted)'}; font-size:0.75rem;"><i class="fa-solid ${p.propostaLidaDT ? 'fa-check-double' : 'fa-check'}"></i> ${p.propostaLidaDT ? 'Validada' : 'A aguardar validação'}</span></div>` : '';
+            const aHtml = p.anexoBase64 ? `<a href="${p.anexoBase64}" download="PRHF_${p.disciplina}" class="secondary-btn small-btn" style="margin-bottom:10px; color:var(--primary-green); border-color:var(--primary-green);"><i class="fa-solid fa-download"></i> Documento do Professor</a>` : '';
+            const fpHtml = p.feedbackProfessor ? `<div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:10px; font-size:0.85rem;"><strong style="color:var(--primary-green);">Prof:</strong> ${p.feedbackProfessor}</div>` : '';
+            const propHtml = p.propostaAluno ? `<div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:15px; font-size:0.85rem;"><strong style="color:var(--warning-yellow);">A tua Proposta:</strong> ${p.propostaAluno} <br><span style="color:${p.propostaLidaDT ? 'var(--success-green)' : 'var(--text-muted)'}; font-size:0.75rem;"><i class="fa-solid ${p.propostaLidaDT ? 'fa-check-double' : 'fa-check'}"></i> ${p.propostaLidaDT ? 'Validada' : 'A aguardar validação'}</span></div>` : '';
 
-            return `<div class="card" style="margin-bottom:15px; border-left: 4px solid ${corFinal};"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="font-size: 1.1rem; color:white;">${p.disciplina} (Mod. ${p.modulo})</strong><span style="color:${corFinal}; font-size:0.75rem; font-weight:bold;">${txtSt}</span></div><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">${p.descricao}</p>${anexoHTML} ${fpHTML} ${propHTML}<div style="font-size:0.8rem; margin-bottom: 15px; border-top:1px dashed #333; padding-top:10px;">Data Limite: <strong style="color:${corFinal};">${p.prazo}</strong><br>Horas Presenciais: <strong>${hPres}h</strong></div>${p.status !== 'concluida' ? `<button class="primary-btn small-btn" style="width:100%; background-color:${corFinal}; color:${corFinal === 'var(--warning-yellow)' ? 'black' : 'white'};" onclick="window.abrirAcaoPrhf('${p.id}', '${p.disciplina}', '${p.modulo}', '${p.prazo}')"><i class="fa-solid fa-calendar-plus"></i> Agendar Sessão</button>` : ''}</div>`;
+            return `<div class="card" style="margin-bottom:15px; border-left: 4px solid ${corFinal};"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="font-size: 1.1rem; color:white;">${p.disciplina} (Mod. ${p.modulo})</strong><span style="color:${corFinal}; font-size:0.75rem; font-weight:bold;">${txtSt}</span></div><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">${p.descricao}</p>${aHtml} ${fpHtml} ${propHtml}<div style="font-size:0.8rem; margin-bottom: 15px; border-top:1px dashed #333; padding-top:10px;">Data Limite: <strong style="color:${corFinal};">${p.prazo}</strong><br>Horas Presenciais: <strong>${hPres}h</strong></div>${p.status !== 'concluida' ? `<button class="primary-btn small-btn" style="width:100%; background-color:${corFinal}; color:${corFinal === 'var(--warning-yellow)' ? 'black' : 'white'};" onclick="window.abrirAcaoPrhf('${p.id}', '${p.disciplina}', '${p.modulo}', '${p.prazo}')"><i class="fa-solid fa-calendar-plus"></i> Agendar Sessão</button>` : ''}</div>`;
         };
 
         pendentes.forEach(p => html += renderP(p));
-        if(concluidos.length > 0) {
-            html += `<div class="falta-date-divider" style="margin-top:20px;"><span>Concluídos</span></div>`;
-            concluidos.forEach(p => html += renderP(p));
-        }
+        if(concluidos.length > 0) { html += `<div class="falta-date-divider" style="margin-top:20px;"><span>Concluídos</span></div>`; concluidos.forEach(p => html += renderP(p)); }
         cCont.innerHTML = html;
     } catch(e) {}
 }
@@ -414,33 +460,28 @@ async function carregarComportamentoAluno() {
     const cCont = document.getElementById('aluno-caderneta-content');
     try {
         const res = await getDocs(query(collection(db, "utilizadores", myUserId, "ocorrencias")));
-        if(res.empty) { cCont.innerHTML = '<p class="text-muted center">Sem registos.</p>'; return; }
+        if(res.empty) { cCont.innerHTML = '<p class="text-muted" style="text-align:center;">Sem registos.</p>'; return; }
         let regs = []; res.forEach(d => regs.push(d.data())); regs.sort((a,b) => b.data.localeCompare(a.data)); 
         let html = ''; regs.forEach(r => { const cor = r.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)'; const ic = r.tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>'; html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${cor};"><div style="display:flex; align-items:center; gap:8px; color:${cor}; margin-bottom:5px;">${ic} <strong>${r.titulo}</strong></div><span style="font-size:0.75rem; color:var(--text-muted);">Data: ${r.data} | Prof. ${r.autor}</span>${r.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px; background:rgba(0,0,0,0.2); padding:8px; border-radius:6px;">${r.descricao}</p>` : ''}</div>`; }); cCont.innerHTML = html;
     } catch(e) {}
 }
 
-async function carregarObservacoesAluno(reuniaoSelecionada = '1_avaliacao') {
+async function carregarObservacoesAluno(rSel = '1_avaliacao') {
     const cCont = document.getElementById('aluno-caderneta-content');
-    const reunioesMenu = [{id: '1_intercalar', label: '1ª Intercalar'}, {id: '1_avaliacao', label: '1ª Avaliação'}, {id: '2_intercalar', label: '2ª Intercalar'}, {id: '2_avaliacao', label: '2ª Avaliação'}, {id: '3_avaliacao', label: '3ª Avaliação'}];
+    const rM = [{id: '1_intercalar', label: '1ª Intercalar'}, {id: '1_avaliacao', label: '1ª Avaliação'}, {id: '2_intercalar', label: '2ª Intercalar'}, {id: '2_avaliacao', label: '2ª Avaliação'}, {id: '3_avaliacao', label: '3ª Avaliação'}];
     let html = '<div style="display:flex; overflow-x:auto; gap:10px; margin-bottom:20px; padding-bottom:10px; scrollbar-width: none;">';
-    reunioesMenu.forEach(r => { const bg = r.id === reuniaoSelecionada ? 'var(--primary-green)' : 'var(--bg-dark)'; const color = r.id === reuniaoSelecionada ? 'var(--bg-dark)' : 'var(--text-muted)'; html += `<button class="btn-select-reuniao" data-id="${r.id}" style="background:${bg}; color:${color}; border:1px solid #333; padding:8px 15px; border-radius:20px; cursor:pointer; font-weight:bold; white-space:nowrap; transition:0.2s; flex-shrink:0;">${r.label}</button>`; });
-    html += '</div><div id="reuniao-content-area"><p class="text-muted center">A carregar dados...</p></div>';
+    rM.forEach(r => { const bg = r.id === rSel ? 'var(--primary-green)' : 'var(--bg-dark)'; const color = r.id === rSel ? 'var(--bg-dark)' : 'var(--text-muted)'; html += `<button class="btn-select-reuniao" data-id="${r.id}" style="background:${bg}; color:${color}; border:1px solid #333; padding:8px 15px; border-radius:20px; cursor:pointer; font-weight:bold; white-space:nowrap; transition:0.2s; flex-shrink:0;">${r.label}</button>`; });
+    html += '</div><div id="reuniao-content-area"><p class="text-muted center">A carregar...</p></div>';
     cCont.innerHTML = html;
 
     document.querySelectorAll('.btn-select-reuniao').forEach(btn => { btn.addEventListener('click', (e) => { carregarObservacoesAluno(e.currentTarget.getAttribute('data-id')); }); });
 
     try {
-        const docSnap = await getDoc(doc(db, "utilizadores", myUserId, "reunioes", reuniaoSelecionada));
-        let dadosReuniao = docSnap.exists() ? docSnap.data() : {};
-        let contentHtml = '<div style="display:flex; flex-direction:column; gap:10px;">';
-        ordemDisciplinasGlobal.forEach(disc => {
-            const comentario = dadosReuniao.disciplinas && dadosReuniao.disciplinas[disc] ? dadosReuniao.disciplinas[disc] : '<span style="color:var(--text-muted);">Sem comentário (SN)</span>';
-            contentHtml += `<div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;"><h4 style="margin-bottom:8px; color:white; font-size:1rem;">${disc}</h4><p style="color:var(--text-light); font-size:0.9rem; line-height:1.4; margin:0;">${comentario}</p></div>`;
-        });
-        const global = dadosReuniao.global || '<span style="color:var(--text-muted);">Sem observações globais registadas (SN).</span>';
-        contentHtml += `<div class="card" style="margin-top:15px; border:1px solid var(--warning-yellow); background:rgba(255,204,0,0.05); padding:15px;"><h3 style="color:var(--warning-yellow); margin-bottom:10px; font-size:1.1rem;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3><p style="color:white; font-size:0.95rem; line-height:1.5; margin:0;">${global}</p></div></div>`;
-        document.getElementById('reuniao-content-area').innerHTML = contentHtml;
+        const dS = await getDoc(doc(db, "utilizadores", myUserId, "reunioes", rSel)); let dR = dS.exists() ? dS.data() : {};
+        let cH = '<div style="display:flex; flex-direction:column; gap:10px;">';
+        ordemDisciplinasGlobal.forEach(disc => { const cm = dR.disciplinas && dR.disciplinas[disc] ? dR.disciplinas[disc] : '<span style="color:var(--text-muted);">SN</span>'; cH += `<div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;"><h4 style="margin-bottom:8px; color:white; font-size:1rem;">${disc}</h4><p style="color:var(--text-light); font-size:0.9rem; line-height:1.4; margin:0;">${cm}</p></div>`; });
+        const gl = dR.global || '<span style="color:var(--text-muted);">SN</span>'; cH += `<div class="card" style="margin-top:15px; border:1px solid var(--warning-yellow); background:rgba(255,204,0,0.05); padding:15px;"><h3 style="color:var(--warning-yellow); margin-bottom:10px; font-size:1.1rem;"><i class="fa-solid fa-comment-dots"></i> Globais</h3><p style="color:white; font-size:0.95rem; line-height:1.5; margin:0;">${gl}</p></div></div>`;
+        document.getElementById('reuniao-content-area').innerHTML = cH;
     } catch(e) {}
 }
 
@@ -453,19 +494,22 @@ document.getElementById('tab-aluno-horario')?.addEventListener('click', (e) => {
 document.querySelectorAll('.agenda-filter-label input').forEach(chk => chk.addEventListener('change', carregarAgendaAlunoLista));
 
 async function carregarAgendaAlunoLista() {
-    const subContainer = document.getElementById('aluno-agenda-content'); subContainer.innerHTML = '<p class="text-muted center">A sincronizar...</p>'; if(!minhaTurma) return;
+    const sC = document.getElementById('aluno-agenda-content'); sC.innerHTML = '<p class="text-muted center">A sincronizar agenda...</p>'; if(!minhaTurma) return;
     const mT = document.getElementById('aluno-filtro-agenda-testes').checked; const mTr = document.getElementById('aluno-filtro-agenda-trabalhos').checked; const mO = document.getElementById('aluno-filtro-agenda-outros').checked;
     try {
-        const evDb = await getDocs(collection(db, "turmas", minhaTurma, "eventos"));
-        let evs = []; evDb.forEach(d => { const e = d.data(); let bgC = '#b82bf2'; let txtT = 'Evento'; if(e.tipo === 'teste' || e.tipo === 'avaliacao') { if(mT) { bgC = '#ffaa00'; txtT = 'Avaliação'; evs.push({...e, cor: bgC, txt: txtT}); } } else if(e.tipo === 'trabalho' || e.tipo === 'entrega') { if(mTr) { bgC = '#00d2ff'; txtT = 'Entrega'; evs.push({...e, cor: bgC, txt: txtT}); } } else { if(mO) evs.push({...e, cor: bgC, txt: txtT}); } });
-        if(evs.length === 0) { subContainer.innerHTML = '<p class="text-muted center">Nenhum evento com os filtros atuais.</p>'; return; }
+        const evDb = await getDocs(collection(db, "turmas", minhaTurma, "eventos")); if(evDb.empty) { sC.innerHTML = '<p class="text-muted center">Sem eventos na escola.</p>'; return; }
+        let evs = [];
+        evDb.forEach(d => { const e = d.data(); let bgC = '#b82bf2'; let txtT = 'Evento'; if(e.tipo === 'teste' || e.tipo === 'avaliacao') { if(mT) { bgC = '#ffaa00'; txtT = 'Avaliação'; evs.push({...e, cor: bgC, txt: txtT}); } } else if(e.tipo === 'trabalho' || e.tipo === 'entrega') { if(mTr) { bgC = '#00d2ff'; txtT = 'Entrega'; evs.push({...e, cor: bgC, txt: txtT}); } } else { if(mO) evs.push({...e, cor: bgC, txt: txtT}); } });
+        if(evs.length === 0) { sC.innerHTML = '<p class="text-muted center">Nenhum evento com os filtros atuais.</p>'; return; }
+        
         const hj = new Date().toISOString().split('T')[0]; const fut = evs.filter(e => e.data >= hj).sort((a,b) => a.data.localeCompare(b.data)); const pas = evs.filter(e => e.data < hj).sort((a,b) => b.data.localeCompare(a.data));
-        const mesArr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const mA = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
         let html = '';
-        const rEv = (ev) => { const dp = ev.data.split('-'); const mes = mesArr[parseInt(dp[1])-1]; return `<div class="calendar-event-card" style="border-left-color:${ev.cor}; margin-bottom:10px;"><div class="calendar-date-box"><span class="day">${dp[2]}</span><span class="month" style="color:${ev.cor};">${mes}</span></div><div class="calendar-info"><h4 style="margin:0; color:white;">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt||'evento').toUpperCase()}</span></div></div>`; };
+        const rEv = (ev) => { const dp = ev.data.split('-'); const mes = mA[parseInt(dp[1])-1]; return `<div class="calendar-event-card" style="border-left-color:${ev.cor}; margin-bottom:10px;"><div class="calendar-date-box"><span class="day">${dp[2]}</span><span class="month" style="color:${ev.cor};">${mes}</span></div><div class="calendar-info"><h4 style="margin:0; color:white;">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt||'evento').toUpperCase()}</span></div></div>`; };
+
         if(fut.length > 0) fut.forEach(e => html += rEv(e)); else html += '<p class="text-muted center">Sem eventos futuros.</p>';
         if(pas.length > 0) { html += '<div class="calendar-divider" style="margin-top:20px;"><span>Passados</span></div>'; pas.forEach(e => html += rEv(e)); }
-        subContainer.innerHTML = html;
+        sC.innerHTML = html;
     } catch(e) {}
 }
 
@@ -475,20 +519,21 @@ document.getElementById('btn-aluno-horario-grelha')?.addEventListener('click', (
 document.getElementById('btn-aluno-prev-horario')?.addEventListener('click', () => { if(ahModo === 'dia') ahDOff--; else ahSOff--; carregarHorarioAluno(); });
 document.getElementById('btn-aluno-next-horario')?.addEventListener('click', () => { if(ahModo === 'dia') ahDOff++; else ahSOff++; carregarHorarioAluno(); });
 
-const getCorEspecial = (d) => { const dL = d.toLowerCase(); if(d.includes('alm')) return { c: 'var(--warning-yellow)', bg: 'rgba(255, 204, 0, 0.15)' }; if(d.includes('vis')) return { c: '#00d2ff', bg: 'rgba(0, 210, 255, 0.15)' }; if(d.includes('prhf')) return { c: 'var(--danger-red)', bg: 'rgba(255, 77, 77, 0.15)' }; if(d.includes('pap') || d.includes('fct')) return { c: '#ff9900', bg: 'rgba(255, 153, 0, 0.15)' }; return { c: 'var(--primary-green)', bg: 'rgba(0, 204, 136, 0.1)' }; };
+const getCorEspecial = (dsc) => { const d = dsc.toLowerCase(); if(d.includes('alm')) return { c: 'var(--warning-yellow)', bg: 'rgba(255, 204, 0, 0.15)' }; if(d.includes('vis')) return { c: '#00d2ff', bg: 'rgba(0, 210, 255, 0.15)' }; if(d.includes('prhf')) return { c: 'var(--danger-red)', bg: 'rgba(255, 77, 77, 0.15)' }; if(d.includes('pap') || d.includes('fct')) return { c: '#ff9900', bg: 'rgba(255, 153, 0, 0.15)' }; if(['reunião','reuniao','livre','estudo'].some(k => d.includes(k))) return { c: '#b82bf2', bg: 'rgba(184, 43, 242, 0.15)' }; return { c: 'var(--primary-green)', bg: 'rgba(0, 204, 136, 0.1)' }; };
 
 async function carregarHorarioAluno() {
     const sC = document.getElementById('aluno-agenda-content'); sC.innerHTML = '<p class="text-muted center">A gerar horário...</p>'; if(!minhaTurma) return;
     try {
         const dS = await getDoc(doc(db, "turmas", minhaTurma)); let hb = {}; if(dS.exists() && dS.data().horario) hb = dS.data().horario;
         const bK = ['1', '2', '3', '4', '1300', '5', '6', '7']; const bT = { '1': '08:30', '2': '09:35', '3': '10:50', '4': '11:55', '1300': '13:00', '5': '14:05', '6': '15:15', '7': '16:20' }; const dM = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']; const fDt = (dt) => `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;
+        
         if (ahModo === 'dia') {
             let tD = new Date(); tD.setDate(tD.getDate() + ahDOff); document.getElementById('aluno-horario-display').innerText = `${dM[tD.getDay()]}, ${fDt(tD)}`;
             let h = ''; let tAD = false; const dSStr = `${tD.getFullYear()}-${String(tD.getMonth()+1).padStart(2,'0')}-${String(tD.getDate()).padStart(2,'0')}`;
-            bK.forEach(b => { const dc = hb[`${dSStr}_${b}`]; if(dc) { const sty = getCorEspecial(dc); h += `<div class="horario-list-item" style="border-left-color:${sty.c}; background-color:${sty.bg};"><div class="horario-time-col">${bT[b]}</div><div class="horario-disc-col"><div class="horario-disc-name">${dc}</div></div></div>`; tAD = true; } });
+            bK.forEach(b => { const dc = hb[`${dSStr}_${b}`]; if(dc) { const sty = getCorEspecial(dc); h += `<div class="horario-list-item" style="border-left-color:${sty.c}; background-color:${sty.bg};"><div class="horario-time-col">${bT[b]}</div><div class="horario-disc-col"><div class="horario-disc-name">${dc}</div><div class="horario-prof">Prof. A Atribuir</div></div></div>`; tAD = true; } });
             sC.innerHTML = tAD ? h : '<p class="text-muted center" style="margin-top:30px;">Sem aulas neste dia.</p>';
         } else {
-            let dT = new Date(); dtT.setDate(dtT.getDate() + (ahSOff * 7)); dtT.setDate(dtT.getDate() - (dtT.getDay() === 0 ? 6 : dtT.getDay() - 1)); let dE = new Date(dtT); dE.setDate(dE.getDate() + 4);
+            let dtT = new Date(); dtT.setDate(dtT.getDate() + (ahSOff * 7)); dtT.setDate(dtT.getDate() - (dtT.getDay() === 0 ? 6 : dtT.getDay() - 1)); let dE = new Date(dtT); dE.setDate(dE.getDate() + 4);
             document.getElementById('aluno-horario-display').innerText = `${fDt(dtT)} a ${fDt(dE)}`;
             let h = '<div class="horario-grid" style="min-width:100%;"><div class="horario-header"></div>'; let dI = new Date(dtT);
             ['SEG','TER','QUA','QUI','SEX'].forEach(d => { h += `<div class="horario-header">${d}<span>${fDt(dI)}</span></div>`; dI.setDate(dI.getDate()+1); });
@@ -517,14 +562,13 @@ document.getElementById('btn-cancelar-novo-forum')?.addEventListener('click', ()
 document.getElementById('btn-confirmar-novo-forum')?.addEventListener('click', async () => {
     const nome = document.getElementById('input-nome-novo-forum').value.trim(); if(!nome) return;
     let mbr = [myUserId]; document.querySelectorAll('.colegas-check:checked').forEach(c => mbr.push(c.value));
-    try { await addDoc(collection(db, "turmas", minhaTurma, "foruns"), { nome: nome, tipo: 'permanente', isDefault: false, membros: mbr, criadoPor: myUserName }); document.getElementById('modal-criar-forum').style.display = 'none'; document.getElementById('input-nome-novo-forum').value = ''; alert("Grupo criado!"); carregarForuns(); } catch(e) {}
+    try { await addDoc(collection(db, "turmas", minhaTurma, "foruns"), { nome: nome, tipo: 'permanente', isDefault: false, membros: mbr, criadoPor: myUserName }); document.getElementById('modal-criar-forum').style.display = 'none'; document.getElementById('input-nome-novo-forum').value = ''; carregarForuns(); } catch(e) {}
 });
 
 async function carregarForuns() {
-    const cont = document.getElementById('aluno-forum-channel-list'); cont.innerHTML = '<p class="text-muted center">A carregar...</p>'; if(!minhaTurma) return;
-    let html = `<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apoio & Turma</h3><div class="canal-card" data-id="turma_global" data-nome="Turma ${minhaTurma}"><div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-users"></i></div><div class="canal-info"><h4>Turma ${minhaTurma}</h4><p>Canal Geral</p></div></div><div class="canal-card" data-id="dt_${myUserId}" data-nome="Chat DT"><div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div><div class="canal-info"><h4>Diretor de Turma</h4><p>Mensagem Privada</p></div></div><h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Disciplinas</h3><div style="display:flex; flex-wrap:wrap; gap:10px;">`;
+    const cont = document.getElementById('aluno-forum-channel-list'); cont.innerHTML = '<p class="text-muted center">A configurar fóruns...</p>'; if(!minhaTurma) return;
+    let html = `<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apoio & Turma</h3><div class="canal-card" data-id="turma_global" data-nome="Turma ${minhaTurma}" style="margin-bottom: 10px;"><div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-users"></i></div><div class="canal-info"><h4>Turma ${minhaTurma}</h4><p>Canal Geral</p></div></div><div class="canal-card" data-id="dt_${myUserId}" data-nome="Chat DT"><div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div><div class="canal-info"><h4>Diretor de Turma</h4><p>Mensagem Privada</p></div></div><h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Disciplinas</h3><div style="display:flex; flex-wrap:wrap; gap:10px;">`;
     ordemDisciplinasGlobal.forEach(disc => { html += `<div class="canal-card" data-id="disc_${disc}" data-nome="Fórum ${disc}" style="flex: 1 1 45%; padding: 10px;"><div class="canal-info" style="text-align:center;"><h4 style="margin:0; font-size:0.9rem; color:#00d2ff;"><i class="fa-solid fa-book-open"></i> ${disc}</h4></div></div>`; }); html += '</div>';
-    
     try {
         const res = await getDocs(collection(db, "turmas", minhaTurma, "foruns")); let extras = '';
         res.forEach(d => { const f = d.data(); if(f.membros.includes(myUserId) && !f.isDefault) extras += `<div class="canal-card" data-id="${d.id}" data-nome="${f.nome}"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-comments"></i></div><div class="canal-info"><h4>${f.nome}</h4><p>Os Meus Chats</p></div></div>`; });
@@ -532,7 +576,7 @@ async function carregarForuns() {
     } catch(e) {}
     cont.innerHTML = html;
     
-    cont.querySelectorAll('.canal-card').forEach(c => c.addEventListener('click', (e) => { alunoForumAtivoId = e.currentTarget.getAttribute('data-id'); document.getElementById('aluno-chat-active-title').innerText = e.currentTarget.getAttribute('data-nome'); document.getElementById('aluno-forum-channel-list').style.display = 'none'; document.getElementById('aluno-forum-chat-view').style.display = 'flex'; document.getElementById('btn-create-chat-aluno').style.display = 'none'; iniciarChatAluno(alunoForumAtivoId); }));
+    cont.querySelectorAll('.canal-card').forEach(c => c.addEventListener('click', (e) => { window.alunoForumAtivoId = e.currentTarget.getAttribute('data-id'); document.getElementById('aluno-chat-active-title').innerText = e.currentTarget.getAttribute('data-nome'); document.getElementById('aluno-forum-channel-list').style.display = 'none'; document.getElementById('aluno-forum-chat-view').style.display = 'flex'; document.getElementById('btn-create-chat-aluno').style.display = 'none'; iniciarChatAluno(window.alunoForumAtivoId); }));
 }
 
 document.getElementById('btn-aluno-voltar-canais')?.addEventListener('click', () => { document.getElementById('aluno-forum-chat-view').style.display = 'none'; document.getElementById('aluno-forum-channel-list').style.display = 'block'; document.getElementById('btn-create-chat-aluno').style.display = 'block'; });
@@ -541,10 +585,10 @@ function iniciarChatAluno(fId) {
     const chatC = document.getElementById('aluno-chat-messages-container'); chatC.innerHTML = ''; if(chatUnsubscribeAluno) chatUnsubscribeAluno();
     chatUnsubscribeAluno = onSnapshot(query(collection(db, "turmas", minhaTurma, "foruns", fId, "mensagens"), orderBy("timestamp")), (snap) => { let html = ''; snap.forEach(doc => { const m = doc.data(); const isMe = m.remetente === myUserName; html += `<div class="chat-bubble ${isMe ? 'admin' : 'student'}"><strong>${isMe ? 'Tu' : m.remetente}</strong><br>${m.texto}<span class="chat-meta">${new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span></div>`; }); chatC.innerHTML = html; chatC.scrollTop = chatC.scrollHeight; });
 }
-document.getElementById('btn-aluno-send-msg')?.addEventListener('click', async () => { const inp = document.getElementById('aluno-input-forum-msg'); const t = inp.value.trim(); if(!t || !alunoForumAtivoId) return; try { await addDoc(collection(db, "turmas", minhaTurma, "foruns", alunoForumAtivoId, "mensagens"), { remetente: myUserName, texto: t, timestamp: Date.now() }); inp.value = ''; } catch(e) {} });
+document.getElementById('btn-aluno-send-msg')?.addEventListener('click', async () => { const inp = document.getElementById('aluno-input-forum-msg'); const t = inp.value.trim(); if(!t || !window.alunoForumAtivoId) return; try { await addDoc(collection(db, "turmas", minhaTurma, "foruns", window.alunoForumAtivoId, "mensagens"), { remetente: myUserName, texto: t, timestamp: Date.now() }); inp.value = ''; } catch(e) {} });
 
 // ==========================================
-// 9. POMODORO (Música e XP)
+// 9. POMODORO E MÚSICA
 // ==========================================
 let pTmr; let pRest = 25 * 60; 
 document.getElementById('btn-start-study')?.addEventListener('click', (e) => {
@@ -587,31 +631,29 @@ async function carregarResumos() {
 }
 
 let fQB64 = "";
-document.getElementById('upload-foto-quadro')?.addEventListener('change', async (e) => { let file = e.target.files[0]; if(!file) return; if (file.type.startsWith('image/')) { const opt = { maxSizeMB: 0.8, maxWidthOrHeight: 1920, useWebWorker: true }; try { file = await imageCompression(file, opt); } catch (err) {} } document.getElementById('foto-quadro-file-name').innerText = file.name; document.getElementById('btn-gravar-foto-quadro').style.display = 'block'; const rd = new FileReader(); rd.onload = (ev) => { fQB64 = ev.target.result; }; rd.readAsDataURL(file); });
+const handleFotoQuadro = async (e) => { let file = e.target.files[0]; if(!file) return; if (file.type.startsWith('image/')) { const opt = { maxSizeMB: 0.8, maxWidthOrHeight: 1920, useWebWorker: true }; try { file = await imageCompression(file, opt); } catch (err) {} } document.getElementById('foto-quadro-file-name').innerText = file.name; document.getElementById('btn-gravar-foto-quadro').style.display = 'block'; const rd = new FileReader(); rd.onload = (ev) => { fQB64 = ev.target.result; }; rd.readAsDataURL(file); };
+document.getElementById('upload-foto-quadro')?.addEventListener('change', handleFotoQuadro); document.getElementById('tirar-foto-quadro')?.addEventListener('change', handleFotoQuadro);
 document.getElementById('btn-gravar-foto-quadro')?.addEventListener('click', async (e) => { const t = document.getElementById('foto-titulo').value.trim(); if(!t || !fQB64) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await addDoc(collection(db, "utilizadores", myUserId, "caderno_fotos"), { titulo: t, fotoBase64: fQB64, timestamp: Date.now() }); b.innerHTML = '<i class="fa-solid fa-check"></i> Guardada'; setTimeout(() => { b.style.display = 'none'; b.disabled = false; b.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Guardar na Galeria'; document.getElementById('foto-quadro-file-name').innerText = ""; document.getElementById('foto-titulo').value = ""; fQB64 = ""; carregarFotosQuadro(); }, 2000); } catch(err) { b.innerHTML = "Erro"; setTimeout(() => { b.disabled = false; }, 2000); } });
 async function carregarFotosQuadro() { const c = document.getElementById('lista-fotos-quadro-container'); c.innerHTML = '<p class="text-muted" style="grid-column: span 2; text-align:center;">A carregar galeria...</p>'; try { const s = await getDocs(query(collection(db, "utilizadores", myUserId, "caderno_fotos"), orderBy("timestamp", "desc"))); let h = ''; s.forEach(d => { const dta = d.data(); h += `<div style="background:var(--bg-card); border:1px solid #333; border-radius:8px; overflow:hidden;"><div style="height:120px; background:url('${dta.fotoBase64}') center/cover no-repeat; cursor:pointer;" onclick="window.open('${dta.fotoBase64}')"></div><div style="padding:10px; font-size:0.85rem;"><strong style="color:white; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${dta.titulo}</strong><span style="color:var(--text-muted); font-size:0.7rem;">${new Date(dta.timestamp).toLocaleDateString('pt-PT')}</span></div></div>`; }); c.innerHTML = h===''?'<p class="text-muted" style="grid-column: span 2; text-align:center;">Sem fotos.</p>':h; } catch(e) {} }
 document.getElementById('tab-caderno-resumos')?.addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('tab-caderno-galeria').classList.remove('active'); document.getElementById('sec-caderno-resumos').style.display = 'block'; document.getElementById('sec-caderno-galeria').style.display = 'none'; });
 document.getElementById('tab-caderno-galeria')?.addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('tab-caderno-resumos').classList.remove('active'); document.getElementById('sec-caderno-resumos').style.display = 'none'; document.getElementById('sec-caderno-galeria').style.display = 'block'; carregarFotosQuadro(); });
 
 // ==========================================
-// 11. SUMÁRIOS
+// 11. SUMÁRIOS E PASSAPORTE
 // ==========================================
 document.getElementById('aluno-filtro-sumarios-disc')?.addEventListener('change', carregarSumariosAluno);
 async function carregarSumariosAluno() {
-    const c = document.getElementById('aluno-lista-sumarios-container'); c.innerHTML = '<p class="text-muted center">A carregar sumários...</p>'; if(!minhaTurma) return;
+    const c = document.getElementById('aluno-lista-sumarios-container'); c.innerHTML = '<p class="text-muted center">A carregar...</p>'; if(!minhaTurma) return;
     try {
         const r = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); if(r.empty) { c.innerHTML = '<p class="text-muted center">Sem sumários.</p>'; return; }
         let sum = []; let dU = new Set(); r.forEach(d => { const dt = d.data(); sum.push({id: d.id, ...dt}); dU.add(dt.disciplina); });
-        const fS = document.getElementById('aluno-filtro-sumarios-disc'); if (fS.options.length <= 1) { let oH = '<option value="">Todas as Disciplinas</option>'; dU.forEach(dc => oH += `<option value="${dc}">${dc}</option>`); fS.innerHTML = oH; }
+        const fS = document.getElementById('aluno-filtro-sumarios-disc'); if (fS.options.length <= 1) { let oH = '<option value="">Todas</option>'; dU.forEach(dc => oH += `<option value="${dc}">${dc}</option>`); fS.innerHTML = oH; }
         const fA = fS.value; if(fA) sum = sum.filter(s => s.disciplina === fA); sum.sort((a,b) => b.data.localeCompare(a.data)); 
-        if(sum.length === 0) { c.innerHTML = '<p class="text-muted center">Sem sumários para a disciplina.</p>'; return; }
-        let h = ''; sum.forEach(s => { const aB = s.anexoBase64 ? `<a href="${s.anexoBase64}" download="${s.anexoNome}" class="primary-btn small-btn" style="display:inline-block; margin-top:10px; width:auto; padding:8px 12px; background-color:#0099ff;"><i class="fa-solid fa-download"></i> Baixar Anexo</a>` : ''; h += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #0099ff;"><div><span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">${s.data} | ${s.disciplina} | Prof. ${s.professor}</span><h4 style="margin:5px 0;">${s.titulo}</h4>${s.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px;">${s.descricao}</p>` : ''}</div>${aB}</div>`; }); c.innerHTML = h;
+        if(sum.length === 0) { c.innerHTML = '<p class="text-muted center">Sem sumários.</p>'; return; }
+        let h = ''; sum.forEach(s => { const aB = s.anexoBase64 ? `<a href="${s.anexoBase64}" download="${s.anexoNome}" class="primary-btn small-btn" style="display:inline-block; margin-top:10px; width:auto; padding:8px 12px; background-color:#0099ff;"><i class="fa-solid fa-download"></i> Anexo</a>` : ''; h += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #0099ff;"><div><span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">${s.data} | ${s.disciplina} | Prof. ${s.professor}</span><h4 style="margin:5px 0;">${s.titulo}</h4>${s.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px;">${s.descricao}</p>` : ''}</div>${aB}</div>`; }); c.innerHTML = h;
     } catch(e) {}
 }
 
-// ==========================================
-// 12. PASSAPORTE
-// ==========================================
 function carregarDadosPassaporte(dados) {
     if(dados.fct) { document.getElementById('aluno-fct-horas').innerText = `${dados.fct.horasRealizadas||0} / ${dados.fct.horasTotal||0}h`; document.getElementById('aluno-fct-progress').style.width = `${((dados.fct.horasRealizadas||0)/(dados.fct.horasTotal||1))*100}%`; document.getElementById('input-fct-horas').value = dados.fct.horasRealizadas||'';}
     if(dados.pap) { document.getElementById('input-pap-tema').value = dados.pap.tema || ''; }
