@@ -2,7 +2,7 @@ import { auth, db, messaging, VAPID_KEY, getToken, onMessage } from "./firebase.
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, collection, updateDoc, getDocs, query, addDoc, onSnapshot, orderBy, setDoc, enableIndexedDbPersistence, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// Matriz Oficial de Disciplinas (Ordem)
+// Matriz Oficial de Disciplinas (Ordem e Fóruns)
 const matrizCursoMap = {
     "Sociocultural": ["PORT", "ING", "AI", "EF", "TIC"],
     "Científica": ["GEO", "HCA", "MAT", "FQ", "BG", "MAC"],
@@ -205,7 +205,7 @@ async function construirHomeAdaptativa(dadosAluno) {
 }
 
 // ----------------------------------------------------
-// GAMIFICAÇÃO, ESTATÍSTICAS ESTUDO E AVATAR
+// GAMIFICAÇÃO E PERFIL COMPLETO (Nível, XP, Títulos)
 // ----------------------------------------------------
 function carregarGamificacao(dados) {
     const xp = dados.xp || 0;
@@ -216,6 +216,7 @@ function carregarGamificacao(dados) {
 
     document.getElementById('aluno-nivel').innerText = nivel;
     document.getElementById('aluno-xp-atual').innerText = xp;
+
     document.getElementById('perfil-xp-totais').innerText = xp;
     document.getElementById('perfil-xp-progress').style.width = `${progresso}%`;
 
@@ -281,7 +282,7 @@ const views = [
     document.getElementById('view-aluno-passaporte'), document.getElementById('view-study-mode'),
     document.getElementById('view-aluno-sumarios'), document.getElementById('view-aluno-caderno'),
     document.getElementById('view-aluno-notificacoes'), document.getElementById('view-aluno-perfil'),
-    document.getElementById('view-aluno-justificar'), document.getElementById('view-aluno-acao-prhf')
+    document.getElementById('view-aluno-acao-prhf')
 ];
 
 function esconderTodasAsVistas() { views.forEach(v => { if(v) v.style.display = 'none'; }); }
@@ -302,12 +303,12 @@ navItems.forEach(item => {
 });
 
 document.getElementById('btn-open-notificacoes')?.addEventListener('click', () => { esconderTodasAsVistas(); navItems.forEach(nav => nav.classList.remove('active')); document.getElementById('view-aluno-notificacoes').style.display = 'block'; carregarNotificacoesAluno(); });
-document.querySelectorAll('#btn-voltar-notificacoes, #btn-voltar-justificar, #btn-voltar-acao-prhf').forEach(btn => {
+document.querySelectorAll('#btn-voltar-notificacoes').forEach(btn => {
     btn?.addEventListener('click', () => { esconderTodasAsVistas(); document.querySelector('.nav-item[data-target="student-dashboard"]').classList.add('active'); document.getElementById('student-dashboard').style.display = 'block'; });
 });
 
 // ----------------------------------------------------
-// CADERNETA - VISTAS IGUAIS AO EE + INTERATIVIDADE
+// CADERNETA - VISTAS E INTERATIVIDADE
 // ----------------------------------------------------
 const tabTimeline = document.getElementById('tab-aluno-timeline'); const tabNotas = document.getElementById('tab-aluno-notas'); const tabFaltas = document.getElementById('tab-aluno-faltas'); const tabPrhfs = document.getElementById('tab-aluno-prhfs'); const tabComportamento = document.getElementById('tab-aluno-comportamento'); const tabObservacoes = document.getElementById('tab-aluno-observacoes'); const cadernetaContent = document.getElementById('aluno-caderneta-content');
 
@@ -338,10 +339,10 @@ document.querySelectorAll('#timeline-filtros .filter-chip').forEach(chip => {
 
 async function obterEventosLinhaTemporal() {
     let eventos = []; if(!myUserId) return eventos;
-    const notasSnap = await getDocs(collection(db, "utilizadores", myUserId, "notas")); notasSnap.forEach(d => { const n = d.data(); eventos.push({ time: new Date(n.data).getTime(), cat: 'notas', icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação', desc: `${n.disciplina} (Mod. ${n.modulo}): <strong>${n.nota}</strong>` }); });
-    const faltasSnap = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); faltasSnap.forEach(d => { const f = d.data(); eventos.push({ time: new Date(f.criadoEm || f.dataInicio).getTime(), cat: 'faltas', icon: '<i class="fa-solid fa-user-xmark"></i>', cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Falta a ${f.disciplina} (${f.horas}h)`, desc: f.justificada ? `Justificada` : `Falta registada` }); });
+    const notasSnap = await getDocs(collection(db, "utilizadores", myUserId, "notas")); notasSnap.forEach(d => { const n = d.data(); eventos.push({ time: new Date(n.data).getTime(), cat: 'notas', icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação Lançada', desc: `${n.disciplina} (Mod. ${n.modulo}): <strong>${n.nota}</strong>` }); });
+    const faltasSnap = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); faltasSnap.forEach(d => { const f = d.data(); eventos.push({ time: new Date(f.criadoEm || f.dataInicio).getTime(), cat: 'faltas', icon: '<i class="fa-solid fa-user-xmark"></i>', cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Falta a ${f.disciplina} (${f.horas}h)`, desc: f.justificada ? `Estado: Justificada` : `Atenção: Falta por justificar!` }); });
     const ocSnap = await getDocs(collection(db, "utilizadores", myUserId, "ocorrencias")); ocSnap.forEach(d => { const o = d.data(); eventos.push({ time: o.timestamp, cat: 'comportamento', icon: o.tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>', cor: o.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Registo Disciplinar`, desc: `<strong>${o.titulo}</strong><br><span style="font-size:0.8rem; color:#aaa;">${o.descricao || ''}</span>` }); });
-    const humorSnap = await getDocs(collection(db, "utilizadores", myUserId, "humor")); humorSnap.forEach(d => { const h = d.data(); eventos.push({ time: h.timestamp, cat: 'gamificacao', icon: '<i class="fa-solid fa-heart-pulse"></i>', cor: '#b82bf2', titulo: `Check-in Emocional`, desc: `Sentiste-te ${h.humor} (+10 XP)` }); });
+    const humorSnap = await getDocs(collection(db, "utilizadores", myUserId, "humor")); humorSnap.forEach(d => { const h = d.data(); eventos.push({ time: h.timestamp, cat: 'gamificacao', icon: '<i class="fa-solid fa-heart-pulse"></i>', cor: '#b82bf2', titulo: `Check-in Emocional`, desc: `Sentiste-te ${h.humor}. (+10 XP)` }); });
     eventos.sort((a,b) => b.time - a.time); return eventos;
 }
 
@@ -355,7 +356,36 @@ async function carregarTimelineAluno() {
     } catch(e) { cadernetaContent.innerHTML = '<p class="text-danger center">Erro ao carregar histórico.</p>'; }
 }
 
-// NOTAS (Igual ao EE)
+// Filtros das Notificações
+let notifFilterCat = 'all';
+document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(chip => {
+    chip.addEventListener('click', (e) => {
+        document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(c => c.classList.remove('active'));
+        e.currentTarget.classList.add('active'); notifFilterCat = e.currentTarget.getAttribute('data-cat');
+        carregarNotificacoesAluno();
+    });
+});
+
+async function carregarNotificacoesAluno() {
+    const container = document.getElementById('aluno-notificacoes-container'); container.innerHTML = '<p class="text-muted center">A ler alertas...</p>';
+    try {
+        let eventos = await obterEventosLinhaTemporal();
+        eventos = eventos.map(e => {
+            let nCat = 'escola';
+            if(e.cat === 'faltas' && e.cor === 'var(--danger-red)') nCat = 'importante';
+            if(e.cat === 'gamificacao') nCat = 'gamificacao';
+            return { ...e, nCat: nCat };
+        });
+
+        if(notifFilterCat !== 'all') { eventos = eventos.filter(e => e.nCat === notifFilterCat); }
+        const recentes = eventos.slice(0, 15);
+        if(recentes.length === 0) { container.innerHTML = '<p class="text-muted center" style="margin-top:40px;">Sem alertas nesta categoria.</p>'; return; }
+        
+        let html = ''; recentes.forEach(ev => { html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${ev.cor}; display:flex; align-items:flex-start; gap: 15px; padding: 15px;"><div style="font-size: 1.5rem; color: ${ev.cor};">${ev.icon}</div><div><strong style="color:white; font-size:1rem; display:block; margin-bottom:3px;">${ev.titulo}</strong><span style="font-size:0.85rem; color:var(--text-light);">${ev.desc}</span><div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px;">${new Date(ev.time).toLocaleString('pt-PT')}</div></div></div>`; }); container.innerHTML = html; 
+        if(notifFilterCat === 'all') document.getElementById('badge-notificacoes').style.display = 'none';
+    } catch(e) { container.innerHTML = '<p class="text-danger center">Erro ao carregar notificações.</p>'; }
+}
+
 async function carregarNotasAluno() {
     try {
         const notasDb = await getDocs(collection(db, "utilizadores", myUserId, "notas"));
@@ -382,7 +412,6 @@ async function carregarNotasAluno() {
     } catch(e) {}
 }
 
-// FALTAS (Com Barra de Assiduidade e Botão Justificar)
 async function carregarFaltasAluno() {
     try {
         const faltasDb = await getDocs(collection(db, "utilizadores", myUserId, "faltas"));
@@ -394,12 +423,7 @@ async function carregarFaltasAluno() {
             faltasObj[f.disciplina].push(f); 
         });
 
-        let html = `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                <h3 style="font-size: 1.05rem; color: white;">Assiduidade</h3>
-                <button class="primary-btn small-btn" style="background:var(--bg-dark); color:var(--warning-yellow); border:1px solid var(--warning-yellow);" onclick="document.querySelector('.nav-item[data-target=\\'view-aluno-caderneta\\']').classList.remove('active'); esconderTodasAsVistas(); document.getElementById('view-aluno-justificar').style.display='block';"><i class="fa-solid fa-cloud-arrow-up"></i> Justificar Falta</button>
-            </div>
-        `;
+        let html = '';
 
         ordemDisciplinasGlobal.forEach(disc => {
             let totalHorasFalta = 0;
@@ -415,9 +439,8 @@ async function carregarFaltasAluno() {
                 });
             }
 
-            // Simulação de limite de faltas para o visual (10% de assiduidade de um módulo típico de 50h)
-            const limiteVirtual = 5; 
-            let assiduidade = 100 - ((totalHorasFalta / limiteVirtual) * 10);
+            const limiteVirtual = 50; // Total de horas virtuais por módulo para testar a barra
+            let assiduidade = 100 - ((totalHorasFalta / limiteVirtual) * 100);
             if (assiduidade < 0) assiduidade = 0;
             
             let barraColor = 'var(--success-green)';
@@ -433,7 +456,7 @@ async function carregarFaltasAluno() {
                             <div style="font-size: 0.8rem; color:var(--text-muted); margin-top:3px;">${totalHorasFalta}h Injustificadas</div>
                         </div>
                         <div style="text-align:right;">
-                            <div style="font-weight:bold; color:${barraColor};">${assiduidade}%</div>
+                            <div style="font-weight:bold; color:${barraColor};">${assiduidade.toFixed(0)}%</div>
                             <div style="font-size:0.7rem; color:var(--text-muted);">Assiduidade</div>
                         </div>
                     </div>
@@ -455,7 +478,6 @@ async function carregarFaltasAluno() {
     } catch(e) {}
 }
 
-// PRHFs (Com Botão Interativo)
 async function carregarPrhfsAluno() {
     try {
         const prhfsDb = await getDocs(collection(db, "utilizadores", myUserId, "prhfs"));
@@ -467,7 +489,7 @@ async function carregarPrhfsAluno() {
         prhfsArr.forEach(p => { 
             const isUrgente = p.moduloTerminado === true || p.moduloTerminado === "true"; 
             const cor = isUrgente ? 'var(--danger-red)' : 'var(--warning-yellow)';
-            const txtSt = p.status === 'concluida' ? 'CONCLUÍDO' : (isUrgente ? 'URGENTE (Mód. Terminado)' : 'EM CURSO');
+            const txtSt = p.status === 'concluida' ? 'CONCLUÍDO' : (isUrgente ? 'URGENTE' : 'EM CURSO');
             const corFinal = p.status === 'concluida' ? 'var(--success-green)' : cor;
 
             html += `<div class="card" style="margin-bottom:15px; border-left: 4px solid ${corFinal};">
@@ -477,7 +499,7 @@ async function carregarPrhfsAluno() {
                         </div>
                         <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">${p.descricao}</p>
                         <div style="font-size:0.8rem; margin-bottom: 15px;">Data Limite: <strong style="color:${corFinal};">${p.prazo}</strong> | Presenciais: <strong>${p.horasPresenciais||0}h</strong></div>
-                        ${p.status !== 'concluida' ? `<button class="secondary-btn small-btn" style="width:100%; border-color:${corFinal}; color:${corFinal};" onclick="abrirAcaoPrhf('${p.id}', '${p.disciplina}', '${p.modulo}', '${p.prazo}', '${p.horasPresenciais}')"><i class="fa-solid fa-pen-to-square"></i> Ver / Enviar Proposta</button>` : ''}
+                        ${p.status !== 'concluida' ? `<button class="secondary-btn small-btn" style="width:100%; border-color:${corFinal}; color:${corFinal};" onclick="abrirAcaoPrhf('${p.id}', '${p.disciplina}', '${p.modulo}', '${p.prazo}', '${p.horasPresenciais}')"><i class="fa-solid fa-pen-to-square"></i> Propor Data/Hora</button>` : ''}
                     </div>`; 
         }); 
         cadernetaContent.innerHTML = html;
@@ -493,18 +515,27 @@ window.abrirAcaoPrhf = (id, disc, mod, prazo, horas) => {
     document.getElementById('prhf-acao-prazo').innerText = prazo;
     document.getElementById('prhf-acao-horas').innerText = `${horas}h`;
     
+    document.getElementById('btn-voltar-acao-prhf').onclick = () => {
+        esconderTodasAsVistas();
+        document.querySelector('.nav-item[data-target="view-aluno-caderneta"]').classList.add('active');
+        document.getElementById('view-aluno-caderneta').style.display = 'block';
+        carregarPrhfsAluno(); // Recarrega a tab dos PRHFs
+    };
+
     document.getElementById('btn-enviar-proposta-prhf').onclick = async () => {
-        const txt = document.getElementById('aluno-prhf-proposta-txt').value.trim();
-        if(!txt) return;
+        const dataVal = document.getElementById('aluno-prhf-proposta-data').value;
+        const horaVal = document.getElementById('aluno-prhf-proposta-hora').value;
+        if(!dataVal || !horaVal) { alert("Preenche o dia e a hora da tua proposta!"); return; }
+        
+        const propostaFinal = `Data: ${dataVal} | Hora: ${horaVal}`;
         try {
-            await updateDoc(doc(db, "utilizadores", myUserId, "prhfs", id), { propostaAluno: txt, propostaLidaDT: false });
+            await updateDoc(doc(db, "utilizadores", myUserId, "prhfs", id), { propostaAluno: propostaFinal, propostaLidaDT: false });
             alert("Proposta enviada ao Diretor de Turma com sucesso!");
             document.getElementById('btn-voltar-acao-prhf').click();
         } catch(e) {}
     };
 };
 
-// COMPORTAMENTO E REUNIÕES (Iguais ao EE)
 async function carregarComportamentoAluno() {
     try {
         const res = await getDocs(query(collection(db, "utilizadores", myUserId, "ocorrencias")));
@@ -540,7 +571,7 @@ async function carregarObservacoesAluno(reuniaoSelecionada = '1_avaliacao') {
 }
 
 // ----------------------------------------------------
-// AGENDA E HORÁRIO (IGUAL AO EE COM LÓGICA PRÓPRIA)
+// AGENDA E HORÁRIO
 // ----------------------------------------------------
 document.querySelector('.nav-item[data-target="view-aluno-agenda"]')?.addEventListener('click', () => { document.getElementById('tab-aluno-eventos').click(); });
 document.getElementById('tab-aluno-eventos')?.addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('tab-aluno-horario').classList.remove('active'); document.getElementById('aluno-agenda-filtros').style.display = 'flex'; document.getElementById('aluno-horario-container').style.display = 'none'; carregarAgendaAlunoLista(); });
@@ -669,27 +700,50 @@ async function carregarHorarioAluno() {
 // ----------------------------------------------------
 let chatUnsubscribeAluno = null; let alunoForumAtivoId = null;
 async function carregarForuns() {
-    const container = document.getElementById('aluno-forum-channel-list'); container.innerHTML = '<p class="text-muted center">A configurar fóruns mágicos...</p>'; 
+    const container = document.getElementById('aluno-forum-channel-list'); container.innerHTML = '<p class="text-muted center">A configurar fóruns...</p>'; 
     if(!minhaTurma) return;
     
-    // Configuração dos canais obrigatórios virtuais
-    let canais = [
-        { id: 'turma_global', nome: `Geral Turma ${minhaTurma}`, icon: 'fa-users', color: '#00cc88' },
-        { id: `dt_${myUserId}`, nome: 'Mensagem para DT', icon: 'fa-user-tie', color: '#ffaa00' }
-    ];
-    
-    // Adiciona os canais de disciplinas
-    ordemDisciplinasGlobal.forEach(disc => {
-        canais.push({ id: `disc_${disc}`, nome: `Fórum ${disc}`, icon: 'fa-book-open', color: '#00d2ff' });
-    });
+    // Pastas Virtuais e Fóruns Livres
+    let html = `
+        <h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apoio & Turma</h3>
+        <div class="canal-card" data-id="turma_global" data-nome="Turma ${minhaTurma} (Geral)">
+            <div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-users"></i></div>
+            <div class="canal-info"><h4>Turma ${minhaTurma}</h4><p>Canal Geral</p></div>
+        </div>
+        <div class="canal-card" data-id="dt_${myUserId}" data-nome="Chat c/ Diretor de Turma">
+            <div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div>
+            <div class="canal-info"><h4>Diretor de Turma</h4><p>Mensagem Privada</p></div>
+        </div>
 
-    let html = '';
-    canais.forEach(c => {
-        html += `<div class="canal-card" data-id="${c.id}" data-nome="${c.nome}">
-                    <div class="canal-icon" style="color:${c.color}; border-color:${c.color};"><i class="fa-solid ${c.icon}"></i></div>
-                    <div class="canal-info"><h4>${c.nome}</h4></div>
+        <h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Disciplinas</h3>
+        <div style="display:flex; flex-wrap:wrap; gap:10px;">
+    `;
+    
+    // Gerar pequenos chips/cards para as disciplinas
+    ordemDisciplinasGlobal.forEach(disc => {
+        html += `<div class="canal-card" data-id="disc_${disc}" data-nome="Fórum ${disc}" style="flex: 1 1 45%; padding: 10px;">
+                    <div class="canal-info" style="text-align:center;"><h4 style="margin:0; font-size:0.9rem; color:#00d2ff;"><i class="fa-solid fa-book-open"></i> ${disc}</h4></div>
                  </div>`;
     });
+    html += '</div>';
+
+    // Ler fóruns criados pelo aluno para trabalhos
+    try {
+        const res = await getDocs(collection(db, "turmas", minhaTurma, "foruns"));
+        let extrasHtml = '';
+        res.forEach(docSnap => { 
+            const f = docSnap.data(); 
+            // Mostra apenas se for membro e não for um dos defaults acima
+            if(f.membros.includes(myUserId) && !f.isDefault) { 
+                extrasHtml += `<div class="canal-card" data-id="${docSnap.id}" data-nome="${f.nome}"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-comments"></i></div><div class="canal-info"><h4>${f.nome}</h4><p>Grupo Personalizado</p></div></div>`; 
+            } 
+        });
+        
+        if (extrasHtml !== '') {
+            html += `<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Grupos de Trabalho</h3>` + extrasHtml;
+        }
+    } catch(e) {}
+
     container.innerHTML = html;
     
     container.querySelectorAll('.canal-card').forEach(card => card.addEventListener('click', (e) => { 
@@ -717,30 +771,39 @@ function iniciarChatAluno(fId) {
 }
 document.getElementById('btn-aluno-send-msg')?.addEventListener('click', async () => { const inp = document.getElementById('aluno-input-forum-msg'); const txt = inp.value.trim(); if(!txt || !alunoForumAtivoId) return; try { await addDoc(collection(db, "turmas", minhaTurma, "foruns", alunoForumAtivoId, "mensagens"), { remetente: myUserName, texto: txt, timestamp: Date.now() }); inp.value = ''; } catch(e) {} });
 
-// ----------------------------------------------------
-// UPLOAD ATESTADO (JUSTIFICAR FALTA)
-// ----------------------------------------------------
-let atestadoBase64 = "";
-document.getElementById('aluno-upload-atestado')?.addEventListener('change', (e) => {
-    const file = e.target.files[0]; if(!file) return;
-    if(file.size > 2097152) { alert("Ficheiro demasiado grande! Máx 2MB."); return; } 
-    document.getElementById('aluno-atestado-file-name').innerText = "Ficheiro: " + file.name;
-    document.getElementById('btn-aluno-enviar-atestado').style.display = 'block';
-    const reader = new FileReader(); reader.onload = (ev) => { atestadoBase64 = ev.target.result; }; reader.readAsDataURL(file);
-});
-document.getElementById('btn-aluno-enviar-atestado')?.addEventListener('click', async (e) => {
-    if(!atestadoBase64 || !myUserId) return; const obs = document.getElementById('aluno-atestado-obs').value.trim();
-    const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A enviar...'; btnRef.disabled = true;
+// Criar Grupo de Estudo
+document.getElementById('btn-create-chat-aluno')?.addEventListener('click', async () => {
+    const nomeGrupo = prompt("Nome do Grupo de Estudo/Trabalho:");
+    if(!nomeGrupo) return;
     try {
-        await addDoc(collection(db, "utilizadores", myUserId, "atestados"), { ficheiroBase64: atestadoBase64, observacoes: obs, status: "pendente", dataEnvio: new Date().toISOString() });
-        btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Enviado!';
-        setTimeout(() => { document.getElementById('aluno-atestado-file-name').innerText = ""; document.getElementById('aluno-atestado-obs').value = ""; atestadoBase64 = ""; btnRef.style.display = 'none'; btnRef.disabled = false; btnRef.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Atestado'; document.getElementById('btn-voltar-justificar').click(); }, 2000);
-    } catch(err) { btnRef.innerHTML = "Erro!"; setTimeout(() => { btnRef.disabled = false; btnRef.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Atestado'; }, 2000); }
+        await addDoc(collection(db, "turmas", minhaTurma, "foruns"), {
+            nome: nomeGrupo, tipo: 'permanente', isDefault: false, membros: [myUserId], criadoPor: myUserName
+        });
+        alert("Grupo criado! Pede ao teu DT para adicionar os teus colegas a este canal (funcionalidade temporária nesta versão).");
+        carregarForuns();
+    } catch(e) {}
 });
 
 // ----------------------------------------------------
-// NOTIFICAÇÕES GERAIS E OUTROS
+// SUMÁRIOS
 // ----------------------------------------------------
+const viewSumarios = document.getElementById('view-aluno-sumarios');
+document.getElementById('btn-open-sumarios')?.addEventListener('click', () => { esconderTodasAsVistas(); navItems.forEach(nav => nav.classList.remove('active')); viewSumarios.style.display = 'block'; carregarSumariosAluno(); });
+document.getElementById('btn-voltar-sumarios')?.addEventListener('click', () => { esconderTodasAsVistas(); document.querySelector('.nav-item[data-target="student-dashboard"]').classList.add('active'); document.getElementById('student-dashboard').style.display = 'block'; });
+document.getElementById('aluno-filtro-sumarios-disc')?.addEventListener('change', carregarSumariosAluno);
+
+async function carregarSumariosAluno() {
+    const container = document.getElementById('aluno-lista-sumarios-container'); container.innerHTML = '<p class="text-muted" style="text-align:center;">A carregar sumários...</p>'; if(!minhaTurma) return;
+    try {
+        const res = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); if(res.empty) { container.innerHTML = '<p class="text-muted" style="text-align:center;">Nenhum material publicado pelos professores.</p>'; return; }
+        let sumarios = []; let disciplinasUnicas = new Set(); res.forEach(d => { const data = d.data(); sumarios.push({id: d.id, ...data}); disciplinasUnicas.add(data.disciplina); });
+        const filtroSelect = document.getElementById('aluno-filtro-sumarios-disc'); if (filtroSelect.options.length <= 1) { let optHTML = '<option value="">Todas as Disciplinas</option>'; disciplinasUnicas.forEach(disc => optHTML += `<option value="${disc}">${disc}</option>`); filtroSelect.innerHTML = optHTML; }
+        const filtroAtual = filtroSelect.value; if(filtroAtual) sumarios = sumarios.filter(s => s.disciplina === filtroAtual); sumarios.sort((a,b) => b.data.localeCompare(a.data)); 
+        if(sumarios.length === 0) { container.innerHTML = '<p class="text-muted" style="text-align:center;">Sem sumários para esta disciplina.</p>'; return; }
+        let html = ''; sumarios.forEach(s => { const anexoBtn = s.anexoBase64 ? `<a href="${s.anexoBase64}" download="${s.anexoNome}" class="primary-btn small-btn" style="display:inline-block; margin-top:10px; width:auto; padding:8px 12px; background-color:#0099ff;"><i class="fa-solid fa-download"></i> Baixar ${s.anexoNome}</a>` : ''; html += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #0099ff;"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">${s.data} | ${s.disciplina} | Prof. ${s.professor}</span><h4 style="margin:5px 0;">${s.titulo}</h4>${s.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px;">${s.descricao}</p>` : ''}</div></div>${anexoBtn}</div>`; }); container.innerHTML = html;
+    } catch(e) { container.innerHTML = '<p class="text-danger center">Erro ao carregar os dados.</p>'; }
+}
+
 async function pedirPermissaoNotificacoes() { try { const permission = await Notification.requestPermission(); if (permission === 'granted') { const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js'); const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration }); if (currentToken) { await updateDoc(doc(db, "utilizadores", myUserId), { tokenNotificacao: currentToken }); } } } catch (error) { console.error("Erro fatal ao ativar notificações:", error); } }
 if(typeof onMessage !== "undefined" && messaging) { onMessage(messaging, (payload) => { alert(`NOVA NOTIFICAÇÃO:\n\n${payload.notification.title}\n${payload.notification.body}`); }); }
 setTimeout(() => { if(myUserId) pedirPermissaoNotificacoes(); }, 4000);
