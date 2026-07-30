@@ -88,9 +88,7 @@
                     <p class="text-muted center">A preparar o teu assistente...</p>
                 </div>
 
-                <!-- ACESSO RÁPIDO (FERRAMENTAS) -->
-                <h3 class="section-title" style="font-size:1rem; color:var(--text-muted); margin-top: 15px; border-bottom: 1px solid #333; padding-bottom: 8px;"><i class="fa-solid fa-shapes"></i> Ferramentas</h3>
-                
+                <!-- Acesso Direto Fluido (Sem Título) -->
                 <div class="lms-action-grid">
                     <button class="lms-btn" id="btn-open-study-mode" style="border-color:#9b59b6; color:#9b59b6; background: rgba(155, 89, 182, 0.05);">
                         <i class="fa-solid fa-stopwatch"></i>
@@ -115,7 +113,6 @@
             <div id="view-aluno-perfil" style="display: none;">
                 <div class="class-header"><h2 class="section-title"><i class="fa-solid fa-user-astronaut"></i> O Meu Perfil</h2></div>
                 
-                <!-- Avatar & XP -->
                 <div class="card" style="text-align: center;">
                     <div style="position:relative; width: 100px; height: 100px; margin: 0 auto 15px auto;">
                         <img id="perfil-avatar-img" src="https://via.placeholder.com/100" style="width:100%; height:100%; border-radius:50%; object-fit:cover; border: 3px solid var(--primary-green);">
@@ -128,7 +125,6 @@
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;"><span id="perfil-xp-totais">0</span> XP totais alcançados</p>
                 </div>
 
-                <!-- Estatísticas de Hábitos de Estudo -->
                 <div class="card" style="border-left: 4px solid #00d2ff; margin-bottom: 20px;">
                     <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-fire"></i> Hábitos de Foco</h3>
                     <div style="display:flex; justify-content:space-between; text-align:center; gap:10px;">
@@ -145,7 +141,6 @@
                     </div>
                 </div>
 
-                <!-- Objetivos Pessoais -->
                 <div class="card" style="border-left: 4px solid var(--warning-yellow);">
                     <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-bullseye"></i> Os Meus Objetivos</h3>
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Define metas! Ganhas <strong style="color:var(--warning-yellow);">+50 XP</strong> por cada objetivo concluído.</p>
@@ -156,7 +151,6 @@
                     <div id="lista-objetivos-container"></div>
                 </div>
 
-                <!-- Estatísticas Gráficas -->
                 <div class="card" id="card-stats-grafico">
                     <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-chart-pie"></i> Desempenho por Disciplina</h3>
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Média atual baseada nas notas lançadas.</p>
@@ -165,7 +159,6 @@
                     </div>
                 </div>
 
-                <!-- Histórico Emocional -->
                 <div class="card" style="border-left: 4px solid #b82bf2; margin-top: 20px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
                         <h3 style="font-size: 1.1rem; color: white; margin:0;"><i class="fa-solid fa-heart-pulse"></i> Histórico Emocional</h3>
@@ -192,25 +185,50 @@
                 </div>
 
                 <div id="aluno-notificacoes-container">
-                    <p class="text-muted" style="text-align:center;">A carregar alertas...</p>
+                    <p class="text-muted" style="text-align:center;">A carregar histórico...</p>
                 </div>
             </div>
 
-            <!-- VISTA CADERNO DIGITAL -->
+            <!-- VISTA CADERNO DIGITAL & GALERIA -->
             <div id="view-aluno-caderno" style="display: none;">
                 <div class="class-header" style="margin-bottom: 10px;">
                     <button id="btn-voltar-caderno" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                 </div>
-                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-book"></i> Caderno Digital</h2>
+                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-book"></i> O Meu Caderno</h2>
                 
-                <div class="card" style="margin-bottom: 20px; padding: 15px;">
-                    <h3 style="font-size: 1rem; margin-bottom: 10px;">Criar Novo Resumo</h3>
-                    <div class="form-group"><input type="text" id="caderno-titulo" placeholder="Título (ex: Resumo de História)" class="input-padrao" style="width:100%; margin-bottom:10px;"></div>
-                    <div id="quill-editor" style="height: 180px; background: white; color: black; border-radius: 0 0 8px 8px;"></div>
-                    <button id="btn-gravar-apontamento" class="primary-btn" style="width: 100%; margin-top: 15px; background-color: #e67e22;"><i class="fa-solid fa-save"></i> Gravar na Nuvem</button>
+                <div class="falta-tabs" style="margin-bottom: 15px;">
+                    <button class="falta-tab-btn active" id="tab-caderno-resumos">Resumos de Texto</button>
+                    <button class="falta-tab-btn" id="tab-caderno-galeria">Galeria (Fotos do Quadro)</button>
                 </div>
-                <h3 style="color: var(--primary-green); font-size: 1rem; margin-bottom: 15px;"><i class="fa-solid fa-folder-open"></i> Os Meus Resumos</h3>
-                <div id="lista-apontamentos-container"><p class="text-muted" style="text-align:center;">A carregar resumos...</p></div>
+
+                <!-- Secção de Resumos Textuais -->
+                <div id="sec-caderno-resumos">
+                    <div class="card" style="margin-bottom: 20px; padding: 15px;">
+                        <h3 style="font-size: 1rem; margin-bottom: 10px;">Criar Novo Resumo</h3>
+                        <div class="form-group"><input type="text" id="caderno-titulo" placeholder="Título (ex: Resumo de História)" class="input-padrao" style="width:100%; margin-bottom:10px;"></div>
+                        <div id="quill-editor" style="height: 180px; background: white; color: black; border-radius: 0 0 8px 8px;"></div>
+                        <button id="btn-gravar-apontamento" class="primary-btn" style="width: 100%; margin-top: 15px; background-color: #e67e22;"><i class="fa-solid fa-save"></i> Gravar na Nuvem</button>
+                    </div>
+                    <h3 style="color: var(--primary-green); font-size: 1rem; margin-bottom: 15px;"><i class="fa-solid fa-folder-open"></i> Os Meus Resumos</h3>
+                    <div id="lista-apontamentos-container"><p class="text-muted" style="text-align:center;">A carregar resumos...</p></div>
+                </div>
+
+                <!-- Secção de Galeria de Fotos -->
+                <div id="sec-caderno-galeria" style="display: none;">
+                    <div class="card" style="margin-bottom: 20px; padding: 15px; text-align: center; border: 1px dashed #e67e22;">
+                        <h3 style="font-size: 1rem; margin-bottom: 10px; color: #e67e22;"><i class="fa-solid fa-camera"></i> Guardar Foto do Quadro</h3>
+                        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom: 15px;">Tira foto aos apontamentos do professor para não perderes nada.</p>
+                        <input type="text" id="foto-titulo" placeholder="Título/Matéria da Foto" style="width:100%; margin-bottom:15px; border-radius:8px; padding:10px;">
+                        <label for="upload-foto-quadro" class="primary-btn" style="background-color: #e67e22; width: auto; display: inline-block; cursor: pointer; padding: 10px 20px;"><i class="fa-solid fa-upload"></i> Escolher / Tirar Foto</label>
+                        <input type="file" id="upload-foto-quadro" style="display:none;" accept="image/*">
+                        <span id="foto-quadro-file-name" style="display:block; margin-top:10px; font-size:0.85rem; color:var(--success-green);"></span>
+                        <button id="btn-gravar-foto-quadro" class="primary-btn" style="width: 100%; margin-top: 15px; background-color: var(--success-green); display:none;"><i class="fa-solid fa-cloud-arrow-up"></i> Guardar na Galeria</button>
+                    </div>
+                    <h3 style="color: #e67e22; font-size: 1rem; margin-bottom: 15px;"><i class="fa-solid fa-images"></i> As Minhas Fotos</h3>
+                    <div id="lista-fotos-quadro-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <p class="text-muted" style="grid-column: span 2; text-align:center;">A carregar galeria...</p>
+                    </div>
+                </div>
             </div>
 
             <!-- VISTA SUMÁRIOS -->
@@ -219,14 +237,12 @@
                     <button id="btn-voltar-sumarios" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                 </div>
                 <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-book-open"></i> Sumários</h2>
-                
                 <div style="margin-bottom:15px;"><select id="aluno-filtro-sumarios-disc" style="margin:0; padding:8px;"><option value="">Todas as Disciplinas</option></select></div>
                 <div id="aluno-lista-sumarios-container"><p class="text-muted" style="text-align:center;">A procurar materiais...</p></div>
             </div>
 
             <!-- VISTA CADERNETA E LINHA TEMPORAL -->
             <div id="view-aluno-caderneta" style="display: none;">
-                
                 <div class="falta-tabs" style="display:flex; flex-wrap:wrap; gap:5px; justify-content:center; margin-bottom: 15px;">
                     <button class="falta-tab-btn active" id="tab-aluno-timeline" style="flex: 1 1 100%; border-color: var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-clock-rotate-left"></i> Histórico</button>
                     <button class="falta-tab-btn" id="tab-aluno-notas" style="flex: 1 1 30%;">Notas</button>
@@ -236,7 +252,7 @@
                     <button class="falta-tab-btn" id="tab-aluno-observacoes" style="flex: 1 1 45%;">Reuniões</button>
                 </div>
 
-                <!-- Chips de Filtro Timeline (SÓ APARECEM NA TIMELINE) -->
+                <!-- Chips de Filtro Timeline -->
                 <div class="filter-chips-container" id="timeline-filtros" style="display: flex;">
                     <div class="filter-chip active" data-cat="all">Tudo</div>
                     <div class="filter-chip" data-cat="notas">Avaliações</div>
@@ -257,37 +273,42 @@
                     
                     <div style="display:flex; justify-content:space-between; margin-bottom: 15px; font-size:0.8rem; border-bottom: 1px dashed #333; padding-bottom:10px;">
                         <span>Data Limite: <strong id="prhf-acao-prazo" style="color:var(--warning-yellow);">...</strong></span>
-                        <span>Presenciais <strong id="prhf-acao-horas-totais">...</strong> / <strong id="prhf-acao-horas">...</strong></span>
+                        <span>Presenciais: <strong id="prhf-acao-horas-totais">...</strong> / <strong id="prhf-acao-horas">...</strong></span>
                     </div>
+
+                    <div id="prhf-acao-docs-container" style="margin-bottom: 15px;"></div>
+                    <div id="prhf-acao-status-container" style="margin-bottom: 20px;"></div>
                     
-                    <h4 style="font-size: 0.95rem; margin-bottom: 10px; color:var(--primary-green);">Proposta de Horas Presenciais</h4>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Indica o dia e a hora em que pretendes realizar a sessão para validação do Professor.</p>
-                    
-                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                        <input type="date" id="aluno-prhf-proposta-data" style="margin:0; flex: 1;">
-                        <input type="time" id="aluno-prhf-proposta-hora" style="margin:0; flex: 1;">
+                    <div id="prhf-form-proposta">
+                        <h4 style="font-size: 0.95rem; margin-bottom: 10px; color:var(--primary-green);">Proposta de Horas Presenciais</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Indica o dia e o horário exato para validação do Professor.</p>
+                        
+                        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Data</label><input type="date" id="aluno-prhf-proposta-data" style="margin:0; width:100%;"></div>
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Início</label><input type="time" id="aluno-prhf-proposta-hora-inicio" style="margin:0; width:100%;"></div>
+                            <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Fim</label><input type="time" id="aluno-prhf-proposta-hora-fim" style="margin:0; width:100%;"></div>
+                        </div>
+                        
+                        <button id="btn-enviar-proposta-prhf" class="primary-btn" style="width:100%; background-color: var(--primary-green);">Enviar Proposta ao Professor</button>
                     </div>
-                    
-                    <button id="btn-enviar-proposta-prhf" class="primary-btn" style="width:100%; background-color: var(--primary-green);"><i class="fa-solid fa-paper-plane"></i> Enviar Proposta ao DT</button>
                 </div>
             </div>
 
             <!-- VISTA AGENDA / HORÁRIO -->
             <div id="view-aluno-agenda" style="display: none;">
-                
                 <div class="falta-tabs" style="margin-bottom: 15px;">
                     <button class="falta-tab-btn active" id="tab-aluno-eventos">Calendário</button>
                     <button class="falta-tab-btn" id="tab-aluno-horario">Horário</button>
                 </div>
                 
-                <!-- Filtros para a Vista de Eventos -->
                 <div class="agenda-filters" id="aluno-agenda-filtros" style="display:flex;">
-                    <label class="agenda-filter-label"><input type="checkbox" id="aluno-filtro-agenda-testes" checked> <span style="color:#ffaa00;">●</span> Testes/Av.</label>
+                    <label class="agenda-filter-label"><input type="checkbox" id="aluno-filtro-agenda-testes" checked> <span style="color:#ffaa00;">●</span> Avaliações</label>
                     <label class="agenda-filter-label"><input type="checkbox" id="aluno-filtro-agenda-trabalhos" checked> <span style="color:#00d2ff;">●</span> Entregas</label>
                     <label class="agenda-filter-label"><input type="checkbox" id="aluno-filtro-agenda-outros" checked> <span style="color:#b82bf2;">●</span> Outros</label>
                 </div>
                 
-                <!-- Grelha do Horário (Escondida por defeito) -->
                 <div id="aluno-horario-container" style="display:none;">
                     <div class="falta-tabs" style="margin-bottom: 15px;">
                         <button class="falta-tab-btn active" id="btn-aluno-horario-dia">Vista Diária</button>
@@ -300,7 +321,6 @@
                     </div>
                 </div>
 
-                <!-- Corrigido o padding-bottom para que não corte a grelha -->
                 <div id="aluno-agenda-content" style="margin-top:10px; overflow-x: auto; padding-bottom: 20px;">
                     <p class="text-muted" style="text-align:center;">A carregar dados...</p>
                 </div>
@@ -366,22 +386,34 @@
                                 <input type="file" id="aluno-upload-pap" style="display:none;" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.zip">
                             </div>
                             <span id="aluno-pap-file-name" class="file-name-display" style="display:block; margin-top:10px; font-size:0.85rem; color:var(--success-green);"></span>
-                            <button id="btn-enviar-pap" class="primary-btn" style="display:none; width:100%; margin-top:10px;"><i class="fa-solid fa-paper-plane"></i> Submeter à Escola</button>
+                            <button id="btn-enviar-pap" class="primary-btn" style="display:none; width:100%; margin-top:10px;">Submeter à Escola</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- MODO FOCO & DIÁRIO DE ESTUDO -->
-            <div id="view-study-mode" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 75vh;">
+            <!-- MODO FOCO & DIÁRIO DE ESTUDO COM MÚSICA -->
+            <div id="view-study-mode" style="display: none; flex-direction: column; align-items: center; justify-content: flex-start; height: 80vh; overflow-y:auto; padding-top: 20px;">
                 <h2 style="color: #9b59b6; margin-bottom: 20px;"><i class="fa-solid fa-stopwatch"></i> Modo Foco</h2>
-                <div style="font-size: 5rem; font-weight: bold; font-family: monospace; color: white; margin-bottom: 30px;" id="study-timer-text">25:00</div>
-                <div id="study-controls">
-                    <button id="btn-start-study" class="primary-btn" style="background-color: #9b59b6; font-size: 1.2rem; padding: 15px 40px; border-radius: 30px; display: inline-block;"><i class="fa-solid fa-play"></i> Iniciar</button>
-                    <button id="btn-stop-study" class="danger-btn" style="display: none; font-size: 1.2rem; padding: 15px 40px; border-radius: 30px;"><i class="fa-solid fa-stop"></i> Parar</button>
-                    <br><button id="btn-voltar-study" class="secondary-btn" style="margin-top: 30px; border: none; width: auto; margin-left: auto; margin-right: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+                <div style="font-size: 5rem; font-weight: bold; font-family: monospace; color: white; margin-bottom: 20px;" id="study-timer-text">25:00</div>
+                
+                <!-- Secção de Música (Opcional) -->
+                <div id="pomodoro-music-container" style="margin-bottom: 20px; width: 100%; max-width: 350px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; border: 1px dashed #9b59b6;">
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px; text-align:center;">Estudas melhor com música? Cola aqui o link da tua playlist do Spotify ou YouTube.</p>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="pomodoro-music-url" placeholder="https://open.spotify.com/..." style="margin:0; flex:1; padding:8px; font-size:0.8rem; border-radius:6px;">
+                        <button id="btn-load-music" class="secondary-btn small-btn" style="border-color:#9b59b6; color:#9b59b6;"><i class="fa-solid fa-play"></i></button>
+                    </div>
+                    <div id="music-player-frame" style="margin-top: 15px; display: none; width: 100%; border-radius: 8px; overflow:hidden;"></div>
                 </div>
-                <div id="post-study-log" style="display: none; width: 100%; max-width: 400px; text-align: center;">
+
+                <div id="study-controls" style="text-align: center; width:100%; max-width: 350px;">
+                    <button id="btn-start-study" class="primary-btn" style="background-color: #9b59b6; font-size: 1.2rem; padding: 15px 40px; border-radius: 30px; display: inline-block;"><i class="fa-solid fa-play"></i> Iniciar</button>
+                    <button id="btn-stop-study" class="danger-btn" style="display: none; font-size: 1.2rem; padding: 15px 40px; border-radius: 30px; margin: 0 auto;"><i class="fa-solid fa-stop"></i> Parar</button>
+                    <br><button id="btn-voltar-study" class="secondary-btn" style="margin-top: 20px; border: none; width: auto; margin-left: auto; margin-right: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+                </div>
+                
+                <div id="post-study-log" style="display: none; width: 100%; max-width: 350px; text-align: center; margin-top: 20px;">
                     <h3 style="color: white; margin-bottom: 10px;">Sessão Concluída! 🎉</h3>
                     <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 15px;">Faz um breve registo do que aprendeste para ganhares <strong style="color:var(--warning-yellow);">+50 XP</strong>.</p>
                     <textarea id="study-log-text" class="input-field" placeholder="Ex: Estudei a fórmula resolvente..." style="min-height: 80px; margin-bottom: 15px; border-radius: 12px;"></textarea>
