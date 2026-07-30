@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- FullCalendar (Mantido para compatibilidade, embora o UI novo use o modelo do EE) -->
+    <!-- FullCalendar -->
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/locales/pt.global.min.js'></script>
 
@@ -36,11 +36,11 @@
 <body>
     <div id="app-content">
         <header id="header-aluno" class="app-header">
-            <div class="user-profile">
-                <div class="profile-avatar" id="header-avatar-circle" style="width: 35px; height: 35px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+            <div class="user-profile" style="align-items: center;">
+                <div class="profile-avatar" id="header-avatar-circle" style="width: 35px; height: 35px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom:0;">
                     <i class="fa-solid fa-user" style="color: white; font-size: 1rem;"></i>
                 </div>
-                <span id="header-user-name-aluno">A carregar...</span>
+                <span id="header-user-name-aluno" style="margin-top:0;">A carregar...</span>
             </div>
             <div style="display: flex; align-items: center; gap: 15px;">
                 <button id="btn-open-notificacoes" style="background:none; border:none; color:white; font-size:1.3rem; position:relative; cursor:pointer;">
@@ -76,7 +76,7 @@
                     <div id="aluno-search-results" style="display:none; position:absolute; top:50px; left:0; width:100%; background:#222; border:1px solid #444; border-radius:12px; z-index:10; max-height:250px; overflow-y:auto; box-shadow: 0 5px 15px rgba(0,0,0,0.5); padding: 10px;"></div>
                 </div>
 
-                <!-- MODO ÉPOCA DE EXAMES (Aparece via JS) -->
+                <!-- MODO ÉPOCA DE EXAMES -->
                 <div id="exam-mode-banner" style="display:none; background: linear-gradient(135deg, #8e2de2, #4a00e0); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 15px rgba(138, 43, 226, 0.3); border: 1px solid #9b59b6;">
                     <h3 style="margin-bottom: 5px; font-size: 1.2rem;"><i class="fa-solid fa-graduation-cap"></i> Época de Exames Ativada</h3>
                     <p style="font-size: 0.9rem; color: #e0e0e0; margin-bottom: 10px;">O Modo Foco está recomendado. Prepara-te!</p>
@@ -157,7 +157,7 @@
                 </div>
 
                 <!-- Estatísticas Gráficas -->
-                <div class="card">
+                <div class="card" id="card-stats-grafico">
                     <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-chart-pie"></i> Desempenho por Disciplina</h3>
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Média atual baseada nas notas lançadas.</p>
                     <div style="position: relative; height: 220px; width: 100%;">
@@ -192,7 +192,7 @@
                 </div>
 
                 <div id="aluno-notificacoes-container">
-                    <p class="text-muted" style="text-align:center;">A carregar histórico...</p>
+                    <p class="text-muted" style="text-align:center;">A carregar alertas...</p>
                 </div>
             </div>
 
@@ -226,7 +226,6 @@
 
             <!-- VISTA CADERNETA E LINHA TEMPORAL -->
             <div id="view-aluno-caderneta" style="display: none;">
-                <!-- TÍTULO REMOVIDO COMO PEDIDO -->
                 
                 <div class="falta-tabs" style="display:flex; flex-wrap:wrap; gap:5px; justify-content:center; margin-bottom: 15px;">
                     <button class="falta-tab-btn active" id="tab-aluno-timeline" style="flex: 1 1 100%; border-color: var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-clock-rotate-left"></i> Histórico</button>
@@ -255,16 +254,15 @@
                 
                 <div class="card" style="margin-bottom: 20px; border-left: 4px solid var(--warning-yellow);">
                     <h3 style="margin-bottom: 5px; font-size: 1.1rem; color: white;" id="prhf-acao-titulo">Disciplina (Módulo)</h3>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;" id="prhf-acao-desc">A carregar detalhes...</p>
+                    
                     <div style="display:flex; justify-content:space-between; margin-bottom: 15px; font-size:0.8rem; border-bottom: 1px dashed #333; padding-bottom:10px;">
                         <span>Data Limite: <strong id="prhf-acao-prazo" style="color:var(--warning-yellow);">...</strong></span>
-                        <span>Presenciais: <strong id="prhf-acao-horas">...</strong></span>
+                        <span>Presenciais <strong id="prhf-acao-horas-totais">...</strong> / <strong id="prhf-acao-horas">...</strong></span>
                     </div>
                     
                     <h4 style="font-size: 0.95rem; margin-bottom: 10px; color:var(--primary-green);">Proposta de Horas Presenciais</h4>
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Indica o dia e a hora em que pretendes realizar a sessão para validação do Professor.</p>
                     
-                    <!-- Substituído textarea por Data/Hora como pedido -->
                     <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                         <input type="date" id="aluno-prhf-proposta-data" style="margin:0; flex: 1;">
                         <input type="time" id="aluno-prhf-proposta-hora" style="margin:0; flex: 1;">
@@ -276,7 +274,6 @@
 
             <!-- VISTA AGENDA / HORÁRIO -->
             <div id="view-aluno-agenda" style="display: none;">
-                <!-- TÍTULO REMOVIDO COMO PEDIDO -->
                 
                 <div class="falta-tabs" style="margin-bottom: 15px;">
                     <button class="falta-tab-btn active" id="tab-aluno-eventos">Calendário</button>
@@ -290,7 +287,7 @@
                     <label class="agenda-filter-label"><input type="checkbox" id="aluno-filtro-agenda-outros" checked> <span style="color:#b82bf2;">●</span> Outros</label>
                 </div>
                 
-                <!-- Grelha do Horário (Escondida por defeito, encolhida) -->
+                <!-- Grelha do Horário (Escondida por defeito) -->
                 <div id="aluno-horario-container" style="display:none;">
                     <div class="falta-tabs" style="margin-bottom: 15px;">
                         <button class="falta-tab-btn active" id="btn-aluno-horario-dia">Vista Diária</button>
@@ -303,7 +300,8 @@
                     </div>
                 </div>
 
-                <div id="aluno-agenda-content" style="margin-top:10px; overflow-x: auto;">
+                <!-- Corrigido o padding-bottom para que não corte a grelha -->
+                <div id="aluno-agenda-content" style="margin-top:10px; overflow-x: auto; padding-bottom: 20px;">
                     <p class="text-muted" style="text-align:center;">A carregar dados...</p>
                 </div>
             </div>
@@ -312,7 +310,7 @@
             <div id="view-aluno-forum" style="display: none;">
                 <div class="class-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
                     <h2 class="section-title" style="margin:0;"><i class="fa-solid fa-comments"></i> Fóruns</h2>
-                    <button id="btn-create-chat-aluno" class="primary-btn small-btn" style="background:var(--bg-dark); border:1px solid var(--primary-green); color:var(--primary-green);"><i class="fa-solid fa-plus"></i> Novo</button>
+                    <button id="btn-create-chat-aluno" class="primary-btn small-btn" style="background:var(--bg-dark); border:1px solid var(--primary-green); color:var(--primary-green);"><i class="fa-solid fa-plus"></i> Novo Chat</button>
                 </div>
                 
                 <div id="aluno-forum-channel-list">
@@ -390,6 +388,20 @@
                     <button id="btn-save-study-log" class="primary-btn" style="background-color: var(--success-green);"><i class="fa-solid fa-save"></i> Guardar e Ganhar XP</button>
                 </div>
             </div>
+            
+            <!-- MODAL CRIAÇÃO DE FÓRUM (ESTILO PRO) -->
+            <div id="modal-criar-forum" class="modal-overlay">
+                <div class="action-sheet" style="max-width:400px; border-radius:12px; margin:20px; animation: none;">
+                    <h3 style="margin-bottom: 15px; color:var(--primary-green);"><i class="fa-solid fa-comments"></i> Novo Grupo</h3>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">Cria um grupo de estudo com os teus colegas para partilhar resumos e dúvidas.</p>
+                    <input type="text" id="input-nome-novo-forum" placeholder="Nome do Grupo (Ex: Trabalho de Física)" style="width:100%; margin-bottom:20px;">
+                    <div style="display:flex; gap:10px;">
+                        <button id="btn-cancelar-novo-forum" class="secondary-btn">Cancelar</button>
+                        <button id="btn-confirmar-novo-forum" class="primary-btn">Criar Grupo</button>
+                    </div>
+                </div>
+            </div>
+
         </main>
 
         <nav class="bottom-nav">
