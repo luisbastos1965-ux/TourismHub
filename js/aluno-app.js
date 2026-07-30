@@ -2,7 +2,7 @@ import { auth, db, messaging, VAPID_KEY, getToken, onMessage } from "./firebase.
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, collection, updateDoc, getDocs, query, addDoc, onSnapshot, orderBy, setDoc, enableIndexedDbPersistence, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// Matriz Oficial de Disciplinas (Ordem e Fóruns)
+// Matriz Oficial de Disciplinas
 const matrizCursoMap = {
     "Sociocultural": ["PORT", "ING", "AI", "EF", "TIC"],
     "Científica": ["GEO", "HCA", "MAT", "FQ", "BG", "MAC"],
@@ -46,7 +46,9 @@ onAuthStateChanged(auth, async (user) => {
 
                 carregarDadosPassaporte(dados);
                 carregarGamificacao(dados);
-                construirHomeAdaptativa(dados);
+                
+                // Chamada forçada após carregar os dados
+                await construirHomeAdaptativa(dados);
                 
                 const timelineEvents = await obterEventosLinhaTemporal();
                 if (timelineEvents.length > 0) {
@@ -79,12 +81,11 @@ onAuthStateChanged(auth, async (user) => {
 document.getElementById('btn-logout-aluno')?.addEventListener('click', () => { signOut(auth).then(() => window.location.href = "index.html"); });
 
 // ----------------------------------------------------
-// O DASHBOARD ADAPTATIVO MÁGICO (HOME)
+// O DASHBOARD ADAPTATIVO MÁGICO (HOME) - CORRIGIDO
 // ----------------------------------------------------
 async function construirHomeAdaptativa(dadosAluno) {
     const container = document.getElementById('dynamic-hero-section');
     if(!container) return;
-    container.innerHTML = '<p class="text-muted center">A preparar o teu assistente...</p>';
 
     let temFaltas = 0; let eventosBreves = []; let prhfsAtivos = 0;
     try {
@@ -108,6 +109,7 @@ async function construirHomeAdaptativa(dadosAluno) {
 
         let heroHTML = ''; let showHumorAndMission = false;
 
+        // PRIORIDADE 1: VERMELHO
         if (temFaltas > 0 || prhfsAtivos > 0) {
             heroHTML = `
                 <div class="card" style="background: linear-gradient(135deg, #ff4d4d, #cc0000); color: white; border: none; border-radius: 16px; margin-bottom: 20px;">
@@ -120,7 +122,9 @@ async function construirHomeAdaptativa(dadosAluno) {
                     <button class="primary-btn" style="background: white; color: #cc0000;" onclick="document.querySelector('.nav-item[data-target=\\'view-aluno-caderneta\\']').click()"><i class="fa-solid fa-book-open"></i> Abrir Caderneta e Resolver</button>
                 </div>
             `;
-        } else if (eventosBreves.length > 0) {
+        } 
+        // PRIORIDADE 2: LARANJA
+        else if (eventosBreves.length > 0) {
             let ev = eventosBreves[0];
             const dataF = ev.data.split('-').reverse().join('/');
             heroHTML = `
@@ -133,7 +137,9 @@ async function construirHomeAdaptativa(dadosAluno) {
                 </div>
             `;
             showHumorAndMission = true;
-        } else {
+        } 
+        // PRIORIDADE 3: VERDE
+        else {
             heroHTML = `
                 <div class="card" style="background: linear-gradient(135deg, #00cc88, #009966); color: white; border: none; border-radius: 16px; margin-bottom: 20px;">
                     <h3 style="margin-bottom:5px; font-size: 1.3rem;"><i class="fa-solid fa-leaf"></i> Dia Tranquilo</h3>
@@ -179,8 +185,10 @@ async function construirHomeAdaptativa(dadosAluno) {
             }
         }
 
+        // INJETA O CONTEÚDO TODO
         container.innerHTML = heroHTML + secundariosHTML;
 
+        // Ativar cliques no Humor Dinâmico
         const bDinamicos = document.querySelectorAll('.mood-btn-dinamico');
         if(bDinamicos.length > 0) {
             bDinamicos.forEach(btn => {
@@ -205,7 +213,7 @@ async function construirHomeAdaptativa(dadosAluno) {
 }
 
 // ----------------------------------------------------
-// GAMIFICAÇÃO E PERFIL COMPLETO (Nível, XP, Títulos)
+// GAMIFICAÇÃO, ESTATÍSTICAS ESTUDO E AVATAR
 // ----------------------------------------------------
 function carregarGamificacao(dados) {
     const xp = dados.xp || 0;
@@ -216,7 +224,6 @@ function carregarGamificacao(dados) {
 
     document.getElementById('aluno-nivel').innerText = nivel;
     document.getElementById('aluno-xp-atual').innerText = xp;
-
     document.getElementById('perfil-xp-totais').innerText = xp;
     document.getElementById('perfil-xp-progress').style.width = `${progresso}%`;
 
@@ -416,18 +423,11 @@ async function carregarFaltasAluno() {
     try {
         const faltasDb = await getDocs(collection(db, "utilizadores", myUserId, "faltas"));
         let faltasObj = {}; 
-        
-        faltasDb.forEach(d => { 
-            const f = d.data(); 
-            if(!faltasObj[f.disciplina]) faltasObj[f.disciplina] = []; 
-            faltasObj[f.disciplina].push(f); 
-        });
+        faltasDb.forEach(d => { const f = d.data(); if(!faltasObj[f.disciplina]) faltasObj[f.disciplina] = []; faltasObj[f.disciplina].push(f); });
 
         let html = '';
-
         ordemDisciplinasGlobal.forEach(disc => {
-            let totalHorasFalta = 0;
-            let faltasHTML = '';
+            let totalHorasFalta = 0; let faltasHTML = '';
             
             if(faltasObj[disc] && faltasObj[disc].length > 0) {
                 faltasObj[disc].sort((a,b) => b.dataInicio.localeCompare(a.dataInicio));
@@ -492,34 +492,39 @@ async function carregarPrhfsAluno() {
             const txtSt = p.status === 'concluida' ? 'CONCLUÍDO' : (isUrgente ? 'URGENTE' : 'EM CURSO');
             const corFinal = p.status === 'concluida' ? 'var(--success-green)' : cor;
 
+            // Tratamento das horas totais do módulo
+            const horasTotais = p.horasTotais || 50; 
+            const calcHorasPrhf = Math.ceil(horasTotais / 3);
+
             html += `<div class="card" style="margin-bottom:15px; border-left: 4px solid ${corFinal};">
                         <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
                             <strong>${p.disciplina} (Mod. ${p.modulo})</strong>
                             <span style="color:${corFinal}; font-size:0.75rem; font-weight:bold;">${txtSt}</span>
                         </div>
                         <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">${p.descricao}</p>
-                        <div style="font-size:0.8rem; margin-bottom: 15px;">Data Limite: <strong style="color:${corFinal};">${p.prazo}</strong> | Presenciais: <strong>${p.horasPresenciais||0}h</strong></div>
-                        ${p.status !== 'concluida' ? `<button class="secondary-btn small-btn" style="width:100%; border-color:${corFinal}; color:${corFinal};" onclick="abrirAcaoPrhf('${p.id}', '${p.disciplina}', '${p.modulo}', '${p.prazo}', '${p.horasPresenciais}')"><i class="fa-solid fa-pen-to-square"></i> Propor Data/Hora</button>` : ''}
+                        <div style="font-size:0.8rem; margin-bottom: 15px;">Data Limite: <strong style="color:${corFinal};">${p.prazo}</strong> | Presenciais: <strong>${p.horasPresenciais||0}h / ${calcHorasPrhf}h</strong></div>
+                        ${p.status !== 'concluida' ? `<button class="secondary-btn small-btn" style="width:100%; border-color:${corFinal}; color:${corFinal};" onclick="abrirAcaoPrhf('${p.id}', '${p.disciplina}', '${p.modulo}', '${p.prazo}', '${p.horasPresenciais||0}', '${calcHorasPrhf}')"><i class="fa-solid fa-pen-to-square"></i> Propor Data/Hora</button>` : ''}
                     </div>`; 
         }); 
         cadernetaContent.innerHTML = html;
     } catch(e) {}
 }
 
-window.abrirAcaoPrhf = (id, disc, mod, prazo, horas) => {
+window.abrirAcaoPrhf = (id, disc, mod, prazo, horasFeitas, horasTotais) => {
     document.querySelector('.nav-item[data-target="view-aluno-caderneta"]').classList.remove('active');
     esconderTodasAsVistas();
     document.getElementById('view-aluno-acao-prhf').style.display = 'block';
     
     document.getElementById('prhf-acao-titulo').innerText = `${disc} (Mod. ${mod})`;
     document.getElementById('prhf-acao-prazo').innerText = prazo;
-    document.getElementById('prhf-acao-horas').innerText = `${horas}h`;
+    document.getElementById('prhf-acao-horas').innerText = `${horasFeitas}h`;
+    document.getElementById('prhf-acao-horas-totais').innerText = `${horasTotais}h`;
     
     document.getElementById('btn-voltar-acao-prhf').onclick = () => {
         esconderTodasAsVistas();
         document.querySelector('.nav-item[data-target="view-aluno-caderneta"]').classList.add('active');
         document.getElementById('view-aluno-caderneta').style.display = 'block';
-        carregarPrhfsAluno(); // Recarrega a tab dos PRHFs
+        carregarPrhfsAluno(); 
     };
 
     document.getElementById('btn-enviar-proposta-prhf').onclick = async () => {
@@ -530,7 +535,7 @@ window.abrirAcaoPrhf = (id, disc, mod, prazo, horas) => {
         const propostaFinal = `Data: ${dataVal} | Hora: ${horaVal}`;
         try {
             await updateDoc(doc(db, "utilizadores", myUserId, "prhfs", id), { propostaAluno: propostaFinal, propostaLidaDT: false });
-            alert("Proposta enviada ao Diretor de Turma com sucesso!");
+            alert("Proposta enviada ao Professor com sucesso!");
             document.getElementById('btn-voltar-acao-prhf').click();
         } catch(e) {}
     };
@@ -571,7 +576,7 @@ async function carregarObservacoesAluno(reuniaoSelecionada = '1_avaliacao') {
 }
 
 // ----------------------------------------------------
-// AGENDA E HORÁRIO
+// AGENDA E HORÁRIO (Com Grelha ajustada)
 // ----------------------------------------------------
 document.querySelector('.nav-item[data-target="view-aluno-agenda"]')?.addEventListener('click', () => { document.getElementById('tab-aluno-eventos').click(); });
 document.getElementById('tab-aluno-eventos')?.addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('tab-aluno-horario').classList.remove('active'); document.getElementById('aluno-agenda-filtros').style.display = 'flex'; document.getElementById('aluno-horario-container').style.display = 'none'; carregarAgendaAlunoLista(); });
@@ -673,7 +678,8 @@ async function carregarHorarioAluno() {
             let dEnd = new Date(dtT); dEnd.setDate(dEnd.getDate() + 4);
             document.getElementById('aluno-horario-display').innerText = `${fDt(dtT)} a ${fDt(dEnd)}`;
 
-            let html = '<div class="horario-grid"><div class="horario-header"></div>';
+            // O estilo CSS .horario-grid garante o tamanho
+            let html = '<div class="horario-grid" style="min-width:100%;"><div class="horario-header"></div>';
             let dtIter = new Date(dtT);
             ['SEG','TER','QUA','QUI','SEX'].forEach(d => { html += `<div class="horario-header">${d}<span>${fDt(dtIter)}</span></div>`; dtIter.setDate(dtIter.getDate()+1); });
             
@@ -685,7 +691,7 @@ async function carregarHorarioAluno() {
                     const disc = hb[`${dStr}_${bId}`];
                     if(disc) {
                         const sty = getCorEspecial(disc);
-                        html += `<div class="horario-slot" style="padding:2px; border: 1px solid ${sty.c}; background-color: ${sty.bg}; color: white;"><strong>${disc}</strong></div>`;
+                        html += `<div class="horario-slot" style="border: 1px solid ${sty.c}; background-color: ${sty.bg}; color: white;"><strong>${disc}</strong></div>`;
                     } else html += `<div class="horario-slot"></div>`;
                     dtIter.setDate(dtIter.getDate()+1);
                 }
@@ -696,14 +702,39 @@ async function carregarHorarioAluno() {
 }
 
 // ----------------------------------------------------
-// FÓRUM MAGIA (Canais Default)
+// FÓRUM MAGIA E MODAL PRO
 // ----------------------------------------------------
 let chatUnsubscribeAluno = null; let alunoForumAtivoId = null;
+
+// Controlos do Novo Modal de Fórum
+document.getElementById('btn-create-chat-aluno')?.addEventListener('click', () => {
+    document.getElementById('modal-criar-forum').style.display = 'flex';
+});
+
+document.getElementById('btn-cancelar-novo-forum')?.addEventListener('click', () => {
+    document.getElementById('modal-criar-forum').style.display = 'none';
+    document.getElementById('input-nome-novo-forum').value = '';
+});
+
+document.getElementById('btn-confirmar-novo-forum')?.addEventListener('click', async () => {
+    const nomeGrupo = document.getElementById('input-nome-novo-forum').value.trim();
+    if(!nomeGrupo) return;
+    try {
+        await addDoc(collection(db, "turmas", minhaTurma, "foruns"), {
+            nome: nomeGrupo, tipo: 'permanente', isDefault: false, membros: [myUserId], criadoPor: myUserName
+        });
+        document.getElementById('modal-criar-forum').style.display = 'none';
+        document.getElementById('input-nome-novo-forum').value = '';
+        alert("Grupo de Trabalho criado com sucesso! (Adição de colegas brevemente).");
+        carregarForuns();
+    } catch(e) {}
+});
+
+
 async function carregarForuns() {
-    const container = document.getElementById('aluno-forum-channel-list'); container.innerHTML = '<p class="text-muted center">A configurar fóruns...</p>'; 
+    const container = document.getElementById('aluno-forum-channel-list'); container.innerHTML = '<p class="text-muted center">A configurar fóruns mágicos...</p>'; 
     if(!minhaTurma) return;
     
-    // Pastas Virtuais e Fóruns Livres
     let html = `
         <h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apoio & Turma</h3>
         <div class="canal-card" data-id="turma_global" data-nome="Turma ${minhaTurma} (Geral)">
@@ -719,7 +750,6 @@ async function carregarForuns() {
         <div style="display:flex; flex-wrap:wrap; gap:10px;">
     `;
     
-    // Gerar pequenos chips/cards para as disciplinas
     ordemDisciplinasGlobal.forEach(disc => {
         html += `<div class="canal-card" data-id="disc_${disc}" data-nome="Fórum ${disc}" style="flex: 1 1 45%; padding: 10px;">
                     <div class="canal-info" style="text-align:center;"><h4 style="margin:0; font-size:0.9rem; color:#00d2ff;"><i class="fa-solid fa-book-open"></i> ${disc}</h4></div>
@@ -727,15 +757,13 @@ async function carregarForuns() {
     });
     html += '</div>';
 
-    // Ler fóruns criados pelo aluno para trabalhos
     try {
         const res = await getDocs(collection(db, "turmas", minhaTurma, "foruns"));
         let extrasHtml = '';
         res.forEach(docSnap => { 
             const f = docSnap.data(); 
-            // Mostra apenas se for membro e não for um dos defaults acima
             if(f.membros.includes(myUserId) && !f.isDefault) { 
-                extrasHtml += `<div class="canal-card" data-id="${docSnap.id}" data-nome="${f.nome}"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-comments"></i></div><div class="canal-info"><h4>${f.nome}</h4><p>Grupo Personalizado</p></div></div>`; 
+                extrasHtml += `<div class="canal-card" data-id="${docSnap.id}" data-nome="${f.nome}"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-comments"></i></div><div class="canal-info"><h4>${f.nome}</h4><p>Grupo de Trabalho</p></div></div>`; 
             } 
         });
         
@@ -770,19 +798,6 @@ function iniciarChatAluno(fId) {
     });
 }
 document.getElementById('btn-aluno-send-msg')?.addEventListener('click', async () => { const inp = document.getElementById('aluno-input-forum-msg'); const txt = inp.value.trim(); if(!txt || !alunoForumAtivoId) return; try { await addDoc(collection(db, "turmas", minhaTurma, "foruns", alunoForumAtivoId, "mensagens"), { remetente: myUserName, texto: txt, timestamp: Date.now() }); inp.value = ''; } catch(e) {} });
-
-// Criar Grupo de Estudo
-document.getElementById('btn-create-chat-aluno')?.addEventListener('click', async () => {
-    const nomeGrupo = prompt("Nome do Grupo de Estudo/Trabalho:");
-    if(!nomeGrupo) return;
-    try {
-        await addDoc(collection(db, "turmas", minhaTurma, "foruns"), {
-            nome: nomeGrupo, tipo: 'permanente', isDefault: false, membros: [myUserId], criadoPor: myUserName
-        });
-        alert("Grupo criado! Pede ao teu DT para adicionar os teus colegas a este canal (funcionalidade temporária nesta versão).");
-        carregarForuns();
-    } catch(e) {}
-});
 
 // ----------------------------------------------------
 // SUMÁRIOS
