@@ -19,7 +19,7 @@
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 
-    <!-- Chart.js -->
+    <!-- Chart.js (Estatísticas e Gráficos) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
@@ -132,11 +132,9 @@
                     </div>
                 </div>
 
-                <!-- OBJETIVOS INTELIGENTES -->
                 <div class="card" style="border-left: 4px solid var(--warning-yellow);">
                     <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-bullseye"></i> Metas Inteligentes</h3>
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Escolhe a nota que queres atingir! A app verifica as tuas notas e dá-te <strong style="color:var(--warning-yellow);">+50 XP</strong> automaticamente quando a alcançares.</p>
-                    
                     <div style="display:flex; gap:10px; margin-bottom: 15px;">
                         <select id="obj-disciplina" style="flex:2; margin:0; padding:10px; font-size:0.9rem;"></select>
                         <input type="number" id="obj-nota-alvo" placeholder="Nota" style="flex:1; margin:0; padding:10px; font-size:0.9rem;" min="10" max="20">
@@ -168,14 +166,17 @@
                 <div class="class-header" style="margin-bottom: 10px;">
                     <button id="btn-voltar-notificacoes" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                 </div>
-                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-bell"></i> Central de Alertas</h2>
+                
                 <div class="filter-chips-container" id="notificacoes-filtros">
                     <div class="filter-chip active" data-cat="all">Todas</div>
                     <div class="filter-chip" data-cat="importante">Importantes</div>
                     <div class="filter-chip" data-cat="escola">Escola</div>
                     <div class="filter-chip" data-cat="gamificacao">Gamificação</div>
                 </div>
-                <div id="aluno-notificacoes-container"></div>
+
+                <div id="aluno-notificacoes-container">
+                    <p class="text-muted" style="text-align:center;">A carregar histórico...</p>
+                </div>
             </div>
 
             <!-- VISTA CADERNO DIGITAL -->
@@ -183,7 +184,6 @@
                 <div class="class-header" style="margin-bottom: 10px;">
                     <button id="btn-voltar-caderno" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                 </div>
-                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-book"></i> O Meu Caderno</h2>
                 
                 <div class="falta-tabs" style="margin-bottom: 15px;">
                     <button class="falta-tab-btn active" id="tab-caderno-resumos">Resumos Texto</button>
@@ -204,8 +204,16 @@
                     <div class="card" style="margin-bottom: 20px; padding: 15px; text-align: center; border: 1px dashed #e67e22;">
                         <h3 style="font-size: 1rem; margin-bottom: 10px; color: #e67e22;"><i class="fa-solid fa-camera"></i> Guardar Foto do Quadro</h3>
                         <input type="text" id="foto-titulo" placeholder="Título da Foto" style="width:100%; margin-bottom:15px; border-radius:8px; padding:10px;">
-                        <label for="upload-foto-quadro" class="primary-btn" style="background-color: #e67e22; width: auto; display: inline-block; cursor: pointer; padding: 10px 20px;"><i class="fa-solid fa-upload"></i> Escolher Foto</label>
-                        <input type="file" id="upload-foto-quadro" style="display:none;" accept="image/*">
+                        
+                        <!-- BOTÕES DE TIRAR FOTO VS GALERIA -->
+                        <div style="display:flex; gap:10px; justify-content:center; margin-bottom:15px;">
+                            <label for="upload-foto-quadro" class="primary-btn" style="background-color: #e67e22; width: auto; display: inline-block; cursor: pointer; padding: 10px 20px; flex:1;"><i class="fa-solid fa-images"></i> Galeria</label>
+                            <input type="file" id="upload-foto-quadro" style="display:none;" accept="image/*">
+                            
+                            <label for="tirar-foto-quadro" class="primary-btn" style="background-color: #d35400; width: auto; display: inline-block; cursor: pointer; padding: 10px 20px; flex:1;"><i class="fa-solid fa-camera"></i> Tirar Foto</label>
+                            <input type="file" id="tirar-foto-quadro" style="display:none;" accept="image/*" capture="environment">
+                        </div>
+
                         <span id="foto-quadro-file-name" style="display:block; margin-top:10px; font-size:0.85rem; color:var(--success-green);"></span>
                         <button id="btn-gravar-foto-quadro" class="primary-btn" style="width: 100%; margin-top: 15px; background-color: var(--success-green); display:none;"><i class="fa-solid fa-cloud-arrow-up"></i> Guardar na Galeria</button>
                     </div>
@@ -223,7 +231,7 @@
                 <div id="aluno-lista-sumarios-container"></div>
             </div>
 
-            <!-- VISTA CADERNETA -->
+            <!-- VISTA CADERNETA E LINHA TEMPORAL -->
             <div id="view-aluno-caderneta" style="display: none;">
                 <div class="falta-tabs" style="display:flex; flex-wrap:wrap; gap:5px; justify-content:center; margin-bottom: 15px;">
                     <button class="falta-tab-btn active" id="tab-aluno-timeline" style="flex: 1 1 100%; border-color: var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-clock-rotate-left"></i> Histórico</button>
@@ -242,7 +250,7 @@
                     <div class="filter-chip" data-cat="gamificacao">Gamificação</div>
                 </div>
 
-                <div id="aluno-caderneta-content"><p class="text-muted" style="text-align:center;">A carregar...</p></div>
+                <div id="aluno-caderneta-content"><p class="text-muted" style="text-align:center;">A carregar histórico...</p></div>
             </div>
 
             <!-- VISTA AÇÃO PRHF -->
@@ -255,10 +263,8 @@
                         <span>Data Limite: <strong id="prhf-acao-prazo" style="color:var(--warning-yellow);">...</strong></span>
                     </div>
                     
-                    <div id="prhf-docs-container"></div>
-                    
-                    <h4 style="font-size: 0.95rem; margin-bottom: 10px; margin-top: 15px; color:var(--primary-green);">Agendar Sessão Presencial</h4>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Indica o dia e o horário para o Professor validar.</p>
+                    <h4 style="font-size: 0.95rem; margin-bottom: 10px; color:var(--primary-green);">Proposta de Horas Presenciais</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Indica o dia e o horário para validação do Professor.</p>
                     
                     <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                         <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Data</label><input type="date" id="aluno-prhf-proposta-data" style="margin:0; width:100%;"></div>
@@ -297,7 +303,7 @@
                     </div>
                 </div>
 
-                <div id="aluno-agenda-content" style="margin-top:10px; overflow-x: auto; padding-bottom: 20px;">
+                <div id="aluno-agenda-content" style="margin-top:10px; overflow-x: auto; padding-bottom: 40px;">
                     <p class="text-muted" style="text-align:center;">A carregar dados...</p>
                 </div>
             </div>
@@ -306,7 +312,7 @@
             <div id="view-aluno-forum" style="display: none;">
                 <div class="class-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
                     <h2 class="section-title" style="margin:0;"><i class="fa-solid fa-comments"></i> Fóruns</h2>
-                    <button id="btn-create-chat-aluno" class="primary-btn small-btn" style="background:var(--bg-dark); border:1px solid var(--primary-green); color:var(--primary-green);"><i class="fa-solid fa-plus"></i> Novo Grupo</button>
+                    <button id="btn-create-chat-aluno" class="primary-btn small-btn" style="background:var(--bg-dark); border:1px solid var(--primary-green); color:var(--primary-green);"><i class="fa-solid fa-plus"></i> Novo Chat</button>
                 </div>
                 
                 <div id="aluno-forum-channel-list"></div>
@@ -372,7 +378,7 @@
                             </div>
                         </div>
                         <div style="border-top: 1px dashed #333; padding-top: 15px;">
-                            <label style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; display: block;">Entrega de Documentos:</label>
+                            <label style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; display: block;">Entrega de Documentos (Anteprojeto/Relatório):</label>
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <label for="aluno-upload-pap" class="secondary-btn small-btn" style="margin:0; flex:1; text-align:center; border-style: dashed;"><i class="fa-solid fa-upload"></i> Anexar Ficheiro</label>
                                 <input type="file" id="aluno-upload-pap" style="display:none;" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.zip">
@@ -381,6 +387,34 @@
                             <button id="btn-enviar-pap" class="primary-btn" style="display:none; width:100%; margin-top:10px;">Submeter à Escola</button>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- MODO FOCO -->
+            <div id="view-study-mode" style="display: none; flex-direction: column; align-items: center; justify-content: flex-start; height: 80vh; overflow-y:auto; padding-top: 20px;">
+                <h2 style="color: #9b59b6; margin-bottom: 20px;"><i class="fa-solid fa-stopwatch"></i> Modo Foco</h2>
+                <div style="font-size: 5rem; font-weight: bold; font-family: monospace; color: white; margin-bottom: 20px;" id="study-timer-text">25:00</div>
+                
+                <div id="pomodoro-music-container" style="margin-bottom: 20px; width: 100%; max-width: 350px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; border: 1px dashed #9b59b6;">
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px; text-align:center;">Cola aqui o link da tua playlist (Spotify ou YouTube) para estudares com música.</p>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="pomodoro-music-url" placeholder="https://open.spotify.com/..." style="margin:0; flex:1; padding:8px; font-size:0.8rem; border-radius:6px;">
+                        <button id="btn-load-music" class="secondary-btn small-btn" style="border-color:#9b59b6; color:#9b59b6;"><i class="fa-solid fa-play"></i></button>
+                    </div>
+                    <div id="music-player-frame" style="margin-top: 15px; display: none; width: 100%; border-radius: 8px; overflow:hidden;"></div>
+                </div>
+
+                <div id="study-controls" style="text-align: center; width:100%; max-width: 350px;">
+                    <button id="btn-start-study" class="primary-btn" style="background-color: #9b59b6; font-size: 1.2rem; padding: 15px 40px; border-radius: 30px; display: inline-block;"><i class="fa-solid fa-play"></i> Iniciar</button>
+                    <button id="btn-stop-study" class="danger-btn" style="display: none; font-size: 1.2rem; padding: 15px 40px; border-radius: 30px; margin: 0 auto;"><i class="fa-solid fa-stop"></i> Parar</button>
+                    <br><button id="btn-voltar-study" class="secondary-btn" style="margin-top: 20px; border: none; width: auto; margin-left: auto; margin-right: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+                </div>
+                
+                <div id="post-study-log" style="display: none; width: 100%; max-width: 350px; text-align: center; margin-top: 20px;">
+                    <h3 style="color: white; margin-bottom: 10px;">Sessão Concluída! 🎉</h3>
+                    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 15px;">Faz um breve registo do que aprendeste para ganhares <strong style="color:var(--warning-yellow);">+50 XP</strong>.</p>
+                    <textarea id="study-log-text" class="input-field" placeholder="Ex: Estudei a fórmula resolvente..." style="min-height: 80px; margin-bottom: 15px; border-radius: 12px;"></textarea>
+                    <button id="btn-save-study-log" class="primary-btn" style="background-color: var(--success-green);"><i class="fa-solid fa-save"></i> Guardar e Ganhar XP</button>
                 </div>
             </div>
 
@@ -395,6 +429,7 @@
         </nav>
     </div>
 
+    <!-- SCRIPT ÚNICO -->
     <script type="module" src="./js/aluno-app.js"></script>
 </body>
 </html>
