@@ -73,7 +73,6 @@
                     <div id="aluno-search-results" style="display:none; position:absolute; top:50px; left:0; width:100%; background:#222; border:1px solid #444; border-radius:12px; z-index:10; max-height:250px; overflow-y:auto; box-shadow: 0 5px 15px rgba(0,0,0,0.5); padding: 10px;"></div>
                 </div>
 
-                <!-- MODO ÉPOCA DE EXAMES -->
                 <div id="exam-mode-banner" style="display:none; background: linear-gradient(135deg, #8e2de2, #4a00e0); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 15px rgba(138, 43, 226, 0.3); border: 1px solid #9b59b6;">
                     <h3 style="margin-bottom: 5px; font-size: 1.2rem;"><i class="fa-solid fa-graduation-cap"></i> Época de Exames Ativada</h3>
                     <p style="font-size: 0.9rem; color: #e0e0e0; margin-bottom: 10px;">O Modo Foco está recomendado. Prepara-te!</p>
@@ -85,7 +84,7 @@
                     <div class="card"><p class="text-muted center">A preparar o teu assistente...</p></div>
                 </div>
 
-                <!-- ACESSO RÁPIDO (Ícones Limpos) -->
+                <!-- ACESSO RÁPIDO (Apenas ícones) -->
                 <div class="lms-action-grid" style="margin-top: 20px;">
                     <button class="lms-btn" id="btn-open-study-mode" style="border-color:#9b59b6; color:#9b59b6; background: rgba(155, 89, 182, 0.05);">
                         <i class="fa-solid fa-stopwatch"></i><span>Modo Foco</span>
@@ -169,14 +168,17 @@
                 <div class="class-header" style="margin-bottom: 10px;">
                     <button id="btn-voltar-notificacoes" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                 </div>
-                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-bell"></i> Central de Alertas</h2>
+                
                 <div class="filter-chips-container" id="notificacoes-filtros">
                     <div class="filter-chip active" data-cat="all">Todas</div>
                     <div class="filter-chip" data-cat="importante">Importantes</div>
                     <div class="filter-chip" data-cat="escola">Escola</div>
                     <div class="filter-chip" data-cat="gamificacao">Gamificação</div>
                 </div>
-                <div id="aluno-notificacoes-container"></div>
+
+                <div id="aluno-notificacoes-container">
+                    <p class="text-muted" style="text-align:center;">A carregar histórico...</p>
+                </div>
             </div>
 
             <!-- VISTA CADERNO DIGITAL -->
@@ -214,7 +216,7 @@
                         </div>
 
                         <span id="foto-quadro-file-name" style="display:block; margin-top:10px; font-size:0.85rem; color:var(--success-green);"></span>
-                        <button id="btn-gravar-foto-quadro" class="primary-btn" style="width: 100%; margin-top: 15px; background-color: var(--success-green); display:none;"><i class="fa-solid fa-cloud-arrow-up"></i> Guardar na Galeria</button>
+                        <button id="btn-gravar-foto-quadro" class="primary-btn" style="width: 100%; margin-top: 15px; background-color: var(--success-green); display:none;"><i class="fa-solid fa-cloud-arrow-up"></i> Guardar</button>
                     </div>
                     <div id="lista-fotos-quadro-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"></div>
                 </div>
@@ -311,10 +313,7 @@
 
             <!-- VISTA FÓRUM -->
             <div id="view-aluno-forum" style="display: none;">
-                <div class="class-header" style="display:flex; flex-direction:column; align-items:flex-start; margin-bottom: 20px; gap: 15px;">
-                    <h2 class="section-title" style="margin:0;"><i class="fa-solid fa-comments"></i> Fóruns</h2>
-                    <button id="btn-create-chat-aluno" class="primary-btn" style="background:var(--bg-dark); border:1px dashed var(--primary-green); color:var(--primary-green); width: 100%;"><i class="fa-solid fa-plus"></i> Criar Novo Grupo de Estudo</button>
-                </div>
+                <button id="btn-create-chat-aluno" class="primary-btn" style="background:var(--bg-dark); border:1px dashed var(--primary-green); color:var(--primary-green); width: 100%; margin-bottom: 20px;"><i class="fa-solid fa-plus"></i> Novo Chat / Fórum</button>
                 
                 <div id="aluno-forum-channel-list"></div>
 
@@ -391,13 +390,13 @@
                 </div>
             </div>
 
-            <!-- MODO FOCO (Reconstruído 30 Min e Sem quebrar) -->
-            <div id="view-study-mode" style="display: none; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 20px;">
+            <!-- MODO FOCO (Centrado) -->
+            <div id="view-study-mode" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 75vh; box-sizing: border-box;">
                 <h2 style="color: #9b59b6; margin-bottom: 20px;"><i class="fa-solid fa-stopwatch"></i> Modo Foco</h2>
                 <div style="font-size: 5rem; font-weight: bold; font-family: monospace; color: white; margin-bottom: 30px;" id="study-timer-text">30:00</div>
                 
                 <div id="study-controls" style="text-align: center; width:100%; max-width: 350px;">
-                    <button id="btn-start-study" class="primary-btn" style="background-color: #9b59b6; font-size: 1.2rem; padding: 15px 40px; border-radius: 30px; display: inline-block;"><i class="fa-solid fa-play"></i> Iniciar Pomodoro</button>
+                    <button id="btn-start-study" class="primary-btn" style="background-color: #9b59b6; font-size: 1.2rem; padding: 15px 40px; border-radius: 30px; display: inline-block;">Iniciar</button>
                     <button id="btn-stop-study" class="danger-btn" style="display: none; font-size: 1.2rem; padding: 15px 40px; border-radius: 30px; margin: 0 auto;"><i class="fa-solid fa-stop"></i> Parar</button>
                     <br><button id="btn-voltar-study" class="secondary-btn" style="margin-top: 20px; border: none; width: auto; margin-left: auto; margin-right: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                 </div>
