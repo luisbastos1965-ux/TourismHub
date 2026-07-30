@@ -46,12 +46,14 @@ document.getElementById('btn-logout-aluno')?.addEventListener('click', () => sig
 // ==========================================
 function esconderTodasAsVistas() { document.querySelectorAll('.app-content > div').forEach(v => v.style.display = 'none'); }
 
-document.body.addEventListener('click', (e) => {
+document.body.addEventListener('click', async (e) => {
     // Nav Bar Inferior
     const nav = e.target.closest('.nav-item');
     if(nav) {
         e.preventDefault(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); nav.classList.add('active');
         esconderTodasAsVistas(); const tId = nav.getAttribute('data-target'); 
+        
+        // Foco e Fórum usam flex
         document.getElementById(tId).style.display = (tId === 'view-study-mode' || tId === 'view-aluno-forum') ? 'flex' : 'block';
         
         if(tId === 'view-aluno-perfil') { 
@@ -67,6 +69,10 @@ document.body.addEventListener('click', (e) => {
     if(e.target.closest('#btn-open-study-mode')) {
         esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.getElementById('view-study-mode').style.display = 'flex';
+        // Auto-resume se estiver a correr no background
+        if(localStorage.getItem('pomodoroEndTarget') && localStorage.getItem('pomodoroEndTarget') > Date.now()) {
+            document.getElementById('btn-start-study').click();
+        }
     }
     if(e.target.closest('#btn-open-caderno')) {
         esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -90,7 +96,7 @@ document.body.addEventListener('click', (e) => {
         document.querySelector('.nav-item[data-target="student-dashboard"]').click();
     }
 
-    // Filtros Timeline e Notificações (Delegação Global)
+    // Filtros Timeline e Notificações
     const tChip = e.target.closest('#timeline-filtros .filter-chip');
     if(tChip) {
         document.querySelectorAll('#timeline-filtros .filter-chip').forEach(c => c.classList.remove('active'));
@@ -100,6 +106,21 @@ document.body.addEventListener('click', (e) => {
     if(nChip) {
         document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(c => c.classList.remove('active'));
         nChip.classList.add('active'); notifFilterCat = nChip.getAttribute('data-cat'); carregarNotificacoesAluno();
+    }
+
+    // Novo Grupo Fórum Logic (Protegido por delegação)
+    if(e.target.closest('#btn-create-chat-aluno')) {
+        document.getElementById('modal-criar-forum').style.display = 'flex'; 
+        const cCont = document.getElementById('lista-colegas-forum'); cCont.innerHTML = '<p class="text-muted center">A procurar colegas...</p>';
+        try {
+            const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", minhaTurma)));
+            let cH = ''; 
+            cS.forEach(d => { if(d.data().papel === 'aluno' && d.id !== myUserId) { cH += `<label style="display:flex; align-items:center; gap:10px; color:white; font-size:0.9rem; padding:8px 0; cursor:pointer;"><input type="checkbox" class="colegas-check" value="${d.id}" style="width:18px;height:18px;accent-color:var(--primary-green);"> ${d.data().nome}</label>`; } });
+            cCont.innerHTML = cH === '' ? '<p class="text-muted center" style="font-size:0.8rem;">Ainda és o único aluno registado nesta turma.</p>' : cH;
+        } catch(err) { cCont.innerHTML = '<p class="text-danger center">Erro ao listar turma.</p>'; }
+    }
+    if(e.target.closest('#btn-cancelar-novo-forum')) {
+        document.getElementById('modal-criar-forum').style.display = 'none'; document.getElementById('input-nome-novo-forum').value = '';
     }
 });
 
@@ -266,9 +287,9 @@ function renderizarGraficoNotas() {
 async function carregarEstatisticasEstudo() {
     try {
         const est = await getDocs(query(collection(db, "utilizadores", myUserId, "estudos")));
-        let tS = 0; let dU = new Set(); est.forEach(d => { tS++; if(d.data().data) dU.add(d.data().data.split('T')[0]); });
-        const tm = tS * 30; // 30 min por Pomodoro
-        document.getElementById('total-minutos-foco').innerText = tm>60?`${Math.floor(tm/60)}h${tm%60}m`:`${tm}m`;
+        let tS = 0; let dU = new Set(); let mTot = 0;
+        est.forEach(d => { tS++; if(d.data().data) dU.add(d.data().data.split('T')[0]); mTot += Number(d.data().minutos || 25); });
+        document.getElementById('total-minutos-foco').innerText = mTot>60?`${Math.floor(mTot/60)}h${mTot%60}m`:`${mTot}m`;
         let stk = 0; let dO = Array.from(dU).sort((a,b)=>b.localeCompare(a));
         if(dO.length>0){
             let hj = new Date(); const hs = hj.toISOString().split('T')[0]; hj.setDate(hj.getDate()-1); const os = hj.toISOString().split('T')[0];
@@ -533,11 +554,13 @@ async function carregarHorarioAluno() {
             bK.forEach(b => { const dc = hb[`${dSStr}_${b}`]; if(dc) { const sty = getCorEspecial(dc); h += `<div class="horario-list-item" style="border-left-color:${sty.c}; background-color:${sty.bg};"><div class="horario-time-col">${bT[b]}</div><div class="horario-disc-col"><div class="horario-disc-name">${dc}</div><div class="horario-prof">Prof. A Atribuir</div></div></div>`; tAD = true; } });
             sC.innerHTML = tAD ? h : '<p class="text-muted center" style="margin-top:30px;">Sem aulas neste dia.</p>';
         } else {
-            let dT = new Date(); dT.setDate(dT.getDate() + (ahSOff * 7)); dT.setDate(dT.getDate() - (dT.getDay() === 0 ? 6 : dT.getDay() - 1)); let dE = new Date(dT); dE.setDate(dE.getDate() + 4);
-            document.getElementById('aluno-horario-display').innerText = `${fDt(dT)} a ${fDt(dE)}`;
-            let h = '<div class="horario-grid" style="width:100%;"><div class="horario-header"></div>'; let dI = new Date(dT);
+            let dtT = new Date(); dtT.setDate(dtT.getDate() + (ahSOff * 7)); dtT.setDate(dtT.getDate() - (dtT.getDay() === 0 ? 6 : dtT.getDay() - 1)); let dE = new Date(dtT); dE.setDate(dE.getDate() + 4);
+            document.getElementById('aluno-horario-display').innerText = `${fDt(dtT)} a ${fDt(dE)}`;
+            
+            // Grelha Semanal ajustada e com scroll overflow
+            let h = '<div class="horario-grid" style="min-width:100%;"><div class="horario-header"></div>'; let dI = new Date(dtT);
             ['SEG','TER','QUA','QUI','SEX'].forEach(d => { h += `<div class="horario-header">${d}<span>${fDt(dI)}</span></div>`; dI.setDate(dI.getDate()+1); });
-            bK.forEach(b => { h += `<div class="horario-time">${bT[b]}</div>`; dI = new Date(dT); for(let i=0; i<5; i++) { const dSStr = `${dI.getFullYear()}-${String(dI.getMonth()+1).padStart(2,'0')}-${String(dI.getDate()).padStart(2,'0')}`; const dc = hb[`${dSStr}_${b}`]; if(dc) { const sty = getCorEspecial(dc); h += `<div class="horario-slot" style="border:1px solid ${sty.c}; background-color:${sty.bg}; color:white;"><strong>${dc}</strong></div>`; } else h += `<div class="horario-slot"></div>`; dI.setDate(dI.getDate()+1); } });
+            bK.forEach(b => { h += `<div class="horario-time">${bT[b]}</div>`; dI = new Date(dtT); for(let i=0; i<5; i++) { const dSStr = `${dI.getFullYear()}-${String(dI.getMonth()+1).padStart(2,'0')}-${String(dI.getDate()).padStart(2,'0')}`; const dc = hb[`${dSStr}_${b}`]; if(dc) { const sty = getCorEspecial(dc); h += `<div class="horario-slot" style="border:1px solid ${sty.c}; background-color:${sty.bg}; color:white;"><strong>${dc}</strong></div>`; } else h += `<div class="horario-slot"></div>`; dI.setDate(dI.getDate()+1); } });
             sC.innerHTML = h + '</div>';
         }
     } catch(e) {}
@@ -548,17 +571,6 @@ async function carregarHorarioAluno() {
 // ==========================================
 let chatUnsubscribeAluno = null; let alunoForumAtivoId = null;
 
-document.getElementById('btn-create-chat-aluno')?.addEventListener('click', async () => { 
-    document.getElementById('modal-criar-forum').style.display = 'flex'; 
-    const cCont = document.getElementById('lista-colegas-forum'); cCont.innerHTML = '<p class="text-muted center">A procurar colegas...</p>';
-    try {
-        const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", minhaTurma)));
-        let cH = ''; cS.forEach(d => { if(d.data().papel === 'aluno' && d.id !== myUserId) { cH += `<label style="display:flex; align-items:center; gap:10px; color:white; font-size:0.9rem; padding:8px 0; cursor:pointer;"><input type="checkbox" class="colegas-check" value="${d.id}" style="width:18px;height:18px;accent-color:var(--primary-green);"> ${d.data().nome}</label>`; } });
-        cCont.innerHTML = cH === '' ? '<p class="text-muted center">Sem colegas.</p>' : cH;
-    } catch(e) { cCont.innerHTML = '<p class="text-danger center">Erro.</p>'; }
-});
-
-document.getElementById('btn-cancelar-novo-forum')?.addEventListener('click', () => { document.getElementById('modal-criar-forum').style.display = 'none'; document.getElementById('input-nome-novo-forum').value = ''; });
 document.getElementById('btn-confirmar-novo-forum')?.addEventListener('click', async () => {
     const nome = document.getElementById('input-nome-novo-forum').value.trim(); if(!nome) return;
     let mbr = [myUserId]; document.querySelectorAll('.colegas-check:checked').forEach(c => mbr.push(c.value));
@@ -570,52 +582,74 @@ async function carregarForuns() {
     let html = `<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apoio & Turma</h3><div class="canal-card" data-id="turma_global" data-nome="Turma ${minhaTurma}" style="margin-bottom: 10px;"><div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-users"></i></div><div class="canal-info"><h4>Turma ${minhaTurma}</h4><p>Canal Geral</p></div></div><div class="canal-card" data-id="dt_${myUserId}" data-nome="Chat DT"><div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div><div class="canal-info"><h4>Diretor de Turma</h4><p>Mensagem Privada</p></div></div><h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Disciplinas</h3><div style="display:flex; flex-wrap:wrap; gap:10px;">`;
     ordemDisciplinasGlobal.forEach(disc => { html += `<div class="canal-card" data-id="disc_${disc}" data-nome="Fórum ${disc}" style="flex: 1 1 45%; padding: 10px;"><div class="canal-info" style="text-align:center;"><h4 style="margin:0; font-size:0.9rem; color:#00d2ff;"><i class="fa-solid fa-book-open"></i> ${disc}</h4></div></div>`; }); html += '</div>';
     try {
-        const res = await getDocs(collection(db, "turmas", minhaTurma, "foruns")); let extras = '';
-        res.forEach(d => { const f = d.data(); if(f.membros.includes(myUserId) && !f.isDefault) extras += `<div class="canal-card" data-id="${d.id}" data-nome="${f.nome}"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-comments"></i></div><div class="canal-info"><h4>${f.nome}</h4><p>Os Meus Chats</p></div></div>`; });
-        if(extras !== '') html += `<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Os Meus Chats</h3>` + extras;
+        const res = await getDocs(collection(db, "turmas", minhaTurma, "foruns")); let extrasHtml = '';
+        res.forEach(docSnap => { const f = docSnap.data(); if(f.membros.includes(myUserId) && !f.isDefault) { extrasHtml += `<div class="canal-card" data-id="${docSnap.id}" data-nome="${f.nome}"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-comments"></i></div><div class="canal-info"><h4>${f.nome}</h4><p>Grupo de Estudo</p></div></div>`; } });
+        if (extrasHtml !== '') html += `<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Os Meus Chats</h3>` + extrasHtml;
     } catch(e) {}
     cont.innerHTML = html;
     
-    cont.querySelectorAll('.canal-card').forEach(c => c.addEventListener('click', (e) => { alunoForumAtivoId = e.currentTarget.getAttribute('data-id'); document.getElementById('aluno-chat-active-title').innerText = e.currentTarget.getAttribute('data-nome'); document.getElementById('aluno-forum-channel-list').style.display = 'none'; document.getElementById('btn-create-chat-aluno').style.display = 'none'; document.getElementById('aluno-forum-chat-view').style.display = 'flex'; iniciarChatAluno(alunoForumAtivoId); }));
+    cont.querySelectorAll('.canal-card').forEach(card => card.addEventListener('click', (e) => { alunoForumAtivoId = e.currentTarget.getAttribute('data-id'); document.getElementById('aluno-chat-active-title').innerText = e.currentTarget.getAttribute('data-nome'); document.getElementById('aluno-forum-channel-list').style.display = 'none'; document.getElementById('aluno-forum-chat-view').style.display = 'flex'; document.getElementById('btn-create-chat-aluno').style.display = 'none'; iniciarChatAluno(alunoForumAtivoId); }));
 }
 
 document.getElementById('btn-aluno-voltar-canais')?.addEventListener('click', () => { document.getElementById('aluno-forum-chat-view').style.display = 'none'; document.getElementById('aluno-forum-channel-list').style.display = 'block'; document.getElementById('btn-create-chat-aluno').style.display = 'block'; });
 
 function iniciarChatAluno(fId) {
-    const chatC = document.getElementById('aluno-chat-messages-container'); chatC.innerHTML = ''; if(chatUnsubscribeAluno) chatUnsubscribeAluno();
-    chatUnsubscribeAluno = onSnapshot(query(collection(db, "turmas", minhaTurma, "foruns", fId, "mensagens"), orderBy("timestamp")), (snap) => { let html = ''; snap.forEach(doc => { const m = doc.data(); const isMe = m.remetente === myUserName; html += `<div class="chat-bubble ${isMe ? 'admin' : 'student'}"><strong>${isMe ? 'Tu' : m.remetente}</strong><br>${m.texto}<span class="chat-meta">${new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span></div>`; }); chatC.innerHTML = html; chatC.scrollTop = chatC.scrollHeight; });
+    const chatContainer = document.getElementById('aluno-chat-messages-container'); chatContainer.innerHTML = ''; if(chatUnsubscribeAluno) chatUnsubscribeAluno();
+    chatUnsubscribeAluno = onSnapshot(query(collection(db, "turmas", minhaTurma, "foruns", fId, "mensagens"), orderBy("timestamp")), (snapshot) => {
+        let html = ''; snapshot.forEach(doc => { const msg = doc.data(); const isMe = msg.remetente === myUserName; const classe = isMe ? 'admin' : 'student'; html += `<div class="chat-bubble ${classe}"><strong>${isMe ? 'Tu' : msg.remetente}</strong><br>${msg.texto}<span class="chat-meta">${new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span></div>`; });
+        chatContainer.innerHTML = html; chatContainer.scrollTop = chatContainer.scrollHeight;
+    });
 }
-document.getElementById('btn-aluno-send-msg')?.addEventListener('click', async () => { const inp = document.getElementById('aluno-input-forum-msg'); const t = inp.value.trim(); if(!t || !alunoForumAtivoId) return; try { await addDoc(collection(db, "turmas", minhaTurma, "foruns", alunoForumAtivoId, "mensagens"), { remetente: myUserName, texto: t, timestamp: Date.now() }); inp.value = ''; } catch(e) {} });
+document.getElementById('btn-aluno-send-msg')?.addEventListener('click', async () => { const inp = document.getElementById('aluno-input-forum-msg'); const txt = inp.value.trim(); if(!txt || !alunoForumAtivoId) return; try { await addDoc(collection(db, "turmas", minhaTurma, "foruns", alunoForumAtivoId, "mensagens"), { remetente: myUserName, texto: txt, timestamp: Date.now() }); inp.value = ''; } catch(e) {} });
 
 // ==========================================
 // 9. POMODORO E RESTRIÇÃO DE FOCO
 // ==========================================
-let pTmr = null; let pRest = 30 * 60; 
+let pTmr = null; let pTimeConfig = 30; let pXPConfig = 50;
+const focusXPMap = { '15': 25, '25': 40, '30': 50, '45': 75, '60': 100 };
 
-function resetPomodoro() {
-    clearInterval(pTmr); pTmr = null; pRest = 30 * 60; 
-    document.getElementById('study-timer-text').innerText = "30:00"; 
+function formatTimer(segundos) {
+    if(segundos < 0) segundos = 0; const m = Math.floor(segundos / 60).toString().padStart(2, '0'); const s = (segundos % 60).toString().padStart(2, '0');
+    document.getElementById('study-timer-text').innerText = `${m}:${s}`;
+}
+
+function resetPomodoroUI() {
+    clearInterval(pTmr); pTmr = null; localStorage.removeItem('pomodoroEndTarget');
     document.getElementById('btn-stop-study').style.display = 'none'; document.getElementById('btn-start-study').style.display = 'inline-block';
+    document.getElementById('study-setup').style.display = 'block';
+    document.getElementById('study-timer-text').style.color = "white";
+}
+
+function renderTimerRunning() {
+    let target = localStorage.getItem('pomodoroEndTarget'); if(!target) return;
+    let left = Math.round((target - Date.now()) / 1000);
+    if(left <= 0) {
+        resetPomodoroUI(); formatTimer(0);
+        document.getElementById('study-controls').style.display = 'none'; document.getElementById('study-setup').style.display = 'none'; document.getElementById('post-study-log').style.display = 'block';
+    } else formatTimer(left);
 }
 
 document.getElementById('btn-start-study')?.addEventListener('click', (e) => {
+    pTimeConfig = parseInt(document.getElementById('study-time-selector').value) || 30;
+    pXPConfig = focusXPMap[pTimeConfig] || 50;
+    
     e.currentTarget.style.display = 'none'; document.getElementById('btn-stop-study').style.display = 'inline-block';
-    if(pTmr) clearInterval(pTmr);
-    pTmr = setInterval(() => { 
-        pRest--; 
-        const m = Math.floor(pRest / 60).toString().padStart(2, '0'); const s = (pRest % 60).toString().padStart(2, '0'); 
-        document.getElementById('study-timer-text').innerText = `${m}:${s}`; 
-        if(pRest <= 0) { clearInterval(pTmr); pTmr = null; document.getElementById('study-controls').style.display = 'none'; document.getElementById('post-study-log').style.display = 'block'; } 
-    }, 1000);
+    document.getElementById('study-setup').style.display = 'none';
+    document.getElementById('study-timer-text').style.color = "#9b59b6";
+    
+    if(!localStorage.getItem('pomodoroEndTarget')) localStorage.setItem('pomodoroEndTarget', Date.now() + (pTimeConfig * 60) * 1000);
+    renderTimerRunning(); clearInterval(pTmr); pTmr = setInterval(renderTimerRunning, 1000);
 });
 
-document.getElementById('btn-stop-study')?.addEventListener('click', resetPomodoro);
+document.getElementById('btn-stop-study')?.addEventListener('click', () => { resetPomodoroUI(); formatTimer(30*60); });
 
 // Restrição Modo Foco Anti-Distração
 document.addEventListener('visibilitychange', () => {
     if (document.hidden && pTmr !== null) {
-        resetPomodoro();
-        setTimeout(() => alert("Modo Foco interrompido! Saíste da aplicação e a contagem foi reiniciada."), 500);
+        clearInterval(pTmr); pTmr = null; localStorage.removeItem('pomodoroEndTarget');
+        document.getElementById('foco-xp-perdido').innerText = `${pXPConfig} XP`;
+        document.getElementById('modal-foco-interrompido').style.display = 'flex';
+        resetPomodoroUI(); formatTimer(30*60);
     }
 });
 
@@ -624,15 +658,15 @@ document.getElementById('btn-save-study-log')?.addEventListener('click', async (
     const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
     try {
         const uS = await getDoc(doc(db, "utilizadores", myUserId)); let axp = uS.exists() && uS.data().xp ? uS.data().xp : 0;
-        await addDoc(collection(db, "utilizadores", myUserId, "estudos"), { texto: t, data: new Date().toISOString() });
-        await updateDoc(doc(db, "utilizadores", myUserId), { xp: axp + 50 }); carregarGamificacao({xp: axp + 50});
+        await addDoc(collection(db, "utilizadores", myUserId, "estudos"), { texto: t, minutos: pTimeConfig, data: new Date().toISOString() });
+        await updateDoc(doc(db, "utilizadores", myUserId), { xp: axp + pXPConfig }); carregarGamificacao({xp: axp + pXPConfig});
         b.style.backgroundColor = "var(--success-green)"; b.innerHTML = '<i class="fa-solid fa-check"></i> Feito!';
-        setTimeout(() => { document.getElementById('study-log-text').value = ''; document.getElementById('post-study-log').style.display = 'none'; document.getElementById('study-controls').style.display = 'block'; b.innerHTML = '<i class="fa-solid fa-save"></i> Guardar e Ganhar XP'; b.disabled = false; b.style.backgroundColor = "var(--success-green)"; resetPomodoro(); document.getElementById('btn-voltar-study').click(); }, 2000);
+        setTimeout(() => { document.getElementById('study-log-text').value = ''; document.getElementById('post-study-log').style.display = 'none'; document.getElementById('study-controls').style.display = 'block'; document.getElementById('study-setup').style.display = 'block'; b.innerHTML = '<i class="fa-solid fa-save"></i> Guardar Recompensa'; b.disabled = false; b.style.backgroundColor = "var(--success-green)"; formatTimer(30*60); document.getElementById('btn-voltar-study').click(); }, 2000);
     } catch(err) { b.innerHTML = "Erro"; setTimeout(() => { b.disabled = false; }, 2000); }
 });
 
 // ==========================================
-// 10. CADERNO DIGITAL (FOTOS)
+// 10. CADERNO DIGITAL
 // ==========================================
 document.getElementById('btn-gravar-apontamento')?.addEventListener('click', async (e) => {
     const t = document.getElementById('caderno-titulo').value.trim(); const h = quillEditor.root.innerHTML; const txt = quillEditor.getText().trim(); 
@@ -646,6 +680,12 @@ async function carregarResumos() {
     try { const r = await getDocs(query(collection(db, "utilizadores", myUserId, "apontamentos"))); let arr = []; r.forEach(d => arr.push({id: d.id, ...d.data()})); arr.sort((a,b) => b.timestamp - a.timestamp); let h = ''; arr.forEach(n => { h += `<div class="card" style="margin-bottom:15px; border-left:4px solid #e67e22;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;"><strong style="font-size:1.05rem; color:var(--primary-green);">${n.titulo}</strong><span style="font-size:0.75rem; color:var(--text-muted);"><i class="fa-regular fa-clock"></i> ${new Date(n.timestamp).toLocaleDateString('pt-PT')}</span></div><div style="background: rgba(255,255,255,0.05); padding:10px; border-radius:6px; font-size:0.95rem; overflow-x:auto;">${n.conteudo}</div></div>`; }); c.innerHTML = h === '' ? '<p class="text-muted center">Nenhum resumo.</p>' : h; } catch(e) {}
 }
 
+window.abrirFotoModal = (url, titulo) => {
+    document.getElementById('modal-foto-img').src = url;
+    document.getElementById('modal-foto-titulo').innerText = titulo;
+    document.getElementById('modal-ver-foto').style.display = 'flex';
+};
+
 let fQB64 = "";
 const handleFotoQuadro = async (e) => { 
     let file = e.target.files[0]; if(!file) return; 
@@ -658,7 +698,7 @@ document.getElementById('upload-foto-quadro')?.addEventListener('change', handle
 
 document.getElementById('btn-gravar-foto-quadro')?.addEventListener('click', async (e) => { 
     const t = document.getElementById('foto-titulo').value.trim(); 
-    if(!t) { alert("Preenche o Título da Foto!"); return; }
+    if(!t) { alert("Preenche o Título da Foto primeiro!"); return; }
     if(!fQB64) { alert("Tira ou anexa uma foto primeiro!"); return; }
     
     const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; 
@@ -669,7 +709,7 @@ document.getElementById('btn-gravar-foto-quadro')?.addEventListener('click', asy
     } catch(err) { b.innerHTML = "Erro"; setTimeout(() => { b.disabled = false; }, 2000); } 
 });
 
-async function carregarFotosQuadro() { const c = document.getElementById('lista-fotos-quadro-container'); c.innerHTML = '<p class="text-muted" style="grid-column: span 2; text-align:center;">A carregar galeria...</p>'; try { const s = await getDocs(query(collection(db, "utilizadores", myUserId, "caderno_fotos"), orderBy("timestamp", "desc"))); let h = ''; s.forEach(d => { const dta = d.data(); h += `<div style="background:var(--bg-card); border:1px solid #333; border-radius:8px; overflow:hidden;"><div style="height:120px; background:url('${dta.fotoBase64}') center/cover no-repeat; cursor:pointer;" onclick="window.open('${dta.fotoBase64}')"></div><div style="padding:10px; font-size:0.85rem;"><strong style="color:white; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${dta.titulo}</strong><span style="color:var(--text-muted); font-size:0.7rem;">${new Date(dta.timestamp).toLocaleDateString('pt-PT')}</span></div></div>`; }); c.innerHTML = h===''?'<p class="text-muted" style="grid-column: span 2; text-align:center;">Sem fotos.</p>':h; } catch(e) {} }
+async function carregarFotosQuadro() { const c = document.getElementById('lista-fotos-quadro-container'); c.innerHTML = '<p class="text-muted" style="grid-column: span 2; text-align:center;">A carregar galeria...</p>'; try { const s = await getDocs(query(collection(db, "utilizadores", myUserId, "caderno_fotos"), orderBy("timestamp", "desc"))); let h = ''; s.forEach(d => { const dta = d.data(); h += `<div style="background:var(--bg-card); border:1px solid #333; border-radius:8px; overflow:hidden;"><div style="height:120px; background:url('${dta.fotoBase64}') center/cover no-repeat; cursor:pointer;" onclick="window.abrirFotoModal('${dta.fotoBase64}', '${dta.titulo.replace(/'/g,"\\'")}')"></div><div style="padding:10px; font-size:0.85rem;"><strong style="color:white; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${dta.titulo}</strong><span style="color:var(--text-muted); font-size:0.7rem;">${new Date(dta.timestamp).toLocaleDateString('pt-PT')}</span></div></div>`; }); c.innerHTML = h===''?'<p class="text-muted" style="grid-column: span 2; text-align:center;">Sem fotos.</p>':h; } catch(e) {} }
 
 document.getElementById('tab-caderno-resumos')?.addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('tab-caderno-galeria').classList.remove('active'); document.getElementById('sec-caderno-resumos').style.display = 'block'; document.getElementById('sec-caderno-galeria').style.display = 'none'; });
 document.getElementById('tab-caderno-galeria')?.addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('tab-caderno-resumos').classList.remove('active'); document.getElementById('sec-caderno-resumos').style.display = 'none'; document.getElementById('sec-caderno-galeria').style.display = 'block'; carregarFotosQuadro(); });
