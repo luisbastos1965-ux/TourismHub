@@ -63,11 +63,11 @@
 
                 <!-- ACESSO RÁPIDO NO TOPO -->
                 <div class="lms-action-grid" style="margin-bottom: 20px;">
-                    <button class="lms-btn" id="btn-open-sumarios" style="border-color:#0099ff; color:#0099ff; background: rgba(0, 153, 255, 0.05);">
-                        <i class="fa-solid fa-book-open"></i><span>Materiais/Sumários</span>
+                    <button class="lms-btn" id="btn-open-materiais" style="border-color:#0099ff; color:#0099ff; background: rgba(0, 153, 255, 0.05); display: flex;">
+                        <i class="fa-solid fa-book-open"></i><span>Materiais</span>
                     </button>
-                    <button class="lms-btn" id="btn-abrir-passaporte" style="border-color:var(--warning-yellow); color:var(--warning-yellow); background: rgba(255, 204, 0, 0.05);">
-                        <i class="fa-solid fa-briefcase"></i><span>Estágio / PAP</span>
+                    <button class="lms-btn" id="btn-abrir-passaporte" style="border-color:var(--warning-yellow); color:var(--warning-yellow); background: rgba(255, 204, 0, 0.05); display: none;">
+                        <i class="fa-solid fa-briefcase"></i><span id="btn-passaporte-texto">Estágio / PAP</span>
                     </button>
                 </div>
 
@@ -161,22 +161,22 @@
                 <div id="aluno-notificacoes-container"></div>
             </div>
 
-            <!-- VISTA SUMÁRIOS -->
-            <div id="view-aluno-sumarios" style="display: none;">
+            <!-- VISTA MATERIAIS -->
+            <div id="view-aluno-materiais" style="display: none;">
                 <div class="class-header" style="margin-bottom: 10px;">
-                    <button id="btn-voltar-sumarios" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+                    <button id="btn-voltar-materiais" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                 </div>
-                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-book-open"></i> Sumários e Materiais</h2>
+                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-book-open"></i> Materiais</h2>
                 
                 <div style="margin-bottom:15px; position: relative;">
                     <div style="display:flex; align-items:center; background: var(--bg-card); border: 1px solid #333; border-radius: 8px; padding: 0 10px;">
                         <i class="fa-solid fa-magnifying-glass" style="color:var(--text-muted);"></i>
-                        <input type="text" id="aluno-search-sumarios" placeholder="Pesquisar matéria..." style="width: 100%; border: none; background: transparent; padding: 12px 10px; margin: 0; outline: none; box-shadow: none; color: white;">
+                        <input type="text" id="aluno-search-materiais" placeholder="Pesquisar material..." style="width: 100%; border: none; background: transparent; padding: 12px 10px; margin: 0; outline: none; box-shadow: none; color: white;">
                     </div>
                 </div>
 
-                <div style="margin-bottom:15px;"><select id="aluno-filtro-sumarios-disc" class="input-padrao" style="width: 100%;"><option value="">Todas as Disciplinas</option></select></div>
-                <div id="aluno-lista-sumarios-container"></div>
+                <div style="margin-bottom:15px;"><select id="aluno-filtro-materiais-disc" class="input-padrao" style="width: 100%;"><option value="">Todas as Disciplinas</option></select></div>
+                <div id="aluno-lista-materiais-container"></div>
             </div>
 
             <!-- VISTA CADERNETA E LINHA TEMPORAL -->
@@ -300,7 +300,7 @@
                 <div class="class-header" style="margin-bottom: 10px;"><button id="btn-voltar-passaporte" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
                 <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-passport"></i> Passaporte</h2>
                 
-                <div id="sec-aluno-fct">
+                <div id="sec-aluno-fct" style="display: none;">
                     <h3 style="color: var(--primary-green); font-size: 1rem; margin-bottom: 15px;"><i class="fa-solid fa-briefcase"></i> FCT (Estágio)</h3>
                     <div class="card">
                         <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><strong>Horas Concluídas:</strong> <span style="color:var(--primary-green); font-weight:bold;" id="aluno-fct-horas">0 / 0h</span></div>
@@ -314,7 +314,8 @@
                         </div>
                     </div>
                 </div>
-                <div id="sec-aluno-pap" style="margin-top: 25px;">
+                
+                <div id="sec-aluno-pap" style="margin-top: 25px; display: none;">
                     <h3 style="color: var(--primary-green); font-size: 1rem; margin-bottom: 15px;"><i class="fa-solid fa-laptop-code"></i> PAP</h3>
                     <div class="card">
                         <div style="margin-bottom: 20px;">
@@ -340,7 +341,6 @@
             <!-- MODAL TESTE DAS ACADEMIAS (INICIAL) -->
             <div id="modal-academia-quiz" class="modal-overlay" style="z-index: 4000; background: var(--bg-dark);">
                 <div class="action-sheet" style="max-width:500px; border-radius:12px; margin:20px; text-align: center; height: auto; max-height: 90vh;">
-                    
                     <div id="quiz-question-container">
                         <i class="fa-solid fa-chess-rook" style="font-size: 3rem; color: white; margin-bottom: 15px;"></i>
                         <h2 style="margin-bottom: 10px; color: white;">Bem-vindo à Turma PRO</h2>
@@ -355,14 +355,12 @@
                             <button class="secondary-btn quiz-opt" data-house="aurora" style="text-align:left; justify-content:flex-start; height:auto; padding:15px;">Ser o melhor, bater os meus recordes e focar-me.</button>
                         </div>
                     </div>
-
                     <div id="quiz-result-container" style="display: none; padding: 20px 0;">
                         <div id="quiz-result-icon" style="font-size: 4rem; margin-bottom: 15px;"></div>
                         <h2 style="margin-bottom: 5px; color: white;">És da Academia <span id="quiz-result-name">...</span>!</h2>
                         <p id="quiz-result-desc" style="font-size:0.9rem; color:var(--text-muted); margin-bottom:25px; line-height: 1.5;"></p>
                         <button id="btn-entrar-app" class="primary-btn" style="font-size: 1.1rem; padding: 15px;">Entrar na Aplicação</button>
                     </div>
-
                 </div>
             </div>
             
