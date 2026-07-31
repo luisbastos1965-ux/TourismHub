@@ -374,6 +374,19 @@
                 </div>
             </div>
 
+            <!-- MODAL CONFIRMAR APAGAR META -->
+            <div id="modal-confirm-delete-objetivo" class="modal-overlay" style="z-index: 5000;">
+                <div class="action-sheet" style="max-width:350px; border-radius:12px; margin:20px; text-align: center;">
+                    <i class="fa-solid fa-bullseye" style="font-size: 3rem; color: var(--danger-red); margin-bottom: 15px;"></i>
+                    <h3 style="margin-bottom: 10px; color: white;">Apagar Meta?</h3>
+                    <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;">Queres mesmo eliminar este objetivo? O teu progresso associado a ele será descartado.</p>
+                    <div style="display:flex; gap:10px;">
+                        <button id="btn-cancel-delete-objetivo" class="secondary-btn" style="flex:1;">Cancelar</button>
+                        <button id="btn-confirm-delete-objetivo" class="primary-btn" style="flex:1; background:var(--danger-red); color:white; border:none;">Sim, Apagar</button>
+                    </div>
+                </div>
+            </div>
+            
         </main>
 
         <nav class="bottom-nav">
