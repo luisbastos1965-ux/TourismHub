@@ -1,659 +1,495 @@
-import { auth, db, messaging, VAPID_KEY, getToken, onMessage } from "./firebase.js";
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, collection, updateDoc, getDocs, query, addDoc, onSnapshot, orderBy, setDoc, enableIndexedDbPersistence, deleteDoc, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Turma PRO - Aluno</title>
+    <link rel="icon" type="image/png" href="logo_tur.png">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- FullCalendar -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/locales/pt.global.min.js'></script>
 
-const ordemDisciplinasGlobal = ['PORT', 'ING', 'AI', 'EF', 'TIC', 'GEO', 'HCA', 'MAT', 'CF', 'TIAT', 'TCAT', 'OTET'];
+    <!-- Compressão de Imagens -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
 
-try { await enableIndexedDbPersistence(db); console.log("Offline OK!"); } catch (e) {}
+    <!-- Quill.js (Caderno Digital) -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 
-let myUserId = "", myUserName = "", minhaTurma = "";
-let chartInstance = null; let quillEditor = null;
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        .ql-toolbar.ql-snow { background: #f1f2f6; border-radius: 8px 8px 0 0; border: none; }
+        .ql-container.ql-snow { border: none; }
+        .ql-editor { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 1rem; }
+        .filter-chips-container { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 15px; scrollbar-width: none; }
+        .filter-chips-container::-webkit-scrollbar { display: none; }
+        .filter-chip { background: var(--bg-dark); border: 1px solid #333; color: var(--text-muted); padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; cursor: pointer; white-space: nowrap; transition: 0.2s; }
+        .filter-chip.active { background: var(--primary-green); color: var(--bg-dark); border-color: var(--primary-green); font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="app-content">
+        <header id="header-aluno" class="app-header">
+            <div class="user-profile" style="display: flex; align-items: center; gap: 12px; height: 100%;">
+                <div class="profile-avatar" id="header-avatar-circle" style="width: 38px; height: 38px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 0; flex-shrink: 0;">
+                    <i class="fa-solid fa-user" style="color: white; font-size: 1rem;"></i>
+                </div>
+                <span id="header-user-name-aluno" style="margin: 0; font-weight: bold; line-height: 1;">A carregar...</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <button id="btn-open-notificacoes" style="background:none; border:none; color:white; font-size:1.3rem; position:relative; cursor:pointer;">
+                    <i class="fa-solid fa-bell"></i>
+                    <span id="badge-notificacoes" style="display:none; position:absolute; top:-5px; right:-5px; background:var(--danger-red); color:white; font-size:0.6rem; font-weight:bold; border-radius:50%; padding:2px 5px;">0</span>
+                </button>
+                <button id="btn-logout-aluno" class="logout-btn" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button>
+            </div>
+        </header>
 
-// ==========================================
-// 1. INICIALIZAÇÃO
-// ==========================================
-onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        myUserId = user.email.split('@')[0];
-        try {
-            const docSnap = await getDoc(doc(db, "utilizadores", myUserId));
-            if (docSnap.exists() && docSnap.data().papel === 'aluno') {
-                const d = docSnap.data(); myUserName = d.nome.split(' ')[0]; minhaTurma = d.turma;
-                document.getElementById('header-user-name-aluno').innerText = myUserName;
-                document.getElementById('welcome-nome').innerText = myUserName;
-                document.getElementById('perfil-nome-central').innerText = d.nome || myUserName;
+        <main class="app-content" style="padding-bottom: 80px;">
+            
+            <!-- VISTA INICIAL (DASHBOARD) -->
+            <div id="student-dashboard">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div>
+                        <h2 id="welcome-message" style="margin-bottom: 3px; font-size: 1.4rem;">Olá, <span id="welcome-nome">Aluno</span>!</h2>
+                        <p style="font-size: 0.85rem; color: var(--text-muted);"><span id="aluno-rank-title">Novato</span> • Lvl <span id="aluno-nivel">1</span></p>
+                    </div>
+                    <div style="background: rgba(0, 204, 136, 0.1); border: 1px solid var(--primary-green); padding: 6px 12px; border-radius: 20px; text-align: center; cursor: pointer;" onclick="document.querySelector('.nav-item[data-target=\\'view-aluno-perfil\\']').click()">
+                        <div style="font-weight: bold; color: var(--primary-green); font-size: 1rem;"><i class="fa-solid fa-bolt"></i> <span id="aluno-xp-atual">0</span> <span style="font-size: 0.7rem;">XP</span></div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px; position: relative;">
+                    <div style="display:flex; align-items:center; background: var(--bg-card); border: 1px solid #333; border-radius: 20px; padding: 0 15px;">
+                        <i class="fa-solid fa-magnifying-glass" style="color:var(--text-muted);"></i>
+                        <input type="text" id="aluno-search-input" placeholder="Pesquisar resumos, matérias..." style="width: 100%; border: none; background: transparent; padding: 12px 10px; margin: 0; outline: none; box-shadow: none; color: white;">
+                    </div>
+                    <div id="aluno-search-results" style="display:none; position:absolute; top:50px; left:0; width:100%; background:#222; border:1px solid #444; border-radius:12px; z-index:10; max-height:250px; overflow-y:auto; box-shadow: 0 5px 15px rgba(0,0,0,0.5); padding: 10px;"></div>
+                </div>
+
+                <div id="exam-mode-banner" style="display:none; background: linear-gradient(135deg, #8e2de2, #4a00e0); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 15px rgba(138, 43, 226, 0.3); border: 1px solid #9b59b6;">
+                    <h3 style="margin-bottom: 5px; font-size: 1.2rem;"><i class="fa-solid fa-graduation-cap"></i> Época de Exames Ativada</h3>
+                    <p style="font-size: 0.9rem; color: #e0e0e0; margin-bottom: 10px;">O Modo Foco está recomendado. Prepara-te!</p>
+                    <div id="exam-countdown" style="font-size: 1.5rem; font-weight: bold; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; display: inline-block;">Faltam X dias</div>
+                </div>
+
+                <!-- ASSISTENTE INTELIGENTE -->
+                <div id="dynamic-hero-section">
+                    <div class="card"><p class="text-muted center">A preparar o teu assistente...</p></div>
+                </div>
+
+                <!-- ACESSO RÁPIDO -->
+                <div class="lms-action-grid" style="margin-top: 20px;">
+                    <button class="lms-btn" id="btn-open-study-mode" style="border-color:#9b59b6; color:#9b59b6; background: rgba(155, 89, 182, 0.05);">
+                        <i class="fa-solid fa-stopwatch"></i><span>Modo Foco</span>
+                    </button>
+                    <button class="lms-btn" id="btn-open-caderno" style="border-color:#e67e22; color:#e67e22; background: rgba(230, 126, 34, 0.05);">
+                        <i class="fa-solid fa-book"></i><span>Caderno Digital</span>
+                    </button>
+                    <button class="lms-btn" id="btn-open-sumarios" style="border-color:#0099ff; color:#0099ff; display: none;">
+                        <i class="fa-solid fa-book-open"></i><span>Materiais</span>
+                    </button>
+                    <button class="lms-btn" id="btn-abrir-passaporte" style="border-color:var(--warning-yellow); color:var(--warning-yellow); display:none;">
+                        <i class="fa-solid fa-briefcase"></i><span>Estágio / PAP</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- VISTA PERFIL -->
+            <div id="view-aluno-perfil" style="display: none;">
+                <div class="class-header"><h2 class="section-title"><i class="fa-solid fa-user-astronaut"></i> O Meu Perfil</h2></div>
                 
-                if(d.fotoPerfil) {
-                    document.getElementById('header-avatar-circle').innerHTML = `<img src="${d.fotoPerfil}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-                    document.getElementById('perfil-avatar-img').src = d.fotoPerfil;
-                }
+                <div class="card" style="text-align: center;">
+                    <div style="position:relative; width: 100px; height: 100px; margin: 0 auto 15px auto;">
+                        <img id="perfil-avatar-img" src="https://via.placeholder.com/100" style="width:100%; height:100%; border-radius:50%; object-fit:cover; border: 3px solid var(--primary-green);">
+                        <label for="upload-avatar" style="position:absolute; bottom:0; right:0; background:var(--primary-green); color:var(--bg-dark); width:35px; height:35px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; border: 2px solid var(--bg-card);"><i class="fa-solid fa-camera"></i></label>
+                        <input type="file" id="upload-avatar" style="display:none;" accept="image/*">
+                    </div>
+                    <h3 id="perfil-nome-central" style="margin-bottom: 5px; font-size: 1.3rem;">Nome</h3>
+                    <p id="perfil-titulo-central" style="color: var(--warning-yellow); font-weight: bold; margin-bottom: 15px;">Novato</p>
+                    <div class="progress-bar-bg"><div class="progress-bar-fill" id="perfil-xp-progress" style="width: 0%;"></div></div>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;"><span id="perfil-xp-totais">0</span> XP totais alcançados</p>
+                </div>
+
+                <div class="card" style="border-left: 4px solid #00d2ff; margin-bottom: 20px;">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-fire"></i> Hábitos de Foco</h3>
+                    <div style="display:flex; justify-content:space-between; text-align:center; gap:10px;">
+                        <div style="flex:1; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px;">
+                            <i class="fa-solid fa-fire-flame-curved" style="color:#ffaa00; font-size:1.5rem; margin-bottom:5px;"></i>
+                            <div style="font-size:1.2rem; font-weight:bold; color:white;" id="streak-dias">0</div>
+                            <div style="font-size:0.75rem; color:var(--text-muted);">Dias Seguidos</div>
+                        </div>
+                        <div style="flex:1; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px;">
+                            <i class="fa-solid fa-stopwatch" style="color:#00d2ff; font-size:1.5rem; margin-bottom:5px;"></i>
+                            <div style="font-size:1.2rem; font-weight:bold; color:white;" id="total-minutos-foco">0m</div>
+                            <div style="font-size:0.75rem; color:var(--text-muted);">Tempo Foco</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="border-left: 4px solid var(--warning-yellow);">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-bullseye"></i> Metas Inteligentes</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Escolhe a nota alvo! A app dá-te <strong style="color:var(--warning-yellow);">+50 XP</strong> automaticamente quando a alcançares.</p>
+                    <div style="display:flex; gap:10px; margin-bottom: 15px;">
+                        <select id="obj-disciplina" style="flex:2; margin:0; padding:10px; font-size:0.9rem;"></select>
+                        <input type="number" id="obj-nota-alvo" placeholder="Nota" style="flex:1; margin:0; padding:10px; font-size:0.9rem;" min="10" max="20">
+                        <button id="btn-add-objetivo" class="primary-btn" style="width:auto; padding:0 15px; background:var(--warning-yellow); color:black;"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                    <div id="lista-objetivos-container"></div>
+                </div>
+
+                <div class="card" id="card-stats-grafico">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-chart-pie"></i> Desempenho por Disciplina</h3>
+                    <div style="position: relative; height: 220px; width: 100%;">
+                        <canvas id="chart-notas-aluno"></canvas>
+                    </div>
+                </div>
+
+                <div class="card" style="border-left: 4px solid #b82bf2; margin-top: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                        <h3 style="font-size: 1.1rem; color: white; margin:0;"><i class="fa-solid fa-heart-pulse"></i> Histórico Emocional</h3>
+                        <button id="btn-view-mood-history" style="background:rgba(255,255,255,0.05); border:1px solid #333; color:white; cursor:pointer; font-size:0.85rem; padding: 4px 10px; border-radius: 6px; transition:0.2s;"><i class="fa-solid fa-arrows-rotate"></i> Atualizar</button>
+                    </div>
+                    <div id="mood-history-container">
+                        <p class="text-muted center" style="font-size: 0.85rem;">A carregar histórico...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VISTA CENTRO DE NOTIFICAÇÕES -->
+            <div id="view-aluno-notificacoes" style="display: none;">
+                <div class="class-header" style="margin-bottom: 10px;">
+                    <button id="btn-voltar-notificacoes" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+                </div>
                 
-                const objSelect = document.getElementById('obj-disciplina');
-                if(objSelect) objSelect.innerHTML = ordemDisciplinasGlobal.map(dc => `<option value="${dc}">${dc}</option>`).join('');
+                <div class="filter-chips-container" id="notificacoes-filtros">
+                    <div class="filter-chip active" data-cat="all">Todas</div>
+                    <div class="filter-chip" data-cat="importante">Importantes</div>
+                    <div class="filter-chip" data-cat="escola">Escola</div>
+                    <div class="filter-chip" data-cat="gamificacao">Gamificação</div>
+                </div>
 
-                carregarDadosPassaporte(d); carregarGamificacao(d);
-                await construirHomeAdaptativa();
-                verificarEpocaExames();
-            } else window.location.href = "index.html";
-        } catch (e) { console.error("Erro Auth", e); }
-    } else window.location.href = "index.html";
-});
+                <div id="aluno-notificacoes-container">
+                    <p class="text-muted" style="text-align:center;">A carregar histórico...</p>
+                </div>
+            </div>
 
-document.getElementById('btn-logout-aluno')?.addEventListener('click', () => signOut(auth));
+            <!-- VISTA CADERNO DIGITAL -->
+            <div id="view-aluno-caderno" style="display: none;">
+                <div class="class-header" style="margin-bottom: 10px;">
+                    <button id="btn-voltar-caderno" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+                </div>
+                
+                <div class="falta-tabs" style="margin-bottom: 15px;">
+                    <button class="falta-tab-btn active" id="tab-caderno-resumos">Resumos Texto</button>
+                    <button class="falta-tab-btn" id="tab-caderno-galeria">Fotos do Quadro</button>
+                </div>
 
-// ==========================================
-// 2. ROUTING E BOTÕES GLOBAIS (Delegação Segura)
-// ==========================================
-function esconderTodasAsVistas() { document.querySelectorAll('.app-content > div').forEach(v => v.style.display = 'none'); }
+                <div id="sec-caderno-resumos">
+                    <div class="card" style="margin-bottom: 20px; padding: 15px;">
+                        <h3 style="font-size: 1rem; margin-bottom: 10px;">Criar Novo Resumo</h3>
+                        <div class="form-group"><input type="text" id="caderno-titulo" placeholder="Título da Matéria" class="input-padrao" style="width:100%; margin-bottom:10px;"></div>
+                        <div id="quill-editor" style="height: 180px; background: white; color: black; border-radius: 0 0 8px 8px;"></div>
+                        <button id="btn-gravar-apontamento" class="primary-btn" style="width: 100%; margin-top: 15px; background-color: #e67e22;"><i class="fa-solid fa-save"></i> Gravar na Nuvem</button>
+                    </div>
+                    <div id="lista-apontamentos-container"></div>
+                </div>
 
-document.body.addEventListener('click', async (e) => {
-    // Nav Bar Inferior
-    const nav = e.target.closest('.nav-item');
-    if(nav) {
-        e.preventDefault(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); nav.classList.add('active');
-        esconderTodasAsVistas(); const tId = nav.getAttribute('data-target'); 
-        
-        // Foco e Fórum usam flex
-        document.getElementById(tId).style.display = (tId === 'view-study-mode' || tId === 'view-aluno-forum') ? 'flex' : 'block';
-        
-        if(tId === 'view-aluno-perfil') { 
-            carregarObjetivosPessoais(); carregarHistoricoHumor(); carregarEstatisticasEstudo();
-            setTimeout(renderizarGraficoNotas, 150); 
-        }
-        if(tId === 'view-aluno-caderneta') document.getElementById('tab-aluno-timeline').click();
-        if(tId === 'view-aluno-agenda') document.getElementById('tab-aluno-eventos').click();
-        if(tId === 'view-aluno-forum') carregarForuns();
-    }
-    
-    // Botões de Acesso Rápido na Home
-    if(e.target.closest('#btn-open-study-mode')) {
-        esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        document.getElementById('view-study-mode').style.display = 'flex';
-        // Auto-resume se estiver a correr no background
-        if(localStorage.getItem('pomodoroEndTarget') && localStorage.getItem('pomodoroEndTarget') > Date.now()) {
-            document.getElementById('btn-start-study').click();
-        }
-    }
-    if(e.target.closest('#btn-open-caderno')) {
-        esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        document.getElementById('view-aluno-caderno').style.display = 'block';
-        if(!quillEditor) quillEditor = new Quill('#quill-editor', { theme: 'snow' }); 
-        carregarResumos();
-    }
-    if(e.target.closest('#btn-open-sumarios')) {
-        esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        document.getElementById('view-aluno-sumarios').style.display = 'block'; carregarSumariosAluno();
-    }
-    if(e.target.closest('#btn-abrir-passaporte')) {
-        esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        document.getElementById('view-aluno-passaporte').style.display = 'block';
-    }
-    if(e.target.closest('#btn-open-notificacoes')) {
-        esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        document.getElementById('view-aluno-notificacoes').style.display = 'block'; carregarNotificacoesAluno();
-    }
-    if(e.target.closest('#btn-voltar-notificacoes') || e.target.closest('#btn-voltar-caderno') || e.target.closest('#btn-voltar-sumarios') || e.target.closest('#btn-voltar-passaporte') || e.target.closest('#btn-voltar-study')) {
-        document.querySelector('.nav-item[data-target="student-dashboard"]').click();
-    }
+                <div id="sec-caderno-galeria" style="display: none;">
+                    <div class="card" style="margin-bottom: 20px; padding: 15px; text-align: center; border: 1px dashed #e67e22;">
+                        <h3 style="font-size: 1rem; margin-bottom: 10px; color: #e67e22;"><i class="fa-solid fa-camera"></i> Guardar Foto do Quadro</h3>
+                        <input type="text" id="foto-titulo" placeholder="Título da Foto (Obrigatório)" style="width:100%; margin-bottom:15px; border-radius:8px; padding:10px; border: 1px solid #e67e22;">
+                        
+                        <div style="display:flex; gap:10px; justify-content:center; margin-bottom:15px;">
+                            <label for="upload-foto-quadro" class="primary-btn" style="background-color: #e67e22; width: auto; display: inline-block; cursor: pointer; padding: 10px; flex:1; font-size:0.9rem;"><i class="fa-solid fa-images"></i> Galeria</label>
+                            <input type="file" id="upload-foto-quadro" style="display:none;" accept="image/*">
+                            
+                            <label for="tirar-foto-quadro" class="primary-btn" style="background-color: #d35400; width: auto; display: inline-block; cursor: pointer; padding: 10px; flex:1; font-size:0.9rem;"><i class="fa-solid fa-camera"></i> Tirar Foto</label>
+                            <input type="file" id="tirar-foto-quadro" style="display:none;" accept="image/*" capture="environment">
+                        </div>
 
-    // Filtros Timeline e Notificações
-    const tChip = e.target.closest('#timeline-filtros .filter-chip');
-    if(tChip) {
-        document.querySelectorAll('#timeline-filtros .filter-chip').forEach(c => c.classList.remove('active'));
-        tChip.classList.add('active'); timelineFilterCat = tChip.getAttribute('data-cat'); carregarTimelineAluno();
-    }
-    const nChip = e.target.closest('#notificacoes-filtros .filter-chip');
-    if(nChip) {
-        document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(c => c.classList.remove('active'));
-        nChip.classList.add('active'); notifFilterCat = nChip.getAttribute('data-cat'); carregarNotificacoesAluno();
-    }
+                        <span id="foto-quadro-file-name" style="display:block; margin-top:10px; font-size:0.85rem; color:var(--warning-yellow);"></span>
+                        <button id="btn-gravar-foto-quadro" class="primary-btn" style="width: 100%; margin-top: 15px; background-color: var(--success-green); display:none;"><i class="fa-solid fa-cloud-arrow-up"></i> Gravar na Galeria</button>
+                    </div>
+                    <div id="lista-fotos-quadro-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"></div>
+                </div>
+            </div>
 
-    // ==========================================
-    // CRIAÇÃO DE CHATS (Segurança Máxima)
-    // ==========================================
-    if(e.target.closest('#btn-create-chat-aluno')) {
-        document.getElementById('modal-criar-forum').style.display = 'flex'; 
-        const cCont = document.getElementById('lista-colegas-forum'); cCont.innerHTML = '<p class="text-muted center">A procurar colegas...</p>';
-        try {
-            const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", minhaTurma)));
-            let cH = ''; 
-            cS.forEach(d => { if(d.data().papel === 'aluno' && d.id !== myUserId) { cH += `<label style="display:flex; align-items:center; gap:10px; color:white; font-size:0.9rem; padding:8px 0; cursor:pointer;"><input type="checkbox" class="colegas-check" value="${d.id}" style="width:18px;height:18px;accent-color:var(--primary-green);"> ${d.data().nome}</label>`; } });
-            cCont.innerHTML = cH === '' ? '<p class="text-muted center" style="font-size:0.8rem;">Ainda és o único aluno registado nesta turma.</p>' : cH;
-        } catch(err) { cCont.innerHTML = '<p class="text-danger center">Erro ao listar turma.</p>'; }
-    }
-    
-    if(e.target.closest('#btn-cancelar-novo-forum')) {
-        document.getElementById('modal-criar-forum').style.display = 'none'; document.getElementById('input-nome-novo-forum').value = '';
-    }
+            <!-- MODAL FOTO (VISUALIZADOR ECRÃ INTEIRO) -->
+            <div id="modal-ver-foto" class="modal-overlay" style="z-index: 2000;">
+                <div style="width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column;">
+                    <div style="padding: 15px; display: flex; justify-content: space-between; align-items: center; background: #111;">
+                        <h3 id="modal-foto-titulo" style="color: white; margin: 0; font-size: 1rem;">Foto</h3>
+                        <button onclick="document.getElementById('modal-ver-foto').style.display='none'" style="background: none; border: none; color: white; font-size: 1.5rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div style="flex: 1; display: flex; justify-content: center; align-items: center; overflow: hidden; padding: 10px;">
+                        <img id="modal-foto-img" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                    </div>
+                </div>
+            </div>
 
-    if(e.target.closest('#btn-confirmar-novo-forum')) {
-        const nome = document.getElementById('input-nome-novo-forum').value.trim(); 
-        if(!nome) { alert("Tens de dar um nome ao Grupo!"); return; }
-        
-        let mbr = [myUserId]; 
-        document.querySelectorAll('.colegas-check:checked').forEach(c => mbr.push(c.value));
-        
-        const btnConf = e.target.closest('#btn-confirmar-novo-forum');
-        btnConf.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btnConf.disabled = true;
+            <!-- VISTA SUMÁRIOS -->
+            <div id="view-aluno-sumarios" style="display: none;">
+                <div class="class-header" style="margin-bottom: 10px;">
+                    <button id="btn-voltar-sumarios" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+                </div>
+                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-book-open"></i> Sumários</h2>
+                <div style="margin-bottom:15px;"><select id="aluno-filtro-sumarios-disc" style="margin:0; padding:8px;"><option value="">Todas as Disciplinas</option></select></div>
+                <div id="aluno-lista-sumarios-container"></div>
+            </div>
 
-        try { 
-            await addDoc(collection(db, "turmas", minhaTurma, "foruns"), { 
-                nome: nome, 
-                tipo: 'permanente', 
-                isDefault: false, 
-                membros: mbr, 
-                criadoPor: myUserName 
-            }); 
+            <!-- VISTA CADERNETA E LINHA TEMPORAL -->
+            <div id="view-aluno-caderneta" style="display: none;">
+                <div class="falta-tabs" style="display:flex; flex-wrap:wrap; gap:5px; justify-content:center; margin-bottom: 15px;">
+                    <button class="falta-tab-btn active" id="tab-aluno-timeline" style="flex: 1 1 100%; border-color: var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-clock-rotate-left"></i> Histórico</button>
+                    <button class="falta-tab-btn" id="tab-aluno-notas" style="flex: 1 1 30%;">Notas</button>
+                    <button class="falta-tab-btn" id="tab-aluno-faltas" style="flex: 1 1 30%;">Faltas</button>
+                    <button class="falta-tab-btn" id="tab-aluno-prhfs" style="flex: 1 1 30%;">PRHFs</button>
+                    <button class="falta-tab-btn" id="tab-aluno-comportamento" style="flex: 1 1 45%;">Comportamento</button>
+                    <button class="falta-tab-btn" id="tab-aluno-observacoes" style="flex: 1 1 45%;">Reuniões</button>
+                </div>
+
+                <div class="filter-chips-container" id="timeline-filtros" style="display: flex;">
+                    <div class="filter-chip active" data-cat="all">Tudo</div>
+                    <div class="filter-chip" data-cat="notas">Avaliações</div>
+                    <div class="filter-chip" data-cat="faltas">Faltas</div>
+                    <div class="filter-chip" data-cat="comportamento">Comportamento</div>
+                    <div class="filter-chip" data-cat="gamificacao">Gamificação</div>
+                </div>
+
+                <div id="aluno-caderneta-content"><p class="text-muted" style="text-align:center;">A carregar...</p></div>
+            </div>
+
+            <!-- VISTA AÇÃO PRHF -->
+            <div id="view-aluno-acao-prhf" style="display: none;">
+                <div class="class-header" style="margin-bottom: 10px;"><button id="btn-voltar-acao-prhf" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar aos Planos</button></div>
+                
+                <div class="card" style="margin-bottom: 20px; border-left: 4px solid var(--warning-yellow);">
+                    <h3 style="margin-bottom: 5px; font-size: 1.1rem; color: white;" id="prhf-acao-titulo">Disciplina</h3>
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 15px; font-size:0.8rem; border-bottom: 1px dashed #333; padding-bottom:10px;">
+                        <span>Data Limite: <strong id="prhf-acao-prazo" style="color:var(--warning-yellow);">...</strong></span>
+                    </div>
+                    
+                    <div id="prhf-docs-container"></div>
+                    
+                    <h4 style="font-size: 0.95rem; margin-bottom: 10px; margin-top: 15px; color:var(--primary-green);">Agendar Sessão Presencial</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Indica o dia e o horário para o Professor validar.</p>
+                    
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Data</label><input type="date" id="aluno-prhf-proposta-data" style="margin:0; width:100%;"></div>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Início</label><input type="time" id="aluno-prhf-proposta-hora-inicio" style="margin:0; width:100%;"></div>
+                        <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Fim</label><input type="time" id="aluno-prhf-proposta-hora-fim" style="margin:0; width:100%;"></div>
+                    </div>
+                    
+                    <button id="btn-enviar-proposta-prhf" class="primary-btn" style="width:100%; background-color: var(--primary-green);">Enviar Proposta</button>
+                </div>
+            </div>
+
+            <!-- VISTA AGENDA / HORÁRIO -->
+            <div id="view-aluno-agenda" style="display: none;">
+                <div class="falta-tabs" style="margin-bottom: 15px;">
+                    <button class="falta-tab-btn active" id="tab-aluno-eventos">Calendário</button>
+                    <button class="falta-tab-btn" id="tab-aluno-horario">Horário</button>
+                </div>
+                
+                <div class="agenda-filters" id="aluno-agenda-filtros" style="display:flex;">
+                    <label class="agenda-filter-label"><input type="checkbox" id="aluno-filtro-agenda-testes" checked> <span style="color:#ffaa00;">●</span> Avaliações</label>
+                    <label class="agenda-filter-label"><input type="checkbox" id="aluno-filtro-agenda-trabalhos" checked> <span style="color:#00d2ff;">●</span> Entregas</label>
+                    <label class="agenda-filter-label"><input type="checkbox" id="aluno-filtro-agenda-outros" checked> <span style="color:#b82bf2;">●</span> Outros</label>
+                </div>
+                
+                <div id="aluno-horario-container" style="display:none;">
+                    <div class="falta-tabs" style="margin-bottom: 15px;">
+                        <button class="falta-tab-btn active" id="btn-aluno-horario-dia">Vista Diária</button>
+                        <button class="falta-tab-btn" id="btn-aluno-horario-grelha">Grelha Semanal</button>
+                    </div>
+                    <div class="week-nav-bar">
+                        <button id="btn-aluno-prev-horario"><i class="fa-solid fa-chevron-left"></i></button>
+                        <span id="aluno-horario-display">A carregar...</span>
+                        <button id="btn-aluno-next-horario"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                </div>
+
+                <div id="aluno-agenda-content" style="margin-top:10px; overflow-x: auto; padding-bottom: 40px;">
+                    <p class="text-muted" style="text-align:center;">A carregar dados...</p>
+                </div>
+            </div>
+
+            <!-- VISTA FÓRUM -->
+            <div id="view-aluno-forum" style="display: none; flex-direction:column;">
+                
+                <button id="btn-create-chat-aluno" class="primary-btn" style="background:var(--bg-dark); border:2px dashed var(--primary-green); color:var(--primary-green); width: 100%; margin-bottom: 20px; font-size:1.1rem; padding:15px;"><i class="fa-solid fa-plus"></i> Novo Chat / Fórum</button>
+                
+                <div id="aluno-forum-channel-list"></div>
+
+                <div id="aluno-forum-chat-view" style="display:none; flex-direction:column; height:70vh; background:var(--bg-card); border-radius:12px; border:1px solid #333; overflow:hidden;">
+                    <div style="background:#222; padding:15px; display:flex; align-items:center; gap:10px; border-bottom:1px solid #333;">
+                        <button id="btn-aluno-voltar-canais" class="secondary-btn small-btn" style="padding:5px 10px; width:auto; border:none;"><i class="fa-solid fa-arrow-left"></i></button>
+                        <h3 id="aluno-chat-active-title" style="color:white; font-size:1.1rem; margin:0; flex:1;">...</h3>
+                    </div>
+                    <div class="forum-messages" id="aluno-chat-messages-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:15px;"></div>
+                    <div class="forum-input-area" style="background:#1a1a1a; padding:10px; border-top:1px solid #333; display:flex; gap:8px; align-items:center;">
+                        <input type="text" id="aluno-input-forum-msg" placeholder="Escreve a tua mensagem..." style="margin:0; flex:1; border-radius:20px; padding:10px 15px;">
+                        <button id="btn-aluno-send-msg" class="forum-send-btn" style="width:40px; height:40px;"><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL FÓRUM (Colegas) -->
+            <div id="modal-criar-forum" class="modal-overlay">
+                <div class="action-sheet" style="max-width:400px; border-radius:12px; margin:20px; animation: none;">
+                    <h3 style="margin-bottom: 15px; color:var(--primary-green);"><i class="fa-solid fa-comments"></i> Novo Grupo de Estudo</h3>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">Cria um grupo e escolhe os colegas da tua turma que queres adicionar.</p>
+                    <input type="text" id="input-nome-novo-forum" placeholder="Nome do Grupo (Ex: Trabalho de Física)" style="width:100%; margin-bottom:15px;">
+                    
+                    <div id="lista-colegas-forum" style="max-height: 150px; overflow-y: auto; background: #111; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333;">
+                        <p class="text-muted center">A carregar turma...</p>
+                    </div>
+
+                    <div style="display:flex; gap:10px;">
+                        <button id="btn-cancelar-novo-forum" class="secondary-btn">Cancelar</button>
+                        <button id="btn-confirmar-novo-forum" class="primary-btn">Criar Grupo</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VISTA PASSAPORTE -->
+            <div id="view-aluno-passaporte" style="display: none;">
+                <div class="class-header" style="margin-bottom: 10px;"><button id="btn-voltar-passaporte" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
+                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-passport"></i> Passaporte</h2>
+                
+                <div id="sec-aluno-fct">
+                    <h3 style="color: var(--primary-green); font-size: 1rem; margin-bottom: 15px;"><i class="fa-solid fa-briefcase"></i> FCT (Estágio)</h3>
+                    <div class="card">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><strong>Horas Concluídas:</strong> <span style="color:var(--primary-green); font-weight:bold;" id="aluno-fct-horas">0 / 0h</span></div>
+                        <div class="progress-bar-bg" style="margin-bottom: 20px;"><div class="progress-bar-fill" id="aluno-fct-progress" style="width:0%;"></div></div>
+                        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid #333;">
+                            <label style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; display: block;">Atualizar as minhas horas:</label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="number" id="input-fct-horas" placeholder="Ex: 120" style="margin: 0; flex: 1;">
+                                <button id="btn-save-fct" class="primary-btn" style="width: auto; padding: 0 20px;"><i class="fa-solid fa-check"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="sec-aluno-pap" style="margin-top: 25px;">
+                    <h3 style="color: var(--primary-green); font-size: 1rem; margin-bottom: 15px;"><i class="fa-solid fa-laptop-code"></i> PAP</h3>
+                    <div class="card">
+                        <div style="margin-bottom: 20px;">
+                            <label style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; display: block;">Tema do Projeto:</label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="input-pap-tema" placeholder="O teu tema..." style="margin: 0; flex: 1;">
+                                <button id="btn-save-pap-tema" class="primary-btn" style="width: auto; padding: 0 20px;"><i class="fa-solid fa-save"></i></button>
+                            </div>
+                        </div>
+                        <div style="border-top: 1px dashed #333; padding-top: 15px;">
+                            <label style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; display: block;">Entrega de Documentos (Anteprojeto/Relatório):</label>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <label for="aluno-upload-pap" class="secondary-btn small-btn" style="margin:0; flex:1; text-align:center; border-style: dashed;"><i class="fa-solid fa-upload"></i> Anexar Ficheiro</label>
+                                <input type="file" id="aluno-upload-pap" style="display:none;" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.zip">
+                            </div>
+                            <span id="aluno-pap-file-name" class="file-name-display" style="display:block; margin-top:10px; font-size:0.85rem; color:var(--success-green);"></span>
+                            <button id="btn-enviar-pap" class="primary-btn" style="display:none; width:100%; margin-top:10px;">Submeter à Escola</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODO FOCO (CENTRALIZADO COM FLEX) -->
+            <div id="view-study-mode" style="display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 70vh; padding: 20px; box-sizing: border-box;">
+                <div style="text-align: center; width: 100%;">
+                    <i class="fa-solid fa-stopwatch" style="font-size: 3rem; color: #9b59b6; margin-bottom: 15px;"></i>
+                    <h2 style="color: #9b59b6; margin-bottom: 10px;">Modo Foco</h2>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 25px;">Se saíres da aplicação, o relógio pára e perdes a recompensa!</p>
+                    
+                    <div id="study-setup" style="margin-bottom: 30px;">
+                        <p style="font-size: 0.95rem; margin-bottom: 10px;">Tempo de Foco (Minutos):</p>
+                        <select id="study-time-selector" style="width: 150px; text-align: center; font-size: 1.2rem; font-weight: bold; background: #111; color: white; border: 1px solid #9b59b6; padding: 8px; border-radius: 8px;">
+                            <option value="15">15 Min</option>
+                            <option value="25">25 Min</option>
+                            <option value="30" selected>30 Min</option>
+                            <option value="45">45 Min</option>
+                            <option value="60">60 Min</option>
+                        </select>
+                    </div>
+
+                    <div style="font-size: 5.5rem; font-weight: bold; font-family: monospace; color: white; margin-bottom: 40px; text-shadow: 0 0 20px rgba(155, 89, 182, 0.5);" id="study-timer-text">30:00</div>
+                    
+                    <div id="study-controls" style="width:100%; max-width: 350px; margin: 0 auto;">
+                        <button id="btn-start-study" class="primary-btn" style="background-color: #9b59b6; font-size: 1.2rem; padding: 15px; border-radius: 30px;">Iniciar Foco</button>
+                        <button id="btn-stop-study" class="danger-btn" style="display: none; font-size: 1.2rem; padding: 15px; border-radius: 30px;"><i class="fa-solid fa-stop"></i> Parar e Desistir</button>
+                        <br><button id="btn-voltar-study" class="secondary-btn" style="margin-top: 20px; border: none; width: auto; margin-left: auto; margin-right: auto; padding: 10px;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+                    </div>
+                    
+                    <div id="post-study-log" style="display: none; width: 100%; max-width: 350px; margin: 0 auto;">
+                        <h3 style="color: white; margin-bottom: 10px;">Sessão Concluída! 🎉</h3>
+                        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 15px;">Regista o que aprendeste para ganhares o teu XP.</p>
+                        <textarea id="study-log-text" class="input-field" placeholder="Ex: Estudei a fórmula resolvente..." style="min-height: 80px; margin-bottom: 15px; border-radius: 12px;"></textarea>
+                        <button id="btn-save-study-log" class="primary-btn" style="background-color: var(--success-green);"><i class="fa-solid fa-save"></i> Guardar Recompensa</button>
+                    </div>
+                </div>
+            </div>
             
-            document.getElementById('modal-criar-forum').style.display = 'none'; 
-            document.getElementById('input-nome-novo-forum').value = ''; 
-            btnConf.innerHTML = 'Criar Grupo'; btnConf.disabled = false;
-            
-            carregarForuns(); 
-        } catch(err) { 
-            console.error("Erro ao criar chat:", err);
-            btnConf.innerHTML = 'Erro!';
-            setTimeout(() => { btnConf.innerHTML = 'Criar Grupo'; btnConf.disabled = false; }, 2000);
-        }
-    }
-});
+            <!-- MODAL AVISO FOCO INTERROMPIDO -->
+            <div id="modal-foco-interrompido" class="modal-overlay" style="z-index: 3000;">
+                <div class="action-sheet" style="max-width:350px; border-radius:12px; margin:20px; text-align: center;">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 3rem; color: var(--danger-red); margin-bottom: 15px;"></i>
+                    <h3 style="margin-bottom: 10px; color: white;">Foco Quebrado!</h3>
+                    <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;">Detetámos que saíste da aplicação ou bloqueaste o ecrã. A tua sessão falhou e perdeste a oportunidade de ganhar <strong id="foco-xp-perdido" style="color:var(--danger-red);">0 XP</strong>.</p>
+                    <button onclick="document.getElementById('modal-foco-interrompido').style.display='none'" class="primary-btn" style="background: var(--danger-red); color: white;">Entendido</button>
+                </div>
+            </div>
 
+            <!-- MODAL TESTE DAS ACADEMIAS (INICIAL) -->
+            <div id="modal-academia-quiz" class="modal-overlay" style="z-index: 4000; background: var(--bg-dark);">
+                <div class="action-sheet" style="max-width:500px; border-radius:12px; margin:20px; text-align: center; height: auto; max-height: 90vh;">
+                    
+                    <!-- Ecrã de Boas Vindas / Pergunta -->
+                    <div id="quiz-question-container">
+                        <i class="fa-solid fa-chess-rook" style="font-size: 3rem; color: white; margin-bottom: 15px;"></i>
+                        <h2 style="margin-bottom: 10px; color: white;">Bem-vindo à Turma PRO</h2>
+                        <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;">Antes de começares, precisamos de descobrir qual é a tua Academia. Responde a estas rápidas questões com sinceridade!</p>
+                        
+                        <h3 id="quiz-question-text" style="font-size: 1.1rem; color: var(--primary-green); margin-bottom: 20px;">1. O que mais valorizas na escola?</h3>
+                        
+                        <div id="quiz-options" style="display: flex; flex-direction: column; gap: 10px;">
+                            <button class="secondary-btn quiz-opt" data-house="atlas" style="text-align:left; justify-content:flex-start; height:auto; padding:15px;">Descobrir coisas novas e curiosidades.</button>
+                            <button class="secondary-btn quiz-opt" data-house="sentinela" style="text-align:left; justify-content:flex-start; height:auto; padding:15px;">Organização, bons apontamentos e notas.</button>
+                            <button class="secondary-btn quiz-opt" data-house="nexus" style="text-align:left; justify-content:flex-start; height:auto; padding:15px;">Criar projetos, trabalhos práticos e inovar.</button>
+                            <button class="secondary-btn quiz-opt" data-house="aurora" style="text-align:left; justify-content:flex-start; height:auto; padding:15px;">Ser o melhor, bater os meus recordes e focar-me.</button>
+                        </div>
+                    </div>
 
-// ==========================================
-// 3. DASHBOARD ADAPTATIVO MÁGICO
-// ==========================================
-async function construirHomeAdaptativa() {
-    const cont = document.getElementById('dynamic-hero-section'); if(!cont) return;
-    try {
-        let tFaltas = 0, evs = [], pAtivos = 0, pHoras = 0, mRep = 0;
-        
-        const fS = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); fS.forEach(d => { if(!d.data().justificada && !d.data().comprovativoEnviado) tFaltas++; });
-        const nS = await getDocs(collection(db, "utilizadores", myUserId, "notas")); nS.forEach(d => { const n = d.data().nota; if(n==='REP'||Number(n)<10) mRep++; });
-        const pS = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); pS.forEach(d => { if(d.data().status!=='concluida'){pAtivos++; pHoras+=Number(d.data().horasPresenciais||0);} });
-        
-        if(minhaTurma) {
-            const evSnap = await getDocs(collection(db, "turmas", minhaTurma, "eventos"));
-            const hj = new Date().toISOString().split('T')[0]; let d7 = new Date(); d7.setDate(d7.getDate()+7); const lIso = d7.toISOString().split('T')[0];
-            evSnap.forEach(d => { const e = d.data(); if(e.data>=hj && e.data<=lIso && ['teste','avaliacao','entrega'].includes(e.tipo)) evs.push(e); });
-            evs.sort((a,b)=>a.data.localeCompare(b.data));
-        }
+                    <!-- Ecrã de Resultado -->
+                    <div id="quiz-result-container" style="display: none; padding: 20px 0;">
+                        <div id="quiz-result-icon" style="font-size: 4rem; margin-bottom: 15px;"></div>
+                        <h2 style="margin-bottom: 5px; color: white;">És da Academia <span id="quiz-result-name">...</span>!</h2>
+                        <p id="quiz-result-desc" style="font-size:0.9rem; color:var(--text-muted); margin-bottom:25px; line-height: 1.5;"></p>
+                        <button id="btn-entrar-app" class="primary-btn" style="font-size: 1.1rem; padding: 15px;">Entrar na Aplicação</button>
+                    </div>
 
-        let html = ''; let mMiss = false;
-        if(tFaltas>0 || pAtivos>0 || mRep>0) {
-            html += `<div class="card" style="background:linear-gradient(135deg,#ff4d4d,#cc0000); color:white; border:none; border-radius:16px; margin-bottom:20px;">
-                <h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-triangle-exclamation"></i> Ação Necessária</h3>
-                <p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens pendências urgentes que prejudicam a tua avaliação.</p>
-                <ul style="margin-bottom:20px; padding-left:20px; font-size:1.1rem; font-weight:bold; line-height:1.6;">
-                    ${tFaltas>0?`<li>${tFaltas} Falta(s)</li>`:''}${mRep>0?`<li>${mRep} Módulo(s) Reprovado(s)</li>`:''}${pAtivos>0?`<li>${pAtivos} PRHF(s) pendentes (${pHoras}h presenciais)</li>`:''}
-                </ul>
-                <button class="primary-btn" style="background:white; color:#cc0000; font-size:1.1rem; padding:15px;" onclick="document.querySelector('.nav-item[data-target=\\'view-aluno-caderneta\\']').click()">Abrir Caderneta e Resolver</button>
-            </div>`;
-        } else if(evs.length>0) {
-            const ev = evs[0]; const dF = ev.data.split('-').reverse().join('/');
-            html += `<div class="card" style="background:linear-gradient(135deg,#ffaa00,#e67e22); color:white; border:none; border-radius:16px; margin-bottom:20px;">
-                <h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-calendar-exclamation"></i> Foco Total</h3>
-                <p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens <strong>${ev.titulo}</strong> no dia ${dF}. Que tal iniciares um Pomodoro agora?</p>
-                <button class="primary-btn" style="background:white; color:#e67e22; width:100%; font-size:1.1rem; padding:15px;" onclick="document.getElementById('btn-open-study-mode').click()"><i class="fa-solid fa-stopwatch"></i> Iniciar Pomodoro</button>
-            </div>`; mMiss = true;
-        } else {
-            html += `<div class="card" style="background:linear-gradient(135deg,#00cc88,#009966); color:white; border:none; border-radius:16px; margin-bottom:20px;">
-                <h3 style="margin-bottom:5px; font-size:1.6rem;"><i class="fa-solid fa-leaf"></i> Dia Tranquilo</h3>
-                <p style="font-size:1.05rem; margin-bottom:0; opacity:0.9;">Não tens avaliações marcadas nem pendências. Excelente altura para os teus resumos!</p>
-            </div>`; mMiss = true;
-        }
+                </div>
+            </div>
 
-        if(mMiss && minhaTurma) {
-            const tSnap = await getDoc(doc(db, "turmas", minhaTurma));
-            if(tSnap.exists() && tSnap.data().missaoTitulo) {
-                const tm = tSnap.data();
-                html += `<div class="card" id="missao-card" style="border-left:4px solid var(--warning-yellow); margin-bottom:20px;"><h3 style="font-size:1rem; margin-bottom:5px;"><i class="fa-solid fa-users"></i> Missão da Turma</h3><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:${tm.missaoProgresso!==undefined?'10px':'0'};">${tm.missaoTitulo}</p>${tm.missaoProgresso!==undefined?`<div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${tm.missaoProgresso}%; background:var(--warning-yellow);"></div></div>`:''}</div>`;
-            }
-        }
+        </main>
 
-        const hjIso = new Date().toISOString().split('T')[0];
-        const hSnap = await getDoc(doc(db, "utilizadores", myUserId, "humor", hjIso));
-        if(!hSnap.exists() && mMiss) {
-            html += `<div class="card" id="checkin-card-dinamico" style="border-left:4px solid #b82bf2; margin-bottom:20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="font-size: 1rem; margin:0;"><i class="fa-solid fa-heart-pulse"></i> Como te sentes hoje?</h3></div><div style="display: flex; justify-content: space-around; font-size: 2.2rem;" id="mood-buttons-dinamicos"><span class="mood-btn-dinamico" data-mood="😡" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">😡</span><span class="mood-btn-dinamico" data-mood="🙁" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">🙁</span><span class="mood-btn-dinamico" data-mood="😐" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">😐</span><span class="mood-btn-dinamico" data-mood="🙂" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">🙂</span><span class="mood-btn-dinamico" data-mood="🤩" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">🤩</span></div></div>`;
-        }
+        <nav class="bottom-nav">
+            <a href="#" class="nav-item active" data-target="student-dashboard"><i class="fa-solid fa-house"></i><span>Início</span></a>
+            <a href="#" class="nav-item" data-target="view-aluno-caderneta"><i class="fa-solid fa-book-open"></i><span>Caderneta</span></a>
+            <a href="#" class="nav-item" data-target="view-aluno-agenda"><i class="fa-regular fa-calendar"></i><span>Agenda</span></a>
+            <a href="#" class="nav-item" data-target="view-aluno-forum"><i class="fa-regular fa-comments"></i><span>Fórum</span></a>
+            <a href="#" class="nav-item" data-target="view-aluno-perfil"><i class="fa-solid fa-user-astronaut"></i><span>Perfil</span></a>
+        </nav>
+    </div>
 
-        cont.innerHTML = html;
-
-        document.querySelectorAll('.mood-btn-dinamico').forEach(btn => {
-            btn.addEventListener('mouseover',()=>btn.style.filter='grayscale(0%)'); btn.addEventListener('mouseout',()=>btn.style.filter='grayscale(100%)');
-            btn.addEventListener('click', async (e) => {
-                const m = e.currentTarget.getAttribute('data-mood'); const s = await getDoc(doc(db, "utilizadores", myUserId));
-                let aXp = s.exists()&&s.data().xp?s.data().xp:0;
-                await setDoc(doc(db, "utilizadores", myUserId, "humor", hjIso), { humor:m, timestamp:Date.now(), dataIso:hjIso });
-                await updateDoc(doc(db, "utilizadores", myUserId), { xp: aXp+10 });
-                carregarGamificacao({xp: aXp+10}); document.getElementById('checkin-card-dinamico').innerHTML = '<div style="text-align:center; color:var(--success-green); font-weight:bold; font-size:0.95rem; padding:10px;">Obrigado! <span style="color:var(--warning-yellow);">+10 XP</span></div>';
-            });
-        });
-    } catch(e) { cont.innerHTML = '<p class="text-danger center">Erro no assistente.</p>'; }
-}
-
-async function verificarEpocaExames() {
-    if(!minhaTurma) return;
-    const tSnap = await getDoc(doc(db, "turmas", minhaTurma));
-    if(tSnap.exists() && tSnap.data().epocaExames?.ativa) {
-        document.getElementById('exam-mode-banner').style.display='block'; document.body.style.borderTop="5px solid #8e2de2";
-        if(tSnap.data().epocaExames.dataFim) {
-            const df = Math.ceil((new Date(tSnap.data().epocaExames.dataFim) - new Date()) / (1000 * 60 * 60 * 24));
-            document.getElementById('exam-countdown').innerText = df > 0 ? `Faltam ${df} dias` : "Já terminou";
-        }
-    }
-}
-
-// ==========================================
-// 4. PESQUISA UNIVERSAL
-// ==========================================
-document.getElementById('aluno-search-input')?.addEventListener('input', async (e) => {
-    const termo = e.target.value.toLowerCase().trim(); const box = document.getElementById('aluno-search-results');
-    if(termo.length < 2) { box.style.display = 'none'; return; } box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">A procurar...</p>'; box.style.display = 'block';
-    try {
-        let resArr = [];
-        const rDb = await getDocs(query(collection(db, "utilizadores", myUserId, "apontamentos")));
-        rDb.forEach(d => { if(d.data().titulo?.toLowerCase().includes(termo)) resArr.push({ t: 'O Meu Resumo', txt: d.data().titulo, id: 'btn-open-caderno' }); });
-        if (minhaTurma) { 
-            const sDb = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); 
-            sDb.forEach(d => { if(d.data().titulo?.toLowerCase().includes(termo) || d.data().disciplina?.toLowerCase().includes(termo)) resArr.push({ t: `Sumário - ${d.data().disciplina}`, txt: d.data().titulo, id: 'btn-open-sumarios' }); }); 
-        }
-        if(resArr.length === 0) box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">Sem resultados.</p>'; 
-        else { 
-            let h = ''; resArr.forEach(r => h += `<div style="padding:8px; border-bottom:1px solid #333; cursor:pointer;" onclick="document.getElementById('${r.id}').click(); document.getElementById('aluno-search-results').style.display='none'; document.getElementById('aluno-search-input').value='';"><span style="font-size:0.7rem; color:var(--primary-green); text-transform:uppercase;">${r.t}</span><div style="font-size:0.9rem; color:white; margin-top:3px;">${r.txt}</div></div>`); box.innerHTML = h; 
-        }
-    } catch(err) { box.innerHTML = '<p class="text-danger" style="margin:0;">Erro.</p>'; }
-});
-
-// ==========================================
-// 5. PERFIL E OBJETIVOS INTELIGENTES
-// ==========================================
-function carregarGamificacao(dados) {
-    const xp = dados.xp || 0; const nivel = Math.floor(xp / 100) + 1; const prog = ((xp - ((nivel - 1) * 100)) / 100) * 100;
-    document.getElementById('aluno-nivel').innerText = nivel; document.getElementById('aluno-xp-atual').innerText = xp;
-    if(document.getElementById('perfil-xp-totais')) { document.getElementById('perfil-xp-totais').innerText = xp; document.getElementById('perfil-xp-progress').style.width = `${prog}%`; }
-    let r = "Novato"; if(nivel>=2)r="Aprendiz"; if(nivel>=5)r="Estudante PRO"; if(nivel>=10)r="Veterano"; if(nivel>=20)r="Lenda";
-    document.getElementById('aluno-rank-title').innerText = r; if(document.getElementById('perfil-titulo-central')) document.getElementById('perfil-titulo-central').innerText = r;
-}
-
-async function carregarObjetivosPessoais() {
-    const cont = document.getElementById('lista-objetivos-container'); cont.innerHTML = '<p class="text-muted center">A carregar...</p>';
-    try {
-        const notasSnap = await getDocs(collection(db, "utilizadores", myUserId, "notas")); let mapNotas = {};
-        notasSnap.forEach(n => { const dt = n.data(); if(dt.nota !== 'REP' && !isNaN(dt.nota)) { const val = Number(dt.nota); if(!mapNotas[dt.disciplina] || val > mapNotas[dt.disciplina]) mapNotas[dt.disciplina] = val; } });
-
-        const snap = await getDocs(query(collection(db, "utilizadores", myUserId, "objetivos"), orderBy("timestamp", "desc")));
-        let html = ''; let objGanhouXP = false;
-        for (const d of snap.docs) {
-            const obj = d.data(); 
-            if(!obj.concluido && mapNotas[obj.disciplina] && mapNotas[obj.disciplina] >= Number(obj.notaAlvo)) {
-                await updateDoc(doc(db, "utilizadores", myUserId, "objetivos", d.id), { concluido: true });
-                obj.concluido = true; objGanhouXP = true;
-            }
-            const cColor = obj.concluido ? 'var(--success-green)' : '#444'; const txtDec = obj.concluido ? 'line-through' : 'none'; const txtColor = obj.concluido ? 'var(--text-muted)' : 'white';
-            html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left: 3px solid ${cColor};"><div style="display:flex; align-items:center; gap:12px; flex:1;"><div style="width:24px; height:24px; border-radius:50%; border:2px solid ${cColor}; background:${obj.concluido ? cColor : 'transparent'}; display:flex; align-items:center; justify-content:center;">${obj.concluido ? '<i class="fa-solid fa-check" style="color:var(--bg-dark); font-size:0.75rem;"></i>' : ''}</div><span style="text-decoration:${txtDec}; color:${txtColor}; font-size:0.95rem; flex:1;">Tirar <strong>${obj.notaAlvo}</strong> a ${obj.disciplina}</span></div><i class="fa-solid fa-trash" style="color:var(--danger-red); cursor:pointer; font-size:0.9rem; padding: 5px;" onclick="window.apagarObjetivo('${d.id}')"></i></div>`;
-        }
-        if(objGanhouXP) {
-            const userS = await getDoc(doc(db, "utilizadores", myUserId)); let axp = userS.exists()&&userS.data().xp?userS.data().xp:0;
-            await updateDoc(doc(db, "utilizadores", myUserId), { xp: axp + 50 }); carregarGamificacao({xp: axp+50}); alert("🎉 Parabéns! Um Objetivo Inteligente foi concluído com base nas tuas Notas! +50 XP");
-        }
-        cont.innerHTML = html === '' ? '<p class="text-muted center" style="font-size:0.85rem;">Não tens metas ativas. Começa a desafiar-te!</p>' : html;
-    } catch(e) {}
-}
-
-document.getElementById('btn-add-objetivo')?.addEventListener('click', async () => {
-    const disc = document.getElementById('obj-disciplina').value; const nota = document.getElementById('obj-nota-alvo').value;
-    if(!disc || !nota) { alert("Preenche a Disciplina e a Nota Alvo."); return; }
-    try { await addDoc(collection(db, "utilizadores", myUserId, "objetivos"), { disciplina: disc, notaAlvo: nota, concluido: false, timestamp: Date.now() }); document.getElementById('obj-nota-alvo').value = ''; carregarObjetivosPessoais(); } catch(e) {}
-});
-window.apagarObjetivo = async (id) => { if(confirm("Apagar objetivo?")) { try { await deleteDoc(doc(db, "utilizadores", myUserId, "objetivos", id)); carregarObjetivosPessoais(); } catch(e) {} } };
-
-function renderizarGraficoNotas() {
-    const ctx = document.getElementById('chart-notas-aluno'); if(!ctx) return;
-    getDocs(collection(db, "utilizadores", myUserId, "notas")).then(notasDb => {
-        let mapN = {}; notasDb.forEach(d => { const n = d.data(); if(n.nota!=='REP'&&!isNaN(n.nota)){ if(!mapN[n.disciplina])mapN[n.disciplina]={s:0,c:0}; mapN[n.disciplina].s+=Number(n.nota); mapN[n.disciplina].c++; } });
-        let l=[], dt=[], bg=[]; Object.keys(mapN).forEach(dc => { l.push(dc); const md=(mapN[dc].s/mapN[dc].c).toFixed(1); dt.push(md); bg.push(md>=10?'#00cc88':'#ff4d4d'); });
-        if(l.length===0){ l=["Sem Dados"]; dt=[0]; bg=["#333"]; }
-        if(chartInstance) chartInstance.destroy();
-        chartInstance = new Chart(ctx, { type:'bar', data:{labels:l, datasets:[{label:'Média', data:dt, backgroundColor:bg, borderRadius:6}]}, options:{responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true, max:20}, x:{grid:{display:false}}}, plugins:{legend:{display:false}}} });
-    });
-}
-
-async function carregarEstatisticasEstudo() {
-    try {
-        const est = await getDocs(query(collection(db, "utilizadores", myUserId, "estudos")));
-        let tS = 0; let dU = new Set(); let mTot = 0;
-        est.forEach(d => { tS++; if(d.data().data) dU.add(d.data().data.split('T')[0]); mTot += Number(d.data().minutos || 25); });
-        document.getElementById('total-minutos-foco').innerText = mTot>60?`${Math.floor(mTot/60)}h${mTot%60}m`:`${mTot}m`;
-        let stk = 0; let dO = Array.from(dU).sort((a,b)=>b.localeCompare(a));
-        if(dO.length>0){
-            let hj = new Date(); const hs = hj.toISOString().split('T')[0]; hj.setDate(hj.getDate()-1); const os = hj.toISOString().split('T')[0];
-            if(dO.includes(hs)||dO.includes(os)){ let cv = new Date(dO[0]); for(let i=0;i<dO.length;i++){ if(dO.includes(cv.toISOString().split('T')[0])){ stk++; cv.setDate(cv.getDate()-1); } else break; } }
-        }
-        document.getElementById('streak-dias').innerText = stk;
-    } catch(e) {}
-}
-
-document.getElementById('btn-view-mood-history')?.addEventListener('click', carregarHistoricoHumor);
-async function carregarHistoricoHumor() {
-    const c = document.getElementById('mood-history-container'); c.innerHTML = '<p class="text-muted center">A atualizar...</p>';
-    try {
-        const r = await getDocs(query(collection(db, "utilizadores", myUserId, "humor"), orderBy("timestamp", "desc")));
-        let h = '<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:10px;">';
-        r.forEach(d=>{ const hh=d.data(); h+=`<div style="text-align:center;background:rgba(0,0,0,0.3);padding:10px;border-radius:8px;min-width:60px;"><div style="font-size:1.8rem;">${hh.humor}</div><div style="font-size:0.7rem;color:var(--text-muted);margin-top:5px;">${hh.dataIso.split('-').reverse().slice(0,2).join('/')}</div></div>`;});
-        c.innerHTML = r.empty ? '<p class="text-muted center" style="margin:0;">Sem registos.</p>' : h+'</div>';
-    } catch(e){}
-}
-
-document.getElementById('upload-avatar')?.addEventListener('change', async (e) => {
-    const file = e.target.files[0]; if(!file) return;
-    try {
-        const compressedFile = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 500, useWebWorker: true });
-        const reader = new FileReader();
-        reader.onload = async (ev) => {
-            const base64 = ev.target.result;
-            document.getElementById('perfil-avatar-img').src = base64;
-            document.getElementById('header-avatar-circle').innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-            await updateDoc(doc(db, "utilizadores", myUserId), { fotoPerfil: base64 });
-        };
-        reader.readAsDataURL(compressedFile);
-    } catch(err) {}
-});
-
-
-// ==========================================
-// 6. CADERNETA COMPLETAS
-// ==========================================
-const tabsCad = ['tab-aluno-timeline', 'tab-aluno-notas', 'tab-aluno-faltas', 'tab-aluno-prhfs', 'tab-aluno-comportamento', 'tab-aluno-observacoes'];
-tabsCad.forEach(t => {
-    document.getElementById(t)?.addEventListener('click', (e) => {
-        tabsCad.forEach(id => document.getElementById(id)?.classList.remove('active')); e.currentTarget.classList.add('active');
-        document.getElementById('timeline-filtros').style.display = t === 'tab-aluno-timeline' ? 'flex' : 'none';
-        document.getElementById('aluno-caderneta-content').innerHTML = '<p class="text-muted center">A carregar...</p>';
-        if(t==='tab-aluno-timeline') carregarTimelineAluno(); if(t==='tab-aluno-notas') carregarNotasAluno(); if(t==='tab-aluno-faltas') carregarFaltasAluno(); if(t==='tab-aluno-prhfs') carregarPrhfsAluno(); if(t==='tab-aluno-comportamento') carregarComportamentoAluno(); if(t==='tab-aluno-observacoes') carregarObservacoesAluno();
-    });
-});
-
-let timelineFilterCat = 'all';
-
-async function obterEventosLinhaTemporal() {
-    let ev = [];
-    const nS = await getDocs(collection(db, "utilizadores", myUserId, "notas")); nS.forEach(d => { ev.push({ time: new Date(d.data().data).getTime(), cat: 'notas', icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação', desc: `${d.data().disciplina}: <strong>${d.data().nota}</strong>` }); });
-    const fS = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); fS.forEach(d => { ev.push({ time: new Date(d.data().criadoEm || d.data().dataInicio).getTime(), cat: 'faltas', icon: '<i class="fa-solid fa-user-xmark"></i>', cor: d.data().justificada ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Falta a ${d.data().disciplina} (${d.data().horas}h)`, desc: d.data().justificada ? `Justificada` : `Por justificar` }); });
-    const oS = await getDocs(collection(db, "utilizadores", myUserId, "ocorrencias")); oS.forEach(d => { ev.push({ time: d.data().timestamp, cat: 'comportamento', icon: d.data().tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>', cor: d.data().tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Registo Disciplinar`, desc: `<strong>${d.data().titulo}</strong>` }); });
-    const hS = await getDocs(collection(db, "utilizadores", myUserId, "humor")); hS.forEach(d => { ev.push({ time: d.data().timestamp, cat: 'gamificacao', icon: '<i class="fa-solid fa-heart-pulse"></i>', cor: '#b82bf2', titulo: `Check-in Emocional`, desc: `${d.data().humor} (+10 XP)` }); });
-    ev.sort((a,b) => b.time - a.time); return ev;
-}
-
-async function carregarTimelineAluno() {
-    const cCont = document.getElementById('aluno-caderneta-content');
-    try {
-        let eventos = await obterEventosLinhaTemporal();
-        if(timelineFilterCat !== 'all') { eventos = eventos.filter(e => e.cat === timelineFilterCat); }
-        if(eventos.length === 0) { cCont.innerHTML = '<p class="text-muted center" style="margin-top:40px;">O teu histórico está limpo.</p>'; return; }
-        let html = '<div class="timeline">'; eventos.forEach(e => { html += `<div class="timeline-item"><div class="timeline-icon" style="color:${e.cor}; border-color:${e.cor};">${e.icon}</div><div class="timeline-content" style="border-left: 3px solid ${e.cor};"><span class="timeline-date">${new Date(e.time).toLocaleDateString('pt-PT')}</span><strong style="color:white; display:block; margin-bottom:5px;">${e.titulo}</strong><p style="font-size:0.85rem; color:var(--text-light); margin:0;">${e.desc}</p></div></div>`; }); cCont.innerHTML = html + '</div>';
-    } catch(e) {}
-}
-
-let notifFilterCat = 'all';
-async function carregarNotificacoesAluno() {
-    const cont = document.getElementById('aluno-notificacoes-container'); cont.innerHTML = '<p class="text-muted center">A ler alertas...</p>';
-    try {
-        let evs = await obterEventosLinhaTemporal();
-        evs = evs.map(e => { let c='escola'; if(e.cat==='faltas'&&e.cor==='var(--danger-red)') c='importante'; if(e.cat==='gamificacao') c='gamificacao'; return {...e, nCat: c}; });
-        if(notifFilterCat !== 'all') evs = evs.filter(e => e.nCat === notifFilterCat);
-        const rec = evs.slice(0, 15);
-        if(rec.length === 0) { cont.innerHTML = '<p class="text-muted center" style="margin-top:40px;">Sem alertas nesta categoria.</p>'; return; }
-        let h = ''; rec.forEach(ev => { h += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${ev.cor}; display:flex; align-items:flex-start; gap: 15px; padding: 15px;"><div style="font-size: 1.5rem; color: ${ev.cor};">${ev.icon}</div><div><strong style="color:white; font-size:1rem; display:block; margin-bottom:3px;">${ev.titulo}</strong><span style="font-size:0.85rem; color:var(--text-light);">${ev.desc}</span><div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px;">${new Date(ev.time).toLocaleString('pt-PT')}</div></div></div>`; }); cont.innerHTML = h; 
-        if(notifFilterCat === 'all') document.getElementById('badge-notificacoes').style.display = 'none';
-    } catch(e) {}
-}
-
-async function carregarNotasAluno() {
-    const cCont = document.getElementById('aluno-caderneta-content');
-    try {
-        const notasDb = await getDocs(collection(db, "utilizadores", myUserId, "notas"));
-        if(notasDb.empty) { cCont.innerHTML = '<p class="text-muted center">Sem notas lançadas.</p>'; return; }
-        let disciplinas = {}; notasDb.forEach(d => { const n = d.data(); if(!disciplinas[n.disciplina]) disciplinas[n.disciplina] = []; disciplinas[n.disciplina].push(n); });
-        let html = '';
-        ordemDisciplinasGlobal.forEach(disc => {
-            if(disciplinas[disc] && disciplinas[disc].length > 0) {
-                let sum = 0; let c = 0; let modsHtml = '';
-                disciplinas[disc].forEach(n => {
-                    if(n.nota !== 'REP' && !isNaN(n.nota)) { sum += Number(n.nota); c++; }
-                    const cor = (n.nota === 'REP' || Number(n.nota) < 10) ? 'var(--danger-red)' : 'var(--success-green)';
-                    modsHtml += `<div class="modulo-row"><span>Módulo ${n.modulo}</span><span style="font-weight:bold; color:${cor};">${n.nota}</span></div>`;
-                });
-                const med = c > 0 ? (sum/c).toFixed(1) : '-'; const medCor = (med !== '-' && med < 10) ? 'var(--danger-red)' : 'white';
-                html += `<div class="disciplina-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'"><span class="disciplina-title">${disc}</span><span><span style="font-size:0.75rem; color:var(--text-muted); margin-right:8px;">Média:</span><span class="disciplina-media" style="color:${medCor};">${med}</span> <i class="fa-solid fa-chevron-down" style="font-size:0.8rem; margin-left:5px;"></i></span></div><div class="disciplina-modules">${modsHtml}</div>`;
-            } else { html += `<div class="disciplina-header" style="cursor:default;"><span class="disciplina-title" style="color:var(--text-muted);">${disc}</span><span><span class="disciplina-media" style="color:var(--text-muted); font-size:0.9rem;">SN</span></span></div>`; }
-        });
-        cCont.innerHTML = html;
-    } catch(e) {}
-}
-
-async function carregarFaltasAluno() {
-    const cCont = document.getElementById('aluno-caderneta-content');
-    try {
-        const fDb = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); let fObj = {}; fDb.forEach(d => { const f = d.data(); if(!fObj[f.disciplina]) fObj[f.disciplina] = []; fObj[f.disciplina].push(f); });
-        const pDb = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); let hRec = {}; pDb.forEach(d => { const p = d.data(); if (p.status === 'concluida') { hRec[p.disciplina] = (hRec[p.disciplina] || 0) + Number(p.horasTotais || p.horas || 0); } });
-
-        let html = '';
-        ordemDisciplinasGlobal.forEach(disc => {
-            let totF = 0; let fHtml = '';
-            if(fObj[disc]) {
-                fObj[disc].sort((a,b) => b.dataInicio.localeCompare(a.dataInicio));
-                fObj[disc].forEach(f => {
-                    totF += Number(f.horas || 0); 
-                    const sc = f.justificada ? 'var(--success-green)' : 'var(--danger-red)'; const st = f.justificada ? 'Justificada' : 'Injustificada'; 
-                    fHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 0; border-bottom: 1px dashed #333;"><div><strong style="color:white; font-size:0.9rem;">Falta (${f.horas}h)</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${f.dataInicio}</span></div><span style="font-size:0.75rem; font-weight:bold; color:${sc}; padding:4px 8px; background:rgba(255,255,255,0.05); border-radius:12px;">${st}</span></div>`;
-                });
-            }
-
-            const rec = hRec[disc] || 0; let fEf = totF - rec; if(fEf < 0) fEf = 0;
-            let assiduidade = 100 - ((fEf / 50) * 100); if(assiduidade < 0) assiduidade = 0; if(assiduidade > 100) assiduidade = 100;
-            let bC = assiduidade < 80 ? 'var(--danger-red)' : (assiduidade < 90 ? 'var(--warning-yellow)' : 'var(--success-green)');
-
-            if(fObj[disc] && fObj[disc].length > 0) {
-                html += `<div class="card" style="margin-bottom:15px; padding:15px; border-left: 4px solid ${bC};"><div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'"><div><strong style="font-size: 1.1rem; color:white;">${disc}</strong><div style="font-size: 0.8rem; color:var(--text-muted); margin-top:3px;">${totF}h Faltadas ${rec>0? `(<span style="color:var(--success-green);">${rec}h Recup.</span>)`:''}</div></div><div style="text-align:right;"><div style="font-weight:bold; color:${bC};">${assiduidade.toFixed(0)}%</div><div style="font-size:0.7rem; color:var(--text-muted);">Assiduidade</div></div></div><div style="display:none; margin-top:15px; border-top:1px solid #333; padding-top:10px;">${fHtml}</div></div>`;
-            } else { html += `<div class="card" style="margin-bottom:10px; padding:15px; border-left: 4px solid var(--success-green); display:flex; justify-content:space-between; align-items:center;"><strong style="font-size: 1rem; color:var(--text-muted);">${disc}</strong><div style="text-align:right;"><div style="font-weight:bold; color:var(--success-green);">100%</div></div></div>`; }
-        });
-        cCont.innerHTML = html;
-    } catch(e) {}
-}
-
-async function carregarPrhfsAluno() {
-    const cCont = document.getElementById('aluno-caderneta-content');
-    try {
-        const prhfsDb = await getDocs(collection(db, "utilizadores", myUserId, "prhfs"));
-        if(prhfsDb.empty) { cCont.innerHTML = '<p class="text-muted" style="text-align:center;">Não tens Planos de Recuperação.</p>'; return; }
-        let arr = []; prhfsDb.forEach(d => { arr.push({id: d.id, ...d.data()}); }); arr.sort((a,b) => new Date(a.prazo) - new Date(b.prazo));
-        
-        let pendentes = arr.filter(p => p.status !== 'concluida');
-        let concluidos = arr.filter(p => p.status === 'concluida');
-
-        let html = ''; 
-        const renderP = (p) => {
-            const isUrgente = p.moduloTerminado === true || p.moduloTerminado === "true"; 
-            const cor = isUrgente ? 'var(--danger-red)' : 'var(--warning-yellow)';
-            const txtSt = p.status === 'concluida' ? 'CONCLUÍDO' : (isUrgente ? 'URGENTE' : 'EM CURSO');
-            const corFinal = p.status === 'concluida' ? 'var(--success-green)' : cor;
-            const hPres = Number(p.horasPresenciais || 0); 
-            
-            const aHtml = p.anexoBase64 ? `<a href="${p.anexoBase64}" download="PRHF_${p.disciplina}" class="secondary-btn small-btn" style="margin-bottom:10px; color:var(--primary-green); border-color:var(--primary-green);"><i class="fa-solid fa-download"></i> Documento do Professor</a>` : '';
-            const fpHtml = p.feedbackProfessor ? `<div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:10px; font-size:0.85rem;"><strong style="color:var(--primary-green);">Prof:</strong> ${p.feedbackProfessor}</div>` : '';
-            const propHtml = p.propostaAluno ? `<div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:15px; font-size:0.85rem;"><strong style="color:var(--warning-yellow);">A tua Proposta:</strong> ${p.propostaAluno} <br><span style="color:${p.propostaLidaDT ? 'var(--success-green)' : 'var(--text-muted)'}; font-size:0.75rem;"><i class="fa-solid ${p.propostaLidaDT ? 'fa-check-double' : 'fa-check'}"></i> ${p.propostaLidaDT ? 'Validada' : 'A aguardar validação'}</span></div>` : '';
-
-            let btn = '';
-            if(p.status !== 'concluida' && hPres > 0) {
-                btn = `<button class="primary-btn small-btn" style="width:100%; background-color:${corFinal}; color:${corFinal === 'var(--warning-yellow)' ? 'black' : 'white'};" onclick="window.abrirAcaoPrhf('${p.id}', '${p.disciplina}', '${p.modulo}', '${p.prazo}')">Agendar Sessão Presencial</button>`;
-            }
-
-            return `<div class="card" style="margin-bottom:15px; border-left: 4px solid ${corFinal};"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="font-size: 1.1rem; color:white;">${p.disciplina} (Mod. ${p.modulo})</strong><span style="color:${corFinal}; font-size:0.75rem; font-weight:bold;">${txtSt}</span></div><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">${p.descricao}</p>${aHtml} ${fpHtml} ${propHtml}<div style="font-size:0.8rem; margin-bottom: 15px; border-top:1px dashed #333; padding-top:10px;">Data Limite: <strong style="color:${corFinal};">${p.prazo}</strong><br>Horas Presenciais: <strong>${hPres}h</strong></div>${btn}</div>`;
-        };
-
-        pendentes.forEach(p => html += renderP(p));
-        if(concluidos.length > 0) { html += `<div class="falta-date-divider" style="margin-top:20px;"><span>Concluídos</span></div>`; concluidos.forEach(p => html += renderP(p)); }
-        cCont.innerHTML = html;
-    } catch(e) {}
-}
-
-window.abrirAcaoPrhf = (id, disc, mod, prazo) => {
-    esconderTodasAsVistas(); document.getElementById('view-aluno-acao-prhf').style.display = 'block';
-    document.getElementById('prhf-acao-titulo').innerText = `${disc} (Mod. ${mod})`; document.getElementById('prhf-acao-prazo').innerText = prazo;
-    
-    document.getElementById('btn-voltar-acao-prhf').onclick = () => { esconderTodasAsVistas(); document.getElementById('view-aluno-caderneta').style.display = 'block'; carregarPrhfsAluno(); };
-
-    document.getElementById('btn-enviar-proposta-prhf').onclick = async (e) => {
-        const d = document.getElementById('aluno-prhf-proposta-data').value; const hi = document.getElementById('aluno-prhf-proposta-hora-inicio').value; const hf = document.getElementById('aluno-prhf-proposta-hora-fim').value;
-        if(!d || !hi || !hf) { alert("Preenche a data e horas!"); return; }
-        const btn = e.currentTarget; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
-        try { await updateDoc(doc(db, "utilizadores", myUserId, "prhfs", id), { propostaAluno: `Data: ${d.split('-').reverse().join('/')} | Das ${hi} às ${hf}`, propostaLidaDT: false }); btn.innerHTML = '<i class="fa-solid fa-check"></i> Enviado'; btn.style.backgroundColor = 'var(--success-green)'; setTimeout(() => { document.getElementById('btn-voltar-acao-prhf').click(); btn.innerHTML = 'Enviar Proposta'; btn.disabled = false; btn.style.backgroundColor = 'var(--primary-green)';}, 1500); } catch(err) { btn.innerHTML = "Erro"; setTimeout(() => { btn.disabled = false; }, 1500); }
-    };
-};
-
-async function carregarComportamentoAluno() {
-    const cCont = document.getElementById('aluno-caderneta-content');
-    try {
-        const res = await getDocs(query(collection(db, "utilizadores", myUserId, "ocorrencias")));
-        if(res.empty) { cCont.innerHTML = '<p class="text-muted" style="text-align:center;">Sem registos disciplinares.</p>'; return; }
-        let regs = []; res.forEach(d => regs.push(d.data())); regs.sort((a,b) => b.data.localeCompare(a.data)); 
-        let html = ''; regs.forEach(r => { const cor = r.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)'; const ic = r.tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>'; html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${cor};"><div style="display:flex; align-items:center; gap:8px; color:${cor}; margin-bottom:5px;">${ic} <strong>${r.titulo}</strong></div><span style="font-size:0.75rem; color:var(--text-muted);">Data: ${r.data} | Prof. ${r.autor}</span>${r.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px; background:rgba(0,0,0,0.2); padding:8px; border-radius:6px;">${r.descricao}</p>` : ''}</div>`; }); cCont.innerHTML = html;
-    } catch(e) {}
-}
-
-async function carregarObservacoesAluno(rSel = '1_avaliacao') {
-    const cCont = document.getElementById('aluno-caderneta-content');
-    const rM = [{id: '1_intercalar', label: '1ª Intercalar'}, {id: '1_avaliacao', label: '1ª Avaliação'}, {id: '2_intercalar', label: '2ª Intercalar'}, {id: '2_avaliacao', label: '2ª Avaliação'}, {id: '3_avaliacao', label: '3ª Avaliação'}];
-    let html = '<div style="display:flex; overflow-x:auto; gap:10px; margin-bottom:20px; padding-bottom:10px; scrollbar-width: none;">';
-    rM.forEach(r => { const bg = r.id === rSel ? 'var(--primary-green)' : 'var(--bg-dark)'; const color = r.id === rSel ? 'var(--bg-dark)' : 'var(--text-muted)'; html += `<button class="btn-select-reuniao" data-id="${r.id}" style="background:${bg}; color:${color}; border:1px solid #333; padding:8px 15px; border-radius:20px; cursor:pointer; font-weight:bold; white-space:nowrap; transition:0.2s; flex-shrink:0;">${r.label}</button>`; });
-    html += '</div><div id="reuniao-content-area"><p class="text-muted center">A carregar dados...</p></div>';
-    cCont.innerHTML = html;
-
-    document.querySelectorAll('.btn-select-reuniao').forEach(btn => { btn.addEventListener('click', (e) => { carregarObservacoesAluno(e.currentTarget.getAttribute('data-id')); }); });
-
-    try {
-        const dS = await getDoc(doc(db, "utilizadores", myUserId, "reunioes", rSel)); let dR = dS.exists() ? dS.data() : {};
-        let cH = '<div style="display:flex; flex-direction:column; gap:10px;">';
-        ordemDisciplinasGlobal.forEach(disc => { const cm = dR.disciplinas && dR.disciplinas[disc] ? dR.disciplinas[disc] : '<span style="color:var(--text-muted);">Sem comentário</span>'; cH += `<div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;"><h4 style="margin-bottom:8px; color:white; font-size:1rem;">${disc}</h4><p style="color:var(--text-light); font-size:0.9rem; line-height:1.4; margin:0;">${cm}</p></div>`; });
-        const gl = dR.global || '<span style="color:var(--text-muted);">Sem observações globais.</span>'; cH += `<div class="card" style="margin-top:15px; border:1px solid var(--warning-yellow); background:rgba(255,204,0,0.05); padding:15px;"><h3 style="color:var(--warning-yellow); margin-bottom:10px; font-size:1.1rem;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3><p style="color:white; font-size:0.95rem; line-height:1.5; margin:0;">${gl}</p></div></div>`;
-        document.getElementById('reuniao-content-area').innerHTML = cH;
-    } catch(e) {}
-}
-
-// ==========================================
-// 7. AGENDA E HORÁRIO
-// ==========================================
-document.getElementById('tab-aluno-eventos')?.addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('tab-aluno-horario').classList.remove('active'); document.getElementById('aluno-agenda-filtros').style.display = 'flex'; document.getElementById('aluno-horario-container').style.display = 'none'; carregarAgendaAlunoLista(); });
-document.getElementById('tab-aluno-horario')?.addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('tab-aluno-eventos').classList.remove('active'); document.getElementById('aluno-agenda-filtros').style.display = 'none'; document.getElementById('aluno-horario-container').style.display = 'block'; carregarHorarioAluno(); });
-
-document.querySelectorAll('.agenda-filter-label input').forEach(chk => chk.addEventListener('change', carregarAgendaAlunoLista));
-
-async function carregarAgendaAlunoLista() {
-    const sC = document.getElementById('aluno-agenda-content'); sC.innerHTML = '<p class="text-muted center">A sincronizar agenda...</p>'; if(!minhaTurma) return;
-    const mT = document.getElementById('aluno-filtro-agenda-testes').checked; const mTr = document.getElementById('aluno-filtro-agenda-trabalhos').checked; const mO = document.getElementById('aluno-filtro-agenda-outros').checked;
-    try {
-        const evDb = await getDocs(collection(db, "turmas", minhaTurma, "eventos")); if(evDb.empty) { sC.innerHTML = '<p class="text-muted center">Sem eventos na escola.</p>'; return; }
-        let evs = [];
-        evDb.forEach(d => { const e = d.data(); let bgC = '#b82bf2'; let txtT = 'Evento'; if(e.tipo === 'teste' || e.tipo === 'avaliacao') { if(mT) { bgC = '#ffaa00'; txtT = 'Avaliação'; evs.push({...e, cor: bgC, txt: txtT}); } } else if(e.tipo === 'trabalho' || e.tipo === 'entrega') { if(mTr) { bgC = '#00d2ff'; txtT = 'Entrega'; evs.push({...e, cor: bgC, txt: txtT}); } } else { if(mO) evs.push({...e, cor: bgC, txt: txtT}); } });
-        if(evs.length === 0) { sC.innerHTML = '<p class="text-muted center">Nenhum evento com os filtros atuais.</p>'; return; }
-        
-        const hj = new Date().toISOString().split('T')[0]; const fut = evs.filter(e => e.data >= hj).sort((a,b) => a.data.localeCompare(b.data)); const pas = evs.filter(e => e.data < hj).sort((a,b) => b.data.localeCompare(a.data));
-        const mA = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-        let html = '';
-        const rEv = (ev) => { const dp = ev.data.split('-'); const mes = mA[parseInt(dp[1])-1]; return `<div class="calendar-event-card" style="border-left-color:${ev.cor}; margin-bottom:10px;"><div class="calendar-date-box"><span class="day">${dp[2]}</span><span class="month" style="color:${ev.cor};">${mes}</span></div><div class="calendar-info"><h4 style="margin:0; color:white;">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt||'evento').toUpperCase()}</span></div></div>`; };
-
-        if(fut.length > 0) fut.forEach(e => html += rEv(e)); else html += '<p class="text-muted center">Sem eventos futuros.</p>';
-        if(pas.length > 0) { html += '<div class="calendar-divider" style="margin-top:20px;"><span>Passados</span></div>'; pas.forEach(e => html += rEv(e)); }
-        sC.innerHTML = html;
-    } catch(e) {}
-}
-
-let ahModo = 'dia', ahDOff = 0, ahSOff = 0;
-document.getElementById('btn-aluno-horario-dia')?.addEventListener('click', (e) => { ahModo = 'dia'; e.currentTarget.classList.add('active'); document.getElementById('btn-aluno-horario-grelha').classList.remove('active'); carregarHorarioAluno(); });
-document.getElementById('btn-aluno-horario-grelha')?.addEventListener('click', (e) => { ahModo = 'grelha'; e.currentTarget.classList.add('active'); document.getElementById('btn-aluno-horario-dia').classList.remove('active'); carregarHorarioAluno(); });
-document.getElementById('btn-aluno-prev-horario')?.addEventListener('click', () => { if(ahModo === 'dia') ahDOff--; else ahSOff--; carregarHorarioAluno(); });
-document.getElementById('btn-aluno-next-horario')?.addEventListener('click', () => { if(ahModo === 'dia') ahDOff++; else ahSOff++; carregarHorarioAluno(); });
-
-const getCorEspecial = (dsc) => { const d = dsc.toLowerCase(); if(d.includes('alm')) return { c: 'var(--warning-yellow)', bg: 'rgba(255, 204, 0, 0.15)' }; if(d.includes('vis')) return { c: '#00d2ff', bg: 'rgba(0, 210, 255, 0.15)' }; if(d.includes('prhf')) return { c: 'var(--danger-red)', bg: 'rgba(255, 77, 77, 0.15)' }; if(d.includes('pap') || d.includes('fct')) return { c: '#ff9900', bg: 'rgba(255, 153, 0, 0.15)' }; if(['reunião','reuniao','livre','estudo'].some(k => d.includes(k))) return { c: '#b82bf2', bg: 'rgba(184, 43, 242, 0.15)' }; return { c: 'var(--primary-green)', bg: 'rgba(0, 204, 136, 0.1)' }; };
-
-async function carregarHorarioAluno() {
-    const sC = document.getElementById('aluno-agenda-content'); sC.innerHTML = '<p class="text-muted center">A gerar horário...</p>'; if(!minhaTurma) return;
-    try {
-        const dS = await getDoc(doc(db, "turmas", minhaTurma)); let hb = {}; if(dS.exists() && dS.data().horario) hb = dS.data().horario;
-        const bK = ['1', '2', '3', '4', '1300', '5', '6', '7']; const bT = { '1': '08:30', '2': '09:35', '3': '10:50', '4': '11:55', '1300': '13:00', '5': '14:05', '6': '15:15', '7': '16:20' }; const dM = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']; const fDt = (dt) => `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;
-        
-        if (ahModo === 'dia') {
-            let tD = new Date(); tD.setDate(tD.getDate() + ahDOff); document.getElementById('aluno-horario-display').innerText = `${dM[tD.getDay()]}, ${fDt(tD)}`;
-            let h = ''; let tAD = false; const dSStr = `${tD.getFullYear()}-${String(tD.getMonth()+1).padStart(2,'0')}-${String(tD.getDate()).padStart(2,'0')}`;
-            bK.forEach(b => { const dc = hb[`${dSStr}_${b}`]; if(dc) { const sty = getCorEspecial(dc); h += `<div class="horario-list-item" style="border-left-color:${sty.c}; background-color:${sty.bg};"><div class="horario-time-col">${bT[b]}</div><div class="horario-disc-col"><div class="horario-disc-name">${dc}</div><div class="horario-prof">Prof. A Atribuir</div></div></div>`; tAD = true; } });
-            sC.innerHTML = tAD ? h : '<p class="text-muted center" style="margin-top:30px;">Sem aulas neste dia.</p>';
-        } else {
-            let dtT = new Date(); dtT.setDate(dtT.getDate() + (ahSOff * 7)); dtT.setDate(dtT.getDate() - (dtT.getDay() === 0 ? 6 : dtT.getDay() - 1)); let dE = new Date(dtT); dE.setDate(dE.getDate() + 4);
-            document.getElementById('aluno-horario-display').innerText = `${fDt(dtT)} a ${fDt(dE)}`;
-            let h = '<div class="horario-grid" style="width:100%;"><div class="horario-header"></div>'; let dI = new Date(dtT);
-            ['SEG','TER','QUA','QUI','SEX'].forEach(d => { h += `<div class="horario-header">${d}<span>${fDt(dI)}</span></div>`; dI.setDate(dI.getDate()+1); });
-            bK.forEach(b => { h += `<div class="horario-time">${bT[b]}</div>`; dI = new Date(dtT); for(let i=0; i<5; i++) { const dSStr = `${dI.getFullYear()}-${String(dI.getMonth()+1).padStart(2,'0')}-${String(dI.getDate()).padStart(2,'0')}`; const dc = hb[`${dSStr}_${b}`]; if(dc) { const sty = getCorEspecial(dc); h += `<div class="horario-slot" style="border:1px solid ${sty.c}; background-color:${sty.bg}; color:white;"><strong>${dc}</strong></div>`; } else h += `<div class="horario-slot"></div>`; dI.setDate(dI.getDate()+1); } });
-            sC.innerHTML = h + '</div>';
-        }
-    } catch(e) {}
-}
-
-// ==========================================
-// 8. FÓRUNS E CHAT
-// ==========================================
-let chatUnsubscribeAluno = null; let alunoForumAtivoId = null;
-
-async function carregarForuns() {
-    const cont = document.getElementById('aluno-forum-channel-list'); cont.innerHTML = '<p class="text-muted center">A configurar fóruns...</p>'; if(!minhaTurma) return;
-    let html = `<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apoio & Turma</h3><div class="canal-card" data-id="turma_global" data-nome="Turma ${minhaTurma}" style="margin-bottom: 10px;"><div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-users"></i></div><div class="canal-info"><h4>Turma ${minhaTurma}</h4><p>Canal Geral</p></div></div><div class="canal-card" data-id="dt_${myUserId}" data-nome="Chat DT"><div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div><div class="canal-info"><h4>Diretor de Turma</h4><p>Mensagem Privada</p></div></div><h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Disciplinas</h3><div style="display:flex; flex-wrap:wrap; gap:10px;">`;
-    ordemDisciplinasGlobal.forEach(disc => { html += `<div class="canal-card" data-id="disc_${disc}" data-nome="Fórum ${disc}" style="flex: 1 1 45%; padding: 10px;"><div class="canal-info" style="text-align:center;"><h4 style="margin:0; font-size:0.9rem; color:#00d2ff;"><i class="fa-solid fa-book-open"></i> ${disc}</h4></div></div>`; }); html += '</div>';
-    try {
-        const res = await getDocs(collection(db, "turmas", minhaTurma, "foruns")); let extrasHtml = '';
-        res.forEach(docSnap => { const f = docSnap.data(); if(f.membros && f.membros.includes(myUserId) && !f.isDefault) { extrasHtml += `<div class="canal-card" data-id="${docSnap.id}" data-nome="${f.nome}"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-comments"></i></div><div class="canal-info"><h4>${f.nome}</h4><p>Grupo de Estudo</p></div></div>`; } });
-        if (extrasHtml !== '') html += `<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Os Meus Chats</h3>` + extrasHtml;
-    } catch(e) {}
-    cont.innerHTML = html;
-    
-    cont.querySelectorAll('.canal-card').forEach(card => card.addEventListener('click', (e) => { alunoForumAtivoId = e.currentTarget.getAttribute('data-id'); document.getElementById('aluno-chat-active-title').innerText = e.currentTarget.getAttribute('data-nome'); document.getElementById('aluno-forum-channel-list').style.display = 'none'; document.getElementById('aluno-forum-chat-view').style.display = 'flex'; document.getElementById('btn-create-chat-aluno').style.display = 'none'; iniciarChatAluno(alunoForumAtivoId); }));
-}
-
-document.getElementById('btn-aluno-voltar-canais')?.addEventListener('click', () => { document.getElementById('aluno-forum-chat-view').style.display = 'none'; document.getElementById('aluno-forum-channel-list').style.display = 'block'; document.getElementById('btn-create-chat-aluno').style.display = 'block'; });
-
-function iniciarChatAluno(fId) {
-    const chatContainer = document.getElementById('aluno-chat-messages-container'); chatContainer.innerHTML = ''; if(chatUnsubscribeAluno) chatUnsubscribeAluno();
-    chatUnsubscribeAluno = onSnapshot(query(collection(db, "turmas", minhaTurma, "foruns", fId, "mensagens"), orderBy("timestamp")), (snapshot) => {
-        let html = ''; snapshot.forEach(doc => { const msg = doc.data(); const isMe = msg.remetente === myUserName; const classe = isMe ? 'admin' : 'student'; html += `<div class="chat-bubble ${classe}"><strong>${isMe ? 'Tu' : msg.remetente}</strong><br>${msg.texto}<span class="chat-meta">${new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span></div>`; });
-        chatContainer.innerHTML = html; chatContainer.scrollTop = chatContainer.scrollHeight;
-    });
-}
-document.getElementById('btn-aluno-send-msg')?.addEventListener('click', async () => { const inp = document.getElementById('aluno-input-forum-msg'); const txt = inp.value.trim(); if(!txt || !alunoForumAtivoId) return; try { await addDoc(collection(db, "turmas", minhaTurma, "foruns", alunoForumAtivoId, "mensagens"), { remetente: myUserName, texto: txt, timestamp: Date.now() }); inp.value = ''; } catch(e) {} });
-
-// ==========================================
-// 11. SUMÁRIOS E PASSAPORTE
-// ==========================================
-document.getElementById('aluno-filtro-sumarios-disc')?.addEventListener('change', carregarSumariosAluno);
-async function carregarSumariosAluno() {
-    const c = document.getElementById('aluno-lista-sumarios-container'); c.innerHTML = '<p class="text-muted center">A carregar sumários...</p>'; if(!minhaTurma) return;
-    try {
-        const r = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); if(r.empty) { c.innerHTML = '<p class="text-muted center">Nenhum material publicado pelos professores.</p>'; return; }
-        let sum = []; let dU = new Set(); r.forEach(d => { const dt = d.data(); sum.push({id: d.id, ...dt}); dU.add(dt.disciplina); });
-        const fS = document.getElementById('aluno-filtro-sumarios-disc'); if (fS.options.length <= 1) { let oH = '<option value="">Todas as Disciplinas</option>'; dU.forEach(dc => oH += `<option value="${dc}">${dc}</option>`); fS.innerHTML = oH; }
-        const fA = fS.value; if(fA) sum = sum.filter(s => s.disciplina === fA); sum.sort((a,b) => b.data.localeCompare(a.data)); 
-        if(sum.length === 0) { c.innerHTML = '<p class="text-muted" style="text-align:center;">Sem sumários para esta disciplina.</p>'; return; }
-        let html = ''; sum.forEach(s => { const aB = s.anexoBase64 ? `<a href="${s.anexoBase64}" download="${s.anexoNome}" class="primary-btn small-btn" style="display:inline-block; margin-top:10px; width:auto; padding:8px 12px; background-color:#0099ff;"><i class="fa-solid fa-download"></i> Baixar ${s.anexoNome}</a>` : ''; html += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #0099ff;"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">${s.data} | ${s.disciplina} | Prof. ${s.professor}</span><h4 style="margin:5px 0;">${s.titulo}</h4>${s.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px;">${s.descricao}</p>` : ''}</div></div>${aB}</div>`; }); c.innerHTML = html;
-    } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao carregar os dados.</p>'; }
-}
-
-function carregarDadosPassaporte(dados) {
-    if(dados.fct) { document.getElementById('aluno-fct-horas').innerText = `${dados.fct.horasRealizadas||0} / ${dados.fct.horasTotal||0}h`; document.getElementById('aluno-fct-progress').style.width = `${((dados.fct.horasRealizadas||0)/(dados.fct.horasTotal||1))*100}%`; document.getElementById('input-fct-horas').value = dados.fct.horasRealizadas||'';}
-    if(dados.pap) { document.getElementById('input-pap-tema').value = dados.pap.tema || ''; }
-    if (dados.papFicheiroEnviado) document.getElementById('aluno-pap-file-name').innerText = "Ficheiro submetido.";
-}
-document.getElementById('btn-save-fct')?.addEventListener('click', async (e) => { const v = document.getElementById('input-fct-horas').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "fct.horasRealizadas": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
-document.getElementById('btn-save-pap-tema')?.addEventListener('click', async (e) => { const v = document.getElementById('input-pap-tema').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "pap.tema": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-save"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
-let fPB64 = ""; document.getElementById('aluno-upload-pap')?.addEventListener('change', async (e) => { let f = e.target.files[0]; if(!f) return; if (f.type.startsWith('image/')) { try { f = await imageCompression(f, {maxSizeMB:0.5}); } catch(e){} } document.getElementById('aluno-pap-file-name').innerText = f.name; document.getElementById('btn-enviar-pap').style.display = 'block'; const r = new FileReader(); r.onload = ev => fPB64 = ev.target.result; r.readAsDataURL(f); });
-document.getElementById('btn-enviar-pap')?.addEventListener('click', async (e) => { if(!fPB64) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { const snap = await getDoc(doc(db, "utilizadores", myUserId)); let axp = snap.exists()&&snap.data().xp?snap.data().xp:0; await updateDoc(doc(db, "utilizadores", myUserId), { papFicheiroEnviado:true, papFicheiroBase64:fPB64, xp:axp+200 }); b.style.backgroundColor="var(--success-green)"; b.innerHTML='<i class="fa-solid fa-check"></i> Submetido'; setTimeout(() => { b.style.display='none'; b.disabled=false; document.getElementById('aluno-pap-file-name').style.color="var(--success-green)"; }, 2000); } catch(err){} });
-
-async function pedirPermissaoNotificacoes() { try { const p = await Notification.requestPermission(); if(p==='granted') { const r = await navigator.serviceWorker.register('./firebase-messaging-sw.js'); const t = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: r }); if(t) await updateDoc(doc(db, "utilizadores", myUserId), { tokenNotificacao: t }); } } catch(e){} }
-if(typeof onMessage !== "undefined" && messaging) onMessage(messaging, p => alert(`NOVA NOTIFICAÇÃO:\n${p.notification.title}\n${p.notification.body}`));
-setTimeout(() => { if(myUserId) pedirPermissaoNotificacoes(); }, 4000);
+    <!-- SCRIPT ÚNICO CONSOLIDADO E OTIMIZADO -->
+    <script type="module" src="./js/aluno-app.js"></script>
+</body>
+</html>
