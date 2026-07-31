@@ -14,14 +14,14 @@ let fQB64 = "";
 let pTmr = null; let pTimeConfig = 30; let pXPConfig = 50; let pRest = 30 * 60;
 const focusXPMap = { '15': 25, '25': 40, '30': 50, '45': 75, '60': 100 };
 
-let timelineFilterCat = 'all'; let notifFilterCat = 'all';
+window.timelineFilterCat = 'all'; window.notifFilterCat = 'all';
 let ahModo = 'dia', ahDOff = 0, ahSOff = 0;
 
 const ACADEMIAS_INFO = {
-    'atlas': { nome: 'Atlas', cor: '#00cc88', icon: 'fa-compass', desc: 'A academia dos Exploradores.' },
-    'sentinela': { nome: 'Sentinela', cor: '#0088ff', icon: 'fa-shield-halved', desc: 'A academia dos Guardiões.' },
-    'nexus': { nome: 'Nexus', cor: '#ff8800', icon: 'fa-microchip', desc: 'A academia dos Inovadores.' },
-    'aurora': { nome: 'Aurora', cor: '#b82bf2', icon: 'fa-bolt', desc: 'A academia dos Desafiadores.' }
+    'atlas': { nome: 'Atlas', cor: '#00cc88', icon: 'fa-compass', desc: 'A academia dos Exploradores. Movidos pela curiosidade, pela descoberta e pela vontade de aprender além dos livros.' },
+    'sentinela': { nome: 'Sentinela', cor: '#0088ff', icon: 'fa-shield-halved', desc: 'A academia dos Guardiões. Destacam-se pela responsabilidade, organização, assiduidade e cooperação mútua.' },
+    'nexus': { nome: 'Nexus', cor: '#ff8800', icon: 'fa-microchip', desc: 'A academia dos Inovadores. Criativos, focados em projetos práticos, tecnologia e em encontrar novas soluções.' },
+    'aurora': { nome: 'Aurora', cor: '#b82bf2', icon: 'fa-bolt', desc: 'A academia dos Desafiadores. Competitivos, resilientes, mestres do foco e sempre prontos a superar os próprios limites.' }
 };
 
 // ==========================================
@@ -61,33 +61,34 @@ onAuthStateChanged(auth, async (user) => {
 document.getElementById('btn-logout-aluno')?.addEventListener('click', () => signOut(auth));
 
 // ==========================================
-// 2. EVENT DELEGATION (CLIQUES SEGUROS)
+// 2. EVENT DELEGATION GLOBAL (CLIQUES SEGUROS)
 // ==========================================
 function esconderTodasAsVistas() { document.querySelectorAll('.app-content > div').forEach(v => v.style.display = 'none'); }
 
 document.body.addEventListener('click', async (e) => {
     
-    // NAVEGAÇÃO PRINCIPAL (NAV BAR)
+    // NAV BAR INFERIOR
     const nav = e.target.closest('.nav-item');
     if(nav) {
         e.preventDefault(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); nav.classList.add('active');
         esconderTodasAsVistas(); const tId = nav.getAttribute('data-target'); 
         document.getElementById(tId).style.display = (tId === 'view-study-mode' || tId === 'view-aluno-forum') ? 'flex' : 'block';
         
-        if(tId === 'view-aluno-perfil') { carregarObjetivosPessoais(); carregarHistoricoHumor(); carregarEstatisticasEstudo(); setTimeout(renderizarGraficoNotas, 150); }
+        if(tId === 'view-aluno-perfil') { carregarRankingTurma(); carregarObjetivosPessoais(); carregarHistoricoHumor(); carregarEstatisticasEstudo(); setTimeout(renderizarGraficoNotas, 150); }
         if(tId === 'view-aluno-caderneta') document.getElementById('tab-aluno-timeline').click();
         if(tId === 'view-aluno-agenda') document.getElementById('tab-aluno-eventos').click();
         if(tId === 'view-aluno-forum') carregarForuns();
+        if(tId === 'view-aluno-caderno') { if(!quillEditor) quillEditor = new Quill('#quill-editor', { theme: 'snow' }); carregarResumos(); }
     }
     
-    // FERRAMENTAS E BOTÕES VOLTAR DA HOME
+    // FERRAMENTAS E VOLTAR DA HOME
     if(e.target.closest('#btn-open-study-mode')) {
         esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-study-mode').style.display = 'flex';
-        if(localStorage.getItem('pomodoroEndTarget') && localStorage.getItem('pomodoroEndTarget') > Date.now()) { document.getElementById('btn-start-study').click(); }
+        if(localStorage.getItem('pomodoroEndTarget') && localStorage.getItem('pomodoroEndTarget') > Date.now()) document.getElementById('btn-start-study').click();
     }
     if(e.target.closest('#btn-open-caderno')) {
         esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-caderno').style.display = 'block';
-        if(!quillEditor) quillEditor = new Quill('#quill-editor', { theme: 'snow' }); carregarResumos();
+        if(!quillEditor) quillEditor = new Quill('#quill-editor', { theme: 'snow' }); carregarResumos(); document.getElementById('tab-caderno-resumos').click();
     }
     if(e.target.closest('#btn-open-sumarios')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-sumarios').style.display = 'block'; carregarSumariosAluno(); }
     if(e.target.closest('#btn-abrir-passaporte')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-passaporte').style.display = 'block'; }
@@ -96,9 +97,24 @@ document.body.addEventListener('click', async (e) => {
         document.querySelector('.nav-item[data-target="student-dashboard"]').click();
     }
 
-    // CADERNO (TABS E GUARDAR)
+    // CADERNETA (TABS SUPERIORES)
+    if(e.target.closest('#tab-aluno-timeline')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='flex'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarTimelineAluno(); }
+    if(e.target.closest('#tab-aluno-notas')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarNotasAluno(); }
+    if(e.target.closest('#tab-aluno-faltas')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarFaltasAluno(); }
+    if(e.target.closest('#tab-aluno-prhfs')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarPrhfsAluno(); }
+    if(e.target.closest('#tab-aluno-comportamento')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarComportamentoAluno(); }
+    if(e.target.closest('#tab-aluno-observacoes')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarObservacoesAluno(); }
+
+    // FILTROS (TIMELINE E ALERTAS)
+    const tChip = e.target.closest('#timeline-filtros .filter-chip');
+    if(tChip) { document.querySelectorAll('#timeline-filtros .filter-chip').forEach(c => c.classList.remove('active')); tChip.classList.add('active'); window.timelineFilterCat = tChip.getAttribute('data-cat'); carregarTimelineAluno(); }
+    const nChip = e.target.closest('#notificacoes-filtros .filter-chip');
+    if(nChip) { document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(c => c.classList.remove('active')); nChip.classList.add('active'); window.notifFilterCat = nChip.getAttribute('data-cat'); carregarNotificacoesAluno(); }
+
+    // CADERNO DIGITAL (ABAS E GRAVAR)
     if(e.target.closest('#tab-caderno-resumos')) { document.getElementById('tab-caderno-resumos').classList.add('active'); document.getElementById('tab-caderno-galeria').classList.remove('active'); document.getElementById('sec-caderno-resumos').style.display = 'block'; document.getElementById('sec-caderno-galeria').style.display = 'none'; }
     if(e.target.closest('#tab-caderno-galeria')) { document.getElementById('tab-caderno-galeria').classList.add('active'); document.getElementById('tab-caderno-resumos').classList.remove('active'); document.getElementById('sec-caderno-resumos').style.display = 'none'; document.getElementById('sec-caderno-galeria').style.display = 'block'; carregarFotosQuadro(); }
+    
     if(e.target.closest('#btn-gravar-apontamento')) {
         const t = document.getElementById('caderno-titulo').value.trim(); const h = quillEditor.root.innerHTML; const txt = quillEditor.getText().trim(); 
         if(!t || txt.length === 0) { alert("Preenche o título e o resumo!"); return; }
@@ -109,6 +125,7 @@ document.body.addEventListener('click', async (e) => {
             carregarResumos(); setTimeout(() => { b.innerHTML = '<i class="fa-solid fa-save"></i> Gravar na Nuvem'; b.disabled = false; b.style.backgroundColor = '#e67e22'; }, 2000); 
         } catch(err) { b.innerHTML = 'Erro!'; setTimeout(() => { b.innerHTML = '<i class="fa-solid fa-save"></i> Gravar na Nuvem'; b.disabled = false; }, 2000); }
     }
+    
     if(e.target.closest('#btn-gravar-foto-quadro')) {
         const t = document.getElementById('foto-titulo').value.trim(); 
         if(!t) { alert("Preenche o Título da Foto primeiro!"); return; }
@@ -117,7 +134,7 @@ document.body.addEventListener('click', async (e) => {
         try { 
             await addDoc(collection(db, "utilizadores", myUserId, "caderno_fotos"), { titulo: t, fotoBase64: fQB64, timestamp: Date.now() }); 
             b.innerHTML = '<i class="fa-solid fa-check"></i> Guardada'; 
-            setTimeout(() => { b.style.display = 'none'; b.disabled = false; b.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Guardar na Galeria'; document.getElementById('foto-quadro-file-name').innerText = ""; document.getElementById('foto-titulo').value = ""; fQB64 = ""; carregarFotosQuadro(); }, 2000); 
+            setTimeout(() => { b.style.display = 'none'; b.disabled = false; b.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Gravar na Galeria'; document.getElementById('foto-quadro-file-name').innerText = ""; document.getElementById('foto-titulo').value = ""; fQB64 = ""; carregarFotosQuadro(); }, 2000); 
         } catch(err) { b.innerHTML = "Erro"; setTimeout(() => { b.disabled = false; }, 2000); } 
     }
 
@@ -129,12 +146,6 @@ document.body.addEventListener('click', async (e) => {
     if(e.target.closest('#btn-aluno-prev-horario')) { if(ahModo === 'dia') ahDOff--; else ahSOff--; carregarHorarioAluno(); }
     if(e.target.closest('#btn-aluno-next-horario')) { if(ahModo === 'dia') ahDOff++; else ahSOff++; carregarHorarioAluno(); }
 
-    // FILTROS
-    const tChip = e.target.closest('#timeline-filtros .filter-chip');
-    if(tChip) { document.querySelectorAll('#timeline-filtros .filter-chip').forEach(c => c.classList.remove('active')); tChip.classList.add('active'); timelineFilterCat = tChip.getAttribute('data-cat'); carregarTimelineAluno(); }
-    const nChip = e.target.closest('#notificacoes-filtros .filter-chip');
-    if(nChip) { document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(c => c.classList.remove('active')); nChip.classList.add('active'); notifFilterCat = nChip.getAttribute('data-cat'); carregarNotificacoesAluno(); }
-
     // FÓRUNS (CRIAR E ABRIR)
     if(e.target.closest('#btn-create-chat-aluno')) {
         document.getElementById('modal-criar-forum').style.display = 'flex'; 
@@ -143,7 +154,7 @@ document.body.addEventListener('click', async (e) => {
             const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", minhaTurma))); let cH = ''; 
             cS.forEach(d => { if(d.data().papel === 'aluno' && d.id !== myUserId) { cH += `<label style="display:flex; align-items:center; gap:10px; color:white; font-size:0.9rem; padding:8px 0; cursor:pointer;"><input type="checkbox" class="colegas-check" value="${d.id}" style="width:18px;height:18px;accent-color:var(--primary-green);"> ${d.data().nome}</label>`; } });
             cCont.innerHTML = cH === '' ? '<p class="text-muted center" style="font-size:0.8rem;">Ainda és o único aluno registado nesta turma.</p>' : cH;
-        } catch(err) { cCont.innerHTML = '<p class="text-danger center">Erro.</p>'; }
+        } catch(err) { cCont.innerHTML = '<p class="text-danger center">Erro ao listar turma.</p>'; }
     }
     if(e.target.closest('#btn-cancelar-novo-forum')) { document.getElementById('modal-criar-forum').style.display = 'none'; document.getElementById('input-nome-novo-forum').value = ''; }
     if(e.target.closest('#btn-confirmar-novo-forum')) {
@@ -153,10 +164,14 @@ document.body.addEventListener('click', async (e) => {
         try { await addDoc(collection(db, "turmas", minhaTurma, "foruns"), { nome: nome, tipo: 'permanente', isDefault: false, membros: mbr, criadoPor: myUserName }); document.getElementById('modal-criar-forum').style.display = 'none'; document.getElementById('input-nome-novo-forum').value = ''; btnConf.innerHTML = 'Criar Grupo'; btnConf.disabled = false; carregarForuns(); } catch(err) { btnConf.innerHTML = 'Erro!'; setTimeout(() => { btnConf.innerHTML = 'Criar Grupo'; btnConf.disabled = false; }, 2000); }
     }
     const cardF = e.target.closest('.canal-card');
-    if(cardF) {
+    if(cardF && !e.target.closest('.btn-delete-chat')) {
         alunoForumAtivoId = cardF.getAttribute('data-id'); document.getElementById('aluno-chat-active-title').innerText = cardF.getAttribute('data-nome'); 
         document.getElementById('aluno-forum-channel-list').style.display = 'none'; document.getElementById('btn-create-chat-aluno').style.display = 'none'; document.getElementById('aluno-forum-chat-view').style.display = 'flex'; 
         iniciarChatAluno(alunoForumAtivoId);
+    }
+    if(e.target.closest('.btn-delete-chat')) {
+        e.stopPropagation(); const id = e.target.closest('.btn-delete-chat').getAttribute('data-id');
+        if(confirm("Queres mesmo apagar este Chat? Vai desaparecer para todos os teus colegas.")) { try { await deleteDoc(doc(db, "turmas", minhaTurma, "foruns", id)); carregarForuns(); } catch(err){} }
     }
     if(e.target.closest('#btn-aluno-voltar-canais')) { document.getElementById('aluno-forum-chat-view').style.display = 'none'; document.getElementById('aluno-forum-channel-list').style.display = 'block'; document.getElementById('btn-create-chat-aluno').style.display = 'block'; }
     if(e.target.closest('#btn-aluno-send-msg')) {
@@ -164,7 +179,7 @@ document.body.addEventListener('click', async (e) => {
         try { await addDoc(collection(db, "turmas", minhaTurma, "foruns", alunoForumAtivoId, "mensagens"), { remetente: myUserName, texto: t, timestamp: Date.now() }); inp.value = ''; } catch(err) {} 
     }
 
-    // MODO FOCO (Botões)
+    // MODO FOCO
     if(e.target.closest('#btn-start-study')) {
         pTimeConfig = parseInt(document.getElementById('study-time-selector').value) || 30; pXPConfig = focusXPMap[pTimeConfig] || 50; pRest = pTimeConfig * 60;
         document.getElementById('btn-start-study').style.display = 'none'; document.getElementById('btn-stop-study').style.display = 'inline-block';
@@ -188,20 +203,21 @@ document.body.addEventListener('click', async (e) => {
 
 // Eventos de Upload de ficheiros e Selectors
 document.addEventListener('change', async (e) => {
-    // Foto do Quadro (Câmara ou Galeria)
     if (e.target.id === 'upload-foto-quadro' || e.target.id === 'tirar-foto-quadro') {
         let file = e.target.files[0]; if(!file) return; 
         if (file.type.startsWith('image/')) { try { file = await imageCompression(file, { maxSizeMB: 0.8, maxWidthOrHeight: 1920, useWebWorker: true }); } catch (err) {} } 
         document.getElementById('foto-quadro-file-name').innerText = file.name || 'foto_capturada.jpg'; document.getElementById('btn-gravar-foto-quadro').style.display = 'block'; 
         const rd = new FileReader(); rd.onload = (ev) => { fQB64 = ev.target.result; }; rd.readAsDataURL(file); 
     }
-    // Mudança de Tempo do Foco
-    if (e.target.id === 'study-time-selector') {
-        if (!pTmr) { const val = parseInt(e.target.value) || 30; formatTimer(val * 60); }
-    }
-    // Filtros Agenda
+    if (e.target.id === 'study-time-selector') { if (!pTmr) { const val = parseInt(e.target.value) || 30; formatTimer(val * 60); } }
     if (e.target.closest('.agenda-filter-label input')) { carregarAgendaAlunoLista(); }
 });
+
+window.abrirFotoModal = (url, titulo) => {
+    document.getElementById('modal-foto-img').src = url;
+    document.getElementById('modal-foto-titulo').innerText = titulo;
+    document.getElementById('modal-ver-foto').style.display = 'flex';
+};
 
 // ==========================================
 // 3. DASHBOARD ADAPTATIVO MÁGICO
@@ -349,12 +365,16 @@ document.getElementById('aluno-search-input')?.addEventListener('input', async (
             sDb.forEach(d => { if(d.data().titulo?.toLowerCase().includes(termo) || d.data().disciplina?.toLowerCase().includes(termo)) resArr.push({ t: `Sumário - ${d.data().disciplina}`, txt: d.data().titulo, id: 'btn-open-sumarios' }); }); 
         }
         if(resArr.length === 0) box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">Sem resultados.</p>'; 
-        else { let h = ''; resArr.forEach(r => h += `<div style="padding:8px; border-bottom:1px solid #333; cursor:pointer;" onclick="document.getElementById('${r.id}').click(); document.getElementById('aluno-search-results').style.display='none'; document.getElementById('aluno-search-input').value='';"><span style="font-size:0.7rem; color:var(--primary-green); text-transform:uppercase;">${r.t}</span><div style="font-size:0.9rem; color:white; margin-top:3px;">${r.txt}</div></div>`); box.innerHTML = h; }
+        else { 
+            let h = ''; resArr.forEach(r => h += `<div style="padding:8px; border-bottom:1px solid #333; cursor:pointer;" onclick="document.getElementById('${r.id}').click(); document.getElementById('aluno-search-results').style.display='none'; document.getElementById('aluno-search-input').value='';"><span style="font-size:0.7rem; color:var(--primary-green); text-transform:uppercase;">${r.t}</span><div style="font-size:0.9rem; color:white; margin-top:3px;">${r.txt}</div></div>`); box.innerHTML = h; 
+        }
     } catch(err) { box.innerHTML = '<p class="text-danger" style="margin:0;">Erro.</p>'; }
 });
 
+document.addEventListener('click', (e) => { if (!e.target.closest('#aluno-search-input') && !e.target.closest('#aluno-search-results')) { document.getElementById('aluno-search-results').style.display = 'none'; } });
+
 // ==========================================
-// 5. PERFIL E OBJETIVOS INTELIGENTES
+// 5. PERFIL, OBJETIVOS E TOP 10 RANKING
 // ==========================================
 function carregarGamificacao(dados) {
     const xp = dados.xp || 0; const nivel = Math.floor(xp / 100) + 1; const prog = ((xp - ((nivel - 1) * 100)) / 100) * 100;
@@ -362,6 +382,30 @@ function carregarGamificacao(dados) {
     if(document.getElementById('perfil-xp-totais')) { document.getElementById('perfil-xp-totais').innerText = xp; document.getElementById('perfil-xp-progress').style.width = `${prog}%`; }
     let r = "Novato"; if(nivel>=2)r="Aprendiz"; if(nivel>=5)r="Estudante PRO"; if(nivel>=10)r="Veterano"; if(nivel>=20)r="Lenda";
     document.getElementById('aluno-rank-title').innerText = r; if(document.getElementById('perfil-titulo-central')) document.getElementById('perfil-titulo-central').innerText = r;
+}
+
+async function carregarRankingTurma() {
+    const c = document.getElementById('ranking-turma-container');
+    if(!minhaTurma) { c.innerHTML = '<p class="text-muted center">Sem turma atribuída.</p>'; return; }
+    try {
+        const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", minhaTurma), where("papel", "==", "aluno")));
+        let alunos = []; snap.forEach(d => alunos.push({id: d.id, ...d.data()}));
+        alunos.sort((a,b) => (b.xp || 0) - (a.xp || 0));
+        
+        let html = '';
+        alunos.slice(0, 10).forEach((al, idx) => {
+            let cor = 'var(--text-muted)';
+            if(idx === 0) cor = '#ffd700'; else if(idx === 1) cor = '#c0c0c0'; else if(idx === 2) cor = '#cd7f32';
+            
+            html += `<div style="display:flex; align-items:center; gap:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left:3px solid ${cor};">
+                        <span style="font-weight:bold; font-size:1.2rem; color:${cor}; width:25px; text-align:center;">${idx+1}</span>
+                        <img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=00cc88&color=fff`}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;">
+                        <div style="flex:1;"><strong style="font-size:0.95rem; color:white;">${al.nome.split(' ')[0]} ${al.nome.split(' ').pop()}</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">${al.academia ? ACADEMIAS_INFO[al.academia].nome : 'S/ Academia'}</span></div>
+                        <span style="font-weight:bold; color:var(--primary-green); font-size:0.9rem;">${al.xp || 0} XP</span>
+                    </div>`;
+        });
+        c.innerHTML = html === '' ? '<p class="text-muted center">Ainda não há alunos com XP.</p>' : html;
+    } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao carregar ranking.</p>'; }
 }
 
 async function carregarObjetivosPessoais() {
@@ -389,6 +433,11 @@ async function carregarObjetivosPessoais() {
     } catch(e) {}
 }
 
+document.getElementById('btn-add-objetivo')?.addEventListener('click', async () => {
+    const disc = document.getElementById('obj-disciplina').value; const nota = document.getElementById('obj-nota-alvo').value;
+    if(!disc || !nota) { alert("Preenche a Disciplina e a Nota Alvo."); return; }
+    try { await addDoc(collection(db, "utilizadores", myUserId, "objetivos"), { disciplina: disc, notaAlvo: nota, concluido: false, timestamp: Date.now() }); document.getElementById('obj-nota-alvo').value = ''; carregarObjetivosPessoais(); } catch(e) {}
+});
 window.apagarObjetivo = async (id) => { if(confirm("Apagar objetivo?")) { try { await deleteDoc(doc(db, "utilizadores", myUserId, "objetivos", id)); carregarObjetivosPessoais(); } catch(e) {} } };
 
 function renderizarGraficoNotas() {
@@ -405,8 +454,8 @@ function renderizarGraficoNotas() {
 async function carregarEstatisticasEstudo() {
     try {
         const est = await getDocs(query(collection(db, "utilizadores", myUserId, "estudos")));
-        let tS = 0; let dU = new Set(); let mTot = 0;
-        est.forEach(d => { tS++; if(d.data().data) dU.add(d.data().data.split('T')[0]); mTot += Number(d.data().minutos || 30); });
+        let dU = new Set(); let mTot = 0;
+        est.forEach(d => { if(d.data().data) dU.add(d.data().data.split('T')[0]); mTot += Number(d.data().minutos || 30); });
         document.getElementById('total-minutos-foco').innerText = mTot>60?`${Math.floor(mTot/60)}h${mTot%60}m`:`${mTot}m`;
         let stk = 0; let dO = Array.from(dU).sort((a,b)=>b.localeCompare(a));
         if(dO.length>0){
@@ -417,6 +466,7 @@ async function carregarEstatisticasEstudo() {
     } catch(e) {}
 }
 
+document.getElementById('btn-view-mood-history')?.addEventListener('click', carregarHistoricoHumor);
 async function carregarHistoricoHumor() {
     const c = document.getElementById('mood-history-container'); c.innerHTML = '<p class="text-muted center">A atualizar...</p>';
     try {
@@ -427,9 +477,23 @@ async function carregarHistoricoHumor() {
     } catch(e){}
 }
 
+document.getElementById('upload-avatar')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0]; if(!file) return;
+    try {
+        const compressedFile = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 500, useWebWorker: true });
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+            const base64 = ev.target.result;
+            document.getElementById('perfil-avatar-img').src = base64;
+            document.getElementById('header-avatar-circle').innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+            await updateDoc(doc(db, "utilizadores", myUserId), { fotoPerfil: base64 });
+        };
+        reader.readAsDataURL(compressedFile);
+    } catch(err) {}
+});
 
 // ==========================================
-// 6. CADERNETA E LINHA TEMPORAL
+// 6. CADERNETA 
 // ==========================================
 async function obterEventosLinhaTemporal() {
     let ev = [];
@@ -444,7 +508,7 @@ async function carregarTimelineAluno() {
     const cCont = document.getElementById('aluno-caderneta-content');
     try {
         let eventos = await obterEventosLinhaTemporal();
-        if(timelineFilterCat !== 'all') { eventos = eventos.filter(e => e.cat === timelineFilterCat); }
+        if(window.timelineFilterCat !== 'all') { eventos = eventos.filter(e => e.cat === window.timelineFilterCat); }
         if(eventos.length === 0) { cCont.innerHTML = '<p class="text-muted center" style="margin-top:40px;">O teu histórico está limpo.</p>'; return; }
         let html = '<div class="timeline">'; eventos.forEach(e => { html += `<div class="timeline-item"><div class="timeline-icon" style="color:${e.cor}; border-color:${e.cor};">${e.icon}</div><div class="timeline-content" style="border-left: 3px solid ${e.cor};"><span class="timeline-date">${new Date(e.time).toLocaleDateString('pt-PT')}</span><strong style="color:white; display:block; margin-bottom:5px;">${e.titulo}</strong><p style="font-size:0.85rem; color:var(--text-light); margin:0;">${e.desc}</p></div></div>`; }); cCont.innerHTML = html + '</div>';
     } catch(e) {}
@@ -455,11 +519,11 @@ async function carregarNotificacoesAluno() {
     try {
         let evs = await obterEventosLinhaTemporal();
         evs = evs.map(e => { let c='escola'; if(e.cat==='faltas'&&e.cor==='var(--danger-red)') c='importante'; if(e.cat==='gamificacao') c='gamificacao'; return {...e, nCat: c}; });
-        if(notifFilterCat !== 'all') evs = evs.filter(e => e.nCat === notifFilterCat);
+        if(window.notifFilterCat !== 'all') evs = evs.filter(e => e.nCat === window.notifFilterCat);
         const rec = evs.slice(0, 15);
         if(rec.length === 0) { cont.innerHTML = '<p class="text-muted center" style="margin-top:40px;">Sem alertas nesta categoria.</p>'; return; }
         let h = ''; rec.forEach(ev => { h += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${ev.cor}; display:flex; align-items:flex-start; gap: 15px; padding: 15px;"><div style="font-size: 1.5rem; color: ${ev.cor};">${ev.icon}</div><div><strong style="color:white; font-size:1rem; display:block; margin-bottom:3px;">${ev.titulo}</strong><span style="font-size:0.85rem; color:var(--text-light);">${ev.desc}</span><div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px;">${new Date(ev.time).toLocaleString('pt-PT')}</div></div></div>`; }); cont.innerHTML = h; 
-        if(notifFilterCat === 'all') document.getElementById('badge-notificacoes').style.display = 'none';
+        if(window.notifFilterCat === 'all') document.getElementById('badge-notificacoes').style.display = 'none';
     } catch(e) {}
 }
 
@@ -661,8 +725,8 @@ async function carregarForuns() {
     ordemDisciplinasGlobal.forEach(disc => { html += `<div class="canal-card" data-id="disc_${disc}" data-nome="Fórum ${disc}" style="flex: 1 1 45%; padding: 10px;"><div class="canal-info" style="text-align:center;"><h4 style="margin:0; font-size:0.9rem; color:#00d2ff;"><i class="fa-solid fa-book-open"></i> ${disc}</h4></div></div>`; }); html += '</div>';
     try {
         const res = await getDocs(collection(db, "turmas", minhaTurma, "foruns")); let extrasHtml = '';
-        res.forEach(docSnap => { const f = docSnap.data(); if(f.membros && f.membros.includes(myUserId) && !f.isDefault) { extrasHtml += `<div class="canal-card" data-id="${docSnap.id}" data-nome="${f.nome}"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-comments"></i></div><div class="canal-info"><h4>${f.nome}</h4><p>Grupo de Estudo</p></div></div>`; } });
-        if (extrasHtml !== '') html += `<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Os Meus Chats</h3>` + extrasHtml;
+        res.forEach(docSnap => { const f = docSnap.data(); if(f.membros && f.membros.includes(myUserId) && !f.isDefault) { extrasHtml += `<div class="canal-card" data-id="${docSnap.id}" data-nome="${f.nome}" style="position:relative;"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-comments"></i></div><div class="canal-info"><h4>${f.nome}</h4><p>Grupo de Estudo</p></div><i class="fa-solid fa-trash btn-delete-chat" data-id="${docSnap.id}" style="color:var(--danger-red); position:absolute; right:15px; font-size:1.1rem; cursor:pointer;"></i></div>`; } });
+        if (extrasHtml !== '') html += `<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Os Meus Chats</h3><div style="display:flex; flex-direction:column; gap:10px;">${extrasHtml}</div>`;
     } catch(e) {}
     cont.innerHTML = html;
 }
@@ -674,38 +738,6 @@ function iniciarChatAluno(fId) {
         chatContainer.innerHTML = html; chatContainer.scrollTop = chatContainer.scrollHeight;
     });
 }
-
-// ==========================================
-// 9. POMODORO (Foco de Memória)
-// ==========================================
-function formatTimer(segundos) {
-    if(segundos < 0) segundos = 0; const m = Math.floor(segundos / 60).toString().padStart(2, '0'); const s = (segundos % 60).toString().padStart(2, '0');
-    document.getElementById('study-timer-text').innerText = `${m}:${s}`;
-}
-
-function resetPomodoroUI() {
-    clearInterval(pTmr); pTmr = null; localStorage.removeItem('pomodoroEndTarget');
-    document.getElementById('btn-stop-study').style.display = 'none'; document.getElementById('btn-start-study').style.display = 'inline-block';
-    document.getElementById('study-setup').style.display = 'block'; document.getElementById('study-timer-text').style.color = "white";
-}
-
-function renderTimerRunning() {
-    let target = localStorage.getItem('pomodoroEndTarget'); if(!target) return;
-    let left = Math.round((target - Date.now()) / 1000);
-    if(left <= 0) {
-        resetPomodoroUI(); formatTimer(0);
-        document.getElementById('study-controls').style.display = 'none'; document.getElementById('study-setup').style.display = 'none'; document.getElementById('post-study-log').style.display = 'block';
-    } else formatTimer(left);
-}
-
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden && pTmr !== null) {
-        clearInterval(pTmr); pTmr = null; localStorage.removeItem('pomodoroEndTarget');
-        document.getElementById('foco-xp-perdido').innerText = `${pXPConfig} XP`;
-        document.getElementById('modal-foco-interrompido').style.display = 'flex';
-        resetPomodoroUI(); formatTimer(pTimeConfig * 60);
-    }
-});
 
 // ==========================================
 // 11. SUMÁRIOS E PASSAPORTE
@@ -727,10 +759,8 @@ function carregarDadosPassaporte(dados) {
     if(dados.pap) { document.getElementById('input-pap-tema').value = dados.pap.tema || ''; }
     if (dados.papFicheiroEnviado) document.getElementById('aluno-pap-file-name').innerText = "Ficheiro submetido.";
 }
-
 document.getElementById('btn-save-fct')?.addEventListener('click', async (e) => { const v = document.getElementById('input-fct-horas').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "fct.horasRealizadas": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
 document.getElementById('btn-save-pap-tema')?.addEventListener('click', async (e) => { const v = document.getElementById('input-pap-tema').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "pap.tema": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-save"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
-let fPB64 = ""; document.getElementById('aluno-upload-pap')?.addEventListener('change', async (e) => { let f = e.target.files[0]; if(!f) return; if (f.type.startsWith('image/')) { try { f = await imageCompression(f, {maxSizeMB:0.5}); } catch(e){} } document.getElementById('aluno-pap-file-name').innerText = f.name; document.getElementById('btn-enviar-pap').style.display = 'block'; const r = new FileReader(); r.onload = ev => fPB64 = ev.target.result; r.readAsDataURL(f); });
 document.getElementById('btn-enviar-pap')?.addEventListener('click', async (e) => { if(!fPB64) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { const snap = await getDoc(doc(db, "utilizadores", myUserId)); let axp = snap.exists()&&snap.data().xp?snap.data().xp:0; await updateDoc(doc(db, "utilizadores", myUserId), { papFicheiroEnviado:true, papFicheiroBase64:fPB64, xp:axp+200 }); b.style.backgroundColor="var(--success-green)"; b.innerHTML='<i class="fa-solid fa-check"></i> Submetido'; setTimeout(() => { b.style.display='none'; b.disabled=false; document.getElementById('aluno-pap-file-name').style.color="var(--success-green)"; }, 2000); } catch(err){} });
 
 async function pedirPermissaoNotificacoes() { try { const p = await Notification.requestPermission(); if(p==='granted') { const r = await navigator.serviceWorker.register('./firebase-messaging-sw.js'); const t = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: r }); if(t) await updateDoc(doc(db, "utilizadores", myUserId), { tokenNotificacao: t }); } } catch(e){} }
