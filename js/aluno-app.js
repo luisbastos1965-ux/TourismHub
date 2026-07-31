@@ -8,7 +8,6 @@ try { await enableIndexedDbPersistence(db); console.log("Offline OK!"); } catch 
 
 let myUserId = "", myUserName = "", minhaTurma = "", myAcademia = "";
 let chartInstance = null; let alunoForumAtivoId = null; let chatUnsubscribeAluno = null; let pendingDeleteChatId = null;
-let fQB64 = "";
 
 window.timelineFilterCat = 'all'; window.notifFilterCat = 'all';
 let ahModo = 'dia', ahDOff = 0, ahSOff = 0;
@@ -52,13 +51,11 @@ onAuthStateChanged(auth, async (user) => {
                 } else if (turmaAno === 11) {
                     btnPassaporte.style.display = 'flex';
                     document.getElementById('btn-passaporte-texto').innerText = 'FCT (Estágio)';
-                    if(secFct) secFct.style.display = 'block';
-                    if(secPap) secPap.style.display = 'none';
+                    if(secFct) secFct.style.display = 'block'; if(secPap) secPap.style.display = 'none';
                 } else {
                     btnPassaporte.style.display = 'flex';
                     document.getElementById('btn-passaporte-texto').innerText = 'Estágio / PAP';
-                    if(secFct) secFct.style.display = 'block';
-                    if(secPap) secPap.style.display = 'block';
+                    if(secFct) secFct.style.display = 'block'; if(secPap) secPap.style.display = 'block';
                 }
 
                 carregarDadosPassaporte(d); carregarGamificacao(d);
@@ -80,7 +77,7 @@ function aplicarTemaAcademia(idHouse) { const ac = ACADEMIAS_INFO[idHouse]; if(!
 
 
 // ==========================================
-// 2. EVENT DELEGATION GLOBAL (CLIQUES SEGUROS)
+// 2. EVENT DELEGATION GLOBAL
 // ==========================================
 function esconderTodasAsVistas() { document.querySelectorAll('.app-content > div').forEach(v => v.style.display = 'none'); }
 
@@ -98,7 +95,7 @@ document.body.addEventListener('click', async (e) => {
         if(tId === 'view-aluno-forum') carregarForuns();
     }
     
-    // FERRAMENTAS
+    // FERRAMENTAS E ACESSO RÁPIDO
     if(e.target.closest('#btn-open-materiais')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-materiais').style.display = 'block'; carregarMateriaisAluno(); }
     if(e.target.closest('#btn-abrir-passaporte')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-passaporte').style.display = 'block'; }
     if(e.target.closest('#btn-open-notificacoes')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-notificacoes').style.display = 'block'; carregarNotificacoesAluno(); }
@@ -106,7 +103,7 @@ document.body.addEventListener('click', async (e) => {
         document.querySelector('.nav-item[data-target="student-dashboard"]').click();
     }
 
-    // CADERNETA (TABS SUPERIORES)
+    // CADERNETA TABS
     if(e.target.closest('#tab-aluno-timeline')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='flex'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarTimelineAluno(); }
     if(e.target.closest('#tab-aluno-notas')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarNotasAluno(); }
     if(e.target.closest('#tab-aluno-faltas')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarFaltasAluno(); }
@@ -128,7 +125,7 @@ document.body.addEventListener('click', async (e) => {
     if(e.target.closest('#btn-aluno-prev-horario')) { if(ahModo === 'dia') ahDOff--; else ahSOff--; carregarHorarioAluno(); }
     if(e.target.closest('#btn-aluno-next-horario')) { if(ahModo === 'dia') ahDOff++; else ahSOff++; carregarHorarioAluno(); }
 
-    // FÓRUNS (CRIAR, APAGAR E ABRIR)
+    // FÓRUNS
     if(e.target.closest('#btn-create-chat-aluno')) {
         document.getElementById('modal-criar-forum').style.display = 'flex'; 
         const cCont = document.getElementById('lista-colegas-forum'); cCont.innerHTML = '<p class="text-muted center">A procurar colegas...</p>';
@@ -172,7 +169,7 @@ document.body.addEventListener('click', async (e) => {
         try { await addDoc(collection(db, "turmas", minhaTurma, "foruns", alunoForumAtivoId, "mensagens"), { remetente: myUserName, texto: t, timestamp: Date.now() }); inp.value = ''; } catch(err) {} 
     }
     
-    // Objetivos Adicionar
+    // Metas
     if(e.target.closest('#btn-add-objetivo')) {
         const tipo = document.getElementById('obj-tipo').value;
         let data = { tipo: tipo, concluido: false, timestamp: Date.now() };
@@ -180,28 +177,28 @@ document.body.addEventListener('click', async (e) => {
             data.disciplina = document.getElementById('obj-disciplina').value; data.modulo = document.getElementById('obj-modulo').value; data.notaAlvo = document.getElementById('obj-nota-alvo').value;
             if(!data.disciplina || !data.modulo || !data.notaAlvo) return alert("Preenche todos os campos.");
             data.desc = `Tirar ${data.notaAlvo} no Mod. ${data.modulo} a ${data.disciplina}`;
-        } else if (tipo === 'nivel') {
-            data.nivelAlvo = document.getElementById('obj-nivel-alvo').value;
-            if(!data.nivelAlvo) return alert("Preenche o nível alvo.");
-            data.desc = `Alcançar o Nível ${data.nivelAlvo}`;
-        } else if (tipo === 'prhf') { data.desc = `Concluir 1 Plano de Recuperação (PRHF)`; }
-        
-        try { await addDoc(collection(db, "utilizadores", myUserId, "objetivos"), data); document.getElementById('obj-nota-alvo').value = ''; document.getElementById('obj-nivel-alvo').value = ''; carregarObjetivosPessoais(); } catch(err) {}
+        } else if (tipo === 'prhf') { 
+            const pSnap = await getDocs(collection(db, "utilizadores", myUserId, "prhfs"));
+            let c = 0; pSnap.forEach(p => { if(p.data().status === 'concluida') c++; });
+            data.targetCount = c + 1; data.desc = `Concluir +1 Plano de Recuperação (PRHF)`;
+        } else if (tipo === 'reconhecimento') {
+            const rSnap = await getDocs(query(collection(db, "utilizadores", myUserId, "ocorrencias"), where("tipo", "==", "positiva")));
+            data.targetCount = rSnap.size + 1; data.desc = `Receber +1 Registo Positivo do Professor`;
+        }
+        try { await addDoc(collection(db, "utilizadores", myUserId, "objetivos"), data); document.getElementById('obj-nota-alvo').value = ''; carregarObjetivosPessoais(); } catch(err) {}
     }
 });
 
-// Eventos Automáticos de Mudar o Dropdown ou Escolher Foto
+// Eventos Dropdown Globais
 document.addEventListener('change', async (e) => {
-    // Mudança de Tipo de Objetivo
     if (e.target.id === 'obj-tipo') {
-        const v = e.target.value; document.getElementById('obj-setup-nota').style.display = v === 'nota' ? 'flex' : 'none'; document.getElementById('obj-setup-nivel').style.display = v === 'nivel' ? 'flex' : 'none';
+        const v = e.target.value; document.getElementById('obj-setup-nota').style.display = v === 'nota' ? 'flex' : 'none';
     }
-    // Filtros Agenda
     if (e.target.closest('.agenda-filter-label input')) { carregarAgendaAlunoLista(); }
 });
 
 // ==========================================
-// 3. DASHBOARD ADAPTATIVO MÁGICO
+// 3. DASHBOARD ADAPTATIVO
 // ==========================================
 async function construirHomeAdaptativa() {
     const alertCont = document.getElementById('hero-alert-section'); const emoCont = document.getElementById('hero-emotional-section');
@@ -304,21 +301,34 @@ async function carregarRankingTurma() {
     try {
         const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", minhaTurma), where("papel", "==", "aluno")));
         let alunos = []; snap.forEach(d => alunos.push({id: d.id, ...d.data()})); alunos.sort((a,b) => (b.xp || 0) - (a.xp || 0));
-        let html = '';
+        
+        let academiasXP = { atlas: 0, sentinela: 0, nexus: 0, aurora: 0 };
+        alunos.forEach(al => { if(al.academia && academiasXP[al.academia] !== undefined) academiasXP[al.academia] += (al.xp || 0); });
+        
+        let hAcad = `<div style="display:flex; justify-content:space-around; margin-bottom:20px; text-align:center; background:rgba(0,0,0,0.2); padding:15px; border-radius:12px;">`;
+        const orderAcad = Object.keys(academiasXP).sort((a,b) => academiasXP[b] - academiasXP[a]);
+        orderAcad.forEach((ac) => {
+            const acData = ACADEMIAS_INFO[ac];
+            hAcad += `<div><i class="fa-solid ${acData.icon}" style="font-size:2rem; color:${acData.cor}; margin-bottom:8px; display:block;"></i><strong style="color:white; font-size:0.85rem;">${acData.nome}</strong><br><span style="color:var(--warning-yellow); font-size:0.9rem; font-weight:bold;">${academiasXP[ac]} XP</span></div>`;
+        });
+        hAcad += `</div><h4 style="color:var(--text-muted); font-size:0.85rem; text-transform:uppercase; margin-bottom:10px;">🏆 Top 10 Alunos</h4>`;
+        
+        let hAl = '';
         alunos.slice(0, 10).forEach((al, idx) => {
             let cor = 'var(--text-muted)'; if(idx === 0) cor = '#ffd700'; else if(idx === 1) cor = '#c0c0c0'; else if(idx === 2) cor = '#cd7f32';
-            html += `<div style="display:flex; align-items:center; gap:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left:3px solid ${cor};"><span style="font-weight:bold; font-size:1.2rem; color:${cor}; width:25px; text-align:center;">${idx+1}</span><img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=00cc88&color=fff`}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"><div style="flex:1;"><strong style="font-size:0.95rem; color:white;">${al.nome.split(' ')[0]} ${al.nome.split(' ').pop()}</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">${al.academia ? ACADEMIAS_INFO[al.academia].nome : 'S/ Academia'}</span></div><span style="font-weight:bold; color:var(--primary-green); font-size:0.9rem;">${al.xp || 0} XP</span></div>`;
+            hAl += `<div style="display:flex; align-items:center; gap:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left:3px solid ${cor};"><span style="font-weight:bold; font-size:1.2rem; color:${cor}; width:25px; text-align:center;">${idx+1}</span><img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=00cc88&color=fff`}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"><div style="flex:1;"><strong style="font-size:0.95rem; color:white;">${al.nome.split(' ')[0]} ${al.nome.split(' ').pop()}</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">${al.academia ? ACADEMIAS_INFO[al.academia].nome : 'S/ Academia'}</span></div><span style="font-weight:bold; color:var(--primary-green); font-size:0.9rem;">${al.xp || 0} XP</span></div>`;
         });
-        c.innerHTML = html === '' ? '<p class="text-muted center">Ainda não há alunos com XP.</p>' : html;
+        c.innerHTML = hAcad + (hAl === '' ? '<p class="text-muted center">Ainda não há alunos com XP.</p>' : hAl);
     } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao carregar ranking.</p>'; }
 }
 
 async function carregarObjetivosPessoais() {
     const cont = document.getElementById('lista-objetivos-container'); cont.innerHTML = '<p class="text-muted center">A carregar...</p>';
     try {
-        const uSnap = await getDoc(doc(db, "utilizadores", myUserId)); const uXp = uSnap.exists() ? (uSnap.data().xp || 0) : 0; const currentNivel = Math.floor(uXp / 100) + 1;
+        const uSnap = await getDoc(doc(db, "utilizadores", myUserId)); const uXp = uSnap.exists() ? (uSnap.data().xp || 0) : 0;
         const nSnap = await getDocs(collection(db, "utilizadores", myUserId, "notas")); let notasArr = []; nSnap.forEach(n => notasArr.push(n.data()));
-        const pSnap = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); let prhfsArr = []; pSnap.forEach(p => prhfsArr.push(p.data()));
+        const pSnap = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); let numPrhfs = 0; pSnap.forEach(p => { if(p.data().status === 'concluida') numPrhfs++; });
+        const rSnap = await getDocs(query(collection(db, "utilizadores", myUserId, "ocorrencias"), where("tipo", "==", "positiva"))); const numPositivas = rSnap.size;
 
         const snap = await getDocs(collection(db, "utilizadores", myUserId, "objetivos")); let objArr = []; snap.forEach(d => objArr.push({id: d.id, ...d.data()})); objArr.sort((a,b) => b.timestamp - a.timestamp);
         let html = ''; let objGanhouXP = false;
@@ -326,14 +336,14 @@ async function carregarObjetivosPessoais() {
             let achieved = false;
             if(!obj.concluido) {
                 if(obj.tipo === 'nota') { const temNota = notasArr.find(n => n.disciplina === obj.disciplina && Number(n.modulo) === Number(obj.modulo) && Number(n.nota) >= Number(obj.notaAlvo)); if(temNota) achieved = true; } 
-                else if (obj.tipo === 'nivel') { if(currentNivel >= Number(obj.nivelAlvo)) achieved = true; } 
-                else if (obj.tipo === 'prhf') { const temPrhfConcluido = prhfsArr.find(p => p.status === 'concluida'); if(temPrhfConcluido) achieved = true; }
+                else if (obj.tipo === 'prhf') { if(numPrhfs >= obj.targetCount) achieved = true; }
+                else if (obj.tipo === 'reconhecimento') { if(numPositivas >= obj.targetCount) achieved = true; }
             }
             if(achieved) { await updateDoc(doc(db, "utilizadores", myUserId, "objetivos", obj.id), { concluido: true }); obj.concluido = true; objGanhouXP = true; }
             const cColor = obj.concluido ? 'var(--success-green)' : '#444'; const txtDec = obj.concluido ? 'line-through' : 'none'; const txtColor = obj.concluido ? 'var(--text-muted)' : 'white';
             html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left: 3px solid ${cColor};"><div style="display:flex; align-items:center; gap:12px; flex:1;"><div style="width:24px; height:24px; border-radius:50%; border:2px solid ${cColor}; background:${obj.concluido ? cColor : 'transparent'}; display:flex; align-items:center; justify-content:center;">${obj.concluido ? '<i class="fa-solid fa-check" style="color:var(--bg-dark); font-size:0.75rem;"></i>' : ''}</div><span style="text-decoration:${txtDec}; color:${txtColor}; font-size:0.95rem; flex:1;">${obj.desc}</span></div><i class="fa-solid fa-trash" style="color:var(--danger-red); cursor:pointer; font-size:0.9rem; padding: 5px;" onclick="window.apagarObjetivo('${obj.id}')"></i></div>`;
         }
-        if(objGanhouXP) { await updateDoc(doc(db, "utilizadores", myUserId), { xp: uXp + 50 }); carregarGamificacao({xp: uXp+50}); alert("🎉 Parabéns! Um Objetivo Inteligente foi concluído automaticamente! +50 XP"); }
+        if(objGanhouXP) { await updateDoc(doc(db, "utilizadores", myUserId), { xp: uXp + 50 }); carregarGamificacao({xp: uXp+50}); alert("🎉 Parabéns! Uma Meta foi concluída automaticamente! +50 XP"); }
         cont.innerHTML = html === '' ? '<p class="text-muted center" style="font-size:0.85rem;">Não tens metas ativas. Começa a desafiar-te!</p>' : html;
     } catch(e) {}
 }
@@ -344,8 +354,11 @@ function renderizarGraficoNotas() {
     const ctx = document.getElementById('chart-notas-aluno'); if(!ctx) return;
     getDocs(collection(db, "utilizadores", myUserId, "notas")).then(notasDb => {
         let mapN = {}; notasDb.forEach(d => { const n = d.data(); if(n.nota!=='REP'&&!isNaN(n.nota)){ if(!mapN[n.disciplina])mapN[n.disciplina]={s:0,c:0}; mapN[n.disciplina].s+=Number(n.nota); mapN[n.disciplina].c++; } });
-        let l=[], dt=[], bg=[]; Object.keys(mapN).forEach(dc => { l.push(dc); const md=(mapN[dc].s/mapN[dc].c).toFixed(1); dt.push(md); bg.push(md>=10?'#00cc88':'#ff4d4d'); });
-        if(l.length===0){ l=["Sem Dados"]; dt=[0]; bg=["#333"]; }
+        let l = ordemDisciplinasGlobal; let dt=[], bg=[]; 
+        l.forEach(dc => { 
+            if(mapN[dc]) { const md=(mapN[dc].s/mapN[dc].c).toFixed(1); dt.push(md); bg.push(md>=10?'#00cc88':'#ff4d4d'); }
+            else { dt.push(0); bg.push('#333'); }
+        });
         if(chartInstance) chartInstance.destroy();
         chartInstance = new Chart(ctx, { type:'bar', data:{labels:l, datasets:[{label:'Média', data:dt, backgroundColor:bg, borderRadius:6}]}, options:{responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true, max:20}, x:{grid:{display:false}}}, plugins:{legend:{display:false}}} });
     });
@@ -524,11 +537,9 @@ async function carregarAgendaAlunoLista() {
         let evs = [];
         evDb.forEach(d => { const e = d.data(); let bgC = '#b82bf2'; let txtT = 'Evento'; if(e.tipo === 'teste' || e.tipo === 'avaliacao') { if(mT) { bgC = '#ffaa00'; txtT = 'Avaliação'; evs.push({...e, cor: bgC, txt: txtT}); } } else if(e.tipo === 'trabalho' || e.tipo === 'entrega') { if(mTr) { bgC = '#00d2ff'; txtT = 'Entrega'; evs.push({...e, cor: bgC, txt: txtT}); } } else { if(mO) evs.push({...e, cor: bgC, txt: txtT}); } });
         if(evs.length === 0) { sC.innerHTML = '<p class="text-muted center">Nenhum evento com os filtros atuais.</p>'; return; }
-        
         const hj = new Date().toISOString().split('T')[0]; const fut = evs.filter(e => e.data >= hj).sort((a,b) => a.data.localeCompare(b.data)); const pas = evs.filter(e => e.data < hj).sort((a,b) => b.data.localeCompare(a.data));
         const mA = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; let html = '';
         const rEv = (ev) => { const dp = ev.data.split('-'); const mes = mA[parseInt(dp[1])-1]; return `<div class="calendar-event-card" style="border-left-color:${ev.cor}; margin-bottom:10px;"><div class="calendar-date-box"><span class="day">${dp[2]}</span><span class="month" style="color:${ev.cor};">${mes}</span></div><div class="calendar-info"><h4 style="margin:0; color:white;">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt||'evento').toUpperCase()}</span></div></div>`; };
-
         if(fut.length > 0) fut.forEach(e => html += rEv(e)); else html += '<p class="text-muted center">Sem eventos futuros.</p>';
         if(pas.length > 0) { html += '<div class="calendar-divider" style="margin-top:20px;"><span>Passados</span></div>'; pas.forEach(e => html += rEv(e)); } sC.innerHTML = html;
     } catch(e) {}
@@ -573,12 +584,12 @@ async function carregarHorarioAluno() {
 // ==========================================
 async function carregarForuns() {
     const cont = document.getElementById('aluno-forum-channel-list'); cont.innerHTML = '<p class="text-muted center">A configurar fóruns...</p>'; if(!minhaTurma) return;
-    let html = `<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apoio & Turma</h3><div class="canal-card" data-id="turma_global" data-nome="Turma ${minhaTurma}" style="margin-bottom: 15px;"><div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-users"></i></div><div class="canal-info"><h4>Turma ${minhaTurma}</h4><p>Canal Geral</p></div></div><div class="canal-card" data-id="dt_${myUserId}" data-nome="Chat DT"><div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div><div class="canal-info"><h4>Diretor de Turma</h4><p>Mensagem Privada</p></div></div><h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Disciplinas</h3><div style="display:flex; flex-wrap:wrap; gap:10px;">`;
-    ordemDisciplinasGlobal.forEach(disc => { html += `<div class="canal-card" data-id="disc_${disc}" data-nome="Fórum ${disc}" style="flex: 1 1 45%; padding: 10px;"><div class="canal-info" style="text-align:center;"><h4 style="margin:0; font-size:0.9rem; color:#00d2ff;"><i class="fa-solid fa-book-open"></i> ${disc}</h4></div></div>`; }); html += '</div>';
+    let html = `<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apoio & Turma</h3><div class="canal-card" data-id="turma_global" data-nome="Turma ${minhaTurma}" style="margin-bottom: 10px;"><div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-users"></i></div><div class="canal-info"><h4>Turma ${minhaTurma}</h4><p>Canal Geral</p></div></div><div class="canal-card" data-id="dt_${myUserId}" data-nome="Chat DT"><div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div><div class="canal-info"><h4>Diretor de Turma</h4><p>Mensagem Privada</p></div></div><h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Disciplinas</h3><div style="display:flex; flex-direction:column; gap:10px;">`;
+    ordemDisciplinasGlobal.forEach(disc => { html += `<div class="canal-card" data-id="disc_${disc}" data-nome="Fórum ${disc}"><div class="canal-info" style="text-align:left;"><h4 style="margin:0; font-size:0.9rem; color:#00d2ff;"><i class="fa-solid fa-book-open"></i> ${disc}</h4></div></div>`; }); html += '</div>';
     try {
-        const s = await getDocs(collection(db, "turmas", minhaTurma, "foruns")); let eH = ''; let arr = []; s.forEach(d => arr.push({id: d.id, ...d.data()}));
-        arr.forEach(f => { if(f.membros && f.membros.includes(myUserId) && !f.isDefault) { eH += `<div class="canal-card" data-id="${f.id}" data-nome="${f.nome}" style="position:relative; flex: 1 1 45%; padding:10px;"><div class="canal-info" style="text-align:center;"><h4 style="margin:0; font-size:0.9rem; color:#b82bf2;"><i class="fa-solid fa-comments"></i> ${f.nome}</h4></div><i class="fa-solid fa-trash btn-delete-chat" data-id="${f.id}" style="color:var(--danger-red); position:absolute; top:5px; right:5px; font-size:0.8rem; cursor:pointer; padding:5px;"></i></div>`; } });
-        if (eH !== '') html += `<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Os Meus Chats</h3><div style="display:flex; flex-wrap:wrap; gap:10px;">${eH}</div>`;
+        const res = await getDocs(collection(db, "turmas", minhaTurma, "foruns")); let extrasHtml = '';
+        res.forEach(docSnap => { const f = docSnap.data(); if(f.membros && f.membros.includes(myUserId) && !f.isDefault) { extrasHtml += `<div class="canal-card" data-id="${docSnap.id}" data-nome="${f.nome}" style="position:relative;"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-comments"></i></div><div class="canal-info"><h4>${f.nome}</h4><p>Grupo de Estudo</p></div><i class="fa-solid fa-trash btn-delete-chat" data-id="${docSnap.id}" style="color:var(--danger-red); position:absolute; right:15px; font-size:1.1rem; cursor:pointer;"></i></div>`; } });
+        if (extrasHtml !== '') html += `<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Os Meus Chats</h3><div style="display:flex; flex-direction:column; gap:10px;">${extrasHtml}</div>`;
     } catch(e) {}
     cont.innerHTML = html;
 }
@@ -592,7 +603,7 @@ function iniciarChatAluno(fId) {
 }
 
 // ==========================================
-// 11. SUMÁRIOS E PASSAPORTE
+// 11. SUMÁRIOS (MATERIAIS) E PASSAPORTE
 // ==========================================
 async function carregarMateriaisAluno() {
     const c = document.getElementById('aluno-lista-materiais-container'); c.innerHTML = '<p class="text-muted center">A carregar materiais...</p>'; if(!minhaTurma) return;
