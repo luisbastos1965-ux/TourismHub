@@ -33,6 +33,15 @@
         
         .input-padrao { background: var(--bg-dark); border: 1px solid #333; color: white; border-radius: 8px; padding: 10px; font-family: inherit; }
         .input-padrao:focus { outline: none; border-color: var(--primary-green); }
+        
+        /* Roda de Seleção do Foco */
+        .wheel-container { position: relative; width: 100px; margin: 0 auto; }
+        .wheel-scroll { height: 90px; overflow-y: scroll; scroll-snap-type: y mandatory; scrollbar-width: none; border: 2px solid var(--primary-green); border-radius: 12px; background: #111; }
+        .wheel-scroll::-webkit-scrollbar { display: none; }
+        .wheel-opt { height: 30px; line-height: 30px; scroll-snap-align: center; font-size: 1.2rem; font-weight: bold; color: #555; transition: 0.2s; cursor: pointer; }
+        .wheel-label { position: absolute; top: 30px; right: -35px; line-height: 30px; color: var(--text-muted); font-size: 0.9rem; font-weight: bold; }
+        .wheel-fade-top { position: absolute; top: 0; left: 0; width: 100%; height: 30px; background: linear-gradient(to bottom, #111, transparent); pointer-events: none; border-radius: 12px 12px 0 0; }
+        .wheel-fade-bottom { position: absolute; bottom: 0; left: 0; width: 100%; height: 30px; background: linear-gradient(to top, #111, transparent); pointer-events: none; border-radius: 0 0 12px 12px; }
     </style>
 </head>
 <body>
@@ -67,7 +76,6 @@
                     </div>
                 </div>
 
-                <!-- PESQUISA UNIVERSAL -->
                 <div style="margin-bottom: 20px; position: relative;">
                     <div style="display:flex; align-items:center; background: var(--bg-card); border: 1px solid #333; border-radius: 20px; padding: 0 15px;">
                         <i class="fa-solid fa-magnifying-glass" style="color:var(--text-muted);"></i>
@@ -82,11 +90,8 @@
                     <div id="exam-countdown" style="font-size: 1.5rem; font-weight: bold; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; display: inline-block;">Faltam X dias</div>
                 </div>
 
-                <!-- ALARMES E AVISOS ESCOLARES (Injetado via JS) -->
-                <div id="hero-alert-section"></div>
-
-                <!-- ACESSO RÁPIDO -->
-                <div class="lms-action-grid" style="margin-top: 10px; margin-bottom: 20px;">
+                <!-- ACESSO RÁPIDO NO TOPO -->
+                <div class="lms-action-grid" style="margin-bottom: 20px;">
                     <button class="lms-btn" id="btn-open-study-mode" style="border-color:#9b59b6; color:#9b59b6; background: rgba(155, 89, 182, 0.05);">
                         <i class="fa-solid fa-stopwatch"></i><span>Modo Foco</span>
                     </button>
@@ -101,6 +106,9 @@
                     </button>
                 </div>
 
+                <!-- ALARMES E AVISOS ESCOLARES (Injetado via JS) -->
+                <div id="hero-alert-section"></div>
+
                 <!-- EMOCIONAL E MISSÕES DA TURMA (Injetado via JS) -->
                 <div id="hero-emotional-section"></div>
             </div>
@@ -108,7 +116,6 @@
             <!-- VISTA PERFIL -->
             <div id="view-aluno-perfil" style="display: none; padding-top: 10px;">
                 
-                <!-- Info do Utilizador -->
                 <div class="card" style="text-align: center;">
                     <div style="position:relative; width: 100px; height: 100px; margin: 0 auto 15px auto;">
                         <img id="perfil-avatar-img" src="https://via.placeholder.com/100" style="width:100%; height:100%; border-radius:50%; object-fit:cover; border: 3px solid var(--primary-green);">
@@ -160,16 +167,6 @@
                     <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-chart-pie"></i> Desempenho por Disciplina</h3>
                     <div style="position: relative; height: 220px; width: 100%;">
                         <canvas id="chart-notas-aluno"></canvas>
-                    </div>
-                </div>
-
-                <div class="card" style="border-left: 4px solid #b82bf2; margin-top: 20px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                        <h3 style="font-size: 1.1rem; color: white; margin:0;"><i class="fa-solid fa-heart-pulse"></i> Histórico Emocional</h3>
-                        <button id="btn-view-mood-history" style="background:rgba(255,255,255,0.05); border:1px solid #333; color:white; cursor:pointer; font-size:0.85rem; padding: 4px 10px; border-radius: 6px; transition:0.2s;"><i class="fa-solid fa-arrows-rotate"></i> Atualizar</button>
-                    </div>
-                    <div id="mood-history-container">
-                        <p class="text-muted center" style="font-size: 0.85rem;">A carregar histórico...</p>
                     </div>
                 </div>
             </div>
@@ -285,7 +282,7 @@
                     <div id="prhf-docs-container"></div>
                     
                     <h4 style="font-size: 0.95rem; margin-bottom: 10px; margin-top: 15px; color:var(--primary-green);">Agendar Sessão Presencial</h4>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Indica o dia e o horário para validação do Professor.</p>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Indica o dia e o horário para o Professor validar.</p>
                     
                     <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                         <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Data</label><input type="date" id="aluno-prhf-proposta-data" style="margin:0; width:100%;"></div>
@@ -362,7 +359,7 @@
 
                     <div style="display:flex; gap:10px;">
                         <button id="btn-cancelar-novo-forum" class="secondary-btn">Cancelar</button>
-                        <button id="btn-confirmar-novo-forum" class="primary-btn">Criar Grupo</button>
+                        <button id="btn-confirm-novo-forum" class="primary-btn">Criar Grupo</button>
                     </div>
                 </div>
             </div>
@@ -409,7 +406,7 @@
                 </div>
             </div>
 
-            <!-- MODO FOCO (CENTRALIZADO COM FLEX) -->
+            <!-- MODO FOCO (RODA SCROLL + CENTRADO) -->
             <div id="view-study-mode" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 70vh; box-sizing: border-box; padding: 20px;">
                 <div style="text-align: center; width: 100%;">
                     <i class="fa-solid fa-stopwatch" style="font-size: 3rem; color: var(--primary-green); margin-bottom: 15px;"></i>
@@ -417,14 +414,23 @@
                     <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 25px;">Se saíres da aplicação, o relógio pára e perdes a recompensa!</p>
                     
                     <div id="study-setup" style="margin-bottom: 30px;">
-                        <p style="font-size: 0.95rem; margin-bottom: 10px;">Tempo de Foco (Minutos):</p>
-                        <select id="study-time-selector" style="width: 150px; text-align: center; font-size: 1.2rem; font-weight: bold; background: #111; color: white; border: 1px solid var(--primary-green); padding: 8px; border-radius: 8px;">
-                            <option value="15">15 Min</option>
-                            <option value="25">25 Min</option>
-                            <option value="30" selected>30 Min</option>
-                            <option value="45">45 Min</option>
-                            <option value="60">60 Min</option>
-                        </select>
+                        <p style="font-size: 0.95rem; margin-bottom: 10px;">Desliza para escolher o tempo:</p>
+                        
+                        <!-- RODA CSS SCROLL -->
+                        <div class="wheel-container">
+                            <div class="wheel-fade-top"></div>
+                            <div id="study-wheel" class="wheel-scroll">
+                                <div style="height: 30px;"></div>
+                                <div class="wheel-opt" data-val="15">15</div>
+                                <div class="wheel-opt" data-val="25">25</div>
+                                <div class="wheel-opt" data-val="30" style="color: white; font-size: 1.6rem;">30</div>
+                                <div class="wheel-opt" data-val="45">45</div>
+                                <div class="wheel-opt" data-val="60">60</div>
+                                <div style="height: 30px;"></div>
+                            </div>
+                            <div class="wheel-label">Min</div>
+                            <div class="wheel-fade-bottom"></div>
+                        </div>
                     </div>
 
                     <div style="font-size: 5.5rem; font-weight: bold; font-family: monospace; color: white; margin-bottom: 40px; text-shadow: 0 0 20px rgba(0, 204, 136, 0.3);" id="study-timer-text">30:00</div>
@@ -457,7 +463,6 @@
             <!-- MODAL TESTE DAS ACADEMIAS (INICIAL) -->
             <div id="modal-academia-quiz" class="modal-overlay" style="z-index: 4000; background: var(--bg-dark);">
                 <div class="action-sheet" style="max-width:500px; border-radius:12px; margin:20px; text-align: center; height: auto; max-height: 90vh;">
-                    
                     <div id="quiz-question-container">
                         <i class="fa-solid fa-chess-rook" style="font-size: 3rem; color: white; margin-bottom: 15px;"></i>
                         <h2 style="margin-bottom: 10px; color: white;">Bem-vindo à Turma PRO</h2>
@@ -472,14 +477,12 @@
                             <button class="secondary-btn quiz-opt" data-house="aurora" style="text-align:left; justify-content:flex-start; height:auto; padding:15px;">Ser o melhor, bater os meus recordes e focar-me.</button>
                         </div>
                     </div>
-
                     <div id="quiz-result-container" style="display: none; padding: 20px 0;">
                         <div id="quiz-result-icon" style="font-size: 4rem; margin-bottom: 15px;"></div>
                         <h2 style="margin-bottom: 5px; color: white;">És da Academia <span id="quiz-result-name">...</span>!</h2>
                         <p id="quiz-result-desc" style="font-size:0.9rem; color:var(--text-muted); margin-bottom:25px; line-height: 1.5;"></p>
                         <button id="btn-entrar-app" class="primary-btn" style="font-size: 1.1rem; padding: 15px;">Entrar na Aplicação</button>
                     </div>
-
                 </div>
             </div>
             
