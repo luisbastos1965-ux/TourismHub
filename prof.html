@@ -7,27 +7,7 @@
     <link rel="icon" type="image/png" href="logo_tur.png">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <style>
-        .filter-chips-container { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 15px; scrollbar-width: none; }
-        .filter-chips-container::-webkit-scrollbar { display: none; }
-        .filter-chip { background: var(--bg-dark); border: 1px solid #333; color: var(--text-muted); padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; cursor: pointer; white-space: nowrap; transition: 0.2s; }
-        .filter-chip.active { background: var(--primary-green); color: var(--bg-dark); border-color: var(--primary-green); font-weight: bold; }
-        .input-padrao { background: var(--bg-dark); border: 1px solid #333; color: white; border-radius: 8px; padding: 10px; font-family: inherit; }
-        .input-padrao:focus { outline: none; border-color: var(--primary-green); }
-        
-        /* Semáforos de Risco */
-        .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; box-shadow: 0 0 8px rgba(0,0,0,0.5); }
-        .status-green { background-color: var(--success-green); }
-        .status-yellow { background-color: var(--warning-yellow); }
-        .status-red { background-color: var(--danger-red); }
-
-        /* Lista de Alunos (Faltas Rápidas) */
-        .aluno-list-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 8px; border: 1px solid #333; }
-        .chk-presente { width: 22px; height: 22px; accent-color: var(--primary-green); cursor: pointer; }
-    </style>
 </head>
 <body>
     <div id="app-content">
@@ -78,15 +58,11 @@
 
                 <div id="turma-ativa-container" style="display: none;">
                     
-                    <!-- ASSISTENTE DE AULA -->
                     <div class="card" style="background: linear-gradient(135deg, rgba(0, 204, 136, 0.1), rgba(0, 0, 0, 0.2)); border: 1px solid var(--primary-green); margin-bottom: 20px;">
                         <h3 style="font-size: 1.1rem; margin-bottom: 10px; color: var(--primary-green);"><i class="fa-solid fa-robot"></i> Assistente de Aula</h3>
-                        <div id="assistente-aula-texto" style="font-size: 0.9rem; color: var(--text-light); line-height: 1.5;">
-                            A analisar dados da turma em tempo real...
-                        </div>
+                        <div id="assistente-aula-texto" style="font-size: 0.9rem; color: var(--text-light); line-height: 1.5;">A analisar dados da turma em tempo real...</div>
                     </div>
 
-                    <!-- ACESSO RÁPIDO (Ações do Professor) -->
                     <div class="lms-action-grid" style="margin-bottom: 25px;">
                         <button class="lms-btn" id="btn-modal-faltas" style="border-color:var(--danger-red); color:var(--danger-red); background: rgba(255, 77, 77, 0.05);">
                             <i class="fa-solid fa-user-xmark"></i><span>Faltas</span>
@@ -102,21 +78,18 @@
                         </button>
                     </div>
 
-                    <!-- LISTA DE ALUNOS (Com Semáforo) -->
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <h3 style="font-size: 1.1rem; color: white;">Lista de Alunos</h3>
                         <div style="font-size: 0.75rem; color: var(--text-muted);">
-                            <span class="status-dot status-green" style="width:8px; height:8px;"></span> Em dia &nbsp; 
-                            <span class="status-dot status-red" style="width:8px; height:8px;"></span> Risco
+                            <span class="status-dot status-green"></span> Em dia &nbsp; 
+                            <span class="status-dot status-red"></span> Risco
                         </div>
                     </div>
-                    <div id="lista-alunos-turma" style="display: flex; flex-direction: column; gap: 8px;">
-                        <!-- Injetado via JS -->
-                    </div>
+                    <div id="lista-alunos-turma" style="display: flex; flex-direction: column; gap: 8px;"></div>
                 </div>
             </div>
 
-            <!-- VISTA 3: TAREFAS BUROCRÁTICAS (PRHF, PAP, FCT) -->
+            <!-- VISTA 3: TAREFAS BUROCRÁTICAS -->
             <div id="view-prof-tarefas" style="display: none;">
                 <h2 style="font-size: 1.3rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-inbox"></i> Centro de Tarefas</h2>
                 
@@ -127,39 +100,21 @@
 
                 <div id="sec-tarefas-prhf">
                     <button id="btn-novo-prhf" class="primary-btn" style="width:100%; margin-bottom:15px; background:var(--bg-dark); color:var(--primary-green); border:1px dashed var(--primary-green);"><i class="fa-solid fa-plus"></i> Criar Novo PRHF</button>
-                    <div id="lista-prhfs-professor">
-                        <p class="text-muted center">A carregar planos de recuperação...</p>
-                    </div>
+                    <div id="lista-prhfs-professor"><p class="text-muted center">A carregar planos de recuperação...</p></div>
                 </div>
 
                 <div id="sec-tarefas-passaporte" style="display: none;">
-                    <div id="lista-passaportes-professor">
-                        <p class="text-muted center">Apenas disponível para turmas de 11º e 12º Ano.</p>
-                    </div>
+                    <div id="lista-passaportes-professor"><p class="text-muted center">Apenas disponível para turmas de 11º e 12º Ano.</p></div>
                 </div>
             </div>
 
-            <!-- VISTA 4: FÓRUNS E COMUNICAÇÃO -->
+            <!-- VISTA 4: FÓRUNS -->
             <div id="view-prof-forum" style="display: none; flex-direction:column;">
                 <h2 style="font-size: 1.3rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-comments"></i> Comunicação</h2>
-                <button id="btn-create-chat-prof" class="primary-btn" style="background:var(--bg-dark); border:2px dashed var(--primary-green); color:var(--primary-green); width: 100%; margin-bottom: 20px; font-size:1.1rem; padding:15px;"><i class="fa-solid fa-plus"></i> Novo Chat da Disciplina</button>
                 <div id="prof-forum-channel-list"></div>
-
-                <!-- Janela de Chat Interna -->
-                <div id="prof-forum-chat-view" style="display:none; flex-direction:column; height:65vh; background:var(--bg-card); border-radius:12px; border:1px solid #333; overflow:hidden;">
-                    <div style="background:#222; padding:15px; display:flex; align-items:center; gap:10px; border-bottom:1px solid #333;">
-                        <button id="btn-prof-voltar-canais" class="secondary-btn small-btn" style="padding:5px 10px; width:auto; border:none;"><i class="fa-solid fa-arrow-left"></i></button>
-                        <h3 id="prof-chat-active-title" style="color:white; font-size:1.1rem; margin:0; flex:1;">...</h3>
-                    </div>
-                    <div class="forum-messages" id="prof-chat-messages-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:15px;"></div>
-                    <div class="forum-input-area" style="background:#1a1a1a; padding:10px; border-top:1px solid #333; display:flex; gap:8px; align-items:center;">
-                        <input type="text" id="prof-input-forum-msg" placeholder="Escreve uma mensagem ou aviso..." class="input-padrao" style="margin:0; flex:1; border-radius:20px; padding:10px 15px;">
-                        <button id="btn-prof-send-msg" class="forum-send-btn" style="width:40px; height:40px;"><i class="fa-solid fa-paper-plane"></i></button>
-                    </div>
-                </div>
             </div>
 
-            <!-- VISTA 5: PERFIL E DEFINIÇÕES -->
+            <!-- VISTA 5: PERFIL -->
             <div id="view-prof-perfil" style="display: none;">
                 <div class="card" style="text-align: center;">
                     <div style="position:relative; width: 100px; height: 100px; margin: 0 auto 15px auto;">
@@ -171,10 +126,10 @@
             </div>
 
             <!-- ============================================== -->
-            <!-- ÁREA DE MODAIS (POP-UPS DE AÇÃO RÁPIDA)        -->
+            <!-- MODAIS DE AÇÃO                                 -->
             <!-- ============================================== -->
 
-            <!-- MODAL: PERFIL INTELIGENTE DO ALUNO 360º -->
+            <!-- 1. PERFIL 360 DO ALUNO -->
             <div id="modal-perfil-aluno" class="modal-overlay" style="z-index: 2000;">
                 <div class="action-sheet" style="max-width: 500px; height: 85vh; padding: 0; display: flex; flex-direction: column;">
                     <div style="background: #222; padding: 15px; border-radius: 16px 16px 0 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333;">
@@ -191,138 +146,83 @@
                         <div style="display:flex; justify-content:space-between; margin-bottom: 15px; text-align:center;">
                             <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; margin-right:5px;"><strong id="p-aluno-xp" style="font-size:1.2rem; color:var(--warning-yellow);">0</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">XP Global</span></div>
                             <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; margin-right:5px;"><strong id="p-aluno-faltas" style="font-size:1.2rem; color:var(--danger-red);">0</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">Faltas Injus.</span></div>
-                            <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px;"><strong id="p-aluno-prhfs" style="font-size:1.2rem; color:#00d2ff;">0</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">PRHFs Atraso</span></div>
+                            <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px;"><strong id="p-aluno-prhfs" style="font-size:1.2rem; color:#00d2ff;">0</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">PRHFs</span></div>
                         </div>
                         
                         <button id="btn-dar-positiva" class="primary-btn" style="width:100%; margin-bottom:10px; background:var(--success-green);"><i class="fa-solid fa-star"></i> Ocorrência Positiva (+50 XP)</button>
                         <button id="btn-dar-negativa" class="secondary-btn" style="width:100%; margin-bottom:10px; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-triangle-exclamation"></i> Ocorrência Negativa</button>
                         
-                        <!-- BOTÃO EXCLUSIVO DT -->
                         <button id="btn-justificar-faltas" class="secondary-btn" style="width:100%; margin-bottom:20px; border-color:#00d2ff; color:#00d2ff; display:none;"><i class="fa-solid fa-clipboard-check"></i> Justificar Todas as Faltas Pendentes</button>
 
                         <div id="area-obs-dt" style="display:none;">
                             <h4 style="font-size:0.9rem; color:white; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apreciação do DT (Intercalar/Final)</h4>
-                            <textarea id="p-aluno-obs-dt" class="input-padrao" placeholder="Escreve aqui as notas sobre o comportamento e evolução do aluno..." style="min-height:80px; width:100%; margin-bottom:10px;"></textarea>
+                            <textarea id="p-aluno-obs-dt" class="input-padrao" placeholder="Observações do DT..." style="min-height:80px; width:100%; margin-bottom:10px;"></textarea>
                             <button id="btn-salvar-obs-dt" class="primary-btn small-btn" style="width:100%;">Gravar Observação</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- MODAL: MARCAR FALTAS (A METRALHADORA) -->
-            <div id="modal-marcar-faltas" class="modal-overlay" style="z-index: 2000;">
-                <div class="action-sheet" style="max-width: 400px; max-height: 85vh; padding: 15px; display: flex; flex-direction: column;">
+            <!-- 2. REGISTAR OCORRÊNCIA (Novo Modal Elegante) -->
+            <div id="modal-ocorrencia" class="modal-overlay" style="z-index: 2001;">
+                <div class="action-sheet" style="max-width: 400px; padding: 20px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                        <h3 style="color: white; margin:0;"><i class="fa-solid fa-user-xmark" style="color:var(--danger-red);"></i> Registo Rápido de Faltas</h3>
-                        <button class="fechar-modal" data-target="modal-marcar-faltas" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                        <h3 id="oco-titulo" style="color: white; margin:0;">Registar Ocorrência</h3>
+                        <button class="fechar-modal" data-target="modal-ocorrencia" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
                     </div>
-                    
-                    <div style="display:flex; gap:10px; margin-bottom: 15px;">
-                        <input type="number" id="falta-horas-bloco" class="input-padrao" placeholder="Nº Horas (Ex: 2)" style="flex:1; margin:0;">
-                        <button id="btn-todos-presentes" class="secondary-btn small-btn" style="flex:2; margin:0; border-color:var(--success-green); color:var(--success-green);">Todos Presentes</button>
-                    </div>
-
-                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Desmarca os alunos que <strong>faltaram</strong>:</p>
-                    <div id="lista-metralhadora-faltas" style="flex:1; overflow-y:auto; border: 1px solid #333; border-radius:8px; padding:5px;">
-                        <!-- Lista injetada via JS -->
-                    </div>
-                    
-                    <button id="btn-confirmar-faltas" class="primary-btn" style="margin-top:15px; width:100%; background:var(--danger-red);">Gravar Registo</button>
+                    <input type="hidden" id="oco-tipo" value="">
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">O aluno será notificado na sua aplicação e a ação registada na caderneta.</p>
+                    <textarea id="oco-motivo" class="input-padrao" placeholder="Descreve o motivo (Ex: Boa participação na aula / Falta de material)..." style="width:100%; min-height:80px; margin-bottom:15px;"></textarea>
+                    <button id="btn-gravar-ocorrencia" class="primary-btn" style="width:100%;">Confirmar Registo</button>
                 </div>
             </div>
 
-            <!-- MODAL: AGENDAR EVENTO (COM RADAR DE COLISÕES) -->
-            <div id="modal-agendar-evento" class="modal-overlay" style="z-index: 2000;">
-                <div class="action-sheet" style="max-width: 400px;">
-                    <h3 style="margin-bottom: 15px; color: white;"><i class="fa-solid fa-calendar-plus" style="color:#b82bf2;"></i> Agendar Evento</h3>
-                    <input type="text" id="evento-titulo" class="input-padrao" placeholder="Título (Ex: Teste Escrito)" style="width:100%; margin-bottom:10px;">
-                    
-                    <div style="display:flex; gap:10px; margin-bottom:10px;">
-                        <input type="date" id="evento-data" class="input-padrao" style="flex:1; margin:0;">
-                        <select id="evento-tipo" class="input-padrao" style="flex:1; margin:0;">
-                            <option value="avaliacao">Avaliação / Teste</option>
-                            <option value="entrega">Entrega Trabalho</option>
-                            <option value="outro">Outro Evento</option>
-                        </select>
-                    </div>
-
-                    <div id="aviso-colisao-agenda" style="display:none; background:rgba(255, 77, 77, 0.1); border:1px dashed var(--danger-red); padding:10px; border-radius:8px; margin-bottom:15px;">
-                        <strong style="color:var(--danger-red); font-size:0.85rem;"><i class="fa-solid fa-circle-exclamation"></i> Sobrecarga Detetada!</strong>
-                        <p style="font-size:0.8rem; color:var(--text-light); margin:5px 0 0 0;">Esta turma já tem 3 avaliações agendadas para esta semana. Pondere alterar a data.</p>
-                    </div>
-
-                    <div style="display:flex; gap:10px; margin-top: 15px;">
-                        <button class="secondary-btn fechar-modal" data-target="modal-agendar-evento" style="flex:1;">Cancelar</button>
-                        <button id="btn-gravar-evento" class="primary-btn" style="flex:1;">Agendar</button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- MODAL: LANÇAMENTO DE NOTAS EM MASSA -->
-            <div id="modal-lancamento-notas" class="modal-overlay" style="z-index: 2000;">
-                <div class="action-sheet" style="max-width: 450px; max-height: 85vh; padding: 15px; display: flex; flex-direction: column;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                        <h3 style="color: white; margin:0;"><i class="fa-solid fa-star" style="color:var(--warning-yellow);"></i> Lançar Avaliações</h3>
-                        <button class="fechar-modal" data-target="modal-lancamento-notas" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
-                    </div>
-                    
-                    <div style="display:flex; gap:10px; margin-bottom: 10px;">
-                        <select id="lancar-nota-disciplina" class="input-padrao" style="flex:2; margin:0;"></select>
-                        <input type="number" id="lancar-nota-modulo" class="input-padrao" placeholder="Módulo (Ex: 1)" style="flex:1; margin:0;" min="1">
-                    </div>
-                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px; line-height:1.4;">Deixa em branco se o aluno não fez avaliação. Usa <strong>REP</strong> para módulo reprovado.</p>
-
-                    <div id="grid-notas-alunos" style="flex:1; overflow-y:auto; border: 1px solid #333; border-radius:8px; padding:5px; display:flex; flex-direction:column; gap:5px;">
-                        <!-- Lista de inputs injetada via JS -->
-                    </div>
-                    
-                    <button id="btn-confirmar-notas" class="primary-btn" style="margin-top:15px; width:100%; background:var(--warning-yellow); color:black;"><i class="fa-solid fa-save"></i> Gravar Notas na Turma</button>
-                </div>
-            </div>
-
-            <!-- MODAL: CRIAR PRHF -->
-            <div id="modal-criar-prhf" class="modal-overlay" style="z-index: 2000;">
+            <!-- 3. PARTILHAR MATERIAIS COM UPLOAD (Novo Modal) -->
+            <div id="modal-materiais" class="modal-overlay" style="z-index: 2001;">
                 <div class="action-sheet" style="max-width: 450px; padding: 20px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                        <h3 style="color: white; margin:0;"><i class="fa-solid fa-file-medical" style="color:var(--danger-red);"></i> Novo PRHF</h3>
-                        <button class="fechar-modal" data-target="modal-criar-prhf" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                        <h3 style="color: #0099ff; margin:0;"><i class="fa-solid fa-book-open"></i> Enviar Material</h3>
+                        <button class="fechar-modal" data-target="modal-materiais" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
                     </div>
                     
-                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">Cria um plano de recuperação de módulo. O aluno será notificado de imediato.</p>
+                    <input type="text" id="mat-titulo" class="input-padrao" placeholder="Título do Material (Ex: Ficha 3)" style="width:100%; margin-bottom:10px;">
                     
-                    <select id="prhf-turma" class="input-padrao" style="width:100%; margin-bottom:10px;">
-                        <option value="">Selecione a Turma</option>
-                    </select>
+                    <select id="mat-disciplina" class="input-padrao" style="width:100%; margin-bottom:15px;"></select>
                     
-                    <select id="prhf-aluno" class="input-padrao" style="width:100%; margin-bottom:10px;">
-                        <option value="">Selecione primeiro a Turma</option>
-                    </select>
-                    
-                    <div style="display:flex; gap:10px; margin-bottom:10px;">
-                        <select id="prhf-disciplina" class="input-padrao" style="flex:2; margin:0;"></select>
-                        <input type="number" id="prhf-modulo" class="input-padrao" placeholder="Módulo (Ex: 3)" style="flex:1; margin:0;" min="1">
+                    <div id="mat-upload-area" style="padding: 20px 10px; margin-bottom:15px; border:1px dashed #0099ff; background:rgba(0,153,255,0.05); text-align:center; border-radius:8px; cursor:pointer;" onclick="document.getElementById('mat-file').click();">
+                        <i class="fa-solid fa-cloud-arrow-up" style="font-size:2.2rem; color:#0099ff; margin-bottom:10px;"></i>
+                        <h4 style="color:white; margin-bottom:5px; font-size:0.95rem;">Anexar Ficheiro (Opcional)</h4>
+                        <span id="mat-file-name" style="font-size:0.75rem; color:var(--text-muted);">Toca para selecionar um PDF, DOCX ou Imagem</span>
                     </div>
-                    
-                    <div style="display:flex; gap:10px; margin-bottom:10px;">
-                        <div style="flex:1;">
-                            <label style="font-size:0.75rem; color:var(--text-muted);">Prazo Limite</label>
-                            <input type="date" id="prhf-prazo" class="input-padrao" style="width:100%; margin:0;">
-                        </div>
-                        <div style="flex:1;">
-                            <label style="font-size:0.75rem; color:var(--text-muted);">Horas Presenciais</label>
-                            <input type="number" id="prhf-horas" class="input-padrao" placeholder="Ex: 5" style="width:100%; margin:0;" min="1">
-                        </div>
-                    </div>
-                    
-                    <textarea id="prhf-descricao" class="input-padrao" placeholder="Descreve o trabalho ou as tarefas que o aluno tem de realizar..." style="width:100%; min-height:80px; margin-bottom:15px;"></textarea>
-                    
-                    <button id="btn-gravar-novo-prhf" class="primary-btn" style="width:100%; background:var(--danger-red);"><i class="fa-solid fa-paper-plane"></i> Enviar para o Aluno</button>
+                    <input type="file" id="mat-file" style="display:none;" accept=".pdf,.doc,.docx,.jpg,.png,.zip">
+
+                    <button id="btn-gravar-material" class="primary-btn" style="width:100%; background:#0099ff;"><i class="fa-solid fa-paper-plane"></i> Partilhar com a Turma</button>
                 </div>
             </div>
+
+            <!-- 4. REJEITAR PRHF (Novo Modal) -->
+            <div id="modal-rejeitar-prhf" class="modal-overlay" style="z-index: 2001;">
+                <div class="action-sheet" style="max-width: 400px; padding: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                        <h3 style="color: var(--danger-red); margin:0;"><i class="fa-solid fa-ban"></i> Rejeitar Proposta</h3>
+                        <button class="fechar-modal" data-target="modal-rejeitar-prhf" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <input type="hidden" id="rej-aluno-id" value="">
+                    <input type="hidden" id="rej-prhf-id" value="">
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">Indica o motivo para o aluno propor uma nova data de recuperação.</p>
+                    <textarea id="rej-motivo" class="input-padrao" placeholder="Motivo da rejeição (Ex: Não tenho disponibilidade nessa tarde)..." style="width:100%; min-height:80px; margin-bottom:15px;"></textarea>
+                    <button id="btn-confirmar-rejeicao" class="primary-btn" style="width:100%; background:var(--danger-red);">Rejeitar Agendamento</button>
+                </div>
+            </div>
+
+            <!-- (Outros Modais Originais Mantidos: Faltas, Agenda, Lançamento de Notas, Criar PRHF) -->
+            <div id="modal-marcar-faltas" class="modal-overlay" style="z-index: 2000;"><div class="action-sheet" style="max-width: 400px; max-height: 85vh; padding: 15px; display: flex; flex-direction: column;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color: white; margin:0;"><i class="fa-solid fa-user-xmark" style="color:var(--danger-red);"></i> Registo Rápido de Faltas</h3><button class="fechar-modal" data-target="modal-marcar-faltas" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><div style="display:flex; gap:10px; margin-bottom: 15px;"><input type="number" id="falta-horas-bloco" class="input-padrao" placeholder="Nº Horas (Ex: 2)" style="flex:1; margin:0;"><button id="btn-todos-presentes" class="secondary-btn small-btn" style="flex:2; margin:0; border-color:var(--success-green); color:var(--success-green);">Todos Presentes</button></div><p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Desmarca os alunos que <strong>faltaram</strong>:</p><div id="lista-metralhadora-faltas" style="flex:1; overflow-y:auto; border: 1px solid #333; border-radius:8px; padding:5px;"></div><button id="btn-confirmar-faltas" class="primary-btn" style="margin-top:15px; width:100%; background:var(--danger-red);">Gravar Registo</button></div></div>
+            <div id="modal-agendar-evento" class="modal-overlay" style="z-index: 2000;"><div class="action-sheet" style="max-width: 400px;"><h3 style="margin-bottom: 15px; color: white;"><i class="fa-solid fa-calendar-plus" style="color:#b82bf2;"></i> Agendar Evento</h3><input type="text" id="evento-titulo" class="input-padrao" placeholder="Título (Ex: Teste Escrito)" style="width:100%; margin-bottom:10px;"><div style="display:flex; gap:10px; margin-bottom:10px;"><input type="date" id="evento-data" class="input-padrao" style="flex:1; margin:0;"><select id="evento-tipo" class="input-padrao" style="flex:1; margin:0;"><option value="avaliacao">Avaliação / Teste</option><option value="entrega">Entrega Trabalho</option><option value="outro">Outro Evento</option></select></div><div id="aviso-colisao-agenda" style="display:none; background:rgba(255, 77, 77, 0.1); border:1px dashed var(--danger-red); padding:10px; border-radius:8px; margin-bottom:15px;"><strong style="color:var(--danger-red); font-size:0.85rem;"><i class="fa-solid fa-circle-exclamation"></i> Sobrecarga Detetada!</strong><p style="font-size:0.8rem; color:var(--text-light); margin:5px 0 0 0;">Esta turma já tem 3 avaliações agendadas para esta semana.</p></div><div style="display:flex; gap:10px; margin-top: 15px;"><button class="secondary-btn fechar-modal" data-target="modal-agendar-evento" style="flex:1;">Cancelar</button><button id="btn-gravar-evento" class="primary-btn" style="flex:1;">Agendar</button></div></div></div>
+            <div id="modal-lancamento-notas" class="modal-overlay" style="z-index: 2000;"><div class="action-sheet" style="max-width: 450px; max-height: 85vh; padding: 15px; display: flex; flex-direction: column;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color: white; margin:0;"><i class="fa-solid fa-star" style="color:var(--warning-yellow);"></i> Lançar Avaliações</h3><button class="fechar-modal" data-target="modal-lancamento-notas" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><div style="display:flex; gap:10px; margin-bottom: 10px;"><select id="lancar-nota-disciplina" class="input-padrao" style="flex:2; margin:0;"></select><input type="number" id="lancar-nota-modulo" class="input-padrao" placeholder="Módulo (Ex: 1)" style="flex:1; margin:0;" min="1"></div><p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px; line-height:1.4;">Deixa em branco se o aluno não fez avaliação. Usa <strong>REP</strong> para módulo reprovado.</p><div id="grid-notas-alunos" style="flex:1; overflow-y:auto; border: 1px solid #333; border-radius:8px; padding:5px; display:flex; flex-direction:column; gap:5px;"></div><button id="btn-confirmar-notas" class="primary-btn" style="margin-top:15px; width:100%; background:var(--warning-yellow); color:black;"><i class="fa-solid fa-save"></i> Gravar Notas na Turma</button></div></div>
+            <div id="modal-criar-prhf" class="modal-overlay" style="z-index: 2000;"><div class="action-sheet" style="max-width: 450px; padding: 20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color: white; margin:0;"><i class="fa-solid fa-file-medical" style="color:var(--danger-red);"></i> Novo PRHF</h3><button class="fechar-modal" data-target="modal-criar-prhf" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">O aluno será notificado de imediato.</p><select id="prhf-turma" class="input-padrao" style="width:100%; margin-bottom:10px;"><option value="">Selecione a Turma</option></select><select id="prhf-aluno" class="input-padrao" style="width:100%; margin-bottom:10px;"><option value="">Selecione primeiro a Turma</option></select><div style="display:flex; gap:10px; margin-bottom:10px;"><select id="prhf-disciplina" class="input-padrao" style="flex:2; margin:0;"></select><input type="number" id="prhf-modulo" class="input-padrao" placeholder="Módulo (Ex: 3)" style="flex:1; margin:0;" min="1"></div><div style="display:flex; gap:10px; margin-bottom:10px;"><div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Prazo Limite</label><input type="date" id="prhf-prazo" class="input-padrao" style="width:100%; margin:0;"></div><div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Horas Presenciais</label><input type="number" id="prhf-horas" class="input-padrao" placeholder="Ex: 5" style="width:100%; margin:0;" min="1"></div></div><textarea id="prhf-descricao" class="input-padrao" placeholder="Descreve o trabalho..." style="width:100%; min-height:80px; margin-bottom:15px;"></textarea><button id="btn-gravar-novo-prhf" class="primary-btn" style="width:100%; background:var(--danger-red);"><i class="fa-solid fa-paper-plane"></i> Enviar para o Aluno</button></div></div>
 
         </main>
 
-        <!-- BOTTOM NAVIGATION -->
         <nav class="bottom-nav">
             <a href="#" class="nav-item active" data-target="view-prof-dashboard"><i class="fa-solid fa-house"></i><span>Início</span></a>
             <a href="#" class="nav-item" data-target="view-prof-turmas"><i class="fa-solid fa-users"></i><span>Turmas</span></a>
@@ -332,7 +232,6 @@
         </nav>
     </div>
 
-    <!-- SCRIPT DO PROFESSOR -->
     <script type="module" src="./js/prof-app.js"></script>
 </body>
 </html>
