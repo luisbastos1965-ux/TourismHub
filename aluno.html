@@ -100,7 +100,7 @@
                 </div>
             </div>
 
-            <!-- VISTA PERFIL -->
+            <!-- VISTA PERFIL (COM TOP 10) -->
             <div id="view-aluno-perfil" style="display: none;">
                 <div class="class-header"><h2 class="section-title"><i class="fa-solid fa-user-astronaut"></i> O Meu Perfil</h2></div>
                 
@@ -143,6 +143,14 @@
                     <div id="lista-objetivos-container"></div>
                 </div>
 
+                <!-- TOP 10 DA TURMA -->
+                <div class="card" style="border-left: 4px solid #ffd700; margin-bottom: 20px;">
+                    <h3 style="font-size: 1.1rem; color: white; margin-bottom: 15px;"><i class="fa-solid fa-trophy"></i> Top 10 da Turma</h3>
+                    <div id="ranking-turma-container">
+                        <p class="text-muted center">A classificar alunos...</p>
+                    </div>
+                </div>
+
                 <div class="card" id="card-stats-grafico">
                     <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-chart-pie"></i> Desempenho por Disciplina</h3>
                     <div style="position: relative; height: 220px; width: 100%;">
@@ -166,17 +174,13 @@
                 <div class="class-header" style="margin-bottom: 10px;">
                     <button id="btn-voltar-notificacoes" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                 </div>
-                
                 <div class="filter-chips-container" id="notificacoes-filtros">
                     <div class="filter-chip active" data-cat="all">Todas</div>
                     <div class="filter-chip" data-cat="importante">Importantes</div>
                     <div class="filter-chip" data-cat="escola">Escola</div>
                     <div class="filter-chip" data-cat="gamificacao">Gamificação</div>
                 </div>
-
-                <div id="aluno-notificacoes-container">
-                    <p class="text-muted" style="text-align:center;">A carregar histórico...</p>
-                </div>
+                <div id="aluno-notificacoes-container"></div>
             </div>
 
             <!-- VISTA CADERNO DIGITAL -->
@@ -278,7 +282,7 @@
                     <div id="prhf-docs-container"></div>
                     
                     <h4 style="font-size: 0.95rem; margin-bottom: 10px; margin-top: 15px; color:var(--primary-green);">Agendar Sessão Presencial</h4>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Indica o dia e o horário para o Professor validar.</p>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Indica o dia e o horário para validação do Professor.</p>
                     
                     <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                         <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Data</label><input type="date" id="aluno-prhf-proposta-data" style="margin:0; width:100%;"></div>
@@ -403,10 +407,9 @@
             </div>
 
             <!-- MODO FOCO (CENTRALIZADO COM FLEX) -->
-            <div id="view-study-mode" style="display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 70vh; padding: 20px; box-sizing: border-box;">
+            <div id="view-study-mode" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 70vh; box-sizing: border-box; padding: 20px;">
                 <div style="text-align: center; width: 100%;">
-                    <i class="fa-solid fa-stopwatch" style="font-size: 3rem; color: #9b59b6; margin-bottom: 15px;"></i>
-                    <h2 style="color: #9b59b6; margin-bottom: 10px;">Modo Foco</h2>
+                    <h2 style="color: #9b59b6; margin-bottom: 10px;"><i class="fa-solid fa-stopwatch"></i> Modo Foco</h2>
                     <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 25px;">Se saíres da aplicação, o relógio pára e perdes a recompensa!</p>
                     
                     <div id="study-setup" style="margin-bottom: 30px;">
@@ -423,9 +426,9 @@
                     <div style="font-size: 5.5rem; font-weight: bold; font-family: monospace; color: white; margin-bottom: 40px; text-shadow: 0 0 20px rgba(155, 89, 182, 0.5);" id="study-timer-text">30:00</div>
                     
                     <div id="study-controls" style="width:100%; max-width: 350px; margin: 0 auto;">
-                        <button id="btn-start-study" class="primary-btn" style="background-color: #9b59b6; font-size: 1.2rem; padding: 15px; border-radius: 30px;">Iniciar Foco</button>
+                        <button id="btn-start-study" class="primary-btn" style="background-color: #9b59b6; font-size: 1.2rem; padding: 15px; border-radius: 30px;">Iniciar</button>
                         <button id="btn-stop-study" class="danger-btn" style="display: none; font-size: 1.2rem; padding: 15px; border-radius: 30px;"><i class="fa-solid fa-stop"></i> Parar e Desistir</button>
-                        <br><button id="btn-voltar-study" class="secondary-btn" style="margin-top: 20px; border: none; width: auto; margin-left: auto; margin-right: auto; padding: 10px;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+                        <button id="btn-voltar-study" class="secondary-btn" style="margin-top: 20px; border: none; width: auto; margin-left: auto; margin-right: auto; padding: 10px;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                     </div>
                     
                     <div id="post-study-log" style="display: none; width: 100%; max-width: 350px; margin: 0 auto;">
@@ -451,7 +454,6 @@
             <div id="modal-academia-quiz" class="modal-overlay" style="z-index: 4000; background: var(--bg-dark);">
                 <div class="action-sheet" style="max-width:500px; border-radius:12px; margin:20px; text-align: center; height: auto; max-height: 90vh;">
                     
-                    <!-- Ecrã de Boas Vindas / Pergunta -->
                     <div id="quiz-question-container">
                         <i class="fa-solid fa-chess-rook" style="font-size: 3rem; color: white; margin-bottom: 15px;"></i>
                         <h2 style="margin-bottom: 10px; color: white;">Bem-vindo à Turma PRO</h2>
@@ -467,7 +469,6 @@
                         </div>
                     </div>
 
-                    <!-- Ecrã de Resultado -->
                     <div id="quiz-result-container" style="display: none; padding: 20px 0;">
                         <div id="quiz-result-icon" style="font-size: 4rem; margin-bottom: 15px;"></div>
                         <h2 style="margin-bottom: 5px; color: white;">És da Academia <span id="quiz-result-name">...</span>!</h2>
@@ -489,7 +490,7 @@
         </nav>
     </div>
 
-    <!-- SCRIPT ÚNICO CONSOLIDADO E OTIMIZADO -->
+    <!-- SCRIPT ÚNICO -->
     <script type="module" src="./js/aluno-app.js"></script>
 </body>
 </html>
