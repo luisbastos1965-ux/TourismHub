@@ -25,7 +25,7 @@ const ACADEMIAS_INFO = {
 };
 
 // ==========================================
-// 1. INICIALIZAÇÃO E ACADEMIAS
+// 1. INICIALIZAÇÃO
 // ==========================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -48,8 +48,9 @@ onAuthStateChanged(auth, async (user) => {
 
                 carregarDadosPassaporte(d); carregarGamificacao(d);
                 await construirHomeAdaptativa(); verificarEpocaExames();
-
                 if (!myAcademia) iniciarQuizAcademias(); else aplicarTemaAcademia(myAcademia);
+                
+                setTimeout(iniciarRodaFoco, 1000); // Inicia mecânica da roda do modo foco
             } else window.location.href = "index.html";
         } catch (e) { console.error("Erro Auth", e); }
     } else window.location.href = "index.html";
@@ -61,11 +62,11 @@ let quizScores = { atlas: 0, sentinela: 0, nexus: 0, aurora: 0 }; let currentQue
 function iniciarQuizAcademias() { document.getElementById('modal-academia-quiz').style.display = 'flex'; document.querySelectorAll('.quiz-opt').forEach(btn => { btn.addEventListener('click', (e) => { const chosen = e.currentTarget.getAttribute('data-house'); quizScores[chosen]++; currentQuestion++; avancarQuiz(); }); }); }
 function avancarQuiz() { const qText = document.getElementById('quiz-question-text'); const opts = document.querySelectorAll('.quiz-opt'); if (currentQuestion === 2) { qText.innerText = "2. Como preferes trabalhar e estudar?"; opts[0].innerText = "Em visitas de estudo e a explorar a matéria livremente."; opts[1].innerText = "Com método, rotinas, tarefas bem definidas e prazos."; opts[2].innerText = "Com as mãos na massa, construindo algo ou no PC."; opts[3].innerText = "Em maratonas, desafios e a cronometrar o meu tempo."; } else if (currentQuestion === 3) { qText.innerText = "3. Se tivesses de escolher o teu 'Superpoder', qual seria?"; opts[0].innerText = "Visão Raio-X (Curiosidade para ver além do óbvio)."; opts[1].innerText = "Escudo Protetor (Responsabilidade e lealdade)."; opts[2].innerText = "Varinha Mágica (Criatividade e Inovação)."; opts[3].innerText = "Super Velocidade (Foco, rapidez e energia)."; } else if (currentQuestion > 3) { finalizarQuiz(); } }
 async function finalizarQuiz() { let winningHouse = Object.keys(quizScores).reduce((a, b) => quizScores[a] > quizScores[b] ? a : b); if(quizScores[winningHouse] === 0) winningHouse = 'atlas'; myAcademia = winningHouse; const ac = ACADEMIAS_INFO[winningHouse]; document.getElementById('quiz-question-container').style.display = 'none'; document.getElementById('quiz-result-container').style.display = 'block'; document.getElementById('quiz-result-icon').innerHTML = `<i class="fa-solid ${ac.icon}" style="color: ${ac.cor}; text-shadow: 0 0 20px ${ac.cor};"></i>`; document.getElementById('quiz-result-name').innerText = ac.nome; document.getElementById('quiz-result-name').style.color = ac.cor; document.getElementById('quiz-result-desc').innerText = ac.desc; try { await updateDoc(doc(db, "utilizadores", myUserId), { academia: winningHouse }); } catch(e) {} document.getElementById('btn-entrar-app').addEventListener('click', () => { document.getElementById('modal-academia-quiz').style.display = 'none'; aplicarTemaAcademia(winningHouse); }); }
-function aplicarTemaAcademia(idHouse) { const ac = ACADEMIAS_INFO[idHouse]; if(!ac) return; document.documentElement.style.setProperty('--primary-green', ac.cor); const rankElem = document.getElementById('aluno-rank-title'); const rankCentral = document.getElementById('perfil-titulo-central'); if(rankElem) rankElem.innerText = `${rankElem.innerText.split('•')[0].trim()} • ${ac.nome}`; if(rankCentral) rankCentral.innerHTML = `<i class="fa-solid ${ac.icon}"></i> ${ac.nome} | ${rankCentral.innerText.split('|').pop().trim()}`; }
+function aplicarTemaAcademia(idHouse) { const ac = ACADEMIAS_INFO[idHouse]; if(!ac) return; document.documentElement.style.setProperty('--primary-green', ac.cor); const rankElem = document.getElementById('aluno-rank-title'); const rankCentral = document.getElementById('perfil-titulo-central'); if(rankElem) rankElem.innerText = `${rankElem.innerText.split('•')[0].trim()} • ${ac.nome}`; if(rankCentral) rankCentral.innerHTML = `<i class="fa-solid ${ac.icon}"></i> ${ac.nome}`; }
 
 
 // ==========================================
-// 2. ROUTING E BOTÕES GLOBAIS (Delegação Segura)
+// 2. EVENT DELEGATION GLOBAL (CLIQUES SEGUROS)
 // ==========================================
 function esconderTodasAsVistas() { document.querySelectorAll('.app-content > div').forEach(v => v.style.display = 'none'); }
 
@@ -88,6 +89,7 @@ document.body.addEventListener('click', async (e) => {
     if(e.target.closest('#btn-open-study-mode')) {
         esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-study-mode').style.display = 'flex';
         if(localStorage.getItem('pomodoroEndTarget') && localStorage.getItem('pomodoroEndTarget') > Date.now()) { document.getElementById('btn-start-study').click(); }
+        setTimeout(()=>document.getElementById('study-wheel').scrollTop=60, 50); // Centra aos 30min
     }
     if(e.target.closest('#btn-open-caderno')) {
         esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-caderno').style.display = 'block';
@@ -149,7 +151,7 @@ document.body.addEventListener('click', async (e) => {
     if(e.target.closest('#btn-aluno-prev-horario')) { if(ahModo === 'dia') ahDOff--; else ahSOff--; carregarHorarioAluno(); }
     if(e.target.closest('#btn-aluno-next-horario')) { if(ahModo === 'dia') ahDOff++; else ahSOff++; carregarHorarioAluno(); }
 
-    // FÓRUNS (CRIAR, APAGAR E ABRIR)
+    // FÓRUNS (CRIAR E ABRIR)
     if(e.target.closest('#btn-create-chat-aluno')) {
         document.getElementById('modal-criar-forum').style.display = 'flex'; 
         const cCont = document.getElementById('lista-colegas-forum'); cCont.innerHTML = '<p class="text-muted center">A procurar colegas...</p>';
@@ -157,7 +159,7 @@ document.body.addEventListener('click', async (e) => {
             const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", minhaTurma))); let cH = ''; 
             cS.forEach(d => { if(d.data().papel === 'aluno' && d.id !== myUserId) { cH += `<label style="display:flex; align-items:center; gap:10px; color:white; font-size:0.9rem; padding:8px 0; cursor:pointer;"><input type="checkbox" class="colegas-check" value="${d.id}" style="width:18px;height:18px;accent-color:var(--primary-green);"> ${d.data().nome}</label>`; } });
             cCont.innerHTML = cH === '' ? '<p class="text-muted center" style="font-size:0.8rem;">Ainda és o único aluno registado nesta turma.</p>' : cH;
-        } catch(err) { cCont.innerHTML = '<p class="text-danger center">Erro.</p>'; }
+        } catch(err) { cCont.innerHTML = '<p class="text-danger center">Erro ao listar turma.</p>'; }
     }
     if(e.target.closest('#btn-cancelar-novo-forum')) { document.getElementById('modal-criar-forum').style.display = 'none'; document.getElementById('input-nome-novo-forum').value = ''; }
     if(e.target.closest('#btn-confirmar-novo-forum')) {
@@ -172,9 +174,7 @@ document.body.addEventListener('click', async (e) => {
         e.stopPropagation(); pendingDeleteChatId = e.target.closest('.btn-delete-chat').getAttribute('data-id');
         document.getElementById('modal-confirm-delete-chat').style.display = 'flex';
     }
-    if(e.target.closest('#btn-cancel-delete-chat')) {
-        document.getElementById('modal-confirm-delete-chat').style.display = 'none'; pendingDeleteChatId = null;
-    }
+    if(e.target.closest('#btn-cancel-delete-chat')) { document.getElementById('modal-confirm-delete-chat').style.display = 'none'; pendingDeleteChatId = null; }
     if(e.target.closest('#btn-confirm-delete-chat')) {
         if(pendingDeleteChatId) {
             const btn = e.target.closest('#btn-confirm-delete-chat'); btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
@@ -195,9 +195,9 @@ document.body.addEventListener('click', async (e) => {
         try { await addDoc(collection(db, "turmas", minhaTurma, "foruns", alunoForumAtivoId, "mensagens"), { remetente: myUserName, texto: t, timestamp: Date.now() }); inp.value = ''; } catch(err) {} 
     }
 
-    // MODO FOCO 
+    // MODO FOCO (Botões)
     if(e.target.closest('#btn-start-study')) {
-        pTimeConfig = parseInt(document.getElementById('study-time-selector').value) || 30; pXPConfig = focusXPMap[pTimeConfig] || 50; pRest = pTimeConfig * 60;
+        pXPConfig = focusXPMap[pTimeConfig] || 50; pRest = pTimeConfig * 60;
         document.getElementById('btn-start-study').style.display = 'none'; document.getElementById('btn-stop-study').style.display = 'inline-block';
         document.getElementById('study-setup').style.display = 'none'; document.getElementById('study-timer-text').style.color = "var(--primary-green)";
         if(!localStorage.getItem('pomodoroEndTarget')) localStorage.setItem('pomodoroEndTarget', Date.now() + (pRest * 1000));
@@ -234,32 +234,42 @@ document.body.addEventListener('click', async (e) => {
     }
 });
 
-// Eventos Automáticos de Mudar o Dropdown ou Escolher Foto
+// ==========================================
+// 2.5 EVENTOS DE CÂMARA E RODA DO FOCO
+// ==========================================
 document.addEventListener('change', async (e) => {
     // Foto
     if (e.target.id === 'upload-foto-quadro' || e.target.id === 'tirar-foto-quadro') {
         let file = e.target.files[0]; if(!file) return; 
-        if (file.type.startsWith('image/')) { try { file = await imageCompression(file, { maxSizeMB: 0.3, maxWidthOrHeight: 800, useWebWorker: true }); } catch (err) {} } 
+        if (file.type.startsWith('image/')) { try { file = await imageCompression(file, { maxSizeMB: 0.4, maxWidthOrHeight: 1200, useWebWorker: true }); } catch (err) {} } 
         document.getElementById('foto-quadro-file-name').innerText = file.name || 'foto_capturada.jpg'; document.getElementById('btn-gravar-foto-quadro').style.display = 'block'; 
         const rd = new FileReader(); rd.onload = (ev) => { fQB64 = ev.target.result; }; rd.readAsDataURL(file); 
     }
-    // Mudança de Tempo do Foco
-    if (e.target.id === 'study-time-selector') {
-        if (!pTmr) { pTimeConfig = parseInt(e.target.value) || 30; formatTimer(pTimeConfig * 60); }
-    }
     // Mudança de Tipo de Objetivo
     if (e.target.id === 'obj-tipo') {
-        const v = e.target.value;
-        document.getElementById('obj-setup-nota').style.display = v === 'nota' ? 'flex' : 'none';
-        document.getElementById('obj-setup-nivel').style.display = v === 'nivel' ? 'flex' : 'none';
+        const v = e.target.value; document.getElementById('obj-setup-nota').style.display = v === 'nota' ? 'flex' : 'none'; document.getElementById('obj-setup-nivel').style.display = v === 'nivel' ? 'flex' : 'none';
     }
     // Filtros Agenda
     if (e.target.closest('.agenda-filter-label input')) { carregarAgendaAlunoLista(); }
 });
 
-window.abrirFotoModal = (url, titulo) => {
-    document.getElementById('modal-foto-img').src = url; document.getElementById('modal-foto-titulo').innerText = titulo; document.getElementById('modal-ver-foto').style.display = 'flex';
-};
+// Animação Roda do Foco (Scroll Snap Observer)
+function iniciarRodaFoco() {
+    const wheel = document.getElementById('study-wheel'); if(!wheel) return;
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if(entry.isIntersecting) {
+                document.querySelectorAll('.wheel-opt').forEach(el => { el.style.color = '#555'; el.style.fontSize = '1.2rem'; });
+                entry.target.style.color = 'white'; entry.target.style.fontSize = '1.6rem';
+                pTimeConfig = parseInt(entry.target.getAttribute('data-val'));
+                if(!pTmr) formatTimer(pTimeConfig * 60);
+            }
+        });
+    }, { root: wheel, threshold: 0.6 });
+    document.querySelectorAll('.wheel-opt').forEach(el => observer.observe(el));
+}
+
+window.abrirFotoModal = (url, titulo) => { document.getElementById('modal-foto-img').src = url; document.getElementById('modal-foto-titulo').innerText = titulo; document.getElementById('modal-ver-foto').style.display = 'flex'; };
 
 // ==========================================
 // 3. DASHBOARD ADAPTATIVO MÁGICO
@@ -269,7 +279,6 @@ async function construirHomeAdaptativa() {
     if(!alertCont || !emoCont) return;
     try {
         let tFaltas = 0, evs = [], pAtivos = 0, pHoras = 0, mRep = 0;
-        
         const fS = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); fS.forEach(d => { if(!d.data().justificada && !d.data().comprovativoEnviado) tFaltas++; });
         const nS = await getDocs(collection(db, "utilizadores", myUserId, "notas")); nS.forEach(d => { const n = d.data().nota; if(n==='REP'||Number(n)<10) mRep++; });
         const pS = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); pS.forEach(d => { if(d.data().status!=='concluida'){pAtivos++; pHoras+=Number(d.data().horasPresenciais||0);} });
@@ -314,22 +323,16 @@ async function construirHomeAdaptativa() {
                 emoHtml += `<div class="card" id="missao-card" style="border-left:4px solid var(--warning-yellow); margin-bottom:20px;"><h3 style="font-size:1rem; margin-bottom:5px;"><i class="fa-solid fa-users"></i> Missão da Turma</h3><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:${tm.missaoProgresso!==undefined?'10px':'0'};">${tm.missaoTitulo}</p>${tm.missaoProgresso!==undefined?`<div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${tm.missaoProgresso}%; background:var(--warning-yellow);"></div></div>`:''}</div>`;
             }
         }
-
-        const hjIso = new Date().toISOString().split('T')[0];
-        const hSnap = await getDoc(doc(db, "utilizadores", myUserId, "humor", hjIso));
+        const hjIso = new Date().toISOString().split('T')[0]; const hSnap = await getDoc(doc(db, "utilizadores", myUserId, "humor", hjIso));
         if(!hSnap.exists()) {
             emoHtml += `<div class="card" id="checkin-card-dinamico" style="border-left:4px solid #b82bf2; margin-bottom:20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="font-size: 1rem; margin:0;"><i class="fa-solid fa-heart-pulse"></i> Como te sentes hoje?</h3></div><div style="display: flex; justify-content: space-around; font-size: 2.2rem;" id="mood-buttons-dinamicos"><span class="mood-btn-dinamico" data-mood="😡" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">😡</span><span class="mood-btn-dinamico" data-mood="🙁" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">🙁</span><span class="mood-btn-dinamico" data-mood="😐" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">😐</span><span class="mood-btn-dinamico" data-mood="🙂" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">🙂</span><span class="mood-btn-dinamico" data-mood="🤩" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">🤩</span></div></div>`;
         }
         emoCont.innerHTML = emoHtml;
-
         document.querySelectorAll('.mood-btn-dinamico').forEach(btn => {
             btn.addEventListener('mouseover',()=>btn.style.filter='grayscale(0%)'); btn.addEventListener('mouseout',()=>btn.style.filter='grayscale(100%)');
             btn.addEventListener('click', async (e) => {
-                const m = e.currentTarget.getAttribute('data-mood'); const s = await getDoc(doc(db, "utilizadores", myUserId));
-                let aXp = s.exists()&&s.data().xp?s.data().xp:0;
-                await setDoc(doc(db, "utilizadores", myUserId, "humor", hjIso), { humor:m, timestamp:Date.now(), dataIso:hjIso });
-                await updateDoc(doc(db, "utilizadores", myUserId), { xp: aXp+10 });
-                carregarGamificacao({xp: aXp+10}); document.getElementById('checkin-card-dinamico').innerHTML = '<div style="text-align:center; color:var(--success-green); font-weight:bold; font-size:0.95rem; padding:10px;">Obrigado! <span style="color:var(--warning-yellow);">+10 XP</span></div>';
+                const m = e.currentTarget.getAttribute('data-mood'); const s = await getDoc(doc(db, "utilizadores", myUserId)); let aXp = s.exists()&&s.data().xp?s.data().xp:0;
+                await setDoc(doc(db, "utilizadores", myUserId, "humor", hjIso), { humor:m, timestamp:Date.now(), dataIso:hjIso }); await updateDoc(doc(db, "utilizadores", myUserId), { xp: aXp+10 }); carregarGamificacao({xp: aXp+10}); document.getElementById('checkin-card-dinamico').innerHTML = '<div style="text-align:center; color:var(--success-green); font-weight:bold; font-size:0.95rem; padding:10px;">Obrigado! <span style="color:var(--warning-yellow);">+10 XP</span></div>';
             });
         });
     } catch(e) { }
@@ -341,11 +344,25 @@ async function verificarEpocaExames() {
     if(tSnap.exists() && tSnap.data().epocaExames?.ativa) {
         document.getElementById('exam-mode-banner').style.display='block'; document.body.style.borderTop="5px solid #8e2de2";
         if(tSnap.data().epocaExames.dataFim) {
-            const df = Math.ceil((new Date(tSnap.data().epocaExames.dataFim) - new Date()) / (1000 * 60 * 60 * 24));
-            document.getElementById('exam-countdown').innerText = df > 0 ? `Faltam ${df} dias` : "Já terminou";
+            const df = Math.ceil((new Date(tSnap.data().epocaExames.dataFim) - new Date()) / (1000 * 60 * 60 * 24)); document.getElementById('exam-countdown').innerText = df > 0 ? `Faltam ${df} dias` : "Já terminou";
         }
     }
 }
+
+// ==========================================
+// 4. PESQUISA UNIVERSAL
+// ==========================================
+document.getElementById('aluno-search-input')?.addEventListener('input', async (e) => {
+    const termo = e.target.value.toLowerCase().trim(); const box = document.getElementById('aluno-search-results');
+    if(termo.length < 2) { box.style.display = 'none'; return; } box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">A procurar...</p>'; box.style.display = 'block';
+    try {
+        let resArr = []; const rDb = await getDocs(query(collection(db, "utilizadores", myUserId, "apontamentos")));
+        rDb.forEach(d => { if(d.data().titulo?.toLowerCase().includes(termo)) resArr.push({ t: 'O Meu Resumo', txt: d.data().titulo, id: 'btn-open-caderno' }); });
+        if (minhaTurma) { const sDb = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); sDb.forEach(d => { if(d.data().titulo?.toLowerCase().includes(termo) || d.data().disciplina?.toLowerCase().includes(termo)) resArr.push({ t: `Sumário - ${d.data().disciplina}`, txt: d.data().titulo, id: 'btn-open-sumarios' }); }); }
+        if(resArr.length === 0) box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">Sem resultados.</p>'; else { let h = ''; resArr.forEach(r => h += `<div style="padding:8px; border-bottom:1px solid #333; cursor:pointer;" onclick="document.getElementById('${r.id}').click(); document.getElementById('aluno-search-results').style.display='none'; document.getElementById('aluno-search-input').value='';"><span style="font-size:0.7rem; color:var(--primary-green); text-transform:uppercase;">${r.t}</span><div style="font-size:0.9rem; color:white; margin-top:3px;">${r.txt}</div></div>`); box.innerHTML = h; }
+    } catch(err) { box.innerHTML = '<p class="text-danger" style="margin:0;">Erro.</p>'; }
+});
+document.addEventListener('click', (e) => { if (!e.target.closest('#aluno-search-input') && !e.target.closest('#aluno-search-results')) { document.getElementById('aluno-search-results').style.display = 'none'; } });
 
 // ==========================================
 // 5. PERFIL: RANKING, OBJETIVOS, ESTATÍSTICAS
@@ -357,23 +374,14 @@ function carregarGamificacao(dados) {
 }
 
 async function carregarRankingTurma() {
-    const c = document.getElementById('ranking-turma-container');
-    if(!minhaTurma) { c.innerHTML = '<p class="text-muted center">Sem turma atribuída.</p>'; return; }
+    const c = document.getElementById('ranking-turma-container'); if(!minhaTurma) { c.innerHTML = '<p class="text-muted center">Sem turma atribuída.</p>'; return; }
     try {
         const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", minhaTurma), where("papel", "==", "aluno")));
-        let alunos = []; snap.forEach(d => alunos.push({id: d.id, ...d.data()}));
-        alunos.sort((a,b) => (b.xp || 0) - (a.xp || 0));
-        
+        let alunos = []; snap.forEach(d => alunos.push({id: d.id, ...d.data()})); alunos.sort((a,b) => (b.xp || 0) - (a.xp || 0));
         let html = '';
         alunos.slice(0, 10).forEach((al, idx) => {
-            let cor = 'var(--text-muted)';
-            if(idx === 0) cor = '#ffd700'; else if(idx === 1) cor = '#c0c0c0'; else if(idx === 2) cor = '#cd7f32';
-            html += `<div style="display:flex; align-items:center; gap:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left:3px solid ${cor};">
-                        <span style="font-weight:bold; font-size:1.2rem; color:${cor}; width:25px; text-align:center;">${idx+1}</span>
-                        <img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=00cc88&color=fff`}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;">
-                        <div style="flex:1;"><strong style="font-size:0.95rem; color:white;">${al.nome.split(' ')[0]} ${al.nome.split(' ').pop()}</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">${al.academia ? ACADEMIAS_INFO[al.academia].nome : 'S/ Academia'}</span></div>
-                        <span style="font-weight:bold; color:var(--primary-green); font-size:0.9rem;">${al.xp || 0} XP</span>
-                    </div>`;
+            let cor = 'var(--text-muted)'; if(idx === 0) cor = '#ffd700'; else if(idx === 1) cor = '#c0c0c0'; else if(idx === 2) cor = '#cd7f32';
+            html += `<div style="display:flex; align-items:center; gap:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left:3px solid ${cor};"><span style="font-weight:bold; font-size:1.2rem; color:${cor}; width:25px; text-align:center;">${idx+1}</span><img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=00cc88&color=fff`}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"><div style="flex:1;"><strong style="font-size:0.95rem; color:white;">${al.nome.split(' ')[0]} ${al.nome.split(' ').pop()}</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">${al.academia ? ACADEMIAS_INFO[al.academia].nome : 'S/ Academia'}</span></div><span style="font-weight:bold; color:var(--primary-green); font-size:0.9rem;">${al.xp || 0} XP</span></div>`;
         });
         c.innerHTML = html === '' ? '<p class="text-muted center">Ainda não há alunos com XP.</p>' : html;
     } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao carregar ranking.</p>'; }
@@ -383,24 +391,21 @@ async function carregarObjetivosPessoais() {
     const cont = document.getElementById('lista-objetivos-container'); cont.innerHTML = '<p class="text-muted center">A carregar...</p>';
     try {
         const uSnap = await getDoc(doc(db, "utilizadores", myUserId)); const uXp = uSnap.exists() ? (uSnap.data().xp || 0) : 0; const currentNivel = Math.floor(uXp / 100) + 1;
-        
         const nSnap = await getDocs(collection(db, "utilizadores", myUserId, "notas")); let notasArr = []; nSnap.forEach(n => notasArr.push(n.data()));
         const pSnap = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); let prhfsArr = []; pSnap.forEach(p => prhfsArr.push(p.data()));
 
-        const snap = await getDocs(query(collection(db, "utilizadores", myUserId, "objetivos"), orderBy("timestamp", "desc")));
+        const snap = await getDocs(query(collection(db, "utilizadores", myUserId, "objetivos"))); let objArr = []; snap.forEach(d => objArr.push({id: d.id, ...d.data()})); objArr.sort((a,b) => b.timestamp - a.timestamp);
         let html = ''; let objGanhouXP = false;
-        for (const d of snap.docs) {
-            let obj = d.data(); let achieved = false;
-            
+        for (const obj of objArr) {
+            let achieved = false;
             if(!obj.concluido) {
                 if(obj.tipo === 'nota') { const temNota = notasArr.find(n => n.disciplina === obj.disciplina && Number(n.modulo) === Number(obj.modulo) && Number(n.nota) >= Number(obj.notaAlvo)); if(temNota) achieved = true; } 
                 else if (obj.tipo === 'nivel') { if(currentNivel >= Number(obj.nivelAlvo)) achieved = true; } 
                 else if (obj.tipo === 'prhf') { const temPrhfConcluido = prhfsArr.find(p => p.status === 'concluida'); if(temPrhfConcluido) achieved = true; }
             }
-            if(achieved) { await updateDoc(doc(db, "utilizadores", myUserId, "objetivos", d.id), { concluido: true }); obj.concluido = true; objGanhouXP = true; }
-            
+            if(achieved) { await updateDoc(doc(db, "utilizadores", myUserId, "objetivos", obj.id), { concluido: true }); obj.concluido = true; objGanhouXP = true; }
             const cColor = obj.concluido ? 'var(--success-green)' : '#444'; const txtDec = obj.concluido ? 'line-through' : 'none'; const txtColor = obj.concluido ? 'var(--text-muted)' : 'white';
-            html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left: 3px solid ${cColor};"><div style="display:flex; align-items:center; gap:12px; flex:1;"><div style="width:24px; height:24px; border-radius:50%; border:2px solid ${cColor}; background:${obj.concluido ? cColor : 'transparent'}; display:flex; align-items:center; justify-content:center;">${obj.concluido ? '<i class="fa-solid fa-check" style="color:var(--bg-dark); font-size:0.75rem;"></i>' : ''}</div><span style="text-decoration:${txtDec}; color:${txtColor}; font-size:0.95rem; flex:1;">${obj.desc}</span></div><i class="fa-solid fa-trash" style="color:var(--danger-red); cursor:pointer; font-size:0.9rem; padding: 5px;" onclick="window.apagarObjetivo('${d.id}')"></i></div>`;
+            html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left: 3px solid ${cColor};"><div style="display:flex; align-items:center; gap:12px; flex:1;"><div style="width:24px; height:24px; border-radius:50%; border:2px solid ${cColor}; background:${obj.concluido ? cColor : 'transparent'}; display:flex; align-items:center; justify-content:center;">${obj.concluido ? '<i class="fa-solid fa-check" style="color:var(--bg-dark); font-size:0.75rem;"></i>' : ''}</div><span style="text-decoration:${txtDec}; color:${txtColor}; font-size:0.95rem; flex:1;">${obj.desc}</span></div><i class="fa-solid fa-trash" style="color:var(--danger-red); cursor:pointer; font-size:0.9rem; padding: 5px;" onclick="window.apagarObjetivo('${obj.id}')"></i></div>`;
         }
         if(objGanhouXP) { await updateDoc(doc(db, "utilizadores", myUserId), { xp: uXp + 50 }); carregarGamificacao({xp: uXp+50}); alert("🎉 Parabéns! Um Objetivo Inteligente foi concluído automaticamente! +50 XP"); }
         cont.innerHTML = html === '' ? '<p class="text-muted center" style="font-size:0.85rem;">Não tens metas ativas. Começa a desafiar-te!</p>' : html;
@@ -544,41 +549,23 @@ async function carregarPrhfsAluno() {
         if(prhfsDb.empty) { cCont.innerHTML = '<p class="text-muted" style="text-align:center;">Não tens Planos de Recuperação.</p>'; return; }
         let arr = []; prhfsDb.forEach(d => { arr.push({id: d.id, ...d.data()}); }); arr.sort((a,b) => new Date(a.prazo) - new Date(b.prazo));
         
-        let pendentes = arr.filter(p => p.status !== 'concluida');
-        let concluidos = arr.filter(p => p.status === 'concluida');
-
+        let pendentes = arr.filter(p => p.status !== 'concluida'); let concluidos = arr.filter(p => p.status === 'concluida');
         let html = ''; 
         const renderP = (p) => {
-            const isUrgente = p.moduloTerminado === true || p.moduloTerminado === "true"; 
-            const cor = isUrgente ? 'var(--danger-red)' : 'var(--warning-yellow)';
-            const txtSt = p.status === 'concluida' ? 'CONCLUÍDO' : (isUrgente ? 'URGENTE' : 'EM CURSO');
-            const corFinal = p.status === 'concluida' ? 'var(--success-green)' : cor;
-            const hPres = Number(p.horasPresenciais || 0); 
-            
+            const isUrgente = p.moduloTerminado === true || p.moduloTerminado === "true"; const cor = isUrgente ? 'var(--danger-red)' : 'var(--warning-yellow)'; const txtSt = p.status === 'concluida' ? 'CONCLUÍDO' : (isUrgente ? 'URGENTE' : 'EM CURSO'); const corFinal = p.status === 'concluida' ? 'var(--success-green)' : cor; const hPres = Number(p.horasPresenciais || 0); 
             const aHtml = p.anexoBase64 ? `<a href="${p.anexoBase64}" download="PRHF_${p.disciplina}" class="secondary-btn small-btn" style="margin-bottom:10px; color:var(--primary-green); border-color:var(--primary-green);"><i class="fa-solid fa-download"></i> Documento do Professor</a>` : '';
             const fpHtml = p.feedbackProfessor ? `<div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:10px; font-size:0.85rem;"><strong style="color:var(--primary-green);">Prof:</strong> ${p.feedbackProfessor}</div>` : '';
             const propHtml = p.propostaAluno ? `<div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:15px; font-size:0.85rem;"><strong style="color:var(--warning-yellow);">A tua Proposta:</strong> ${p.propostaAluno} <br><span style="color:${p.propostaLidaDT ? 'var(--success-green)' : 'var(--text-muted)'}; font-size:0.75rem;"><i class="fa-solid ${p.propostaLidaDT ? 'fa-check-double' : 'fa-check'}"></i> ${p.propostaLidaDT ? 'Validada' : 'A aguardar validação'}</span></div>` : '';
-
-            let btn = '';
-            if(p.status !== 'concluida' && hPres > 0) {
-                btn = `<button class="primary-btn small-btn" style="width:100%; background-color:${corFinal}; color:${corFinal === 'var(--warning-yellow)' ? 'black' : 'white'};" onclick="window.abrirAcaoPrhf('${p.id}', '${p.disciplina}', '${p.modulo}', '${p.prazo}')">Agendar Sessão Presencial</button>`;
-            }
-
+            let btn = ''; if(p.status !== 'concluida' && hPres > 0) { btn = `<button class="primary-btn small-btn" style="width:100%; background-color:${corFinal}; color:${corFinal === 'var(--warning-yellow)' ? 'black' : 'white'};" onclick="window.abrirAcaoPrhf('${p.id}', '${p.disciplina}', '${p.modulo}', '${p.prazo}')">Agendar Sessão Presencial</button>`; }
             return `<div class="card" style="margin-bottom:15px; border-left: 4px solid ${corFinal};"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="font-size: 1.1rem; color:white;">${p.disciplina} (Mod. ${p.modulo})</strong><span style="color:${corFinal}; font-size:0.75rem; font-weight:bold;">${txtSt}</span></div><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">${p.descricao}</p>${aHtml} ${fpHtml} ${propHtml}<div style="font-size:0.8rem; margin-bottom: 15px; border-top:1px dashed #333; padding-top:10px;">Data Limite: <strong style="color:${corFinal};">${p.prazo}</strong><br>Horas Presenciais: <strong>${hPres}h</strong></div>${btn}</div>`;
         };
-
-        pendentes.forEach(p => html += renderP(p));
-        if(concluidos.length > 0) { html += `<div class="falta-date-divider" style="margin-top:20px;"><span>Concluídos</span></div>`; concluidos.forEach(p => html += renderP(p)); }
-        cCont.innerHTML = html;
+        pendentes.forEach(p => html += renderP(p)); if(concluidos.length > 0) { html += `<div class="falta-date-divider" style="margin-top:20px;"><span>Concluídos</span></div>`; concluidos.forEach(p => html += renderP(p)); } cCont.innerHTML = html;
     } catch(e) {}
 }
 
 window.abrirAcaoPrhf = (id, disc, mod, prazo) => {
-    esconderTodasAsVistas(); document.getElementById('view-aluno-acao-prhf').style.display = 'block';
-    document.getElementById('prhf-acao-titulo').innerText = `${disc} (Mod. ${mod})`; document.getElementById('prhf-acao-prazo').innerText = prazo;
-    
+    esconderTodasAsVistas(); document.getElementById('view-aluno-acao-prhf').style.display = 'block'; document.getElementById('prhf-acao-titulo').innerText = `${disc} (Mod. ${mod})`; document.getElementById('prhf-acao-prazo').innerText = prazo;
     document.getElementById('btn-voltar-acao-prhf').onclick = () => { esconderTodasAsVistas(); document.getElementById('view-aluno-caderneta').style.display = 'block'; carregarPrhfsAluno(); };
-
     document.getElementById('btn-enviar-proposta-prhf').onclick = async (e) => {
         const d = document.getElementById('aluno-prhf-proposta-data').value; const hi = document.getElementById('aluno-prhf-proposta-hora-inicio').value; const hf = document.getElementById('aluno-prhf-proposta-hora-fim').value;
         if(!d || !hi || !hf) { alert("Preenche a data e horas!"); return; }
@@ -600,16 +587,11 @@ async function carregarComportamentoAluno() {
 async function carregarObservacoesAluno(rSel = '1_avaliacao') {
     const cCont = document.getElementById('aluno-caderneta-content');
     const rM = [{id: '1_intercalar', label: '1ª Intercalar'}, {id: '1_avaliacao', label: '1ª Avaliação'}, {id: '2_intercalar', label: '2ª Intercalar'}, {id: '2_avaliacao', label: '2ª Avaliação'}, {id: '3_avaliacao', label: '3ª Avaliação'}];
-    let html = '<div style="display:flex; overflow-x:auto; gap:10px; margin-bottom:20px; padding-bottom:10px; scrollbar-width: none;">';
-    rM.forEach(r => { const bg = r.id === rSel ? 'var(--primary-green)' : 'var(--bg-dark)'; const color = r.id === rSel ? 'var(--bg-dark)' : 'var(--text-muted)'; html += `<button class="btn-select-reuniao" data-id="${r.id}" style="background:${bg}; color:${color}; border:1px solid #333; padding:8px 15px; border-radius:20px; cursor:pointer; font-weight:bold; white-space:nowrap; transition:0.2s; flex-shrink:0;">${r.label}</button>`; });
-    html += '</div><div id="reuniao-content-area"><p class="text-muted center">A carregar dados...</p></div>';
-    cCont.innerHTML = html;
-
+    let html = '<div style="display:flex; overflow-x:auto; gap:10px; margin-bottom:20px; padding-bottom:10px; scrollbar-width: none;">'; rM.forEach(r => { const bg = r.id === rSel ? 'var(--primary-green)' : 'var(--bg-dark)'; const color = r.id === rSel ? 'var(--bg-dark)' : 'var(--text-muted)'; html += `<button class="btn-select-reuniao" data-id="${r.id}" style="background:${bg}; color:${color}; border:1px solid #333; padding:8px 15px; border-radius:20px; cursor:pointer; font-weight:bold; white-space:nowrap; transition:0.2s; flex-shrink:0;">${r.label}</button>`; }); html += '</div><div id="reuniao-content-area"><p class="text-muted center">A carregar dados...</p></div>'; cCont.innerHTML = html;
     document.querySelectorAll('.btn-select-reuniao').forEach(btn => { btn.addEventListener('click', (e) => { carregarObservacoesAluno(e.currentTarget.getAttribute('data-id')); }); });
 
     try {
-        const dS = await getDoc(doc(db, "utilizadores", myUserId, "reunioes", rSel)); let dR = dS.exists() ? dS.data() : {};
-        let cH = '<div style="display:flex; flex-direction:column; gap:10px;">';
+        const dS = await getDoc(doc(db, "utilizadores", myUserId, "reunioes", rSel)); let dR = dS.exists() ? dS.data() : {}; let cH = '<div style="display:flex; flex-direction:column; gap:10px;">';
         ordemDisciplinasGlobal.forEach(disc => { const cm = dR.disciplinas && dR.disciplinas[disc] ? dR.disciplinas[disc] : '<span style="color:var(--text-muted);">Sem comentário</span>'; cH += `<div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;"><h4 style="margin-bottom:8px; color:white; font-size:1rem;">${disc}</h4><p style="color:var(--text-light); font-size:0.9rem; line-height:1.4; margin:0;">${cm}</p></div>`; });
         const gl = dR.global || '<span style="color:var(--text-muted);">Sem observações globais.</span>'; cH += `<div class="card" style="margin-top:15px; border:1px solid var(--warning-yellow); background:rgba(255,204,0,0.05); padding:15px;"><h3 style="color:var(--warning-yellow); margin-bottom:10px; font-size:1.1rem;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3><p style="color:white; font-size:0.95rem; line-height:1.5; margin:0;">${gl}</p></div></div>`;
         document.getElementById('reuniao-content-area').innerHTML = cH;
@@ -627,15 +609,11 @@ async function carregarAgendaAlunoLista() {
         let evs = [];
         evDb.forEach(d => { const e = d.data(); let bgC = '#b82bf2'; let txtT = 'Evento'; if(e.tipo === 'teste' || e.tipo === 'avaliacao') { if(mT) { bgC = '#ffaa00'; txtT = 'Avaliação'; evs.push({...e, cor: bgC, txt: txtT}); } } else if(e.tipo === 'trabalho' || e.tipo === 'entrega') { if(mTr) { bgC = '#00d2ff'; txtT = 'Entrega'; evs.push({...e, cor: bgC, txt: txtT}); } } else { if(mO) evs.push({...e, cor: bgC, txt: txtT}); } });
         if(evs.length === 0) { sC.innerHTML = '<p class="text-muted center">Nenhum evento com os filtros atuais.</p>'; return; }
-        
         const hj = new Date().toISOString().split('T')[0]; const fut = evs.filter(e => e.data >= hj).sort((a,b) => a.data.localeCompare(b.data)); const pas = evs.filter(e => e.data < hj).sort((a,b) => b.data.localeCompare(a.data));
-        const mA = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-        let html = '';
+        const mA = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; let html = '';
         const rEv = (ev) => { const dp = ev.data.split('-'); const mes = mA[parseInt(dp[1])-1]; return `<div class="calendar-event-card" style="border-left-color:${ev.cor}; margin-bottom:10px;"><div class="calendar-date-box"><span class="day">${dp[2]}</span><span class="month" style="color:${ev.cor};">${mes}</span></div><div class="calendar-info"><h4 style="margin:0; color:white;">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt||'evento').toUpperCase()}</span></div></div>`; };
-
         if(fut.length > 0) fut.forEach(e => html += rEv(e)); else html += '<p class="text-muted center">Sem eventos futuros.</p>';
-        if(pas.length > 0) { html += '<div class="calendar-divider" style="margin-top:20px;"><span>Passados</span></div>'; pas.forEach(e => html += rEv(e)); }
-        sC.innerHTML = html;
+        if(pas.length > 0) { html += '<div class="calendar-divider" style="margin-top:20px;"><span>Passados</span></div>'; pas.forEach(e => html += rEv(e)); } sC.innerHTML = html;
     } catch(e) {}
 }
 
@@ -657,17 +635,7 @@ async function carregarHorarioAluno() {
             document.getElementById('aluno-horario-display').innerText = `${fDt(dT)} a ${fDt(dE)}`;
             let h = '<div class="horario-grid" style="min-width:100%;"><div class="horario-header"></div>'; let dI = new Date(dT);
             ['SEG','TER','QUA','QUI','SEX'].forEach(d => { h += `<div class="horario-header">${d}<span>${fDt(dI)}</span></div>`; dI.setDate(dI.getDate()+1); });
-            bK.forEach(b => { 
-                h += `<div class="horario-time">${bT[b]}</div>`; 
-                dI = new Date(dT); 
-                for(let i=0; i<5; i++) { 
-                    const dSStr = `${dI.getFullYear()}-${String(dI.getMonth()+1).padStart(2,'0')}-${String(dI.getDate()).padStart(2,'0')}`; 
-                    const dc = hb[`${dSStr}_${b}`]; 
-                    if(dc) { const sty = getCorEspecial(dc); h += `<div class="horario-slot" style="border:1px solid ${sty.c}; background-color:${sty.bg}; color:white;"><strong>${dc}</strong></div>`; } 
-                    else { h += `<div class="horario-slot"></div>`; }
-                    dI.setDate(dI.getDate()+1); 
-                } 
-            });
+            bK.forEach(b => { h += `<div class="horario-time">${bT[b]}</div>`; dI = new Date(dT); for(let i=0; i<5; i++) { const dSStr = `${dI.getFullYear()}-${String(dI.getMonth()+1).padStart(2,'0')}-${String(dI.getDate()).padStart(2,'0')}`; const dc = hb[`${dSStr}_${b}`]; if(dc) { const sty = getCorEspecial(dc); h += `<div class="horario-slot" style="border:1px solid ${sty.c}; background-color:${sty.bg}; color:white;"><strong>${dc}</strong></div>`; } else h += `<div class="horario-slot"></div>`; dI.setDate(dI.getDate()+1); } });
             sC.innerHTML = h + '</div>';
         }
     } catch(e) {}
@@ -695,6 +663,38 @@ function iniciarChatAluno(fId) {
         chatContainer.innerHTML = html; chatContainer.scrollTop = chatContainer.scrollHeight;
     });
 }
+
+// ==========================================
+// 9. POMODORO (Foco de Memória)
+// ==========================================
+function formatTimer(segundos) {
+    if(segundos < 0) segundos = 0; const m = Math.floor(segundos / 60).toString().padStart(2, '0'); const s = (segundos % 60).toString().padStart(2, '0');
+    document.getElementById('study-timer-text').innerText = `${m}:${s}`;
+}
+
+function resetPomodoroUI() {
+    clearInterval(pTmr); pTmr = null; localStorage.removeItem('pomodoroEndTarget');
+    document.getElementById('btn-stop-study').style.display = 'none'; document.getElementById('btn-start-study').style.display = 'inline-block';
+    document.getElementById('study-setup').style.display = 'block'; document.getElementById('study-timer-text').style.color = "white";
+}
+
+function renderTimerRunning() {
+    let target = localStorage.getItem('pomodoroEndTarget'); if(!target) return;
+    let left = Math.round((target - Date.now()) / 1000);
+    if(left <= 0) {
+        resetPomodoroUI(); formatTimer(0);
+        document.getElementById('study-controls').style.display = 'none'; document.getElementById('study-setup').style.display = 'none'; document.getElementById('post-study-log').style.display = 'block';
+    } else formatTimer(left);
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && pTmr !== null) {
+        clearInterval(pTmr); pTmr = null; localStorage.removeItem('pomodoroEndTarget');
+        document.getElementById('foco-xp-perdido').innerText = `${pXPConfig} XP`;
+        document.getElementById('modal-foco-interrompido').style.display = 'flex';
+        resetPomodoroUI(); formatTimer(pTimeConfig * 60);
+    }
+});
 
 // ==========================================
 // 11. SUMÁRIOS E PASSAPORTE
