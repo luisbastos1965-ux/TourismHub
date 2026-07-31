@@ -29,8 +29,14 @@ input, textarea, select {
 .danger-btn { width: 100%; background-color: transparent; color: var(--danger-red); border: 1px solid var(--danger-red); padding: 12px; border-radius: 8px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s;}
 .danger-btn:hover { background-color: rgba(255, 77, 77, 0.1); }
 .small-btn { width: auto; padding: 8px 15px; font-size: 0.9rem; }
+
 input, select { width: 100%; padding: 12px; margin-bottom: 15px; background-color: var(--bg-dark); border: 1px solid #333; border-radius: 8px; color: var(--text-light); font-size: 1rem; }
 input:focus, select:focus { outline: none; border-color: var(--primary-green); }
+
+/* Novas Classes de Input Dinâmicas (Usadas no Prof e Aluno) */
+.input-padrao { background: var(--bg-dark); border: 1px solid #333; color: white; border-radius: 8px; padding: 10px; font-family: inherit; }
+.input-padrao:focus { outline: none; border-color: var(--primary-green); }
+
 .text-muted { color: var(--text-muted); }
 
 /* =========================================
@@ -99,6 +105,10 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .hub-card span { font-weight: bold; font-size: 0.95rem; }
 .disabled-hub-card { opacity: 0.3; pointer-events: none; filter: grayscale(100%); }
 
+/* Elementos Lista de Alunos (Usados na Metralhadora de Faltas e Turmas do Prof) */
+.aluno-list-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 8px; border: 1px solid #333; }
+.chk-presente { width: 22px; height: 22px; accent-color: var(--primary-green); cursor: pointer; }
+
 /* =========================================
    AVALIAÇÕES E PAUTA
 ========================================= */
@@ -152,7 +162,7 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .progress-bar-fill { height: 100%; background-color: var(--primary-green); transition: width 0.3s; }
 
 /* =========================================
-   ESTATÍSTICAS & TABELAS
+   ESTATÍSTICAS, TABELAS & BADGES
 ========================================= */
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-bottom: 20px; }
 .stat-card { background-color: var(--bg-card); border: 1px solid #333; border-radius: 12px; padding: 20px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;}
@@ -168,6 +178,18 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 .styled-table td.center { text-align: center; }
 .badge-risco { background: rgba(255,77,77,0.2); color: var(--danger-red); padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; border: 1px solid var(--danger-red); }
 .badge-ok { background: rgba(40,167,69,0.2); color: var(--success-green); padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; border: 1px solid var(--success-green); }
+
+/* Filtros Horizontais (Chips) */
+.filter-chips-container { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 15px; scrollbar-width: none; }
+.filter-chips-container::-webkit-scrollbar { display: none; }
+.filter-chip { background: var(--bg-dark); border: 1px solid #333; color: var(--text-muted); padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; cursor: pointer; white-space: nowrap; transition: 0.2s; }
+.filter-chip.active { background: var(--primary-green); color: var(--bg-dark); border-color: var(--primary-green); font-weight: bold; }
+
+/* Semáforos de Risco (Prof/DT) */
+.status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; box-shadow: 0 0 8px rgba(0,0,0,0.5); }
+.status-green { background-color: var(--success-green); }
+.status-yellow { background-color: var(--warning-yellow); }
+.status-red { background-color: var(--danger-red); }
 
 /* =========================================
    FÓRUM & CHAT CANAIS
@@ -292,7 +314,7 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .sub-media-label { font-size: 0.7rem; color: var(--text-muted); display: block; }
 .sub-media-value { font-size: 1.1rem; font-weight: bold; color: white; }
 
-/* Timeline e Os Novos Filtros de Pílula (Agenda) - FORÇADOS NUMA SÓ LINHA SEM CHECKBOX VISÍVEL */
+/* Timeline e Os Novos Filtros de Pílula (Agenda) */
 .timeline { position: relative; padding-left: 25px; margin-top: 15px; }
 .timeline::before { content: ''; position: absolute; top: 0; left: 9px; width: 2px; height: 100%; background: #333; }
 .timeline-item { position: relative; margin-bottom: 20px; }
@@ -320,7 +342,7 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .modulo-row { display: flex; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid #222; }
 .modulo-row:last-child { border-bottom: none; }
 
-/* Horário Otimizado (Lista Reduzida e Grelha para 52px) */
+/* Horário Otimizado */
 .horario-list-item { display: flex; justify-content: space-between; align-items: center; background: var(--bg-dark); padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid var(--primary-green); }
 .horario-time-col { font-weight: bold; color: var(--text-muted); font-size: 0.95rem; }
 .horario-disc-col { text-align: right; }
