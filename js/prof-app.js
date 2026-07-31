@@ -2,7 +2,7 @@ import { auth, db, messaging, VAPID_KEY, getToken } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, collection, updateDoc, getDocs, query, addDoc, deleteDoc, where, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-let myUserId = "", myUserName = "", profData = {};
+let myUserId = "", myUserName = "", profData = {}, myRoles = [];
 let turmasProfessor = []; let selectedTurma = ""; let alunosTurmaRAM = []; let eventosTurmaRAM = [];
 let alunoSelecionadoId = null;
 
@@ -14,31 +14,56 @@ const ACADEMIAS_INFO = {
 };
 
 // ==========================================
-// 1. INICIALIZAÇÃO DO PROFESSOR
+// 1. INICIALIZAÇÃO DO PROFESSOR (MÚLTIPLOS PAPÉIS)
 // ==========================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         myUserId = user.email.split('@')[0];
         try {
             const docSnap = await getDoc(doc(db, "utilizadores", myUserId));
-            if (docSnap.exists() && (docSnap.data().papel === 'professor' || docSnap.data().papel === 'diretor_turma')) {
-                profData = docSnap.data(); myUserName = profData.nome || myUserId;
-                turmasProfessor = profData.turmas || []; // Ex: ['10A', '11GPSI']
+            if (docSnap.exists()) {
+                profData = docSnap.data();
                 
-                document.getElementById('header-user-name-prof').innerText = myUserName;
-                document.getElementById('perfil-nome-prof').innerText = myUserName;
-                if(profData.fotoPerfil) {
-                    document.getElementById('header-avatar-circle').innerHTML = `<img src="${profData.fotoPerfil}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-                    document.getElementById('prof-avatar-img').src = profData.fotoPerfil;
-                }
+                // Sistema do Cinto de Utilidades (Lê array 'papeis' ou converte a string 'papel' antiga)
+                myRoles = profData.papeis || [];
+                if (profData.papel && !myRoles.includes(profData.papel)) myRoles.push(profData.papel);
+                
+                // Verifica se tem pelo menos um cargo docente
+                const temAcesso = myRoles.some(r => ['professor', 'diretor_turma', 'orientador_pap', 'coordenador'].includes(r));
+                
+                if (temAcesso) {
+                    myUserName = profData.nome || myUserId;
+                    turmasProfessor = profData.turmas || []; // Ex: ['10A', '11GPSI']
+                    
+                    // Monta o título dinamicamente com base nos papéis
+                    let titleStr = "Professor";
+                    if(myRoles.includes('diretor_turma')) titleStr += " / DT";
+                    if(myRoles.includes('coordenador')) titleStr += " / Coord.";
+                    if(myRoles.includes('orientador_pap')) titleStr += " / PAP";
+                    
+                    document.getElementById('header-user-name-prof').innerText = myUserName;
+                    document.getElementById('header-user-name-prof').nextElementSibling.innerText = titleStr;
+                    document.getElementById('perfil-nome-prof').innerText = myUserName;
+                    
+                    if(profData.fotoPerfil) {
+                        document.getElementById('header-avatar-circle').innerHTML = `<img src="${profData.fotoPerfil}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+                        document.getElementById('prof-avatar-img').src = profData.fotoPerfil;
+                    }
 
-                // Preencher o seletor de turmas
-                const sel = document.getElementById('prof-seletor-turmas');
-                if(turmasProfessor.length > 0) {
-                    sel.innerHTML = '<option value="">-- Selecionar Turma --</option>' + turmasProfessor.map(t => `<option value="${t}">Turma ${t}</option>`).join('');
-                } else { sel.innerHTML = '<option value="">Sem turmas atribuídas</option>'; }
+                    // Esconde abas que não pertencem ao cargo do utilizador
+                    if(!myRoles.includes('diretor_turma') && !myRoles.includes('orientador_pap')) {
+                        const tabPassaporte = document.getElementById('tab-tarefas-passaporte');
+                        if(tabPassaporte) tabPassaporte.style.display = 'none';
+                    }
 
-                carregarRadarProfessor();
+                    // Preencher o seletor de turmas
+                    const sel = document.getElementById('prof-seletor-turmas');
+                    if(turmasProfessor.length > 0) {
+                        sel.innerHTML = '<option value="">-- Selecionar Turma --</option>' + turmasProfessor.map(t => `<option value="${t}">Turma ${t}</option>`).join('');
+                    } else { sel.innerHTML = '<option value="">Sem turmas atribuídas</option>'; }
+
+                    carregarRadarProfessor();
+                } else { window.location.href = "index.html"; }
             } else { window.location.href = "index.html"; }
         } catch (e) { console.error("Erro Auth Prof:", e); }
     } else { window.location.href = "index.html"; }
@@ -71,6 +96,16 @@ document.body.addEventListener('click', async (e) => {
         const trg = e.target.closest('.fechar-modal').getAttribute('data-target');
         document.getElementById(trg).style.display = 'none';
         if(trg === 'modal-perfil-aluno') alunoSelecionadoId = null;
+    }
+
+    // TABS DE TAREFAS
+    if(e.target.closest('#tab-tarefas-prhf')) {
+        document.querySelectorAll('.falta-tab-btn').forEach(b => b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active');
+        document.getElementById('sec-tarefas-prhf').style.display = 'block'; document.getElementById('sec-tarefas-passaporte').style.display = 'none';
+    }
+    if(e.target.closest('#tab-tarefas-passaporte')) {
+        document.querySelectorAll('.falta-tab-btn').forEach(b => b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active');
+        document.getElementById('sec-tarefas-prhf').style.display = 'none'; document.getElementById('sec-tarefas-passaporte').style.display = 'block';
     }
 
     // ABRIR PERFIL 360 DO ALUNO
@@ -130,7 +165,7 @@ document.body.addEventListener('click', async (e) => {
         try {
             await addDoc(collection(db, "turmas", selectedTurma, "eventos"), { titulo: t, data: d, tipo: tp, professor: myUserName });
             b.innerHTML = '<i class="fa-solid fa-check"></i> Agendado';
-            setTimeout(() => { b.innerHTML = 'Agendar'; b.disabled = false; document.getElementById('modal-agendar-evento').style.display = 'none'; }, 1500);
+            setTimeout(() => { b.innerHTML = 'Agendar'; b.disabled = false; document.getElementById('modal-agendar-evento').style.display = 'none'; carregarRadarProfessor(); }, 1500);
         } catch(err) { b.innerHTML = "Erro"; setTimeout(()=>b.disabled=false, 1500); }
     }
 
@@ -287,6 +322,17 @@ async function abrirPerfil360Aluno(alunoId) {
     document.getElementById('p-aluno-academia').innerText = al.academia ? ACADEMIAS_INFO[al.academia].nome : 'Sem Academia';
     document.getElementById('p-aluno-xp').innerText = al.xp || 0;
 
+    // Se o Professor também for DT, mostramos a área de Observações Intercalares
+    if(myRoles.includes('diretor_turma')) {
+        document.getElementById('p-aluno-obs-dt').style.display = 'block';
+        document.getElementById('btn-salvar-obs-dt').style.display = 'block';
+        document.getElementById('p-aluno-obs-dt').previousElementSibling.style.display = 'block';
+    } else {
+        document.getElementById('p-aluno-obs-dt').style.display = 'none';
+        document.getElementById('btn-salvar-obs-dt').style.display = 'none';
+        document.getElementById('p-aluno-obs-dt').previousElementSibling.style.display = 'none';
+    }
+
     // Calcular stats rápidos
     let fCount = 0; let pCount = 0;
     try {
@@ -325,15 +371,14 @@ async function carregarRadarProfessor() {
             }); aC.innerHTML = ah;
         } else { aC.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Agenda livre para as próximas semanas.</p>'; }
 
-        // O Radar no Futuro (V2) lerá os PRHFs propostos diretamente de cada aluno das turmas
-        pC.innerHTML = `<div style="padding:10px; border:1px dashed #333; border-radius:8px; text-align:center;"><p style="font-size:0.85rem; color:var(--text-muted); margin:0;">Tudo atualizado! Nenhuma tarefa burocrática pendente para hoje.</p></div>`;
+        // O Radar no Futuro lerá os PRHFs propostos diretamente
+        pC.innerHTML = `<div style="padding:10px; border:1px dashed #333; border-radius:8px; text-align:center;"><p style="font-size:0.85rem; color:var(--text-muted); margin:0;">Tudo atualizado! Nenhuma tarefa burocrática urgente pendente para hoje.</p></div>`;
 
     } catch(e) {}
 }
 
 function carregarTarefasProf() {
-    // Aba PRHFs (Para a V2 o Prof verá a lista global. Por agora é informativo)
-    document.getElementById('lista-prhfs-professor').innerHTML = `<p class="text-muted center" style="font-size:0.85rem; margin-top:20px;">Os teus Planos de Recuperação (PRHF) listados por aluno aparecerão aqui brevemente. Por agora, acede ao Perfil 360º de cada aluno pela janela "Turmas" para verificar o estado.</p>`;
+    document.getElementById('lista-prhfs-professor').innerHTML = `<p class="text-muted center" style="font-size:0.85rem; margin-top:20px;">O sistema central de validação de Planos de Recuperação (PRHF) e justificação de Faltas estará disponível no próximo módulo.</p>`;
 }
 
 function carregarForunsProf() {
