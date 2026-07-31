@@ -8,6 +8,10 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- FullCalendar -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/locales/pt.global.min.js'></script>
+
     <!-- Compressão de Imagens (Para o Avatar do Perfil) -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
 
@@ -61,7 +65,13 @@
                     <div id="exam-countdown" style="font-size: 1.5rem; font-weight: bold; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; display: inline-block;">Faltam X dias</div>
                 </div>
 
-                <!-- ACESSO RÁPIDO NO TOPO -->
+                <!-- ALARMES E AVISOS ESCOLARES (Assistente no TOPO) -->
+                <div id="hero-alert-section"></div>
+
+                <!-- EMOCIONAL E MISSÕES DA TURMA -->
+                <div id="hero-emotional-section"></div>
+
+                <!-- ACESSO RÁPIDO NO FUNDO -->
                 <div class="lms-action-grid" style="margin-bottom: 20px;">
                     <button class="lms-btn" id="btn-open-materiais" style="border-color:#0099ff; color:#0099ff; background: rgba(0, 153, 255, 0.05); display: flex;">
                         <i class="fa-solid fa-book-open"></i><span>Materiais</span>
@@ -70,12 +80,6 @@
                         <i class="fa-solid fa-briefcase"></i><span id="btn-passaporte-texto">Estágio / PAP</span>
                     </button>
                 </div>
-
-                <!-- ALARMES E AVISOS ESCOLARES (Injetado via JS) -->
-                <div id="hero-alert-section"></div>
-
-                <!-- EMOCIONAL E MISSÕES DA TURMA (Injetado via JS) -->
-                <div id="hero-emotional-section"></div>
             </div>
 
             <!-- VISTA PERFIL -->
@@ -94,16 +98,16 @@
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;"><span id="perfil-xp-totais">0</span> XP totais alcançados</p>
                 </div>
 
-                <!-- OBJETIVOS INTELIGENTES -->
+                <!-- OBJETIVOS -->
                 <div class="card" style="border-left: 4px solid var(--warning-yellow);">
-                    <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-bullseye"></i> Metas Inteligentes</h3>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Define os teus objetivos! A app valida automaticamente o teu progresso e dá-te <strong style="color:var(--warning-yellow);">+50 XP</strong> quando os cumprires.</p>
+                    <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-bullseye"></i> Metas</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">A app valida o teu progresso automaticamente e dá-te <strong style="color:var(--warning-yellow);">+50 XP</strong> quando cumprires os objetivos.</p>
                     
                     <div style="display:flex; flex-direction:column; gap:10px; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
                         <select id="obj-tipo" class="input-padrao" style="width:100%; margin:0;">
-                            <option value="nota">Tirar nota alvo num Módulo</option>
-                            <option value="nivel">Alcançar um novo Nível Geral</option>
+                            <option value="nota">Manter / Atingir nota num Módulo</option>
                             <option value="prhf">Concluir Plano de Recuperação (PRHF)</option>
+                            <option value="reconhecimento">Receber Reconhecimento Positivo</option>
                         </select>
                         
                         <div id="obj-setup-nota" style="display:flex; gap:8px;">
@@ -111,21 +115,17 @@
                             <input type="number" id="obj-modulo" placeholder="Mod." class="input-padrao" style="width:60px; margin:0;" min="1">
                             <input type="number" id="obj-nota-alvo" placeholder="Nota" class="input-padrao" style="width:70px; margin:0;" min="10" max="20">
                         </div>
-                        
-                        <div id="obj-setup-nivel" style="display:none; gap:8px;">
-                            <input type="number" id="obj-nivel-alvo" placeholder="Nível pretendido (ex: 5)" class="input-padrao" style="width:100%; margin:0;" min="2">
-                        </div>
 
                         <button id="btn-add-objetivo" class="primary-btn" style="width:100%; margin-top:5px; background:var(--warning-yellow); color:black;"><i class="fa-solid fa-plus"></i> Guardar Meta</button>
                     </div>
                     <div id="lista-objetivos-container"></div>
                 </div>
 
-                <!-- TOP 10 DA TURMA -->
+                <!-- TOP RANKINGS E ACADEMIAS -->
                 <div class="card" style="border-left: 4px solid #ffd700; margin-bottom: 20px;">
-                    <h3 style="font-size: 1.1rem; color: white; margin-bottom: 15px;"><i class="fa-solid fa-trophy"></i> Top 10 da Turma</h3>
+                    <h3 style="font-size: 1.1rem; color: white; margin-bottom: 15px;"><i class="fa-solid fa-trophy"></i> Ranking da Turma</h3>
                     <div id="ranking-turma-container">
-                        <p class="text-muted center">A classificar alunos...</p>
+                        <p class="text-muted center">A classificar alunos e academias...</p>
                     </div>
                 </div>
 
@@ -163,10 +163,9 @@
 
             <!-- VISTA MATERIAIS -->
             <div id="view-aluno-materiais" style="display: none;">
-                <div class="class-header" style="margin-bottom: 10px;">
+                <div class="class-header" style="margin-bottom: 15px;">
                     <button id="btn-voltar-materiais" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                 </div>
-                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-book-open"></i> Materiais</h2>
                 
                 <div style="margin-bottom:15px; position: relative;">
                     <div style="display:flex; align-items:center; background: var(--bg-card); border: 1px solid #333; border-radius: 8px; padding: 0 10px;">
@@ -210,8 +209,6 @@
                     <div style="display:flex; justify-content:space-between; margin-bottom: 15px; font-size:0.8rem; border-bottom: 1px dashed #333; padding-bottom:10px;">
                         <span>Data Limite: <strong id="prhf-acao-prazo" style="color:var(--warning-yellow);">...</strong></span>
                     </div>
-                    
-                    <div id="prhf-docs-container"></div>
                     
                     <h4 style="font-size: 0.95rem; margin-bottom: 10px; margin-top: 15px; color:var(--primary-green);">Agendar Sessão Presencial</h4>
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Indica o dia e o horário para validação do Professor.</p>
@@ -388,7 +385,6 @@
         </nav>
     </div>
 
-    <!-- SCRIPT ÚNICO -->
     <script type="module" src="./js/aluno-app.js"></script>
 </body>
 </html>
