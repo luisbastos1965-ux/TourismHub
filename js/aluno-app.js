@@ -7,12 +7,7 @@ const ordemDisciplinasGlobal = ['PORT', 'ING', 'AI', 'EF', 'TIC', 'GEO', 'HCA', 
 try { await enableIndexedDbPersistence(db); console.log("Offline OK!"); } catch (e) {}
 
 let myUserId = "", myUserName = "", minhaTurma = "", myAcademia = "";
-let chartInstance = null; let quillEditor = null;
-let alunoForumAtivoId = null; let chatUnsubscribeAluno = null; let pendingDeleteChatId = null;
-let fQB64 = "";
-
-let pTmr = null; let pTimeConfig = 30; let pXPConfig = 50; let pRest = 30 * 60;
-const focusXPMap = { '15': 25, '25': 40, '30': 50, '45': 75, '60': 100 };
+let chartInstance = null; let alunoForumAtivoId = null; let chatUnsubscribeAluno = null; let pendingDeleteChatId = null;
 
 window.timelineFilterCat = 'all'; window.notifFilterCat = 'all';
 let ahModo = 'dia', ahDOff = 0, ahSOff = 0;
@@ -21,11 +16,11 @@ const ACADEMIAS_INFO = {
     'atlas': { nome: 'Atlas', cor: '#00cc88', icon: 'fa-compass', desc: 'A academia dos Exploradores. Movidos pela curiosidade e descoberta.' },
     'sentinela': { nome: 'Sentinela', cor: '#0088ff', icon: 'fa-shield-halved', desc: 'A academia dos Guardiões. Destacam-se pela responsabilidade e organização.' },
     'nexus': { nome: 'Nexus', cor: '#ff8800', icon: 'fa-microchip', desc: 'A academia dos Inovadores. Criativos, focados em encontrar novas soluções.' },
-    'aurora': { nome: 'Aurora', cor: '#b82bf2', icon: 'fa-bolt', desc: 'A academia dos Desafiadores. Competitivos, resilientes e mestres do foco.' }
+    'aurora': { nome: 'Aurora', cor: '#b82bf2', icon: 'fa-bolt', desc: 'A academia dos Desafiadores. Competitivos, resilientes e focados na superação.' }
 };
 
 // ==========================================
-// 1. INICIALIZAÇÃO
+// 1. INICIALIZAÇÃO E ACADEMIAS
 // ==========================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -48,9 +43,8 @@ onAuthStateChanged(auth, async (user) => {
 
                 carregarDadosPassaporte(d); carregarGamificacao(d);
                 await construirHomeAdaptativa(); verificarEpocaExames();
+
                 if (!myAcademia) iniciarQuizAcademias(); else aplicarTemaAcademia(myAcademia);
-                
-                setTimeout(iniciarRodaFoco, 1000); // Inicia mecânica da roda do modo foco
             } else window.location.href = "index.html";
         } catch (e) { console.error("Erro Auth", e); }
     } else window.location.href = "index.html";
@@ -77,28 +71,18 @@ document.body.addEventListener('click', async (e) => {
     if(nav) {
         e.preventDefault(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); nav.classList.add('active');
         esconderTodasAsVistas(); const tId = nav.getAttribute('data-target'); 
-        document.getElementById(tId).style.display = (tId === 'view-study-mode' || tId === 'view-aluno-forum') ? 'flex' : 'block';
-        if(tId === 'view-aluno-perfil') { carregarRankingTurma(); carregarObjetivosPessoais(); carregarHistoricoHumor(); setTimeout(renderizarGraficoNotas, 150); }
+        document.getElementById(tId).style.display = (tId === 'view-aluno-forum') ? 'flex' : 'block';
+        if(tId === 'view-aluno-perfil') { carregarRankingTurma(); carregarObjetivosPessoais(); setTimeout(renderizarGraficoNotas, 150); }
         if(tId === 'view-aluno-caderneta') document.getElementById('tab-aluno-timeline').click();
         if(tId === 'view-aluno-agenda') document.getElementById('tab-aluno-eventos').click();
         if(tId === 'view-aluno-forum') carregarForuns();
-        if(tId === 'view-aluno-caderno') { if(!quillEditor) quillEditor = new Quill('#quill-editor', { theme: 'snow' }); carregarResumos(); }
     }
     
     // FERRAMENTAS
-    if(e.target.closest('#btn-open-study-mode')) {
-        esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-study-mode').style.display = 'flex';
-        if(localStorage.getItem('pomodoroEndTarget') && localStorage.getItem('pomodoroEndTarget') > Date.now()) { document.getElementById('btn-start-study').click(); }
-        setTimeout(()=>document.getElementById('study-wheel').scrollTop=60, 50); // Centra aos 30min
-    }
-    if(e.target.closest('#btn-open-caderno')) {
-        esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-caderno').style.display = 'block';
-        if(!quillEditor) quillEditor = new Quill('#quill-editor', { theme: 'snow' }); carregarResumos(); document.getElementById('tab-caderno-resumos').click();
-    }
     if(e.target.closest('#btn-open-sumarios')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-sumarios').style.display = 'block'; carregarSumariosAluno(); }
     if(e.target.closest('#btn-abrir-passaporte')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-passaporte').style.display = 'block'; }
     if(e.target.closest('#btn-open-notificacoes')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-notificacoes').style.display = 'block'; carregarNotificacoesAluno(); }
-    if(e.target.closest('#btn-voltar-notificacoes') || e.target.closest('#btn-voltar-caderno') || e.target.closest('#btn-voltar-sumarios') || e.target.closest('#btn-voltar-passaporte') || e.target.closest('#btn-voltar-study')) {
+    if(e.target.closest('#btn-voltar-notificacoes') || e.target.closest('#btn-voltar-sumarios') || e.target.closest('#btn-voltar-passaporte')) {
         document.querySelector('.nav-item[data-target="student-dashboard"]').click();
     }
 
@@ -116,33 +100,6 @@ document.body.addEventListener('click', async (e) => {
     const nChip = e.target.closest('#notificacoes-filtros .filter-chip');
     if(nChip) { document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(c => c.classList.remove('active')); nChip.classList.add('active'); window.notifFilterCat = nChip.getAttribute('data-cat'); carregarNotificacoesAluno(); }
 
-    // CADERNO DIGITAL
-    if(e.target.closest('#tab-caderno-resumos')) { document.getElementById('tab-caderno-resumos').classList.add('active'); document.getElementById('tab-caderno-galeria').classList.remove('active'); document.getElementById('sec-caderno-resumos').style.display = 'block'; document.getElementById('sec-caderno-galeria').style.display = 'none'; }
-    if(e.target.closest('#tab-caderno-galeria')) { document.getElementById('tab-caderno-galeria').classList.add('active'); document.getElementById('tab-caderno-resumos').classList.remove('active'); document.getElementById('sec-caderno-resumos').style.display = 'none'; document.getElementById('sec-caderno-galeria').style.display = 'block'; carregarFotosQuadro(); }
-    
-    if(e.target.closest('#btn-gravar-apontamento')) {
-        const t = document.getElementById('caderno-titulo').value.trim(); const h = quillEditor.root.innerHTML; const txt = quillEditor.getText().trim(); 
-        if(!t || txt.length === 0) { alert("Preenche o título e o resumo!"); return; }
-        const b = e.target.closest('#btn-gravar-apontamento'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
-        try { 
-            await addDoc(collection(db, "utilizadores", myUserId, "apontamentos"), { titulo: t, conteudo: h, timestamp: Date.now() }); 
-            document.getElementById('caderno-titulo').value = ''; quillEditor.root.innerHTML = ''; b.innerHTML = '<i class="fa-solid fa-check"></i> Guardado'; b.style.backgroundColor = 'var(--success-green)'; 
-            carregarResumos(); setTimeout(() => { b.innerHTML = '<i class="fa-solid fa-save"></i> Gravar na Nuvem'; b.disabled = false; b.style.backgroundColor = '#e67e22'; }, 2000); 
-        } catch(err) { console.error(err); b.innerHTML = 'Erro Interno!'; setTimeout(() => { b.innerHTML = '<i class="fa-solid fa-save"></i> Gravar na Nuvem'; b.disabled = false; }, 2000); }
-    }
-    
-    if(e.target.closest('#btn-gravar-foto-quadro')) {
-        const t = document.getElementById('foto-titulo').value.trim(); 
-        if(!t) { alert("Preenche o Título da Foto primeiro!"); return; }
-        if(!fQB64) { alert("Tira ou anexa uma foto primeiro!"); return; }
-        const b = e.target.closest('#btn-gravar-foto-quadro'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; 
-        try { 
-            await addDoc(collection(db, "utilizadores", myUserId, "caderno_fotos"), { titulo: t, fotoBase64: fQB64, timestamp: Date.now() }); 
-            b.innerHTML = '<i class="fa-solid fa-check"></i> Guardada'; 
-            setTimeout(() => { b.style.display = 'none'; b.disabled = false; b.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Gravar na Galeria'; document.getElementById('foto-quadro-file-name').innerText = ""; document.getElementById('foto-titulo').value = ""; fQB64 = ""; carregarFotosQuadro(); }, 2000); 
-        } catch(err) { console.error(err); b.innerHTML = "Erro Interno"; setTimeout(() => { b.disabled = false; }, 2000); } 
-    }
-
     // AGENDA E HORÁRIO
     if(e.target.closest('#tab-aluno-eventos')) { document.getElementById('tab-aluno-eventos').classList.add('active'); document.getElementById('tab-aluno-horario').classList.remove('active'); document.getElementById('aluno-agenda-filtros').style.display = 'flex'; document.getElementById('aluno-horario-container').style.display = 'none'; carregarAgendaAlunoLista(); }
     if(e.target.closest('#tab-aluno-horario')) { document.getElementById('tab-aluno-horario').classList.add('active'); document.getElementById('tab-aluno-eventos').classList.remove('active'); document.getElementById('aluno-agenda-filtros').style.display = 'none'; document.getElementById('aluno-horario-container').style.display = 'block'; carregarHorarioAluno(); }
@@ -151,7 +108,7 @@ document.body.addEventListener('click', async (e) => {
     if(e.target.closest('#btn-aluno-prev-horario')) { if(ahModo === 'dia') ahDOff--; else ahSOff--; carregarHorarioAluno(); }
     if(e.target.closest('#btn-aluno-next-horario')) { if(ahModo === 'dia') ahDOff++; else ahSOff++; carregarHorarioAluno(); }
 
-    // FÓRUNS (CRIAR E ABRIR)
+    // FÓRUNS (CRIAR, APAGAR E ABRIR)
     if(e.target.closest('#btn-create-chat-aluno')) {
         document.getElementById('modal-criar-forum').style.display = 'flex'; 
         const cCont = document.getElementById('lista-colegas-forum'); cCont.innerHTML = '<p class="text-muted center">A procurar colegas...</p>';
@@ -162,10 +119,10 @@ document.body.addEventListener('click', async (e) => {
         } catch(err) { cCont.innerHTML = '<p class="text-danger center">Erro ao listar turma.</p>'; }
     }
     if(e.target.closest('#btn-cancelar-novo-forum')) { document.getElementById('modal-criar-forum').style.display = 'none'; document.getElementById('input-nome-novo-forum').value = ''; }
-    if(e.target.closest('#btn-confirmar-novo-forum')) {
+    if(e.target.closest('#btn-confirm-novo-forum')) {
         const nome = document.getElementById('input-nome-novo-forum').value.trim(); if(!nome) { alert("Tens de dar um nome ao Grupo!"); return; }
         let mbr = [myUserId]; document.querySelectorAll('.colegas-check:checked').forEach(c => mbr.push(c.value));
-        const btnConf = e.target.closest('#btn-confirmar-novo-forum'); btnConf.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btnConf.disabled = true;
+        const btnConf = e.target.closest('#btn-confirm-novo-forum'); btnConf.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btnConf.disabled = true;
         try { await addDoc(collection(db, "turmas", minhaTurma, "foruns"), { nome: nome, tipo: 'permanente', isDefault: false, membros: mbr, criadoPor: myUserName }); document.getElementById('modal-criar-forum').style.display = 'none'; document.getElementById('input-nome-novo-forum').value = ''; btnConf.innerHTML = 'Criar Grupo'; btnConf.disabled = false; carregarForuns(); } catch(err) { btnConf.innerHTML = 'Erro!'; setTimeout(() => { btnConf.innerHTML = 'Criar Grupo'; btnConf.disabled = false; }, 2000); }
     }
     
@@ -194,27 +151,6 @@ document.body.addEventListener('click', async (e) => {
         const inp = document.getElementById('aluno-input-forum-msg'); const t = inp.value.trim(); if(!t || !alunoForumAtivoId) return; 
         try { await addDoc(collection(db, "turmas", minhaTurma, "foruns", alunoForumAtivoId, "mensagens"), { remetente: myUserName, texto: t, timestamp: Date.now() }); inp.value = ''; } catch(err) {} 
     }
-
-    // MODO FOCO (Botões)
-    if(e.target.closest('#btn-start-study')) {
-        pXPConfig = focusXPMap[pTimeConfig] || 50; pRest = pTimeConfig * 60;
-        document.getElementById('btn-start-study').style.display = 'none'; document.getElementById('btn-stop-study').style.display = 'inline-block';
-        document.getElementById('study-setup').style.display = 'none'; document.getElementById('study-timer-text').style.color = "var(--primary-green)";
-        if(!localStorage.getItem('pomodoroEndTarget')) localStorage.setItem('pomodoroEndTarget', Date.now() + (pRest * 1000));
-        renderTimerRunning(); if(pTmr) clearInterval(pTmr); pTmr = setInterval(renderTimerRunning, 1000);
-    }
-    if(e.target.closest('#btn-stop-study')) { resetPomodoroUI(); formatTimer(pTimeConfig * 60); }
-    if(e.target.closest('#btn-save-study-log')) {
-        const t = document.getElementById('study-log-text').value.trim(); if(!t) return;
-        const b = e.target.closest('#btn-save-study-log'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
-        try {
-            const uS = await getDoc(doc(db, "utilizadores", myUserId)); let axp = uS.exists() && uS.data().xp ? uS.data().xp : 0;
-            await addDoc(collection(db, "utilizadores", myUserId, "estudos"), { texto: t, minutos: pTimeConfig, data: new Date().toISOString() });
-            await updateDoc(doc(db, "utilizadores", myUserId), { xp: axp + pXPConfig }); carregarGamificacao({xp: axp + pXPConfig});
-            b.style.backgroundColor = "var(--success-green)"; b.innerHTML = '<i class="fa-solid fa-check"></i> Feito!';
-            setTimeout(() => { document.getElementById('study-log-text').value = ''; document.getElementById('post-study-log').style.display = 'none'; document.getElementById('study-controls').style.display = 'block'; document.getElementById('study-setup').style.display = 'block'; b.innerHTML = '<i class="fa-solid fa-save"></i> Guardar Recompensa'; b.disabled = false; b.style.backgroundColor = "var(--success-green)"; formatTimer(30*60); document.getElementById('btn-voltar-study').click(); }, 2000);
-        } catch(err) { b.innerHTML = "Erro"; setTimeout(() => { b.disabled = false; }, 2000); }
-    }
     
     // Objetivos Adicionar
     if(e.target.closest('#btn-add-objetivo')) {
@@ -234,17 +170,8 @@ document.body.addEventListener('click', async (e) => {
     }
 });
 
-// ==========================================
-// 2.5 EVENTOS DE CÂMARA E RODA DO FOCO
-// ==========================================
+// Eventos Automáticos de Mudar o Dropdown ou Escolher Foto
 document.addEventListener('change', async (e) => {
-    // Foto
-    if (e.target.id === 'upload-foto-quadro' || e.target.id === 'tirar-foto-quadro') {
-        let file = e.target.files[0]; if(!file) return; 
-        if (file.type.startsWith('image/')) { try { file = await imageCompression(file, { maxSizeMB: 0.4, maxWidthOrHeight: 1200, useWebWorker: true }); } catch (err) {} } 
-        document.getElementById('foto-quadro-file-name').innerText = file.name || 'foto_capturada.jpg'; document.getElementById('btn-gravar-foto-quadro').style.display = 'block'; 
-        const rd = new FileReader(); rd.onload = (ev) => { fQB64 = ev.target.result; }; rd.readAsDataURL(file); 
-    }
     // Mudança de Tipo de Objetivo
     if (e.target.id === 'obj-tipo') {
         const v = e.target.value; document.getElementById('obj-setup-nota').style.display = v === 'nota' ? 'flex' : 'none'; document.getElementById('obj-setup-nivel').style.display = v === 'nivel' ? 'flex' : 'none';
@@ -252,24 +179,6 @@ document.addEventListener('change', async (e) => {
     // Filtros Agenda
     if (e.target.closest('.agenda-filter-label input')) { carregarAgendaAlunoLista(); }
 });
-
-// Animação Roda do Foco (Scroll Snap Observer)
-function iniciarRodaFoco() {
-    const wheel = document.getElementById('study-wheel'); if(!wheel) return;
-    const observer = new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-            if(entry.isIntersecting) {
-                document.querySelectorAll('.wheel-opt').forEach(el => { el.style.color = '#555'; el.style.fontSize = '1.2rem'; });
-                entry.target.style.color = 'white'; entry.target.style.fontSize = '1.6rem';
-                pTimeConfig = parseInt(entry.target.getAttribute('data-val'));
-                if(!pTmr) formatTimer(pTimeConfig * 60);
-            }
-        });
-    }, { root: wheel, threshold: 0.6 });
-    document.querySelectorAll('.wheel-opt').forEach(el => observer.observe(el));
-}
-
-window.abrirFotoModal = (url, titulo) => { document.getElementById('modal-foto-img').src = url; document.getElementById('modal-foto-titulo').innerText = titulo; document.getElementById('modal-ver-foto').style.display = 'flex'; };
 
 // ==========================================
 // 3. DASHBOARD ADAPTATIVO MÁGICO
@@ -303,14 +212,14 @@ async function construirHomeAdaptativa() {
         } else if(evs.length>0) {
             const ev = evs[0]; const dF = ev.data.split('-').reverse().join('/');
             alertHtml += `<div class="card" style="background:linear-gradient(135deg,#ffaa00,#e67e22); color:white; border:none; border-radius:16px; margin-bottom:20px;">
-                <h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-calendar-exclamation"></i> Foco Total</h3>
-                <p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens <strong>${ev.titulo}</strong> no dia ${dF}. Que tal iniciares um Pomodoro agora?</p>
-                <button class="primary-btn" style="background:white; color:#e67e22; width:100%; font-size:1.1rem; padding:15px;" onclick="document.getElementById('btn-open-study-mode').click()"><i class="fa-solid fa-stopwatch"></i> Iniciar Foco</button>
+                <h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-calendar-exclamation"></i> Prepara-te</h3>
+                <p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens <strong>${ev.titulo}</strong> no dia ${dF}. Recomendamos que vejas os teus materiais!</p>
+                <button class="primary-btn" style="background:white; color:#e67e22; width:100%; font-size:1.1rem; padding:15px;" onclick="document.getElementById('btn-open-sumarios').click()"><i class="fa-solid fa-book-open"></i> Abrir Materiais</button>
             </div>`; mMiss = true;
         } else {
             alertHtml += `<div class="card" style="background:linear-gradient(135deg,var(--primary-green),var(--primary-hover)); color:white; border:none; border-radius:16px; margin-bottom:20px;">
                 <h3 style="margin-bottom:5px; font-size:1.6rem;"><i class="fa-solid fa-leaf"></i> Dia Tranquilo</h3>
-                <p style="font-size:1.05rem; margin-bottom:0; opacity:0.9;">Não tens avaliações marcadas nem pendências. Excelente altura para os teus resumos!</p>
+                <p style="font-size:1.05rem; margin-bottom:0; opacity:0.9;">Não tens avaliações marcadas nem pendências.</p>
             </div>`; mMiss = true;
         }
         alertCont.innerHTML = alertHtml;
@@ -349,15 +258,12 @@ async function verificarEpocaExames() {
     }
 }
 
-// ==========================================
-// 4. PESQUISA UNIVERSAL
-// ==========================================
+// PESQUISA
 document.getElementById('aluno-search-input')?.addEventListener('input', async (e) => {
     const termo = e.target.value.toLowerCase().trim(); const box = document.getElementById('aluno-search-results');
     if(termo.length < 2) { box.style.display = 'none'; return; } box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">A procurar...</p>'; box.style.display = 'block';
     try {
-        let resArr = []; const rDb = await getDocs(query(collection(db, "utilizadores", myUserId, "apontamentos")));
-        rDb.forEach(d => { if(d.data().titulo?.toLowerCase().includes(termo)) resArr.push({ t: 'O Meu Resumo', txt: d.data().titulo, id: 'btn-open-caderno' }); });
+        let resArr = []; 
         if (minhaTurma) { const sDb = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); sDb.forEach(d => { if(d.data().titulo?.toLowerCase().includes(termo) || d.data().disciplina?.toLowerCase().includes(termo)) resArr.push({ t: `Sumário - ${d.data().disciplina}`, txt: d.data().titulo, id: 'btn-open-sumarios' }); }); }
         if(resArr.length === 0) box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">Sem resultados.</p>'; else { let h = ''; resArr.forEach(r => h += `<div style="padding:8px; border-bottom:1px solid #333; cursor:pointer;" onclick="document.getElementById('${r.id}').click(); document.getElementById('aluno-search-results').style.display='none'; document.getElementById('aluno-search-input').value='';"><span style="font-size:0.7rem; color:var(--primary-green); text-transform:uppercase;">${r.t}</span><div style="font-size:0.9rem; color:white; margin-top:3px;">${r.txt}</div></div>`); box.innerHTML = h; }
     } catch(err) { box.innerHTML = '<p class="text-danger" style="margin:0;">Erro.</p>'; }
@@ -365,7 +271,7 @@ document.getElementById('aluno-search-input')?.addEventListener('input', async (
 document.addEventListener('click', (e) => { if (!e.target.closest('#aluno-search-input') && !e.target.closest('#aluno-search-results')) { document.getElementById('aluno-search-results').style.display = 'none'; } });
 
 // ==========================================
-// 5. PERFIL: RANKING, OBJETIVOS, ESTATÍSTICAS
+// 5. PERFIL: RANKING E OBJETIVOS
 // ==========================================
 function carregarGamificacao(dados) {
     const xp = dados.xp || 0; const nivel = Math.floor(xp / 100) + 1; const prog = ((xp - ((nivel - 1) * 100)) / 100) * 100;
@@ -394,7 +300,7 @@ async function carregarObjetivosPessoais() {
         const nSnap = await getDocs(collection(db, "utilizadores", myUserId, "notas")); let notasArr = []; nSnap.forEach(n => notasArr.push(n.data()));
         const pSnap = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); let prhfsArr = []; pSnap.forEach(p => prhfsArr.push(p.data()));
 
-        const snap = await getDocs(query(collection(db, "utilizadores", myUserId, "objetivos"))); let objArr = []; snap.forEach(d => objArr.push({id: d.id, ...d.data()})); objArr.sort((a,b) => b.timestamp - a.timestamp);
+        const snap = await getDocs(collection(db, "utilizadores", myUserId, "objetivos")); let objArr = []; snap.forEach(d => objArr.push({id: d.id, ...d.data()})); objArr.sort((a,b) => b.timestamp - a.timestamp);
         let html = ''; let objGanhouXP = false;
         for (const obj of objArr) {
             let achieved = false;
@@ -429,10 +335,8 @@ async function carregarEstatisticasEstudo() {
     try {
         const s = await getDocs(collection(db, "utilizadores", myUserId, "estudos")); let arr = []; s.forEach(d => arr.push(d.data()));
         let dU = new Set(); let mTot = 0; arr.forEach(d => { if(d.data) dU.add(d.data.split('T')[0]); mTot += Number(d.minutos || 30); });
-        document.getElementById('total-minutos-foco').innerText = mTot>60?`${Math.floor(mTot/60)}h${mTot%60}m`:`${mTot}m`;
         let stk = 0; let dO = Array.from(dU).sort((a,b)=>b.localeCompare(a));
         if(dO.length>0){ let hj = new Date(); const hs = hj.toISOString().split('T')[0]; hj.setDate(hj.getDate()-1); const os = hj.toISOString().split('T')[0]; if(dO.includes(hs)||dO.includes(os)){ let cv = new Date(dO[0]); for(let i=0;i<dO.length;i++){ if(dO.includes(cv.toISOString().split('T')[0])){ stk++; cv.setDate(cv.getDate()-1); } else break; } } }
-        document.getElementById('streak-dias').innerText = stk;
     } catch(e) {}
 }
 
@@ -446,16 +350,8 @@ async function carregarHistoricoHumor() {
     } catch(e){}
 }
 
-document.getElementById('upload-avatar')?.addEventListener('change', async (e) => {
-    const file = e.target.files[0]; if(!file) return;
-    try {
-        const compressedFile = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 500, useWebWorker: true }); const reader = new FileReader();
-        reader.onload = async (ev) => { const base64 = ev.target.result; document.getElementById('perfil-avatar-img').src = base64; document.getElementById('header-avatar-circle').innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`; await updateDoc(doc(db, "utilizadores", myUserId), { fotoPerfil: base64 }); }; reader.readAsDataURL(compressedFile);
-    } catch(err) {}
-});
-
 // ==========================================
-// 6. CADERNETA 
+// 6. CADERNETA E LINHA TEMPORAL
 // ==========================================
 async function obterEventosLinhaTemporal() {
     let ev = [];
@@ -609,9 +505,11 @@ async function carregarAgendaAlunoLista() {
         let evs = [];
         evDb.forEach(d => { const e = d.data(); let bgC = '#b82bf2'; let txtT = 'Evento'; if(e.tipo === 'teste' || e.tipo === 'avaliacao') { if(mT) { bgC = '#ffaa00'; txtT = 'Avaliação'; evs.push({...e, cor: bgC, txt: txtT}); } } else if(e.tipo === 'trabalho' || e.tipo === 'entrega') { if(mTr) { bgC = '#00d2ff'; txtT = 'Entrega'; evs.push({...e, cor: bgC, txt: txtT}); } } else { if(mO) evs.push({...e, cor: bgC, txt: txtT}); } });
         if(evs.length === 0) { sC.innerHTML = '<p class="text-muted center">Nenhum evento com os filtros atuais.</p>'; return; }
+        
         const hj = new Date().toISOString().split('T')[0]; const fut = evs.filter(e => e.data >= hj).sort((a,b) => a.data.localeCompare(b.data)); const pas = evs.filter(e => e.data < hj).sort((a,b) => b.data.localeCompare(a.data));
         const mA = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; let html = '';
         const rEv = (ev) => { const dp = ev.data.split('-'); const mes = mA[parseInt(dp[1])-1]; return `<div class="calendar-event-card" style="border-left-color:${ev.cor}; margin-bottom:10px;"><div class="calendar-date-box"><span class="day">${dp[2]}</span><span class="month" style="color:${ev.cor};">${mes}</span></div><div class="calendar-info"><h4 style="margin:0; color:white;">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt||'evento').toUpperCase()}</span></div></div>`; };
+
         if(fut.length > 0) fut.forEach(e => html += rEv(e)); else html += '<p class="text-muted center">Sem eventos futuros.</p>';
         if(pas.length > 0) { html += '<div class="calendar-divider" style="margin-top:20px;"><span>Passados</span></div>'; pas.forEach(e => html += rEv(e)); } sC.innerHTML = html;
     } catch(e) {}
@@ -635,7 +533,17 @@ async function carregarHorarioAluno() {
             document.getElementById('aluno-horario-display').innerText = `${fDt(dT)} a ${fDt(dE)}`;
             let h = '<div class="horario-grid" style="min-width:100%;"><div class="horario-header"></div>'; let dI = new Date(dT);
             ['SEG','TER','QUA','QUI','SEX'].forEach(d => { h += `<div class="horario-header">${d}<span>${fDt(dI)}</span></div>`; dI.setDate(dI.getDate()+1); });
-            bK.forEach(b => { h += `<div class="horario-time">${bT[b]}</div>`; dI = new Date(dT); for(let i=0; i<5; i++) { const dSStr = `${dI.getFullYear()}-${String(dI.getMonth()+1).padStart(2,'0')}-${String(dI.getDate()).padStart(2,'0')}`; const dc = hb[`${dSStr}_${b}`]; if(dc) { const sty = getCorEspecial(dc); h += `<div class="horario-slot" style="border:1px solid ${sty.c}; background-color:${sty.bg}; color:white;"><strong>${dc}</strong></div>`; } else h += `<div class="horario-slot"></div>`; dI.setDate(dI.getDate()+1); } });
+            bK.forEach(b => { 
+                h += `<div class="horario-time">${bT[b]}</div>`; 
+                dI = new Date(dT); 
+                for(let i=0; i<5; i++) { 
+                    const dSStr = `${dI.getFullYear()}-${String(dI.getMonth()+1).padStart(2,'0')}-${String(dI.getDate()).padStart(2,'0')}`; 
+                    const dc = hb[`${dSStr}_${b}`]; 
+                    if(dc) { const sty = getCorEspecial(dc); h += `<div class="horario-slot" style="border:1px solid ${sty.c}; background-color:${sty.bg}; color:white;"><strong>${dc}</strong></div>`; } 
+                    else { h += `<div class="horario-slot"></div>`; }
+                    dI.setDate(dI.getDate()+1); 
+                } 
+            });
             sC.innerHTML = h + '</div>';
         }
     } catch(e) {}
@@ -649,9 +557,9 @@ async function carregarForuns() {
     let html = `<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apoio & Turma</h3><div class="canal-card" data-id="turma_global" data-nome="Turma ${minhaTurma}" style="margin-bottom: 15px;"><div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-users"></i></div><div class="canal-info"><h4>Turma ${minhaTurma}</h4><p>Canal Geral</p></div></div><div class="canal-card" data-id="dt_${myUserId}" data-nome="Chat DT"><div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div><div class="canal-info"><h4>Diretor de Turma</h4><p>Mensagem Privada</p></div></div><h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Disciplinas</h3><div style="display:flex; flex-wrap:wrap; gap:10px;">`;
     ordemDisciplinasGlobal.forEach(disc => { html += `<div class="canal-card" data-id="disc_${disc}" data-nome="Fórum ${disc}" style="flex: 1 1 45%; padding: 10px;"><div class="canal-info" style="text-align:center;"><h4 style="margin:0; font-size:0.9rem; color:#00d2ff;"><i class="fa-solid fa-book-open"></i> ${disc}</h4></div></div>`; }); html += '</div>';
     try {
-        const res = await getDocs(collection(db, "turmas", minhaTurma, "foruns")); let extrasHtml = '';
-        res.forEach(docSnap => { const f = docSnap.data(); if(f.membros && f.membros.includes(myUserId) && !f.isDefault) { extrasHtml += `<div class="canal-card" data-id="${docSnap.id}" data-nome="${f.nome}" style="position:relative; flex: 1 1 45%; padding:10px;"><div class="canal-info" style="text-align:center;"><h4 style="margin:0; font-size:0.9rem; color:#b82bf2;"><i class="fa-solid fa-comments"></i> ${f.nome}</h4></div><i class="fa-solid fa-trash btn-delete-chat" data-id="${docSnap.id}" style="color:var(--danger-red); position:absolute; top:5px; right:5px; font-size:0.8rem; cursor:pointer; padding:5px;"></i></div>`; } });
-        if (extrasHtml !== '') html += `<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Os Meus Chats</h3><div style="display:flex; flex-wrap:wrap; gap:10px;">${extrasHtml}</div>`;
+        const s = await getDocs(collection(db, "turmas", minhaTurma, "foruns")); let eH = ''; let arr = []; s.forEach(d => arr.push({id: d.id, ...d.data()}));
+        arr.forEach(f => { if(f.membros && f.membros.includes(myUserId) && !f.isDefault) { eH += `<div class="canal-card" data-id="${f.id}" data-nome="${f.nome}" style="position:relative; flex: 1 1 45%; padding:10px;"><div class="canal-info" style="text-align:center;"><h4 style="margin:0; font-size:0.9rem; color:#b82bf2;"><i class="fa-solid fa-comments"></i> ${f.nome}</h4></div><i class="fa-solid fa-trash btn-delete-chat" data-id="${f.id}" style="color:var(--danger-red); position:absolute; top:5px; right:5px; font-size:0.8rem; cursor:pointer; padding:5px;"></i></div>`; } });
+        if (eH !== '') html += `<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Os Meus Chats</h3><div style="display:flex; flex-wrap:wrap; gap:10px;">${eH}</div>`;
     } catch(e) {}
     cont.innerHTML = html;
 }
@@ -663,38 +571,6 @@ function iniciarChatAluno(fId) {
         chatContainer.innerHTML = html; chatContainer.scrollTop = chatContainer.scrollHeight;
     });
 }
-
-// ==========================================
-// 9. POMODORO (Foco de Memória)
-// ==========================================
-function formatTimer(segundos) {
-    if(segundos < 0) segundos = 0; const m = Math.floor(segundos / 60).toString().padStart(2, '0'); const s = (segundos % 60).toString().padStart(2, '0');
-    document.getElementById('study-timer-text').innerText = `${m}:${s}`;
-}
-
-function resetPomodoroUI() {
-    clearInterval(pTmr); pTmr = null; localStorage.removeItem('pomodoroEndTarget');
-    document.getElementById('btn-stop-study').style.display = 'none'; document.getElementById('btn-start-study').style.display = 'inline-block';
-    document.getElementById('study-setup').style.display = 'block'; document.getElementById('study-timer-text').style.color = "white";
-}
-
-function renderTimerRunning() {
-    let target = localStorage.getItem('pomodoroEndTarget'); if(!target) return;
-    let left = Math.round((target - Date.now()) / 1000);
-    if(left <= 0) {
-        resetPomodoroUI(); formatTimer(0);
-        document.getElementById('study-controls').style.display = 'none'; document.getElementById('study-setup').style.display = 'none'; document.getElementById('post-study-log').style.display = 'block';
-    } else formatTimer(left);
-}
-
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden && pTmr !== null) {
-        clearInterval(pTmr); pTmr = null; localStorage.removeItem('pomodoroEndTarget');
-        document.getElementById('foco-xp-perdido').innerText = `${pXPConfig} XP`;
-        document.getElementById('modal-foco-interrompido').style.display = 'flex';
-        resetPomodoroUI(); formatTimer(pTimeConfig * 60);
-    }
-});
 
 // ==========================================
 // 11. SUMÁRIOS E PASSAPORTE
