@@ -479,6 +479,19 @@
                 </div>
             </div>
 
+            <!-- MODAL CONFIRMAR APAGAR CHAT -->
+            <div id="modal-confirm-delete-chat" class="modal-overlay" style="z-index: 5000;">
+                <div class="action-sheet" style="max-width:350px; border-radius:12px; margin:20px; text-align: center;">
+                    <i class="fa-solid fa-trash-can" style="font-size: 3rem; color: var(--danger-red); margin-bottom: 15px;"></i>
+                    <h3 style="margin-bottom: 10px; color: white;">Apagar Chat?</h3>
+                    <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;">Esta ação não pode ser revertida e o chat vai desaparecer para todos os teus colegas de imediato.</p>
+                    <div style="display:flex; gap:10px;">
+                        <button id="btn-cancel-delete-chat" class="secondary-btn" style="flex:1;">Cancelar</button>
+                        <button id="btn-confirm-delete-chat" class="primary-btn" style="flex:1; background:var(--danger-red); color:white; border:none;">Sim, Apagar</button>
+                    </div>
+                </div>
+            </div>
+            
         </main>
 
         <nav class="bottom-nav">
