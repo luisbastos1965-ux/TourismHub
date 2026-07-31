@@ -194,12 +194,17 @@
                             <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px;"><strong id="p-aluno-prhfs" style="font-size:1.2rem; color:#00d2ff;">0</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">PRHFs Atraso</span></div>
                         </div>
                         
-                        <button id="btn-dar-positiva" class="primary-btn" style="width:100%; margin-bottom:15px; background:var(--success-green);"><i class="fa-solid fa-star"></i> Atribuir Ocorrência Positiva (+XP)</button>
-                        <button id="btn-dar-negativa" class="secondary-btn" style="width:100%; margin-bottom:20px; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-triangle-exclamation"></i> Registar Ocorrência Negativa</button>
+                        <button id="btn-dar-positiva" class="primary-btn" style="width:100%; margin-bottom:10px; background:var(--success-green);"><i class="fa-solid fa-star"></i> Ocorrência Positiva (+50 XP)</button>
+                        <button id="btn-dar-negativa" class="secondary-btn" style="width:100%; margin-bottom:10px; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-triangle-exclamation"></i> Ocorrência Negativa</button>
+                        
+                        <!-- BOTÃO EXCLUSIVO DT -->
+                        <button id="btn-justificar-faltas" class="secondary-btn" style="width:100%; margin-bottom:20px; border-color:#00d2ff; color:#00d2ff; display:none;"><i class="fa-solid fa-clipboard-check"></i> Justificar Todas as Faltas Pendentes</button>
 
-                        <h4 style="font-size:0.9rem; color:white; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apreciação do DT (Intercalar/Final)</h4>
-                        <textarea id="p-aluno-obs-dt" class="input-padrao" placeholder="Escreve aqui as notas sobre o comportamento e evolução do aluno..." style="min-height:80px; width:100%; margin-bottom:10px;"></textarea>
-                        <button id="btn-salvar-obs-dt" class="primary-btn small-btn" style="width:100%;">Gravar Observação</button>
+                        <div id="area-obs-dt" style="display:none;">
+                            <h4 style="font-size:0.9rem; color:white; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apreciação do DT (Intercalar/Final)</h4>
+                            <textarea id="p-aluno-obs-dt" class="input-padrao" placeholder="Escreve aqui as notas sobre o comportamento e evolução do aluno..." style="min-height:80px; width:100%; margin-bottom:10px;"></textarea>
+                            <button id="btn-salvar-obs-dt" class="primary-btn small-btn" style="width:100%;">Gravar Observação</button>
+                        </div>
                     </div>
                 </div>
             </div>
