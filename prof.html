@@ -57,7 +57,6 @@
                     <h3 style="font-size: 1rem; margin-bottom: 10px; color: white;"><i class="fa-solid fa-triangle-exclamation"></i> Requerem Atenção (Hoje)</h3>
                     <div id="radar-pendentes-container">
                         <p class="text-muted center" style="font-size: 0.85rem;">A analisar tarefas...</p>
-                        <!-- Injetado via JS: PRHFs pendentes, PAPs, Faltas de Check-in -->
                     </div>
                 </div>
 
@@ -273,6 +272,46 @@
                     </div>
                     
                     <button id="btn-confirmar-notas" class="primary-btn" style="margin-top:15px; width:100%; background:var(--warning-yellow); color:black;"><i class="fa-solid fa-save"></i> Gravar Notas na Turma</button>
+                </div>
+            </div>
+
+            <!-- MODAL: CRIAR PRHF -->
+            <div id="modal-criar-prhf" class="modal-overlay" style="z-index: 2000;">
+                <div class="action-sheet" style="max-width: 450px; padding: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                        <h3 style="color: white; margin:0;"><i class="fa-solid fa-file-medical" style="color:var(--danger-red);"></i> Novo PRHF</h3>
+                        <button class="fechar-modal" data-target="modal-criar-prhf" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">Cria um plano de recuperação de módulo. O aluno será notificado de imediato.</p>
+                    
+                    <select id="prhf-turma" class="input-padrao" style="width:100%; margin-bottom:10px;">
+                        <option value="">Selecione a Turma</option>
+                    </select>
+                    
+                    <select id="prhf-aluno" class="input-padrao" style="width:100%; margin-bottom:10px;">
+                        <option value="">Selecione primeiro a Turma</option>
+                    </select>
+                    
+                    <div style="display:flex; gap:10px; margin-bottom:10px;">
+                        <select id="prhf-disciplina" class="input-padrao" style="flex:2; margin:0;"></select>
+                        <input type="number" id="prhf-modulo" class="input-padrao" placeholder="Módulo (Ex: 3)" style="flex:1; margin:0;" min="1">
+                    </div>
+                    
+                    <div style="display:flex; gap:10px; margin-bottom:10px;">
+                        <div style="flex:1;">
+                            <label style="font-size:0.75rem; color:var(--text-muted);">Prazo Limite</label>
+                            <input type="date" id="prhf-prazo" class="input-padrao" style="width:100%; margin:0;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:0.75rem; color:var(--text-muted);">Horas Presenciais</label>
+                            <input type="number" id="prhf-horas" class="input-padrao" placeholder="Ex: 5" style="width:100%; margin:0;" min="1">
+                        </div>
+                    </div>
+                    
+                    <textarea id="prhf-descricao" class="input-padrao" placeholder="Descreve o trabalho ou as tarefas que o aluno tem de realizar..." style="width:100%; min-height:80px; margin-bottom:15px;"></textarea>
+                    
+                    <button id="btn-gravar-novo-prhf" class="primary-btn" style="width:100%; background:var(--danger-red);"><i class="fa-solid fa-paper-plane"></i> Enviar para o Aluno</button>
                 </div>
             </div>
 
