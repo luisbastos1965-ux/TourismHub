@@ -8,7 +8,7 @@ try { await enableIndexedDbPersistence(db); console.log("Offline OK!"); } catch 
 
 let myUserId = "", myUserName = "", minhaTurma = "", myAcademia = "";
 let chartInstance = null; let quillEditor = null;
-let alunoForumAtivoId = null; let chatUnsubscribeAluno = null;
+let alunoForumAtivoId = null; let chatUnsubscribeAluno = null; let pendingDeleteChatId = null;
 let fQB64 = "";
 
 let pTmr = null; let pTimeConfig = 30; let pXPConfig = 50; let pRest = 30 * 60;
@@ -18,10 +18,10 @@ window.timelineFilterCat = 'all'; window.notifFilterCat = 'all';
 let ahModo = 'dia', ahDOff = 0, ahSOff = 0;
 
 const ACADEMIAS_INFO = {
-    'atlas': { nome: 'Atlas', cor: '#00cc88', icon: 'fa-compass', desc: 'A academia dos Exploradores. Movidos pela curiosidade, pela descoberta e pela vontade de aprender além dos livros.' },
-    'sentinela': { nome: 'Sentinela', cor: '#0088ff', icon: 'fa-shield-halved', desc: 'A academia dos Guardiões. Destacam-se pela responsabilidade, organização, assiduidade e cooperação mútua.' },
-    'nexus': { nome: 'Nexus', cor: '#ff8800', icon: 'fa-microchip', desc: 'A academia dos Inovadores. Criativos, focados em projetos práticos, tecnologia e em encontrar novas soluções.' },
-    'aurora': { nome: 'Aurora', cor: '#b82bf2', icon: 'fa-bolt', desc: 'A academia dos Desafiadores. Competitivos, resilientes, mestres do foco e sempre prontos a superar os próprios limites.' }
+    'atlas': { nome: 'Atlas', cor: '#00cc88', icon: 'fa-compass', desc: 'A academia dos Exploradores. Movidos pela curiosidade e descoberta.' },
+    'sentinela': { nome: 'Sentinela', cor: '#0088ff', icon: 'fa-shield-halved', desc: 'A academia dos Guardiões. Destacam-se pela responsabilidade.' },
+    'nexus': { nome: 'Nexus', cor: '#ff8800', icon: 'fa-microchip', desc: 'A academia dos Inovadores. Criativos, focados em encontrar novas soluções.' },
+    'aurora': { nome: 'Aurora', cor: '#b82bf2', icon: 'fa-bolt', desc: 'A academia dos Desafiadores. Competitivos, resilientes e mestres do foco.' }
 };
 
 // ==========================================
@@ -72,19 +72,23 @@ document.body.addEventListener('click', async (e) => {
     if(nav) {
         e.preventDefault(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); nav.classList.add('active');
         esconderTodasAsVistas(); const tId = nav.getAttribute('data-target'); 
+        
         document.getElementById(tId).style.display = (tId === 'view-study-mode' || tId === 'view-aluno-forum') ? 'flex' : 'block';
         
-        if(tId === 'view-aluno-perfil') { carregarRankingTurma(); carregarObjetivosPessoais(); carregarHistoricoHumor(); carregarEstatisticasEstudo(); setTimeout(renderizarGraficoNotas, 150); }
+        if(tId === 'view-aluno-perfil') { 
+            carregarRankingTurma(); carregarObjetivosPessoais(); carregarHistoricoHumor(); carregarEstatisticasEstudo();
+            setTimeout(renderizarGraficoNotas, 150); 
+        }
         if(tId === 'view-aluno-caderneta') document.getElementById('tab-aluno-timeline').click();
         if(tId === 'view-aluno-agenda') document.getElementById('tab-aluno-eventos').click();
         if(tId === 'view-aluno-forum') carregarForuns();
         if(tId === 'view-aluno-caderno') { if(!quillEditor) quillEditor = new Quill('#quill-editor', { theme: 'snow' }); carregarResumos(); }
     }
     
-    // FERRAMENTAS E VOLTAR DA HOME
+    // FERRAMENTAS E VOLTAR
     if(e.target.closest('#btn-open-study-mode')) {
         esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-study-mode').style.display = 'flex';
-        if(localStorage.getItem('pomodoroEndTarget') && localStorage.getItem('pomodoroEndTarget') > Date.now()) document.getElementById('btn-start-study').click();
+        if(localStorage.getItem('pomodoroEndTarget') && localStorage.getItem('pomodoroEndTarget') > Date.now()) { document.getElementById('btn-start-study').click(); }
     }
     if(e.target.closest('#btn-open-caderno')) {
         esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-caderno').style.display = 'block';
@@ -105,13 +109,13 @@ document.body.addEventListener('click', async (e) => {
     if(e.target.closest('#tab-aluno-comportamento')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarComportamentoAluno(); }
     if(e.target.closest('#tab-aluno-observacoes')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarObservacoesAluno(); }
 
-    // FILTROS (TIMELINE E ALERTAS)
+    // FILTROS
     const tChip = e.target.closest('#timeline-filtros .filter-chip');
     if(tChip) { document.querySelectorAll('#timeline-filtros .filter-chip').forEach(c => c.classList.remove('active')); tChip.classList.add('active'); window.timelineFilterCat = tChip.getAttribute('data-cat'); carregarTimelineAluno(); }
     const nChip = e.target.closest('#notificacoes-filtros .filter-chip');
     if(nChip) { document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(c => c.classList.remove('active')); nChip.classList.add('active'); window.notifFilterCat = nChip.getAttribute('data-cat'); carregarNotificacoesAluno(); }
 
-    // CADERNO DIGITAL (ABAS E GRAVAR)
+    // CADERNO DIGITAL
     if(e.target.closest('#tab-caderno-resumos')) { document.getElementById('tab-caderno-resumos').classList.add('active'); document.getElementById('tab-caderno-galeria').classList.remove('active'); document.getElementById('sec-caderno-resumos').style.display = 'block'; document.getElementById('sec-caderno-galeria').style.display = 'none'; }
     if(e.target.closest('#tab-caderno-galeria')) { document.getElementById('tab-caderno-galeria').classList.add('active'); document.getElementById('tab-caderno-resumos').classList.remove('active'); document.getElementById('sec-caderno-resumos').style.display = 'none'; document.getElementById('sec-caderno-galeria').style.display = 'block'; carregarFotosQuadro(); }
     
@@ -134,7 +138,7 @@ document.body.addEventListener('click', async (e) => {
         try { 
             await addDoc(collection(db, "utilizadores", myUserId, "caderno_fotos"), { titulo: t, fotoBase64: fQB64, timestamp: Date.now() }); 
             b.innerHTML = '<i class="fa-solid fa-check"></i> Guardada'; 
-            setTimeout(() => { b.style.display = 'none'; b.disabled = false; b.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Gravar na Galeria'; document.getElementById('foto-quadro-file-name').innerText = ""; document.getElementById('foto-titulo').value = ""; fQB64 = ""; carregarFotosQuadro(); }, 2000); 
+            setTimeout(() => { b.style.display = 'none'; b.disabled = false; b.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Guardar na Galeria'; document.getElementById('foto-quadro-file-name').innerText = ""; document.getElementById('foto-titulo').value = ""; fQB64 = ""; carregarFotosQuadro(); }, 2000); 
         } catch(err) { b.innerHTML = "Erro"; setTimeout(() => { b.disabled = false; }, 2000); } 
     }
 
@@ -146,7 +150,7 @@ document.body.addEventListener('click', async (e) => {
     if(e.target.closest('#btn-aluno-prev-horario')) { if(ahModo === 'dia') ahDOff--; else ahSOff--; carregarHorarioAluno(); }
     if(e.target.closest('#btn-aluno-next-horario')) { if(ahModo === 'dia') ahDOff++; else ahSOff++; carregarHorarioAluno(); }
 
-    // FÓRUNS (CRIAR E ABRIR)
+    // FÓRUNS (CRIAR, APAGAR E ABRIR)
     if(e.target.closest('#btn-create-chat-aluno')) {
         document.getElementById('modal-criar-forum').style.display = 'flex'; 
         const cCont = document.getElementById('lista-colegas-forum'); cCont.innerHTML = '<p class="text-muted center">A procurar colegas...</p>';
@@ -154,7 +158,7 @@ document.body.addEventListener('click', async (e) => {
             const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", minhaTurma))); let cH = ''; 
             cS.forEach(d => { if(d.data().papel === 'aluno' && d.id !== myUserId) { cH += `<label style="display:flex; align-items:center; gap:10px; color:white; font-size:0.9rem; padding:8px 0; cursor:pointer;"><input type="checkbox" class="colegas-check" value="${d.id}" style="width:18px;height:18px;accent-color:var(--primary-green);"> ${d.data().nome}</label>`; } });
             cCont.innerHTML = cH === '' ? '<p class="text-muted center" style="font-size:0.8rem;">Ainda és o único aluno registado nesta turma.</p>' : cH;
-        } catch(err) { cCont.innerHTML = '<p class="text-danger center">Erro ao listar turma.</p>'; }
+        } catch(err) { cCont.innerHTML = '<p class="text-danger center">Erro.</p>'; }
     }
     if(e.target.closest('#btn-cancelar-novo-forum')) { document.getElementById('modal-criar-forum').style.display = 'none'; document.getElementById('input-nome-novo-forum').value = ''; }
     if(e.target.closest('#btn-confirmar-novo-forum')) {
@@ -163,15 +167,28 @@ document.body.addEventListener('click', async (e) => {
         const btnConf = e.target.closest('#btn-confirmar-novo-forum'); btnConf.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btnConf.disabled = true;
         try { await addDoc(collection(db, "turmas", minhaTurma, "foruns"), { nome: nome, tipo: 'permanente', isDefault: false, membros: mbr, criadoPor: myUserName }); document.getElementById('modal-criar-forum').style.display = 'none'; document.getElementById('input-nome-novo-forum').value = ''; btnConf.innerHTML = 'Criar Grupo'; btnConf.disabled = false; carregarForuns(); } catch(err) { btnConf.innerHTML = 'Erro!'; setTimeout(() => { btnConf.innerHTML = 'Criar Grupo'; btnConf.disabled = false; }, 2000); }
     }
+    
+    // Novo Sistema Apagar Chat com Modal Personalizado
+    if(e.target.closest('.btn-delete-chat')) {
+        e.stopPropagation(); pendingDeleteChatId = e.target.closest('.btn-delete-chat').getAttribute('data-id');
+        document.getElementById('modal-confirm-delete-chat').style.display = 'flex';
+    }
+    if(e.target.closest('#btn-cancel-delete-chat')) {
+        document.getElementById('modal-confirm-delete-chat').style.display = 'none'; pendingDeleteChatId = null;
+    }
+    if(e.target.closest('#btn-confirm-delete-chat')) {
+        if(pendingDeleteChatId) {
+            const btn = e.target.closest('#btn-confirm-delete-chat'); btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
+            try { await deleteDoc(doc(db, "turmas", minhaTurma, "foruns", pendingDeleteChatId)); document.getElementById('modal-confirm-delete-chat').style.display = 'none'; carregarForuns(); } catch(err){}
+            finally { btn.innerHTML = 'Sim, Apagar'; btn.disabled = false; pendingDeleteChatId = null; }
+        }
+    }
+
     const cardF = e.target.closest('.canal-card');
     if(cardF && !e.target.closest('.btn-delete-chat')) {
         alunoForumAtivoId = cardF.getAttribute('data-id'); document.getElementById('aluno-chat-active-title').innerText = cardF.getAttribute('data-nome'); 
         document.getElementById('aluno-forum-channel-list').style.display = 'none'; document.getElementById('btn-create-chat-aluno').style.display = 'none'; document.getElementById('aluno-forum-chat-view').style.display = 'flex'; 
         iniciarChatAluno(alunoForumAtivoId);
-    }
-    if(e.target.closest('.btn-delete-chat')) {
-        e.stopPropagation(); const id = e.target.closest('.btn-delete-chat').getAttribute('data-id');
-        if(confirm("Queres mesmo apagar este Chat? Vai desaparecer para todos os teus colegas.")) { try { await deleteDoc(doc(db, "turmas", minhaTurma, "foruns", id)); carregarForuns(); } catch(err){} }
     }
     if(e.target.closest('#btn-aluno-voltar-canais')) { document.getElementById('aluno-forum-chat-view').style.display = 'none'; document.getElementById('aluno-forum-channel-list').style.display = 'block'; document.getElementById('btn-create-chat-aluno').style.display = 'block'; }
     if(e.target.closest('#btn-aluno-send-msg')) {
@@ -179,7 +196,7 @@ document.body.addEventListener('click', async (e) => {
         try { await addDoc(collection(db, "turmas", minhaTurma, "foruns", alunoForumAtivoId, "mensagens"), { remetente: myUserName, texto: t, timestamp: Date.now() }); inp.value = ''; } catch(err) {} 
     }
 
-    // MODO FOCO
+    // MODO FOCO (Botões)
     if(e.target.closest('#btn-start-study')) {
         pTimeConfig = parseInt(document.getElementById('study-time-selector').value) || 30; pXPConfig = focusXPMap[pTimeConfig] || 50; pRest = pTimeConfig * 60;
         document.getElementById('btn-start-study').style.display = 'none'; document.getElementById('btn-stop-study').style.display = 'inline-block';
@@ -201,26 +218,26 @@ document.body.addEventListener('click', async (e) => {
     }
 });
 
-// Eventos de Upload de ficheiros e Selectors
+// Eventos Automáticos de Mudar o Dropdown ou Escolher Foto
 document.addEventListener('change', async (e) => {
+    // Foto
     if (e.target.id === 'upload-foto-quadro' || e.target.id === 'tirar-foto-quadro') {
         let file = e.target.files[0]; if(!file) return; 
-        if (file.type.startsWith('image/')) { try { file = await imageCompression(file, { maxSizeMB: 0.8, maxWidthOrHeight: 1920, useWebWorker: true }); } catch (err) {} } 
+        if (file.type.startsWith('image/')) { try { file = await imageCompression(file, { maxSizeMB: 0.4, maxWidthOrHeight: 1200, useWebWorker: true }); } catch (err) {} } 
         document.getElementById('foto-quadro-file-name').innerText = file.name || 'foto_capturada.jpg'; document.getElementById('btn-gravar-foto-quadro').style.display = 'block'; 
         const rd = new FileReader(); rd.onload = (ev) => { fQB64 = ev.target.result; }; rd.readAsDataURL(file); 
     }
-    if (e.target.id === 'study-time-selector') { if (!pTmr) { const val = parseInt(e.target.value) || 30; formatTimer(val * 60); } }
+    // Mudança de Tempo do Foco
+    if (e.target.id === 'study-time-selector') {
+        if (!pTmr) { pTimeConfig = parseInt(e.target.value) || 30; formatTimer(pTimeConfig * 60); }
+    }
+    // Filtros Agenda
     if (e.target.closest('.agenda-filter-label input')) { carregarAgendaAlunoLista(); }
 });
 
-window.abrirFotoModal = (url, titulo) => {
-    document.getElementById('modal-foto-img').src = url;
-    document.getElementById('modal-foto-titulo').innerText = titulo;
-    document.getElementById('modal-ver-foto').style.display = 'flex';
-};
 
 // ==========================================
-// 3. DASHBOARD ADAPTATIVO MÁGICO
+// 3. DASHBOARD ADAPTATIVO MÁGICO E EXAMES
 // ==========================================
 async function construirHomeAdaptativa() {
     const cont = document.getElementById('dynamic-hero-section'); if(!cont) return;
@@ -238,7 +255,7 @@ async function construirHomeAdaptativa() {
             evs.sort((a,b)=>a.data.localeCompare(b.data));
         }
 
-        let html = ''; let mMiss = false;
+        let html = '';
         if(tFaltas>0 || pAtivos>0 || mRep>0) {
             html += `<div class="card" style="background:linear-gradient(135deg,#ff4d4d,#cc0000); color:white; border:none; border-radius:16px; margin-bottom:20px;">
                 <h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-triangle-exclamation"></i> Ação Necessária</h3>
@@ -254,15 +271,15 @@ async function construirHomeAdaptativa() {
                 <h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-calendar-exclamation"></i> Foco Total</h3>
                 <p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens <strong>${ev.titulo}</strong> no dia ${dF}. Que tal iniciares um Pomodoro agora?</p>
                 <button class="primary-btn" style="background:white; color:#e67e22; width:100%; font-size:1.1rem; padding:15px;" onclick="document.getElementById('btn-open-study-mode').click()"><i class="fa-solid fa-stopwatch"></i> Iniciar Pomodoro</button>
-            </div>`; mMiss = true;
+            </div>`;
         } else {
-            html += `<div class="card" style="background:linear-gradient(135deg,#00cc88,#009966); color:white; border:none; border-radius:16px; margin-bottom:20px;">
+            html += `<div class="card" style="background:linear-gradient(135deg,var(--primary-green),var(--primary-hover)); color:white; border:none; border-radius:16px; margin-bottom:20px;">
                 <h3 style="margin-bottom:5px; font-size:1.6rem;"><i class="fa-solid fa-leaf"></i> Dia Tranquilo</h3>
                 <p style="font-size:1.05rem; margin-bottom:0; opacity:0.9;">Não tens avaliações marcadas nem pendências. Excelente altura para os teus resumos!</p>
-            </div>`; mMiss = true;
+            </div>`;
         }
 
-        if(mMiss && minhaTurma) {
+        if(minhaTurma) {
             const tSnap = await getDoc(doc(db, "turmas", minhaTurma));
             if(tSnap.exists() && tSnap.data().missaoTitulo) {
                 const tm = tSnap.data();
@@ -270,9 +287,10 @@ async function construirHomeAdaptativa() {
             }
         }
 
+        // O botão de Humor aparece todos os dias até fazeres o check-in!
         const hjIso = new Date().toISOString().split('T')[0];
         const hSnap = await getDoc(doc(db, "utilizadores", myUserId, "humor", hjIso));
-        if(!hSnap.exists() && mMiss) {
+        if(!hSnap.exists()) {
             html += `<div class="card" id="checkin-card-dinamico" style="border-left:4px solid #b82bf2; margin-bottom:20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="font-size: 1rem; margin:0;"><i class="fa-solid fa-heart-pulse"></i> Como te sentes hoje?</h3></div><div style="display: flex; justify-content: space-around; font-size: 2.2rem;" id="mood-buttons-dinamicos"><span class="mood-btn-dinamico" data-mood="😡" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">😡</span><span class="mood-btn-dinamico" data-mood="🙁" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">🙁</span><span class="mood-btn-dinamico" data-mood="😐" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">😐</span><span class="mood-btn-dinamico" data-mood="🙂" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">🙂</span><span class="mood-btn-dinamico" data-mood="🤩" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">🤩</span></div></div>`;
         }
 
@@ -288,7 +306,7 @@ async function construirHomeAdaptativa() {
                 carregarGamificacao({xp: aXp+10}); document.getElementById('checkin-card-dinamico').innerHTML = '<div style="text-align:center; color:var(--success-green); font-weight:bold; font-size:0.95rem; padding:10px;">Obrigado! <span style="color:var(--warning-yellow);">+10 XP</span></div>';
             });
         });
-    } catch(e) { cont.innerHTML = '<p class="text-danger center">Erro no assistente.</p>'; }
+    } catch(e) {}
 }
 
 async function verificarEpocaExames() {
@@ -303,55 +321,8 @@ async function verificarEpocaExames() {
     }
 }
 
-// O QUIZ E AS ACADEMIAS
-let quizScores = { atlas: 0, sentinela: 0, nexus: 0, aurora: 0 };
-let currentQuestion = 1;
-
-function iniciarQuizAcademias() {
-    document.getElementById('modal-academia-quiz').style.display = 'flex';
-    document.querySelectorAll('.quiz-opt').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const chosen = e.currentTarget.getAttribute('data-house');
-            quizScores[chosen]++; currentQuestion++; avancarQuiz();
-        });
-    });
-}
-
-function avancarQuiz() {
-    const qText = document.getElementById('quiz-question-text'); const opts = document.querySelectorAll('.quiz-opt');
-    if (currentQuestion === 2) {
-        qText.innerText = "2. Como preferes trabalhar e estudar?";
-        opts[0].innerText = "Em visitas de estudo e a explorar a matéria livremente."; opts[1].innerText = "Com método, rotinas, tarefas bem definidas e prazos."; opts[2].innerText = "Com as mãos na massa, construindo algo ou no PC."; opts[3].innerText = "Em maratonas, desafios e a cronometrar o meu tempo.";
-    } else if (currentQuestion === 3) {
-        qText.innerText = "3. Se tivesses de escolher o teu 'Superpoder', qual seria?";
-        opts[0].innerText = "Visão Raio-X (Curiosidade para ver além do óbvio)."; opts[1].innerText = "Escudo Protetor (Responsabilidade e lealdade)."; opts[2].innerText = "Varinha Mágica (Criatividade e Inovação)."; opts[3].innerText = "Super Velocidade (Foco, rapidez e energia).";
-    } else if (currentQuestion > 3) { finalizarQuiz(); }
-}
-
-async function finalizarQuiz() {
-    let winningHouse = Object.keys(quizScores).reduce((a, b) => quizScores[a] > quizScores[b] ? a : b);
-    if(quizScores[winningHouse] === 0) winningHouse = 'atlas';
-    myAcademia = winningHouse; const ac = ACADEMIAS_INFO[winningHouse];
-
-    document.getElementById('quiz-question-container').style.display = 'none'; document.getElementById('quiz-result-container').style.display = 'block';
-    document.getElementById('quiz-result-icon').innerHTML = `<i class="fa-solid ${ac.icon}" style="color: ${ac.cor}; text-shadow: 0 0 20px ${ac.cor};"></i>`;
-    document.getElementById('quiz-result-name').innerText = ac.nome; document.getElementById('quiz-result-name').style.color = ac.cor; document.getElementById('quiz-result-desc').innerText = ac.desc;
-
-    try { await updateDoc(doc(db, "utilizadores", myUserId), { academia: winningHouse }); } catch(e) {}
-    document.getElementById('btn-entrar-app').addEventListener('click', () => { document.getElementById('modal-academia-quiz').style.display = 'none'; aplicarTemaAcademia(winningHouse); });
-}
-
-function aplicarTemaAcademia(idHouse) {
-    const ac = ACADEMIAS_INFO[idHouse]; if(!ac) return;
-    document.documentElement.style.setProperty('--primary-green', ac.cor);
-    const rankElem = document.getElementById('aluno-rank-title'); const rankCentral = document.getElementById('perfil-titulo-central');
-    if(rankElem) rankElem.innerText = `${rankElem.innerText.split('•')[0].trim()} • ${ac.nome}`;
-    if(rankCentral) rankCentral.innerHTML = `<i class="fa-solid ${ac.icon}"></i> ${ac.nome} | ${rankCentral.innerText.split('|').pop().trim()}`;
-}
-
-
 // ==========================================
-// 4. PESQUISA UNIVERSAL
+// 4. PESQUISA UNIVERSAL E ACADEMIAS
 // ==========================================
 document.getElementById('aluno-search-input')?.addEventListener('input', async (e) => {
     const termo = e.target.value.toLowerCase().trim(); const box = document.getElementById('aluno-search-results');
@@ -370,11 +341,16 @@ document.getElementById('aluno-search-input')?.addEventListener('input', async (
         }
     } catch(err) { box.innerHTML = '<p class="text-danger" style="margin:0;">Erro.</p>'; }
 });
-
 document.addEventListener('click', (e) => { if (!e.target.closest('#aluno-search-input') && !e.target.closest('#aluno-search-results')) { document.getElementById('aluno-search-results').style.display = 'none'; } });
 
+function iniciarQuizAcademias() { document.getElementById('modal-academia-quiz').style.display = 'flex'; document.querySelectorAll('.quiz-opt').forEach(btn => { btn.addEventListener('click', (e) => { const c = e.currentTarget.getAttribute('data-house'); quizScores[c]++; currentQuestion++; avancarQuiz(); }); }); }
+function avancarQuiz() { const qT = document.getElementById('quiz-question-text'); const opts = document.querySelectorAll('.quiz-opt'); if (currentQuestion === 2) { qT.innerText = "2. Como preferes trabalhar e estudar?"; opts[0].innerText = "Em visitas de estudo e a explorar a matéria livremente."; opts[1].innerText = "Com método, rotinas, tarefas bem definidas e prazos."; opts[2].innerText = "Com as mãos na massa, construindo algo ou no PC."; opts[3].innerText = "Em maratonas, desafios e a cronometrar o meu tempo."; } else if (currentQuestion === 3) { qT.innerText = "3. Se tivesses de escolher o teu 'Superpoder', qual seria?"; opts[0].innerText = "Visão Raio-X (Curiosidade para ver além do óbvio)."; opts[1].innerText = "Escudo Protetor (Responsabilidade e lealdade)."; opts[2].innerText = "Varinha Mágica (Criatividade e Inovação)."; opts[3].innerText = "Super Velocidade (Foco, rapidez e energia)."; } else if (currentQuestion > 3) { finalizarQuiz(); } }
+async function finalizarQuiz() { let wH = Object.keys(quizScores).reduce((a, b) => quizScores[a] > quizScores[b] ? a : b); if(quizScores[wH] === 0) wH = 'atlas'; myAcademia = wH; const ac = ACADEMIAS_INFO[wH]; document.getElementById('quiz-question-container').style.display = 'none'; document.getElementById('quiz-result-container').style.display = 'block'; document.getElementById('quiz-result-icon').innerHTML = `<i class="fa-solid ${ac.icon}" style="color: ${ac.cor}; text-shadow: 0 0 20px ${ac.cor};"></i>`; document.getElementById('quiz-result-name').innerText = ac.nome; document.getElementById('quiz-result-name').style.color = ac.cor; document.getElementById('quiz-result-desc').innerText = ac.desc; try { await updateDoc(doc(db, "utilizadores", myUserId), { academia: wH }); } catch(e) {} document.getElementById('btn-entrar-app').addEventListener('click', () => { document.getElementById('modal-academia-quiz').style.display = 'none'; aplicarTemaAcademia(wH); }); }
+function aplicarTemaAcademia(idHouse) { const ac = ACADEMIAS_INFO[idHouse]; if(!ac) return; document.documentElement.style.setProperty('--primary-green', ac.cor); const rE = document.getElementById('aluno-rank-title'); const rC = document.getElementById('perfil-titulo-central'); if(rE) rE.innerText = `${rE.innerText.split('•')[0].trim()} • ${ac.nome}`; if(rC) rC.innerHTML = `<i class="fa-solid ${ac.icon}"></i> ${ac.nome} | ${rC.innerText.split('|').pop().trim()}`; }
+
+
 // ==========================================
-// 5. PERFIL, OBJETIVOS E TOP 10 RANKING
+// 5. PERFIL: RANKING, OBJETIVOS, ESTATÍSTICAS
 // ==========================================
 function carregarGamificacao(dados) {
     const xp = dados.xp || 0; const nivel = Math.floor(xp / 100) + 1; const prog = ((xp - ((nivel - 1) * 100)) / 100) * 100;
@@ -396,7 +372,6 @@ async function carregarRankingTurma() {
         alunos.slice(0, 10).forEach((al, idx) => {
             let cor = 'var(--text-muted)';
             if(idx === 0) cor = '#ffd700'; else if(idx === 1) cor = '#c0c0c0'; else if(idx === 2) cor = '#cd7f32';
-            
             html += `<div style="display:flex; align-items:center; gap:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left:3px solid ${cor};">
                         <span style="font-weight:bold; font-size:1.2rem; color:${cor}; width:25px; text-align:center;">${idx+1}</span>
                         <img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=00cc88&color=fff`}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;">
@@ -413,15 +388,11 @@ async function carregarObjetivosPessoais() {
     try {
         const notasSnap = await getDocs(collection(db, "utilizadores", myUserId, "notas")); let mapNotas = {};
         notasSnap.forEach(n => { const dt = n.data(); if(dt.nota !== 'REP' && !isNaN(dt.nota)) { const val = Number(dt.nota); if(!mapNotas[dt.disciplina] || val > mapNotas[dt.disciplina]) mapNotas[dt.disciplina] = val; } });
-
         const snap = await getDocs(query(collection(db, "utilizadores", myUserId, "objetivos"), orderBy("timestamp", "desc")));
         let html = ''; let objGanhouXP = false;
         for (const d of snap.docs) {
             const obj = d.data(); 
-            if(!obj.concluido && mapNotas[obj.disciplina] && mapNotas[obj.disciplina] >= Number(obj.notaAlvo)) {
-                await updateDoc(doc(db, "utilizadores", myUserId, "objetivos", d.id), { concluido: true });
-                obj.concluido = true; objGanhouXP = true;
-            }
+            if(!obj.concluido && mapNotas[obj.disciplina] && mapNotas[obj.disciplina] >= Number(obj.notaAlvo)) { await updateDoc(doc(db, "utilizadores", myUserId, "objetivos", d.id), { concluido: true }); obj.concluido = true; objGanhouXP = true; }
             const cColor = obj.concluido ? 'var(--success-green)' : '#444'; const txtDec = obj.concluido ? 'line-through' : 'none'; const txtColor = obj.concluido ? 'var(--text-muted)' : 'white';
             html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left: 3px solid ${cColor};"><div style="display:flex; align-items:center; gap:12px; flex:1;"><div style="width:24px; height:24px; border-radius:50%; border:2px solid ${cColor}; background:${obj.concluido ? cColor : 'transparent'}; display:flex; align-items:center; justify-content:center;">${obj.concluido ? '<i class="fa-solid fa-check" style="color:var(--bg-dark); font-size:0.75rem;"></i>' : ''}</div><span style="text-decoration:${txtDec}; color:${txtColor}; font-size:0.95rem; flex:1;">Tirar <strong>${obj.notaAlvo}</strong> a ${obj.disciplina}</span></div><i class="fa-solid fa-trash" style="color:var(--danger-red); cursor:pointer; font-size:0.9rem; padding: 5px;" onclick="window.apagarObjetivo('${d.id}')"></i></div>`;
         }
@@ -453,15 +424,11 @@ function renderizarGraficoNotas() {
 
 async function carregarEstatisticasEstudo() {
     try {
-        const est = await getDocs(query(collection(db, "utilizadores", myUserId, "estudos")));
-        let dU = new Set(); let mTot = 0;
+        const est = await getDocs(query(collection(db, "utilizadores", myUserId, "estudos"))); let dU = new Set(); let mTot = 0;
         est.forEach(d => { if(d.data().data) dU.add(d.data().data.split('T')[0]); mTot += Number(d.data().minutos || 30); });
         document.getElementById('total-minutos-foco').innerText = mTot>60?`${Math.floor(mTot/60)}h${mTot%60}m`:`${mTot}m`;
         let stk = 0; let dO = Array.from(dU).sort((a,b)=>b.localeCompare(a));
-        if(dO.length>0){
-            let hj = new Date(); const hs = hj.toISOString().split('T')[0]; hj.setDate(hj.getDate()-1); const os = hj.toISOString().split('T')[0];
-            if(dO.includes(hs)||dO.includes(os)){ let cv = new Date(dO[0]); for(let i=0;i<dO.length;i++){ if(dO.includes(cv.toISOString().split('T')[0])){ stk++; cv.setDate(cv.getDate()-1); } else break; } }
-        }
+        if(dO.length>0){ let hj = new Date(); const hs = hj.toISOString().split('T')[0]; hj.setDate(hj.getDate()-1); const os = hj.toISOString().split('T')[0]; if(dO.includes(hs)||dO.includes(os)){ let cv = new Date(dO[0]); for(let i=0;i<dO.length;i++){ if(dO.includes(cv.toISOString().split('T')[0])){ stk++; cv.setDate(cv.getDate()-1); } else break; } } }
         document.getElementById('streak-dias').innerText = stk;
     } catch(e) {}
 }
@@ -471,29 +438,13 @@ async function carregarHistoricoHumor() {
     const c = document.getElementById('mood-history-container'); c.innerHTML = '<p class="text-muted center">A atualizar...</p>';
     try {
         const r = await getDocs(query(collection(db, "utilizadores", myUserId, "humor"), orderBy("timestamp", "desc")));
-        let h = '<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:10px;">';
-        r.forEach(d=>{ const hh=d.data(); h+=`<div style="text-align:center;background:rgba(0,0,0,0.3);padding:10px;border-radius:8px;min-width:60px;"><div style="font-size:1.8rem;">${hh.humor}</div><div style="font-size:0.7rem;color:var(--text-muted);margin-top:5px;">${hh.dataIso.split('-').reverse().slice(0,2).join('/')}</div></div>`;});
+        let h = '<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:10px;">'; r.forEach(d=>{ const hh=d.data(); h+=`<div style="text-align:center;background:rgba(0,0,0,0.3);padding:10px;border-radius:8px;min-width:60px;"><div style="font-size:1.8rem;">${hh.humor}</div><div style="font-size:0.7rem;color:var(--text-muted);margin-top:5px;">${hh.dataIso.split('-').reverse().slice(0,2).join('/')}</div></div>`;});
         c.innerHTML = r.empty ? '<p class="text-muted center" style="margin:0;">Sem registos.</p>' : h+'</div>';
     } catch(e){}
 }
 
-document.getElementById('upload-avatar')?.addEventListener('change', async (e) => {
-    const file = e.target.files[0]; if(!file) return;
-    try {
-        const compressedFile = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 500, useWebWorker: true });
-        const reader = new FileReader();
-        reader.onload = async (ev) => {
-            const base64 = ev.target.result;
-            document.getElementById('perfil-avatar-img').src = base64;
-            document.getElementById('header-avatar-circle').innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-            await updateDoc(doc(db, "utilizadores", myUserId), { fotoPerfil: base64 });
-        };
-        reader.readAsDataURL(compressedFile);
-    } catch(err) {}
-});
-
 // ==========================================
-// 6. CADERNETA 
+// 6. CADERNETA E LINHA TEMPORAL
 // ==========================================
 async function obterEventosLinhaTemporal() {
     let ev = [];
@@ -508,7 +459,7 @@ async function carregarTimelineAluno() {
     const cCont = document.getElementById('aluno-caderneta-content');
     try {
         let eventos = await obterEventosLinhaTemporal();
-        if(window.timelineFilterCat !== 'all') { eventos = eventos.filter(e => e.cat === window.timelineFilterCat); }
+        if(timelineFilterCat !== 'all') { eventos = eventos.filter(e => e.cat === timelineFilterCat); }
         if(eventos.length === 0) { cCont.innerHTML = '<p class="text-muted center" style="margin-top:40px;">O teu histórico está limpo.</p>'; return; }
         let html = '<div class="timeline">'; eventos.forEach(e => { html += `<div class="timeline-item"><div class="timeline-icon" style="color:${e.cor}; border-color:${e.cor};">${e.icon}</div><div class="timeline-content" style="border-left: 3px solid ${e.cor};"><span class="timeline-date">${new Date(e.time).toLocaleDateString('pt-PT')}</span><strong style="color:white; display:block; margin-bottom:5px;">${e.titulo}</strong><p style="font-size:0.85rem; color:var(--text-light); margin:0;">${e.desc}</p></div></div>`; }); cCont.innerHTML = html + '</div>';
     } catch(e) {}
@@ -519,11 +470,11 @@ async function carregarNotificacoesAluno() {
     try {
         let evs = await obterEventosLinhaTemporal();
         evs = evs.map(e => { let c='escola'; if(e.cat==='faltas'&&e.cor==='var(--danger-red)') c='importante'; if(e.cat==='gamificacao') c='gamificacao'; return {...e, nCat: c}; });
-        if(window.notifFilterCat !== 'all') evs = evs.filter(e => e.nCat === window.notifFilterCat);
+        if(notifFilterCat !== 'all') evs = evs.filter(e => e.nCat === notifFilterCat);
         const rec = evs.slice(0, 15);
         if(rec.length === 0) { cont.innerHTML = '<p class="text-muted center" style="margin-top:40px;">Sem alertas nesta categoria.</p>'; return; }
         let h = ''; rec.forEach(ev => { h += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${ev.cor}; display:flex; align-items:flex-start; gap: 15px; padding: 15px;"><div style="font-size: 1.5rem; color: ${ev.cor};">${ev.icon}</div><div><strong style="color:white; font-size:1rem; display:block; margin-bottom:3px;">${ev.titulo}</strong><span style="font-size:0.85rem; color:var(--text-light);">${ev.desc}</span><div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px;">${new Date(ev.time).toLocaleString('pt-PT')}</div></div></div>`; }); cont.innerHTML = h; 
-        if(window.notifFilterCat === 'all') document.getElementById('badge-notificacoes').style.display = 'none';
+        if(notifFilterCat === 'all') document.getElementById('badge-notificacoes').style.display = 'none';
     } catch(e) {}
 }
 
@@ -761,6 +712,7 @@ function carregarDadosPassaporte(dados) {
 }
 document.getElementById('btn-save-fct')?.addEventListener('click', async (e) => { const v = document.getElementById('input-fct-horas').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "fct.horasRealizadas": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
 document.getElementById('btn-save-pap-tema')?.addEventListener('click', async (e) => { const v = document.getElementById('input-pap-tema').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "pap.tema": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-save"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
+let fPB64 = ""; document.getElementById('aluno-upload-pap')?.addEventListener('change', async (e) => { let f = e.target.files[0]; if(!f) return; if (f.type.startsWith('image/')) { try { f = await imageCompression(f, {maxSizeMB:0.5}); } catch(e){} } document.getElementById('aluno-pap-file-name').innerText = f.name; document.getElementById('btn-enviar-pap').style.display = 'block'; const r = new FileReader(); r.onload = ev => fPB64 = ev.target.result; r.readAsDataURL(f); });
 document.getElementById('btn-enviar-pap')?.addEventListener('click', async (e) => { if(!fPB64) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { const snap = await getDoc(doc(db, "utilizadores", myUserId)); let axp = snap.exists()&&snap.data().xp?snap.data().xp:0; await updateDoc(doc(db, "utilizadores", myUserId), { papFicheiroEnviado:true, papFicheiroBase64:fPB64, xp:axp+200 }); b.style.backgroundColor="var(--success-green)"; b.innerHTML='<i class="fa-solid fa-check"></i> Submetido'; setTimeout(() => { b.style.display='none'; b.disabled=false; document.getElementById('aluno-pap-file-name').style.color="var(--success-green)"; }, 2000); } catch(err){} });
 
 async function pedirPermissaoNotificacoes() { try { const p = await Notification.requestPermission(); if(p==='granted') { const r = await navigator.serviceWorker.register('./firebase-messaging-sw.js'); const t = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: r }); if(t) await updateDoc(doc(db, "utilizadores", myUserId), { tokenNotificacao: t }); } } catch(e){} }
