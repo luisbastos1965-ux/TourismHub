@@ -11,21 +11,33 @@ const errorMsg = document.getElementById('login-error');
 // ==================================================
 if (window.PasswordCredential && navigator.credentials) {
     // Se o browser suportar o cofre do dispositivo, mostramos o botão
-    btnBiometrico.style.display = 'flex';
+    if(btnBiometrico) btnBiometrico.style.display = 'flex';
 }
 
 // ==================================================
-// 2. VERIFICAR SESSÃO ATIVA & REDIRECIONAR
+// 2. VERIFICAR SESSÃO ATIVA E REDIRECIONAR (O PORTEIRO)
 // ==================================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        // Se já está logado, descobrir o papel e mandar para a página certa
+        // Se já está logado, descobrir os papéis e mandar para a página certa
         const userId = user.email.split('@')[0];
         try {
             const docSnap = await getDoc(doc(db, "utilizadores", userId));
             if (docSnap.exists()) {
-                const papel = docSnap.data().papel;
-                redirecionarParaPainel(papel);
+                const data = docSnap.data();
+                
+                // Sistema de Cinto de Utilidades (Array de Papéis)
+                const papeis = data.papeis || [];
+                
+                // Manter retrocompatibilidade se o aluno só tiver "papel: 'aluno'"
+                if (data.papel && !papeis.includes(data.papel)) {
+                    papeis.push(data.papel);
+                }
+                
+                redirecionarParaPainel(papeis);
+            } else {
+                mostrarErro("Utilizador não encontrado na base de dados.");
+                auth.signOut();
             }
         } catch (e) { console.error("Erro ao ler perfil para redirecionamento", e); }
     } else {
@@ -82,6 +94,14 @@ if(btnLogin) {
     });
 }
 
+// Permite fazer login clicando na tecla "Enter" no campo da password
+const inputPass = document.getElementById('login-password');
+if(inputPass) {
+    inputPass.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') btnLogin.click();
+    });
+}
+
 // ==================================================
 // 4. LOGIN COM IMPRESSÃO DIGITAL / FACE ID
 // ==================================================
@@ -118,19 +138,29 @@ if(btnBiometrico) {
 // 5. MÁQUINA DE ROTAS E AJUDANTES
 // ==================================================
 function mostrarErro(texto) {
-    errorMsg.innerText = texto;
-    errorMsg.style.display = 'block';
+    if(errorMsg) {
+        errorMsg.innerText = texto;
+        errorMsg.style.display = 'block';
+    }
 }
 
-function redirecionarParaPainel(papel) {
+function redirecionarParaPainel(papeis) {
     const paginaAtual = window.location.pathname;
     let paginaDestino = 'index.html'; // Default
 
-    if (papel === 'admin') paginaDestino = 'admin.html';
-    else if (papel === 'dt') paginaDestino = 'dt.html';
-    else if (papel === 'professor') paginaDestino = 'prof.html';
-    else if (papel === 'ee') paginaDestino = 'ee.html';
-    else if (papel === 'aluno') paginaDestino = 'aluno.html';
+    if (papeis.includes('admin')) {
+        paginaDestino = 'admin.html';
+    } 
+    // Deteta qualquer tipo de função letiva e manda para o canivete suíço (prof.html)
+    else if (papeis.some(r => ['professor', 'diretor_turma', 'dt', 'orientador_pap', 'coordenador'].includes(r))) {
+        paginaDestino = 'prof.html';
+    } 
+    else if (papeis.includes('ee')) {
+        paginaDestino = 'ee.html';
+    } 
+    else if (papeis.includes('aluno')) {
+        paginaDestino = 'aluno.html';
+    }
 
     // Para evitar loops, se não estiver na página de destino, redireciona
     if (!paginaAtual.includes(paginaDestino)) {
