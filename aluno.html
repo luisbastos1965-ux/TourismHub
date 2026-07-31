@@ -30,6 +30,9 @@
         .filter-chips-container::-webkit-scrollbar { display: none; }
         .filter-chip { background: var(--bg-dark); border: 1px solid #333; color: var(--text-muted); padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; cursor: pointer; white-space: nowrap; transition: 0.2s; }
         .filter-chip.active { background: var(--primary-green); color: var(--bg-dark); border-color: var(--primary-green); font-weight: bold; }
+        
+        .input-padrao { background: var(--bg-dark); border: 1px solid #333; color: white; border-radius: 8px; padding: 10px; font-family: inherit; }
+        .input-padrao:focus { outline: none; border-color: var(--primary-green); }
     </style>
 </head>
 <body>
@@ -64,6 +67,7 @@
                     </div>
                 </div>
 
+                <!-- PESQUISA UNIVERSAL -->
                 <div style="margin-bottom: 20px; position: relative;">
                     <div style="display:flex; align-items:center; background: var(--bg-card); border: 1px solid #333; border-radius: 20px; padding: 0 15px;">
                         <i class="fa-solid fa-magnifying-glass" style="color:var(--text-muted);"></i>
@@ -78,13 +82,11 @@
                     <div id="exam-countdown" style="font-size: 1.5rem; font-weight: bold; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; display: inline-block;">Faltam X dias</div>
                 </div>
 
-                <!-- ASSISTENTE INTELIGENTE -->
-                <div id="dynamic-hero-section">
-                    <div class="card"><p class="text-muted center">A preparar o teu assistente...</p></div>
-                </div>
+                <!-- ALARMES E AVISOS ESCOLARES (Injetado via JS) -->
+                <div id="hero-alert-section"></div>
 
                 <!-- ACESSO RÁPIDO -->
-                <div class="lms-action-grid" style="margin-top: 20px;">
+                <div class="lms-action-grid" style="margin-top: 10px; margin-bottom: 20px;">
                     <button class="lms-btn" id="btn-open-study-mode" style="border-color:#9b59b6; color:#9b59b6; background: rgba(155, 89, 182, 0.05);">
                         <i class="fa-solid fa-stopwatch"></i><span>Modo Foco</span>
                     </button>
@@ -98,12 +100,15 @@
                         <i class="fa-solid fa-briefcase"></i><span>Estágio / PAP</span>
                     </button>
                 </div>
+
+                <!-- EMOCIONAL E MISSÕES DA TURMA (Injetado via JS) -->
+                <div id="hero-emotional-section"></div>
             </div>
 
-            <!-- VISTA PERFIL (COM TOP 10) -->
-            <div id="view-aluno-perfil" style="display: none;">
-                <div class="class-header"><h2 class="section-title"><i class="fa-solid fa-user-astronaut"></i> O Meu Perfil</h2></div>
+            <!-- VISTA PERFIL -->
+            <div id="view-aluno-perfil" style="display: none; padding-top: 10px;">
                 
+                <!-- Info do Utilizador -->
                 <div class="card" style="text-align: center;">
                     <div style="position:relative; width: 100px; height: 100px; margin: 0 auto 15px auto;">
                         <img id="perfil-avatar-img" src="https://via.placeholder.com/100" style="width:100%; height:100%; border-radius:50%; object-fit:cover; border: 3px solid var(--primary-green);">
@@ -116,29 +121,29 @@
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;"><span id="perfil-xp-totais">0</span> XP totais alcançados</p>
                 </div>
 
-                <div class="card" style="border-left: 4px solid #00d2ff; margin-bottom: 20px;">
-                    <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-fire"></i> Hábitos de Foco</h3>
-                    <div style="display:flex; justify-content:space-between; text-align:center; gap:10px;">
-                        <div style="flex:1; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px;">
-                            <i class="fa-solid fa-fire-flame-curved" style="color:#ffaa00; font-size:1.5rem; margin-bottom:5px;"></i>
-                            <div style="font-size:1.2rem; font-weight:bold; color:white;" id="streak-dias">0</div>
-                            <div style="font-size:0.75rem; color:var(--text-muted);">Dias Seguidos</div>
-                        </div>
-                        <div style="flex:1; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px;">
-                            <i class="fa-solid fa-stopwatch" style="color:#00d2ff; font-size:1.5rem; margin-bottom:5px;"></i>
-                            <div style="font-size:1.2rem; font-weight:bold; color:white;" id="total-minutos-foco">0m</div>
-                            <div style="font-size:0.75rem; color:var(--text-muted);">Tempo Foco</div>
-                        </div>
-                    </div>
-                </div>
-
+                <!-- OBJETIVOS INTELIGENTES -->
                 <div class="card" style="border-left: 4px solid var(--warning-yellow);">
                     <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-bullseye"></i> Metas Inteligentes</h3>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Escolhe a nota alvo! A app dá-te <strong style="color:var(--warning-yellow);">+50 XP</strong> automaticamente quando a alcançares.</p>
-                    <div style="display:flex; gap:10px; margin-bottom: 15px;">
-                        <select id="obj-disciplina" style="flex:2; margin:0; padding:10px; font-size:0.9rem;"></select>
-                        <input type="number" id="obj-nota-alvo" placeholder="Nota" style="flex:1; margin:0; padding:10px; font-size:0.9rem;" min="10" max="20">
-                        <button id="btn-add-objetivo" class="primary-btn" style="width:auto; padding:0 15px; background:var(--warning-yellow); color:black;"><i class="fa-solid fa-plus"></i></button>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Define os teus objetivos! A app valida automaticamente o teu progresso e dá-te <strong style="color:var(--warning-yellow);">+50 XP</strong> quando os cumprires.</p>
+                    
+                    <div style="display:flex; flex-direction:column; gap:10px; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
+                        <select id="obj-tipo" class="input-padrao" style="width:100%; margin:0;">
+                            <option value="nota">Tirar nota alvo num Módulo</option>
+                            <option value="nivel">Alcançar um novo Nível Geral</option>
+                            <option value="prhf">Concluir Plano de Recuperação (PRHF)</option>
+                        </select>
+                        
+                        <div id="obj-setup-nota" style="display:flex; gap:8px;">
+                            <select id="obj-disciplina" class="input-padrao" style="flex:1; margin:0;"></select>
+                            <input type="number" id="obj-modulo" placeholder="Mod." class="input-padrao" style="width:60px; margin:0;" min="1">
+                            <input type="number" id="obj-nota-alvo" placeholder="Nota" class="input-padrao" style="width:70px; margin:0;" min="10" max="20">
+                        </div>
+                        
+                        <div id="obj-setup-nivel" style="display:none; gap:8px;">
+                            <input type="number" id="obj-nivel-alvo" placeholder="Nível pretendido (ex: 5)" class="input-padrao" style="width:100%; margin:0;" min="2">
+                        </div>
+
+                        <button id="btn-add-objetivo" class="primary-btn" style="width:100%; margin-top:5px; background:var(--warning-yellow); color:black;"><i class="fa-solid fa-plus"></i> Guardar Meta</button>
                     </div>
                     <div id="lista-objetivos-container"></div>
                 </div>
@@ -183,20 +188,19 @@
                 <div id="aluno-notificacoes-container"></div>
             </div>
 
-            <!-- VISTA CADERNO DIGITAL -->
+            <!-- VISTA CADERNO DIGITAL E GALERIA -->
             <div id="view-aluno-caderno" style="display: none;">
                 <div class="class-header" style="margin-bottom: 10px;">
                     <button id="btn-voltar-caderno" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                 </div>
                 
                 <div class="falta-tabs" style="margin-bottom: 15px;">
-                    <button class="falta-tab-btn active" id="tab-caderno-resumos">Resumos Texto</button>
+                    <button class="falta-tab-btn active" id="tab-caderno-resumos">Resumos de Texto</button>
                     <button class="falta-tab-btn" id="tab-caderno-galeria">Fotos do Quadro</button>
                 </div>
 
                 <div id="sec-caderno-resumos">
                     <div class="card" style="margin-bottom: 20px; padding: 15px;">
-                        <h3 style="font-size: 1rem; margin-bottom: 10px;">Criar Novo Resumo</h3>
                         <div class="form-group"><input type="text" id="caderno-titulo" placeholder="Título da Matéria" class="input-padrao" style="width:100%; margin-bottom:10px;"></div>
                         <div id="quill-editor" style="height: 180px; background: white; color: black; border-radius: 0 0 8px 8px;"></div>
                         <button id="btn-gravar-apontamento" class="primary-btn" style="width: 100%; margin-top: 15px; background-color: #e67e22;"><i class="fa-solid fa-save"></i> Gravar na Nuvem</button>
@@ -206,7 +210,6 @@
 
                 <div id="sec-caderno-galeria" style="display: none;">
                     <div class="card" style="margin-bottom: 20px; padding: 15px; text-align: center; border: 1px dashed #e67e22;">
-                        <h3 style="font-size: 1rem; margin-bottom: 10px; color: #e67e22;"><i class="fa-solid fa-camera"></i> Guardar Foto do Quadro</h3>
                         <input type="text" id="foto-titulo" placeholder="Título da Foto (Obrigatório)" style="width:100%; margin-bottom:15px; border-radius:8px; padding:10px; border: 1px solid #e67e22;">
                         
                         <div style="display:flex; gap:10px; justify-content:center; margin-bottom:15px;">
@@ -351,7 +354,7 @@
                 <div class="action-sheet" style="max-width:400px; border-radius:12px; margin:20px; animation: none;">
                     <h3 style="margin-bottom: 15px; color:var(--primary-green);"><i class="fa-solid fa-comments"></i> Novo Grupo de Estudo</h3>
                     <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">Cria um grupo e escolhe os colegas da tua turma que queres adicionar.</p>
-                    <input type="text" id="input-nome-novo-forum" placeholder="Nome do Grupo (Ex: Trabalho de Física)" style="width:100%; margin-bottom:15px;">
+                    <input type="text" id="input-nome-novo-forum" placeholder="Nome do Grupo (Ex: Trabalho de Física)" style="width:100%; margin-bottom:15px;" class="input-padrao">
                     
                     <div id="lista-colegas-forum" style="max-height: 150px; overflow-y: auto; background: #111; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333;">
                         <p class="text-muted center">A carregar turma...</p>
@@ -409,12 +412,13 @@
             <!-- MODO FOCO (CENTRALIZADO COM FLEX) -->
             <div id="view-study-mode" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 70vh; box-sizing: border-box; padding: 20px;">
                 <div style="text-align: center; width: 100%;">
-                    <h2 style="color: #9b59b6; margin-bottom: 10px;"><i class="fa-solid fa-stopwatch"></i> Modo Foco</h2>
+                    <i class="fa-solid fa-stopwatch" style="font-size: 3rem; color: var(--primary-green); margin-bottom: 15px;"></i>
+                    <h2 style="color: var(--primary-green); margin-bottom: 10px;">Modo Foco</h2>
                     <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 25px;">Se saíres da aplicação, o relógio pára e perdes a recompensa!</p>
                     
                     <div id="study-setup" style="margin-bottom: 30px;">
                         <p style="font-size: 0.95rem; margin-bottom: 10px;">Tempo de Foco (Minutos):</p>
-                        <select id="study-time-selector" style="width: 150px; text-align: center; font-size: 1.2rem; font-weight: bold; background: #111; color: white; border: 1px solid #9b59b6; padding: 8px; border-radius: 8px;">
+                        <select id="study-time-selector" style="width: 150px; text-align: center; font-size: 1.2rem; font-weight: bold; background: #111; color: white; border: 1px solid var(--primary-green); padding: 8px; border-radius: 8px;">
                             <option value="15">15 Min</option>
                             <option value="25">25 Min</option>
                             <option value="30" selected>30 Min</option>
@@ -423,12 +427,12 @@
                         </select>
                     </div>
 
-                    <div style="font-size: 5.5rem; font-weight: bold; font-family: monospace; color: white; margin-bottom: 40px; text-shadow: 0 0 20px rgba(155, 89, 182, 0.5);" id="study-timer-text">30:00</div>
+                    <div style="font-size: 5.5rem; font-weight: bold; font-family: monospace; color: white; margin-bottom: 40px; text-shadow: 0 0 20px rgba(0, 204, 136, 0.3);" id="study-timer-text">30:00</div>
                     
                     <div id="study-controls" style="width:100%; max-width: 350px; margin: 0 auto;">
-                        <button id="btn-start-study" class="primary-btn" style="background-color: #9b59b6; font-size: 1.2rem; padding: 15px; border-radius: 30px;">Iniciar</button>
+                        <button id="btn-start-study" class="primary-btn" style="font-size: 1.2rem; padding: 15px; border-radius: 30px;">Iniciar</button>
                         <button id="btn-stop-study" class="danger-btn" style="display: none; font-size: 1.2rem; padding: 15px; border-radius: 30px;"><i class="fa-solid fa-stop"></i> Parar e Desistir</button>
-                        <button id="btn-voltar-study" class="secondary-btn" style="margin-top: 20px; border: none; width: auto; margin-left: auto; margin-right: auto; padding: 10px;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+                        <br><button id="btn-voltar-study" class="secondary-btn" style="margin-top: 20px; border: none; width: auto; margin-left: auto; margin-right: auto; padding: 10px;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                     </div>
                     
                     <div id="post-study-log" style="display: none; width: 100%; max-width: 350px; margin: 0 auto;">
@@ -478,7 +482,7 @@
 
                 </div>
             </div>
-
+            
             <!-- MODAL CONFIRMAR APAGAR CHAT -->
             <div id="modal-confirm-delete-chat" class="modal-overlay" style="z-index: 5000;">
                 <div class="action-sheet" style="max-width:350px; border-radius:12px; margin:20px; text-align: center;">
@@ -491,7 +495,7 @@
                     </div>
                 </div>
             </div>
-            
+
         </main>
 
         <nav class="bottom-nav">
