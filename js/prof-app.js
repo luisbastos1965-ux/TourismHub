@@ -6,6 +6,8 @@ let myUserId = "", myUserName = "", profData = {}, myRoles = [];
 let turmasProfessor = []; let selectedTurma = ""; let alunosTurmaRAM = []; let eventosTurmaRAM = [];
 let alunoSelecionadoId = null;
 
+const ordemDisciplinasGlobal = ['PORT', 'ING', 'AI', 'EF', 'TIC', 'GEO', 'HCA', 'MAT', 'CF', 'TIAT', 'TCAT', 'OTET'];
+
 const ACADEMIAS_INFO = {
     'atlas': { nome: 'Atlas', cor: '#00cc88' },
     'sentinela': { nome: 'Sentinela', cor: '#0088ff' },
@@ -24,18 +26,16 @@ onAuthStateChanged(auth, async (user) => {
             if (docSnap.exists()) {
                 profData = docSnap.data();
                 
-                // Sistema do Cinto de Utilidades (Lê array 'papeis' ou converte a string 'papel' antiga)
+                // Sistema do Cinto de Utilidades
                 myRoles = profData.papeis || [];
                 if (profData.papel && !myRoles.includes(profData.papel)) myRoles.push(profData.papel);
                 
-                // Verifica se tem pelo menos um cargo docente
                 const temAcesso = myRoles.some(r => ['professor', 'diretor_turma', 'orientador_pap', 'coordenador'].includes(r));
                 
                 if (temAcesso) {
                     myUserName = profData.nome || myUserId;
-                    turmasProfessor = profData.turmas || []; // Ex: ['10A', '11GPSI']
+                    turmasProfessor = profData.turmas || []; 
                     
-                    // Monta o título dinamicamente com base nos papéis
                     let titleStr = "Professor";
                     if(myRoles.includes('diretor_turma')) titleStr += " / DT";
                     if(myRoles.includes('coordenador')) titleStr += " / Coord.";
@@ -50,13 +50,11 @@ onAuthStateChanged(auth, async (user) => {
                         document.getElementById('prof-avatar-img').src = profData.fotoPerfil;
                     }
 
-                    // Esconde abas que não pertencem ao cargo do utilizador
                     if(!myRoles.includes('diretor_turma') && !myRoles.includes('orientador_pap')) {
                         const tabPassaporte = document.getElementById('tab-tarefas-passaporte');
                         if(tabPassaporte) tabPassaporte.style.display = 'none';
                     }
 
-                    // Preencher o seletor de turmas
                     const sel = document.getElementById('prof-seletor-turmas');
                     if(turmasProfessor.length > 0) {
                         sel.innerHTML = '<option value="">-- Selecionar Turma --</option>' + turmasProfessor.map(t => `<option value="${t}">Turma ${t}</option>`).join('');
@@ -114,24 +112,22 @@ document.body.addEventListener('click', async (e) => {
         abrirPerfil360Aluno(id);
     }
 
-    // BOTÕES DE ACESSO RÁPIDO DA TURMA
+    // --- 1. A METRALHADORA DE FALTAS ---
     if(e.target.closest('#btn-modal-faltas')) {
-        if(!selectedTurma) return alert("Seleciona uma turma primeiro.");
+        if(!selectedTurma || alunosTurmaRAM.length === 0) return alert("Seleciona uma turma com alunos primeiro.");
         const c = document.getElementById('lista-metralhadora-faltas'); let h = '';
         alunosTurmaRAM.forEach(al => {
             h += `<label style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(255,255,255,0.05); margin-bottom:5px; border-radius:8px; border:1px solid #333; cursor:pointer;">
-                    <span style="color:white;">${al.nome}</span>
+                    <span style="color:white; font-size:0.95rem;">${al.nome}</span>
                     <input type="checkbox" class="chk-presente" value="${al.id}" checked>
                   </label>`;
         });
         c.innerHTML = h; document.getElementById('falta-horas-bloco').value = '';
         document.getElementById('modal-marcar-faltas').style.display = 'flex';
     }
-
     if(e.target.closest('#btn-todos-presentes')) {
         e.preventDefault(); document.querySelectorAll('.chk-presente').forEach(c => c.checked = true);
     }
-
     if(e.target.closest('#btn-confirmar-faltas')) {
         const horas = document.getElementById('falta-horas-bloco').value;
         if(!horas || horas < 1) return alert("Indica o número de horas!");
@@ -146,12 +142,74 @@ document.body.addEventListener('click', async (e) => {
             });
             faltasCriadas++;
         }
-        
         b.innerHTML = '<i class="fa-solid fa-check"></i> Faltas Registadas'; b.style.backgroundColor = "var(--success-green)";
         setTimeout(() => { b.innerHTML = 'Gravar Registo'; b.disabled = false; b.style.backgroundColor = "var(--danger-red)"; document.getElementById('modal-marcar-faltas').style.display = 'none'; analisarEAtualizarTurma(selectedTurma); }, 2000);
     }
 
-    // BOTÃO AGENDA (RADAR DE COLISÕES)
+    // --- 2. O LANÇAMENTO VISUAL DE NOTAS (NOVO) ---
+    if(e.target.closest('#btn-modal-notas')) {
+        if(!selectedTurma || alunosTurmaRAM.length === 0) return alert("Seleciona uma turma com alunos primeiro.");
+        
+        document.getElementById('lancar-nota-disciplina').innerHTML = ordemDisciplinasGlobal.map(dc => `<option value="${dc}">${dc}</option>`).join('');
+        document.getElementById('lancar-nota-modulo').value = '';
+        
+        const grid = document.getElementById('grid-notas-alunos');
+        let h = '';
+        alunosTurmaRAM.forEach(al => {
+            h += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(255,255,255,0.05); border-radius:8px; border:1px solid #333;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=333&color=fff`}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;">
+                        <span style="color:white; font-size:0.9rem;">${al.nome}</span>
+                    </div>
+                    <input type="text" class="input-nota-aluno input-padrao" data-id="${al.id}" placeholder="Nota" style="width:70px; text-align:center; padding:5px; margin:0; text-transform:uppercase;">
+                  </div>`;
+        });
+        grid.innerHTML = h;
+        document.getElementById('modal-lancamento-notas').style.display = 'flex';
+    }
+
+    if(e.target.closest('#btn-confirmar-notas')) {
+        const disc = document.getElementById('lancar-nota-disciplina').value;
+        const mod = document.getElementById('lancar-nota-modulo').value;
+        if(!disc || !mod) return alert("Preenche a Disciplina e o Módulo!");
+        
+        const inputs = document.querySelectorAll('.input-nota-aluno');
+        let notasParaGravar = [];
+        inputs.forEach(inp => {
+            const v = inp.value.trim().toUpperCase();
+            if(v) notasParaGravar.push({ id: inp.getAttribute('data-id'), nota: v });
+        });
+        
+        if(notasParaGravar.length === 0) return alert("Não inseriste nenhuma nota nos alunos.");
+        
+        const b = e.target.closest('#btn-confirmar-notas'); 
+        b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A gravar...'; b.disabled = true;
+        
+        try {
+            for(const n of notasParaGravar) {
+                await addDoc(collection(db, "utilizadores", n.id, "notas"), {
+                    disciplina: disc, modulo: Number(mod), nota: n.nota, data: new Date().toISOString(), professor: myUserName
+                });
+                
+                // Automação Gamificação: Se nota positiva (>=10), dá bónus de 20 XP.
+                if(n.nota !== 'REP' && !isNaN(n.nota) && Number(n.nota) >= 10) {
+                    const uS = await getDoc(doc(db, "utilizadores", n.id));
+                    if(uS.exists()) {
+                        let axp = uS.data().xp || 0;
+                        await updateDoc(doc(db, "utilizadores", n.id), { xp: axp + 20 });
+                    }
+                }
+            }
+            b.innerHTML = '<i class="fa-solid fa-check"></i> Turma Atualizada!'; b.style.backgroundColor = "var(--success-green)"; b.style.color = "white";
+            setTimeout(() => { 
+                b.innerHTML = '<i class="fa-solid fa-save"></i> Gravar Notas na Turma'; b.disabled = false; b.style.backgroundColor = "var(--warning-yellow)"; b.style.color="black";
+                document.getElementById('modal-lancamento-notas').style.display = 'none'; 
+                analisarEAtualizarTurma(selectedTurma); 
+            }, 2000);
+        } catch(err) { b.innerHTML = "Erro Interno"; setTimeout(()=>b.disabled=false, 2000); }
+    }
+
+    // --- 3. AGENDA DE EVENTOS E MATERIAIS RÁPIDOS ---
     if(e.target.closest('#btn-modal-agenda')) {
         if(!selectedTurma) return alert("Seleciona uma turma primeiro.");
         document.getElementById('evento-titulo').value = ''; document.getElementById('evento-data').value = ''; document.getElementById('aviso-colisao-agenda').style.display = 'none';
@@ -165,19 +223,29 @@ document.body.addEventListener('click', async (e) => {
         try {
             await addDoc(collection(db, "turmas", selectedTurma, "eventos"), { titulo: t, data: d, tipo: tp, professor: myUserName });
             b.innerHTML = '<i class="fa-solid fa-check"></i> Agendado';
-            setTimeout(() => { b.innerHTML = 'Agendar'; b.disabled = false; document.getElementById('modal-agendar-evento').style.display = 'none'; carregarRadarProfessor(); }, 1500);
+            setTimeout(() => { b.innerHTML = 'Agendar'; b.disabled = false; document.getElementById('modal-agendar-evento').style.display = 'none'; carregarRadarProfessor(); analisarEAtualizarTurma(selectedTurma); }, 1500);
         } catch(err) { b.innerHTML = "Erro"; setTimeout(()=>b.disabled=false, 1500); }
     }
 
-    // OCORRÊNCIAS E GAMIFICAÇÃO NO PERFIL DO ALUNO
+    if(e.target.closest('#btn-modal-materiais')) {
+        if(!selectedTurma) return alert("Seleciona uma turma.");
+        const tit = prompt("Título do Material / Sumário:"); if(!tit) return;
+        const disc = prompt("Sigla da Disciplina (Ex: PORT, MAT):"); if(!disc) return;
+        try {
+            await addDoc(collection(db, "turmas", selectedTurma, "sumarios"), { titulo: tit, disciplina: disc.toUpperCase(), professor: myUserName, data: new Date().toLocaleDateString('pt-PT'), descricao: "Material partilhado pelo professor.", timestamp: Date.now() });
+            alert("Material partilhado com a turma!");
+        } catch(err) {}
+    }
+
+    // --- 4. OCORRÊNCIAS E GAMIFICAÇÃO NO PERFIL DO ALUNO ---
     if(e.target.closest('#btn-dar-positiva')) {
         if(!alunoSelecionadoId) return;
         const motivo = prompt("Motivo do reconhecimento positivo?"); if(!motivo) return;
         try {
             const uS = await getDoc(doc(db, "utilizadores", alunoSelecionadoId)); let axp = uS.exists() && uS.data().xp ? uS.data().xp : 0;
             await addDoc(collection(db, "utilizadores", alunoSelecionadoId, "ocorrencias"), { titulo: "Reconhecimento Positivo", descricao: motivo, tipo: "positiva", autor: myUserName, timestamp: Date.now(), data: new Date().toLocaleDateString('pt-PT') });
-            await updateDoc(doc(db, "utilizadores", alunoSelecionadoId), { xp: axp + 50 }); // Bónus Automático
-            alert("Ação Registada! O aluno ganhou 50 XP e será notificado.");
+            await updateDoc(doc(db, "utilizadores", alunoSelecionadoId), { xp: axp + 50 }); // Bónus XP
+            alert("Ação Registada! O aluno ganhou 50 XP.");
         } catch(err) { alert("Erro ao registar."); }
     }
     
@@ -190,27 +258,6 @@ document.body.addEventListener('click', async (e) => {
         } catch(err) {}
     }
 
-    // MATERIAIS RÁPIDOS (PROMPT SIMPLES V1)
-    if(e.target.closest('#btn-modal-materiais')) {
-        if(!selectedTurma) return alert("Seleciona uma turma.");
-        const tit = prompt("Título do Material / Sumário:"); if(!tit) return;
-        const disc = prompt("Sigla da Disciplina (Ex: PORT, MAT):"); if(!disc) return;
-        try {
-            await addDoc(collection(db, "turmas", selectedTurma, "sumarios"), { titulo: tit, disciplina: disc, professor: myUserName, data: new Date().toLocaleDateString('pt-PT'), descricao: "Material disponibilizado na aula.", timestamp: Date.now() });
-            alert("Material partilhado com a turma!");
-        } catch(err) {}
-    }
-    
-    // NOTAS RÁPIDAS (PROMPT SIMPLES V1)
-    if(e.target.closest('#btn-modal-notas')) {
-        if(!selectedTurma) return alert("Seleciona uma turma.");
-        const numA = prompt("Escreve o nº do aluno para lançar a nota:"); if(!numA) return;
-        const mod = prompt("Qual o Módulo?"); if(!mod) return;
-        const nota = prompt("Qual a Nota Final (10-20 ou REP)?"); if(!nota) return;
-        // Na V2 criaremos o modal visual. Aqui é a base lógica.
-        alert(`Acesso rápido registado: Módulo ${mod} com nota ${nota} guardado na RAM.`);
-    }
-
 });
 
 
@@ -219,12 +266,8 @@ document.body.addEventListener('click', async (e) => {
 // ==========================================
 document.getElementById('prof-seletor-turmas')?.addEventListener('change', (e) => {
     selectedTurma = e.target.value;
-    if(selectedTurma) {
-        document.getElementById('turma-ativa-container').style.display = 'block';
-        analisarEAtualizarTurma(selectedTurma);
-    } else {
-        document.getElementById('turma-ativa-container').style.display = 'none';
-    }
+    if(selectedTurma) { document.getElementById('turma-ativa-container').style.display = 'block'; analisarEAtualizarTurma(selectedTurma); } 
+    else { document.getElementById('turma-ativa-container').style.display = 'none'; }
 });
 
 // Radar de Colisões - Ouve quando a data muda
@@ -232,16 +275,14 @@ document.getElementById('evento-data')?.addEventListener('change', (e) => {
     if(!selectedTurma || !eventosTurmaRAM.length) return;
     const dateSel = new Date(e.target.value);
     
-    // Encontrar Início (Segunda) e Fim (Sexta) da semana escolhida
+    // Encontrar Início (Segunda) e Fim (Sexta) da semana
     const day = dateSel.getDay(); const diff = dateSel.getDate() - day + (day == 0 ? -6 : 1);
     const startOfWeek = new Date(dateSel.setDate(diff)).toISOString().split('T')[0];
     const endOfWeek = new Date(dateSel.setDate(diff + 4)).toISOString().split('T')[0];
     
     let provasNaSemana = 0;
     eventosTurmaRAM.forEach(ev => {
-        if((ev.tipo === 'teste' || ev.tipo === 'avaliacao') && ev.data >= startOfWeek && ev.data <= endOfWeek) {
-            provasNaSemana++;
-        }
+        if((ev.tipo === 'teste' || ev.tipo === 'avaliacao') && ev.data >= startOfWeek && ev.data <= endOfWeek) { provasNaSemana++; }
     });
 
     if(provasNaSemana >= 3) document.getElementById('aviso-colisao-agenda').style.display = 'block';
@@ -257,29 +298,23 @@ async function analisarEAtualizarTurma(turmaId) {
     document.getElementById('assistente-aula-texto').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A calcular a Inteligência Letiva...';
     
     try {
-        // 1. Puxar Alunos
         const qAlunos = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turmaId), where("papel", "==", "aluno")));
         alunosTurmaRAM = []; qAlunos.forEach(d => alunosTurmaRAM.push({id: d.id, ...d.data()}));
         alunosTurmaRAM.sort((a,b) => a.nome.localeCompare(b.nome));
 
-        // 2. Puxar Eventos (Para o Radar)
         const qEvs = await getDocs(collection(db, "turmas", turmaId, "eventos"));
         eventosTurmaRAM = []; qEvs.forEach(d => eventosTurmaRAM.push(d.data()));
 
         let asstText = ""; let alunosEmRisco = 0; let totalPrhfsTurma = 0;
-
-        // 3. Para cada aluno, recolher faltas e prhfs (Simulação Rápida RAM)
         let htmlAlunos = '';
+
         for(let i=0; i<alunosTurmaRAM.length; i++) {
             const al = alunosTurmaRAM[i];
-            
-            // Semáforo Inteligente
             let numFaltas = 0; let numPrhfs = 0;
             const fS = await getDocs(collection(db, "utilizadores", al.id, "faltas")); fS.forEach(f => { if(!f.data().justificada) numFaltas++; });
             const pS = await getDocs(collection(db, "utilizadores", al.id, "prhfs")); pS.forEach(p => { if(p.data().status !== 'concluida') numPrhfs++; });
             
             totalPrhfsTurma += numPrhfs;
-
             let corBola = 'status-green';
             if(numFaltas > 5 || numPrhfs > 2) { corBola = 'status-red'; alunosEmRisco++; }
             else if(numFaltas > 2 || numPrhfs > 0) { corBola = 'status-yellow'; }
@@ -300,7 +335,6 @@ async function analisarEAtualizarTurma(turmaId) {
             </div>`;
         }
 
-        // 4. Montar Assistente de Aula
         asstText = `A turma tem <strong>${alunosTurmaRAM.length} alunos</strong>. `;
         if(alunosEmRisco > 0) asstText += `<span style="color:var(--danger-red);">Existem ${alunosEmRisco} alunos em risco de retenção ou excesso de faltas.</span> `;
         if(totalPrhfsTurma > 0) asstText += `Há ${totalPrhfsTurma} Planos de Recuperação em curso na turma. `;
@@ -322,7 +356,7 @@ async function abrirPerfil360Aluno(alunoId) {
     document.getElementById('p-aluno-academia').innerText = al.academia ? ACADEMIAS_INFO[al.academia].nome : 'Sem Academia';
     document.getElementById('p-aluno-xp').innerText = al.xp || 0;
 
-    // Se o Professor também for DT, mostramos a área de Observações Intercalares
+    // Se o Professor também for DT
     if(myRoles.includes('diretor_turma')) {
         document.getElementById('p-aluno-obs-dt').style.display = 'block';
         document.getElementById('btn-salvar-obs-dt').style.display = 'block';
@@ -333,7 +367,6 @@ async function abrirPerfil360Aluno(alunoId) {
         document.getElementById('p-aluno-obs-dt').previousElementSibling.style.display = 'none';
     }
 
-    // Calcular stats rápidos
     let fCount = 0; let pCount = 0;
     try {
         const fS = await getDocs(collection(db, "utilizadores", alunoId, "faltas")); fS.forEach(f => { if(!f.data().justificada) fCount++; });
@@ -345,7 +378,7 @@ async function abrirPerfil360Aluno(alunoId) {
 }
 
 // ==========================================
-// 5. RADAR DO PROFESSOR E TAREFAS (V1)
+// 5. RADAR DO PROFESSOR E TAREFAS
 // ==========================================
 async function carregarRadarProfessor() {
     const pC = document.getElementById('radar-pendentes-container'); const aC = document.getElementById('radar-agenda-container');
@@ -371,17 +404,16 @@ async function carregarRadarProfessor() {
             }); aC.innerHTML = ah;
         } else { aC.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Agenda livre para as próximas semanas.</p>'; }
 
-        // O Radar no Futuro lerá os PRHFs propostos diretamente
-        pC.innerHTML = `<div style="padding:10px; border:1px dashed #333; border-radius:8px; text-align:center;"><p style="font-size:0.85rem; color:var(--text-muted); margin:0;">Tudo atualizado! Nenhuma tarefa burocrática urgente pendente para hoje.</p></div>`;
+        pC.innerHTML = `<div style="padding:10px; border:1px dashed #333; border-radius:8px; text-align:center;"><p style="font-size:0.85rem; color:var(--text-muted); margin:0;">Tudo atualizado! Nenhuma tarefa urgente para hoje.</p></div>`;
 
     } catch(e) {}
 }
 
 function carregarTarefasProf() {
-    document.getElementById('lista-prhfs-professor').innerHTML = `<p class="text-muted center" style="font-size:0.85rem; margin-top:20px;">O sistema central de validação de Planos de Recuperação (PRHF) e justificação de Faltas estará disponível no próximo módulo.</p>`;
+    document.getElementById('lista-prhfs-professor').innerHTML = `<p class="text-muted center" style="font-size:0.85rem; margin-top:20px;">O sistema central de validação de Planos de Recuperação (PRHF) estará disponível no próximo módulo.</p>`;
 }
 
 function carregarForunsProf() {
     const cont = document.getElementById('prof-forum-channel-list');
-    cont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem; margin-top:20px;">O Fórum das Disciplinas para comunicação com as tuas turmas estará disponível no próximo update da plataforma.</p>';
+    cont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem; margin-top:20px;">O Fórum das Disciplinas estará disponível na fase de Comunicação.</p>';
 }
