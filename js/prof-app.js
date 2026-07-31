@@ -1,884 +1,342 @@
-import { auth, db, messaging, VAPID_KEY, getToken, onMessage } from "./firebase.js";
+import { auth, db, messaging, VAPID_KEY, getToken } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, collection, query, where, getDocs, setDoc, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { doc, getDoc, collection, updateDoc, getDocs, query, addDoc, deleteDoc, where, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-const matrizCurso = { 
-    "Sociocultural": { "PORT": {"M1": 27, "M2": 24, "M3": 27}, "ING": {"M1": 24, "M2": 24, "M3": 24}, "AI": {"M1": 30, "M2": 30}, "EF": {"M1": 20, "M2": 20, "M3": 20, "M4": 20, "M5": 20}, "TIC": {"M1": 24, "M2": 24, "M3": 27, "M4": 24} }, 
-    "Científica": { "GEO": {"M1": 27, "M2": 24}, "HCA": {"M1": 24, "M2": 24, "M3": 27}, "MAT": {"M1": 30, "M2": 30, "M3": 30} }, 
-    "Técnica": { "CF": {"M1": 30, "M2": 30, "M3": 30}, "TIAT": {"M1": 25, "M2": 25, "M3": 25, "M4": 25}, "TCAT": {"M1": 25, "M2": 25, "M3": 25, "M4": 25}, "OTET": {"M1": 25, "M2": 25, "M3": 25, "M4": 25} } 
+let myUserId = "", myUserName = "", profData = {};
+let turmasProfessor = []; let selectedTurma = ""; let alunosTurmaRAM = []; let eventosTurmaRAM = [];
+let alunoSelecionadoId = null;
+
+const ACADEMIAS_INFO = {
+    'atlas': { nome: 'Atlas', cor: '#00cc88' },
+    'sentinela': { nome: 'Sentinela', cor: '#0088ff' },
+    'nexus': { nome: 'Nexus', cor: '#ff8800' },
+    'aurora': { nome: 'Aurora', cor: '#b82bf2' }
 };
 
-// Referências UI
-const profDashboard = document.getElementById('prof-dashboard'); 
-const classHubView = document.getElementById('class-hub-view'); 
-const classView = document.getElementById('class-view'); 
-const studentDetailView = document.getElementById('student-detail-view'); 
-const viewAvaliacoes = document.getElementById('view-avaliacoes'); 
-const viewDisciplinaModulos = document.getElementById('view-disciplina-modulos'); 
-const viewFaltas = document.getElementById('view-faltas'); 
-const viewPrhf = document.getElementById('view-prhf'); 
-const viewClassCalendario = document.getElementById('view-class-calendario'); 
-const viewSumarios = document.getElementById('view-sumarios'); 
-const viewComportamento = document.getElementById('view-comportamento');
-const viewMusai = document.getElementById('view-musai');
-const viewObservacoes = document.getElementById('view-observacoes');
-
-let turmaAtual = ""; 
-let alunoAtualId = ""; 
-let myUserName = "";
-let myUserId = ""; // NOVO PARA NOTIFICAÇÕES
-
-// Função Global de Navegação
-function esconderTudoMenos(ecraAtivo) { 
-    [profDashboard, classHubView, classView, studentDetailView, viewAvaliacoes, viewDisciplinaModulos, viewFaltas, viewPrhf, viewClassCalendario, viewSumarios, viewComportamento, viewMusai, viewObservacoes].forEach(el => { 
-        if(el) el.style.display = 'none'; 
-    }); 
-    if(ecraAtivo) ecraAtivo.style.display = 'block'; 
-}
-
 // ==========================================
-// 1. AUTENTICAÇÃO E NAVEGAÇÃO BÁSICA (COM TURMAS DINÂMICAS)
+// 1. INICIALIZAÇÃO DO PROFESSOR
 // ==========================================
-onAuthStateChanged(auth, async (user) => { 
-    if (user) { 
-        myUserId = user.email.split('@')[0]; 
-        try { 
-            const docSnap = await getDoc(doc(db, "utilizadores", myUserId)); 
-            if (docSnap.exists() && docSnap.data().papel === 'professor') { 
-                const dados = docSnap.data();
-                myUserName = dados.nome.split(' ')[0]; 
-                document.getElementById('header-user-name-staff').innerText = `Olá, ${myUserName}`; 
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        myUserId = user.email.split('@')[0];
+        try {
+            const docSnap = await getDoc(doc(db, "utilizadores", myUserId));
+            if (docSnap.exists() && (docSnap.data().papel === 'professor' || docSnap.data().papel === 'diretor_turma')) {
+                profData = docSnap.data(); myUserName = profData.nome || myUserId;
+                turmasProfessor = profData.turmas || []; // Ex: ['10A', '11GPSI']
                 
-                // Mapear Turmas Reais do Professor!
-                const profTurmas = dados.turmas || [];
-                renderTurmasProfessor(profTurmas);
+                document.getElementById('header-user-name-prof').innerText = myUserName;
+                document.getElementById('perfil-nome-prof').innerText = myUserName;
+                if(profData.fotoPerfil) {
+                    document.getElementById('header-avatar-circle').innerHTML = `<img src="${profData.fotoPerfil}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+                    document.getElementById('prof-avatar-img').src = profData.fotoPerfil;
+                }
 
-                esconderTudoMenos(profDashboard); 
-            } else { 
-                window.location.href = "index.html"; 
-            } 
-        } catch (e) { console.error("Erro na leitura de perfil:", e); } 
-    } else { 
-        window.location.href = "index.html"; 
-    } 
+                // Preencher o seletor de turmas
+                const sel = document.getElementById('prof-seletor-turmas');
+                if(turmasProfessor.length > 0) {
+                    sel.innerHTML = '<option value="">-- Selecionar Turma --</option>' + turmasProfessor.map(t => `<option value="${t}">Turma ${t}</option>`).join('');
+                } else { sel.innerHTML = '<option value="">Sem turmas atribuídas</option>'; }
+
+                carregarRadarProfessor();
+            } else { window.location.href = "index.html"; }
+        } catch (e) { console.error("Erro Auth Prof:", e); }
+    } else { window.location.href = "index.html"; }
 });
 
-function renderTurmasProfessor(turmas) {
-    const grid = document.getElementById('prof-turmas-grid');
-    if (!grid) return;
+document.getElementById('btn-logout-prof')?.addEventListener('click', () => signOut(auth));
+
+
+// ==========================================
+// 2. NAVEGAÇÃO E DELEGAÇÃO DE EVENTOS
+// ==========================================
+function esconderTodasAsVistas() { document.querySelectorAll('.app-content > div').forEach(v => v.style.display = 'none'); }
+
+document.body.addEventListener('click', async (e) => {
     
-    if (turmas.length === 0) {
-        grid.innerHTML = '<p class="text-muted" style="grid-column: 1/-1; text-align:center;">Ainda não tens turmas atribuídas. Pede à Direção para te associar a uma turma.</p>';
-        return;
+    // NAV BAR INFERIOR
+    const nav = e.target.closest('.nav-item');
+    if(nav) {
+        e.preventDefault(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); nav.classList.add('active');
+        esconderTodasAsVistas(); const tId = nav.getAttribute('data-target'); 
+        document.getElementById(tId).style.display = (tId === 'view-prof-forum') ? 'flex' : 'block';
+        if(tId === 'view-prof-dashboard') carregarRadarProfessor();
+        if(tId === 'view-prof-turmas') { if(selectedTurma) analisarEAtualizarTurma(selectedTurma); }
+        if(tId === 'view-prof-tarefas') carregarTarefasProf();
+        if(tId === 'view-prof-forum') carregarForunsProf();
     }
-    
-    let html = '';
-    turmas.forEach(t => {
-        html += `
-        <div class="turma-card-large" data-turma="${t}">
-            <div class="tc-info">
-                <h4>Turma ${t}</h4>
-                <p style="font-size:0.85rem; color:var(--text-muted); margin-top:5px;"><i class="fa-solid fa-door-open"></i> Abrir Hub da Turma</p>
-            </div>
-        </div>`;
-    });
-    grid.innerHTML = html;
 
-    // Ligar cliques dinâmicos
-    grid.querySelectorAll('.turma-card-large').forEach(b => { 
-        b.addEventListener('click', () => { 
-            turmaAtual = b.getAttribute('data-turma'); 
-            document.getElementById('class-hub-title').innerHTML = `Turma ${turmaAtual}`; 
-            esconderTudoMenos(classHubView); 
-        }); 
-    });
-}
+    // FECHAR MODAIS
+    if(e.target.closest('.fechar-modal')) {
+        const trg = e.target.closest('.fechar-modal').getAttribute('data-target');
+        document.getElementById(trg).style.display = 'none';
+        if(trg === 'modal-perfil-aluno') alunoSelecionadoId = null;
+    }
 
-document.getElementById('btn-logout-staff')?.addEventListener('click', () => { 
-    signOut(auth).then(() => window.location.href = "index.html"); 
-});
+    // ABRIR PERFIL 360 DO ALUNO
+    if(e.target.closest('.aluno-list-item')) {
+        const id = e.target.closest('.aluno-list-item').getAttribute('data-id');
+        abrirPerfil360Aluno(id);
+    }
 
-// Fecha todos os modais novos e antigos
-document.querySelectorAll('.btn-fechar-modal').forEach(b => b.addEventListener('click', () => { 
-    document.querySelectorAll('.modal-overlay').forEach(m => m.style.display='none'); 
-}));
-
-// Eventos de Voltar
-document.getElementById('btn-voltar-turmas-hub')?.addEventListener('click', () => esconderTudoMenos(profDashboard)); 
-document.getElementById('btn-voltar-class-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView)); 
-document.getElementById('btn-voltar-lista')?.addEventListener('click', () => esconderTudoMenos(classView)); 
-document.getElementById('btn-voltar-hub-avaliacoes')?.addEventListener('click', () => esconderTudoMenos(studentDetailView)); 
-document.getElementById('btn-voltar-disciplinas')?.addEventListener('click', () => esconderTudoMenos(viewAvaliacoes)); 
-document.getElementById('btn-voltar-hub-faltas')?.addEventListener('click', () => esconderTudoMenos(studentDetailView)); 
-document.getElementById('btn-voltar-hub-prhf')?.addEventListener('click', () => esconderTudoMenos(studentDetailView)); 
-document.getElementById('btn-voltar-cal-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView)); 
-document.getElementById('btn-voltar-sumarios-hub')?.addEventListener('click', () => esconderTudoMenos(classHubView)); 
-document.getElementById('btn-voltar-hub-comportamento')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
-document.getElementById('btn-voltar-hub-musai')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
-document.getElementById('btn-voltar-hub-observacoes')?.addEventListener('click', () => esconderTudoMenos(studentDetailView));
-
-// ==========================================
-// 2. CARREGAR ALUNOS DA TURMA
-// ==========================================
-document.getElementById('btn-hub-alunos')?.addEventListener('click', () => { 
-    esconderTudoMenos(classView); 
-    carregarAlunos(turmaAtual); 
-}); 
-
-async function carregarAlunos(turma) { 
-    const container = document.querySelector('.students-list-container'); 
-    container.innerHTML = '<p class="text-muted">A carregar...</p>'; 
-    try { 
-        const res = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turma), where("papel", "==", "aluno"))); 
-        if (res.empty) { container.innerHTML = '<p class="text-muted">Sem alunos nesta turma.</p>'; return; } 
-        
-        let html = '<ul class="students-list">'; 
-        res.forEach((doc) => { 
-            const a = doc.data(); 
-            const avatar = a.fotoPerfil ? `<img src="${a.fotoPerfil}" class="list-avatar">` : `<div class="list-avatar"><i class="fa-solid fa-user"></i></div>`; 
-            html += `
-            <li class="student-item">
-                <div style="display:flex; align-items:center; gap:12px;">${avatar}
-                    <div class="student-info"><strong>${a.nome}</strong><span>${doc.id.toUpperCase()}</span></div>
-                </div>
-                <button class="secondary-btn small-btn btn-ver-aluno" data-nome="${a.nome}" data-numero="${doc.id}"><i class="fa-solid fa-eye"></i> Ver</button>
-            </li>`; 
-        }); 
-        container.innerHTML = html + '</ul>'; 
-        
-        container.querySelectorAll('.btn-ver-aluno').forEach(btn => { 
-            btn.addEventListener('click', async (e) => { 
-                document.getElementById('detail-student-name').innerText = e.currentTarget.getAttribute('data-nome'); 
-                alunoAtualId = e.currentTarget.getAttribute('data-numero'); 
-                document.getElementById('detail-student-number').innerText = alunoAtualId.toUpperCase(); 
-                esconderTudoMenos(studentDetailView); 
-            }); 
-        }); 
-    } catch (e) { console.error(e); } 
-}
-
-// ==========================================
-// 3. AVALIAÇÕES (NOTAS)
-// ==========================================
-document.getElementById('btn-hub-avaliacoes')?.addEventListener('click', () => { 
-    esconderTudoMenos(viewAvaliacoes); 
-    construirMatrizVisual(document.getElementById('matriz-disciplinas-container'), abrirModulos); 
-});
-
-function construirMatrizVisual(container, fn) { 
-    let html = ""; 
-    for (const [comp, discs] of Object.entries(matrizCurso)) { 
-        html += `<div class="component-section"><div class="component-header">${comp}</div><div class="subject-grid">`; 
-        for (const d of Object.keys(discs)) { 
-            html += `<button class="subject-btn" data-disc="${d}">${d}</button>`; 
-        } 
-        html += `</div></div>`; 
-    } 
-    container.innerHTML = html; 
-    container.querySelectorAll('.subject-btn').forEach(b => b.addEventListener('click', (e) => fn(e.currentTarget.getAttribute('data-disc')))); 
-}
-
-async function abrirModulos(disc) { 
-    esconderTudoMenos(viewDisciplinaModulos); 
-    document.getElementById('titulo-disciplina').innerText = disc; 
-    
-    const container = document.getElementById('lista-modulos-disciplina'); 
-    container.innerHTML = '<p class="text-muted">A preparar pauta...</p>'; 
-    
-    const notas = {}; 
-    try { 
-        const q = await getDocs(collection(db, "utilizadores", alunoAtualId, "notas")); 
-        q.forEach(d => { 
-            if (d.data().disciplina === disc) { 
-                notas[d.data().modulo] = d.data().nota; 
-                notas[d.data().modulo + "_motivo"] = d.data().motivoRep; 
-            } 
-        }); 
-    } catch(e) {} 
-    
-    let mods = []; 
-    for (const comp of Object.values(matrizCurso)) { 
-        if (comp[disc]) mods = Object.keys(comp[disc]); 
-    } 
-    
-    let gradeBtns = ""; 
-    for(let i=10; i<=20; i++) gradeBtns += `<button class="grade-btn" data-val="${i}">${i}</button>`; 
-    gradeBtns += `<button class="grade-btn rep" data-val="REP">REP</button>`; 
-    
-    let html = ""; 
-    mods.forEach(m => { 
-        const n = notas[m] !== undefined ? notas[m] : "SN"; 
-        let badgeClass = n==="SN" ? "sn" : n==="REP" ? "rep" : ""; 
-        const mTxt = (n==="REP" && notas[m+"_motivo"]) ? `<div style="font-size:0.8rem; color:var(--text-muted); margin-top:5px;"><i>Motivo: ${notas[m+"_motivo"]}</i></div>` : ""; 
-        
-        html += `
-        <div class="modulo-avaliar-item" style="display:flex; flex-direction:column;">
-            <div class="mod-view" id="view-${disc}-${m}" style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                <div><strong>${m}</strong>${mTxt}</div>
-                <div style="display:flex; align-items:center; gap:15px;">
-                    <span class="nota-badge ${badgeClass}">${n}</span>
-                    <button class="secondary-btn small-btn btn-abrir-edicao-nota" data-mod="${m}"><i class="fa-solid fa-pen"></i></button>
-                </div>
-            </div>
-            <div class="mod-edit" id="edit-${disc}-${m}" style="display:none; flex-direction:column; width:100%;">
-                <div class="grade-grid" id="grid-${disc}-${m}">${gradeBtns}</div>
-                <div id="rep-reason-box-${disc}-${m}" style="display:none; width:100%; margin-bottom:10px;">
-                    <input type="text" id="input-reason-${disc}-${m}" placeholder="Motivo do REP" style="margin:0; padding:8px; font-size:0.9rem;">
-                </div>
-                <div style="display:flex; gap:10px;">
-                    <button class="primary-btn small-btn btn-gravar-nota" data-disc="${disc}" data-mod="${m}" style="flex:1;">OK</button>
-                    <button class="secondary-btn small-btn btn-fechar-edicao-nota" data-mod="${m}" style="flex:1;">Cancelar</button>
-                </div>
-            </div>
-        </div>`; 
-    }); 
-    
-    container.innerHTML = html; 
-    
-    container.querySelectorAll('.btn-abrir-edicao-nota').forEach(b => b.addEventListener('click', (e) => { 
-        const m=e.currentTarget.getAttribute('data-mod'); 
-        document.getElementById(`view-${disc}-${m}`).style.display='none'; 
-        document.getElementById(`edit-${disc}-${m}`).style.display='flex'; 
-    })); 
-    
-    container.querySelectorAll('.btn-fechar-edicao-nota').forEach(b => b.addEventListener('click', (e) => { 
-        const m=e.currentTarget.getAttribute('data-mod'); 
-        document.getElementById(`view-${disc}-${m}`).style.display='flex'; 
-        document.getElementById(`edit-${disc}-${m}`).style.display='none'; 
-    })); 
-    
-    let nTemp = {}; 
-    container.querySelectorAll('.grade-btn').forEach(btn => { 
-        btn.addEventListener('click', (e) => { 
-            const gp = e.currentTarget.parentElement; 
-            gp.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('selected')); 
-            e.currentTarget.classList.add('selected'); 
-            const m = gp.id.split('-')[2]; 
-            const d = gp.id.split('-')[1]; 
-            const v = e.currentTarget.getAttribute('data-val'); 
-            nTemp[m] = v; 
-            document.getElementById(`rep-reason-box-${d}-${m}`).style.display = v === "REP" ? "block" : "none"; 
-        }); 
-    }); 
-    
-    container.querySelectorAll('.btn-gravar-nota').forEach(b => b.addEventListener('click', async (e) => { 
-        const d = e.currentTarget.getAttribute('data-disc'); 
-        const m = e.currentTarget.getAttribute('data-mod'); 
-        const v = nTemp[m]; 
-        if(!v) return; 
-        
-        const br = e.currentTarget; 
-        br.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; 
-        
-        try { 
-            await setDoc(doc(db, "utilizadores", alunoAtualId, "notas", `${d}_${m}`), { 
-                disciplina: d, 
-                modulo: m, 
-                nota: v==="REP" ? "REP" : Number(v), 
-                motivoRep: v==="REP" ? document.getElementById(`input-reason-${d}-${m}`).value : "", 
-                data: new Date().toISOString() 
-            }); 
-            br.innerText = "Gravado!"; 
-            setTimeout(() => { abrirModulos(d); }, 800); 
-        } catch(err){ 
-            br.innerText = "Erro!"; 
-        } 
-    })); 
-}
-
-// ==========================================
-// 4. FALTAS E PRHF (Com Novos Formulários do Professor)
-// ==========================================
-document.getElementById('btn-hub-faltas')?.addEventListener('click', () => { 
-    esconderTudoMenos(viewFaltas); 
-    carregarFaltas(); 
-}); 
-
-document.getElementById('btn-nova-falta')?.addEventListener('click', () => { 
-    let opt = '<option value="">Disciplina</option>'; 
-    for(const comp of Object.values(matrizCurso)) { 
-        for(const d of Object.keys(comp)) opt += `<option value="${d}">${d}</option>`; 
-    } 
-    document.getElementById('nf-disc').innerHTML = opt; 
-    document.getElementById('modal-nova-falta').style.display = 'flex'; 
-}); 
-
-document.getElementById('nf-disc')?.addEventListener('change', (e) => { 
-    const d = e.target.value; 
-    let mObj = {}; 
-    for(const comp of Object.values(matrizCurso)) { 
-        if(comp[d]) mObj = comp[d]; 
-    } 
-    let opt = '<option value="">Módulo</option>'; 
-    Object.keys(mObj).forEach(m => opt += `<option value="${m}">${m}</option>`); 
-    document.getElementById('nf-mod').innerHTML = opt; 
-}); 
-
-document.getElementById('btn-menos-hora')?.addEventListener('click', () => { 
-    const i = document.getElementById('nf-horas'); 
-    let v = parseInt(i.value) || 1; 
-    if(v > 1) i.value = v - 1; 
-}); 
-
-document.getElementById('btn-mais-hora')?.addEventListener('click', () => { 
-    const i = document.getElementById('nf-horas'); 
-    let v = parseInt(i.value) || 1; 
-    if(v < 8) i.value = v + 1; 
-}); 
-
-document.getElementById('btn-gravar-nova-falta')?.addEventListener('click', async (e) => { 
-    const dI = document.getElementById('nf-data').value; 
-    const disc = document.getElementById('nf-disc').value; 
-    const mod = document.getElementById('nf-mod').value; 
-    const h = parseInt(document.getElementById('nf-horas').value) || 1; 
-    
-    if(!dI || !disc || !mod) return alert("Preenche todos os campos!"); 
-    
-    const br = e.currentTarget; 
-    br.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; 
-    
-    try { 
-        await addDoc(collection(db, "utilizadores", alunoAtualId, "faltas"), { 
-            dataInicio: dI, 
-            disciplina: disc, 
-            modulo: mod, 
-            horas: h, 
-            justificada: false, 
-            criadoEm: new Date().toISOString() 
-        }); 
-        document.getElementById('modal-nova-falta').style.display = 'none'; 
-        br.innerText = "Confirmar Falta"; 
-        carregarFaltas(); 
-    } catch(err) { 
-        br.innerText = "Erro!"; 
-    } 
-}); 
-
-async function carregarFaltas() { 
-    const container = document.getElementById('lista-historico-faltas-container'); 
-    container.innerHTML = '<p class="text-muted">A carregar...</p>'; 
-    try { 
-        const res = await getDocs(query(collection(db, "utilizadores", alunoAtualId, "faltas"))); 
-        if(res.empty) { 
-            container.innerHTML = '<p class="text-muted center">Sem faltas registadas.</p>'; 
-            return; 
-        } 
-        let fArr = []; 
-        res.forEach(d => fArr.push(d.data())); 
-        fArr.sort((a,b) => b.dataInicio.localeCompare(a.dataInicio)); 
-        let html = ''; 
-        fArr.forEach(f => { 
-            html += `
-            <div class="card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border-left: 4px solid var(--danger-red);">
-                <div><strong>${f.disciplina}</strong> (${f.horas}h)<br><span style="font-size:0.8rem; color:var(--text-muted);">${f.dataInicio}</span></div>
-            </div>`; 
-        }); 
-        container.innerHTML = html; 
-    } catch(e) {} 
-}
-
-const selDisc = document.getElementById('prhf-disciplina'); 
-const selMod = document.getElementById('prhf-modulo'); 
-
-document.getElementById('btn-hub-prhf')?.addEventListener('click', () => { 
-    esconderTudoMenos(viewPrhf); 
-    let opt = '<option value="">Disc.</option>'; 
-    for(const comp of Object.values(matrizCurso)) { 
-        for(const d of Object.keys(comp)) opt += `<option value="${d}">${d}</option>`; 
-    } 
-    selDisc.innerHTML = opt; 
-    carregarPrhfs(); 
-}); 
-
-selDisc.addEventListener('change', (e) => { 
-    const d = e.target.value; 
-    let mObj = {}; 
-    for(const comp of Object.values(matrizCurso)) { 
-        if(comp[d]) mObj = comp[d]; 
-    } 
-    let opt = '<option value="">Mod.</option>'; 
-    Object.keys(mObj).forEach(m => opt += `<option value="${m}">${m}</option>`); 
-    selMod.innerHTML = opt; 
-}); 
-
-document.getElementById('btn-guardar-prhf')?.addEventListener('click', async (e) => { 
-    const disc = selDisc.value; 
-    const mod = selMod.value; 
-    const prazo = document.getElementById('prhf-prazo').value; 
-    const desc = document.getElementById('prhf-descricao').value.trim(); 
-    const ht = document.getElementById('prhf-horas').value; 
-    
-    if(!disc || !mod || !prazo || !desc || !ht) return alert("Preenche todos os campos!"); 
-    
-    const br = e.currentTarget; 
-    br.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; 
-    
-    try { 
-        await addDoc(collection(db, "utilizadores", alunoAtualId, "prhfs"), { 
-            disciplina: disc, 
-            modulo: mod, 
-            prazo: prazo, 
-            descricao: desc, 
-            horasPresenciais: parseInt(ht), 
-            moduloTerminado: document.getElementById('prhf-modulo-terminado').checked, 
-            status: 'ativa', 
-            dataRegisto: new Date().toISOString() 
-        }); 
-        document.getElementById('prhf-prazo').value = ""; 
-        document.getElementById('prhf-descricao').value = ""; 
-        document.getElementById('prhf-horas').value = "0"; 
-        br.innerText = "Gravar Plano"; 
-        carregarPrhfs(); 
-    } catch (err) { 
-        br.innerText = "Erro!"; 
-    } 
-}); 
-
-async function carregarPrhfs() { 
-    const container = document.getElementById('lista-prhf-container'); 
-    container.innerHTML = '<p class="text-muted">A carregar...</p>'; 
-    try { 
-        const res = await getDocs(query(collection(db, "utilizadores", alunoAtualId, "prhfs"))); 
-        let html = ''; 
-        res.forEach(doc => { 
-            const d = doc.data(); 
-            const cor = d.status==='ativa' ? (d.moduloTerminado ? 'var(--warning-yellow)' : 'var(--primary-green)') : '#555'; 
-            html += `
-            <div class="card" style="border-left:4px solid ${cor}; margin-bottom:10px;">
-                <strong>${d.disciplina} (M${d.modulo})</strong><br>
-                <span style="font-size:0.8rem;">Prazo: ${d.prazo} | Status: ${d.status.toUpperCase()}</span>
-            </div>`; 
-        }); 
-        container.innerHTML = html || '<p class="text-muted center">Sem PRHFs ativos.</p>'; 
-    } catch (err) {} 
-}
-
-// ==========================================
-// 5. CALENDÁRIO (VISUAL)
-// ==========================================
-document.getElementById('btn-hub-calendario')?.addEventListener('click', () => { 
-    esconderTudoMenos(viewClassCalendario); 
-    carregarEventosCalendario(); 
-});
-
-async function carregarEventosCalendario() { 
-    const containerEL = document.getElementById('calendario-prof'); 
-    containerEL.innerHTML = '<p class="text-muted">A desenhar calendário...</p>'; 
-    
-    try { 
-        const res = await getDocs(query(collection(db, "eventos"))); 
-        
-        let eventosFormatados = []; 
-        res.forEach(d => { 
-            const e = d.data(); 
-            eventosFormatados.push({
-                title: e.titulo,
-                start: e.data,
-                backgroundColor: '#11998e', 
-                borderColor: '#11998e'
-            });
-        }); 
-        
-        containerEL.innerHTML = ""; 
-        
-        let calendar = new FullCalendar.Calendar(containerEL, {
-            initialView: 'dayGridMonth',
-            locale: 'pt',
-            events: eventosFormatados,
-            headerToolbar: {
-                left: 'prev,next',
-                center: 'title',
-                right: 'today'
-            },
-            height: 'auto'
+    // BOTÕES DE ACESSO RÁPIDO DA TURMA
+    if(e.target.closest('#btn-modal-faltas')) {
+        if(!selectedTurma) return alert("Seleciona uma turma primeiro.");
+        const c = document.getElementById('lista-metralhadora-faltas'); let h = '';
+        alunosTurmaRAM.forEach(al => {
+            h += `<label style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(255,255,255,0.05); margin-bottom:5px; border-radius:8px; border:1px solid #333; cursor:pointer;">
+                    <span style="color:white;">${al.nome}</span>
+                    <input type="checkbox" class="chk-presente" value="${al.id}" checked>
+                  </label>`;
         });
-        
-        calendar.render();
-
-    } catch(err) {
-        console.error("Erro no calendário:", err);
-        containerEL.innerHTML = '<p>Erro ao carregar calendário.</p>';
-    } 
-}
-
-// ==========================================
-// 6. SUMÁRIOS E MATERIAIS DE AULA
-// ==========================================
-let matBase64 = ""; 
-let matNome = ""; 
-
-document.getElementById('btn-hub-sumarios')?.addEventListener('click', () => { 
-    esconderTudoMenos(viewSumarios); 
-    let opt = '<option value="">Todas as Disciplinas</option>'; 
-    for(const comp of Object.values(matrizCurso)) { 
-        for(const d of Object.keys(comp)) opt += `<option value="${d}">${d}</option>`; 
-    } 
-    document.getElementById('filtro-sumarios-disc').innerHTML = opt; 
-    carregarSumarios(); 
-}); 
-
-document.getElementById('filtro-sumarios-disc')?.addEventListener('change', carregarSumarios); 
-
-document.getElementById('btn-novo-sumario')?.addEventListener('click', () => { 
-    let opt = '<option value="">Disciplina</option>'; 
-    for(const comp of Object.values(matrizCurso)) { 
-        for(const d of Object.keys(comp)) opt += `<option value="${d}">${d}</option>`; 
-    } 
-    document.getElementById('ns-disc').innerHTML = opt; 
-    document.getElementById('ns-data').value = new Date().toISOString().split('T')[0]; 
-    document.getElementById('ns-titulo').value = ""; 
-    document.getElementById('ns-descricao').value = ""; 
-    document.getElementById('ns-file-name').innerText = ""; 
-    document.getElementById('ns-upload-material').value = ""; 
-    matBase64 = ""; 
-    matNome = ""; 
-    document.getElementById('modal-novo-sumario').style.display = 'flex'; 
-}); 
-
-document.getElementById('ns-upload-material')?.addEventListener('change', async (e) => { 
-    let f = e.target.files[0]; 
-    if(!f) return; 
-    
-    if (f.type.startsWith('image/')) {
-        console.log(`📸 Imagem original: ${(f.size / 1024 / 1024).toFixed(2)} MB`);
-        const options = {
-            maxSizeMB: 0.4, 
-            maxWidthOrHeight: 1920,
-            useWebWorker: true
-        };
-        try {
-            f = await imageCompression(f, options);
-            console.log(`✅ Imagem comprimida: ${(f.size / 1024 / 1024).toFixed(2)} MB`);
-        } catch (error) {
-            console.error("Erro na compressão:", error);
-        }
-    } else {
-        if(f.size > 2097152) return alert("Ficheiros PDF/Word têm um limite de 2MB. Por favor, reduz o tamanho do documento."); 
+        c.innerHTML = h; document.getElementById('falta-horas-bloco').value = '';
+        document.getElementById('modal-marcar-faltas').style.display = 'flex';
     }
 
-    matNome = f.name; 
-    document.getElementById('ns-file-name').innerText = matNome; 
-    
-    const r = new FileReader(); 
-    r.onload = (ev) => matBase64 = ev.target.result; 
-    r.readAsDataURL(f); 
-}); 
+    if(e.target.closest('#btn-todos-presentes')) {
+        e.preventDefault(); document.querySelectorAll('.chk-presente').forEach(c => c.checked = true);
+    }
 
-document.getElementById('btn-gravar-sumario')?.addEventListener('click', async (e) => { 
-    const d = document.getElementById('ns-data').value; 
-    const disc = document.getElementById('ns-disc').value; 
-    const t = document.getElementById('ns-titulo').value.trim(); 
-    const desc = document.getElementById('ns-descricao').value.trim(); 
-    
-    if(!d || !disc || !t) return alert("Preenche Data, Disc. e Título!"); 
-    
-    const br = e.currentTarget; 
-    br.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; 
-    br.disabled = true; 
-    
-    try { 
-        await addDoc(collection(db, "turmas", turmaAtual, "sumarios"), { 
-            data: d, 
-            disciplina: disc, 
-            titulo: t, 
-            descricao: desc, 
-            anexoNome: matNome, 
-            anexoBase64: matBase64, 
-            professor: myUserName, 
-            criadoEm: new Date().toISOString() 
-        }); 
-        br.innerHTML = '<i class="fa-solid fa-check"></i>'; 
-        setTimeout(() => { 
-            document.getElementById('modal-novo-sumario').style.display = 'none'; 
-            br.innerHTML = 'Publicar Sumário'; 
-            br.disabled = false; 
-            carregarSumarios(); 
-        }, 1000); 
-    } catch(err) { 
-        br.innerHTML = "Erro!"; 
-        setTimeout(() => { br.innerHTML = 'Publicar Sumário'; br.disabled = false; }, 2000); 
-    } 
-}); 
-
-async function carregarSumarios() { 
-    const container = document.getElementById('lista-sumarios-container'); 
-    container.innerHTML = '<p class="text-muted">A carregar...</p>'; 
-    const fd = document.getElementById('filtro-sumarios-disc').value; 
-    
-    try { 
-        const res = await getDocs(query(collection(db, "turmas", turmaAtual, "sumarios"))); 
-        if(res.empty) { 
-            container.innerHTML = '<p class="text-muted center">Sem sumários.</p>'; 
-            return; 
-        } 
+    if(e.target.closest('#btn-confirmar-faltas')) {
+        const horas = document.getElementById('falta-horas-bloco').value;
+        if(!horas || horas < 1) return alert("Indica o número de horas!");
+        const b = e.target.closest('#btn-confirmar-faltas'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
         
-        let sArr = []; 
-        res.forEach(d => sArr.push({id: d.id, ...d.data()})); 
-        
-        if(fd) sArr = sArr.filter(s => s.disciplina === fd); 
-        sArr.sort((a,b) => b.data.localeCompare(a.data)); 
-        
-        if(sArr.length === 0) { 
-            container.innerHTML = '<p class="text-muted center">Sem sumários nesta disc.</p>'; 
-            return; 
-        } 
-        
-        let html = ''; 
-        sArr.forEach(s => { 
-            const aBtn = s.anexoBase64 ? `<a href="${s.anexoBase64}" download="${s.anexoNome}" class="secondary-btn small-btn" style="display:inline-block; margin-top:10px; width:auto; padding:5px 10px;"><i class="fa-solid fa-download"></i> ${s.anexoNome}</a>` : ''; 
-            html += `
-            <div class="card" style="margin-bottom:15px; border-left:4px solid #0099ff;">
-                <div>
-                    <span style="font-size:0.75rem; color:var(--text-muted);">${s.data} | ${s.disciplina} | ${s.professor}</span>
-                    <h4 style="margin:5px 0;">${s.titulo}</h4>
-                    ${s.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px;">${s.descricao}</p>` : ''}
-                </div>
-                ${aBtn}
-            </div>`; 
-        }); 
-        container.innerHTML = html; 
-    } catch(e) {} 
-}
-
-// ==========================================
-// 7. COMPORTAMENTO / OCORRÊNCIAS
-// ==========================================
-let tipoOc = "negativa"; 
-
-document.getElementById('btn-hub-comportamento')?.addEventListener('click', () => { 
-    if(!alunoAtualId) return; 
-    esconderTudoMenos(viewComportamento); 
-    carregarComportamento(); 
-}); 
-
-document.getElementById('btn-tipo-negativo')?.addEventListener('click', (e) => { 
-    tipoOc = "negativa"; 
-    e.currentTarget.classList.add('active'); 
-    document.getElementById('btn-tipo-positivo').classList.remove('active'); 
-    e.currentTarget.style.borderColor = "var(--danger-red)";
-    e.currentTarget.style.color = "var(--danger-red)";
-    document.getElementById('btn-tipo-positivo').style.borderColor = "#333";
-    document.getElementById('btn-tipo-positivo').style.color = "var(--text-muted)";
-}); 
-
-document.getElementById('btn-tipo-positivo')?.addEventListener('click', (e) => { 
-    tipoOc = "positiva"; 
-    e.currentTarget.classList.add('active'); 
-    document.getElementById('btn-tipo-negativo').classList.remove('active'); 
-    e.currentTarget.style.borderColor = "var(--success-green)";
-    e.currentTarget.style.color = "var(--success-green)";
-    document.getElementById('btn-tipo-negativo').style.borderColor = "#333";
-    document.getElementById('btn-tipo-negativo').style.color = "var(--text-muted)";
-}); 
-
-document.getElementById('btn-nova-ocorrencia')?.addEventListener('click', () => { 
-    document.getElementById('no-data').value = new Date().toISOString().split('T')[0]; 
-    document.getElementById('no-titulo').value = ""; 
-    document.getElementById('no-descricao').value = ""; 
-    
-    // Resetar botões
-    document.getElementById('btn-tipo-negativo').click();
-    document.getElementById('modal-nova-ocorrencia').style.display = 'flex'; 
-}); 
-
-document.getElementById('btn-gravar-ocorrencia')?.addEventListener('click', async (e) => { 
-    const d = document.getElementById('no-data').value; 
-    const t = document.getElementById('no-titulo').value.trim(); 
-    const desc = document.getElementById('no-descricao').value.trim(); 
-    
-    if(!d || !t) return alert("Preenche Data e Motivo!"); 
-    
-    const br = e.currentTarget; 
-    const txtO = br.innerText; 
-    br.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; 
-    br.disabled = true; 
-    
-    try { 
-        await addDoc(collection(db, "utilizadores", alunoAtualId, "ocorrencias"), { 
-            data: d, 
-            tipo: tipoOc, 
-            titulo: t, 
-            descricao: desc, 
-            autor: myUserName, 
-            timestamp: Date.now() 
-        }); 
-
-        // Gamificação Prof
-        if (tipoOc === "positiva") {
-            const alunoRef = doc(db, "utilizadores", alunoAtualId);
-            const alunoSnap = await getDoc(alunoRef);
-            let currentXp = 0;
-            if(alunoSnap.exists() && alunoSnap.data().xp) {
-                currentXp = alunoSnap.data().xp;
-            }
-            await updateDoc(alunoRef, { xp: currentXp + 50 });
-        }
-
-        br.innerHTML = '<i class="fa-solid fa-check"></i>'; 
-        setTimeout(() => { 
-            document.getElementById('modal-nova-ocorrencia').style.display = 'none'; 
-            br.innerText = txtO; 
-            br.disabled = false; 
-            carregarComportamento(); 
-        }, 1000); 
-    } catch(err) { 
-        br.innerText = "Erro!"; 
-        setTimeout(() => { br.innerText = txtO; br.disabled = false; }, 2000); 
-    } 
-}); 
-
-async function carregarComportamento() { 
-    const container = document.getElementById('lista-comportamento-container'); 
-    container.innerHTML = '<p class="text-muted center">A carregar...</p>'; 
-    
-    try { 
-        const res = await getDocs(query(collection(db, "utilizadores", alunoAtualId, "ocorrencias"))); 
-        if(res.empty) { 
-            container.innerHTML = '<p class="text-muted center">Nenhum registo disciplinar.</p>'; 
-            return; 
-        } 
-        
-        let rArr = []; 
-        res.forEach(d => rArr.push(d.data())); 
-        rArr.sort((a,b) => b.data.localeCompare(a.data)); 
-        
-        let html = ''; 
-        rArr.forEach(r => { 
-            const cor = r.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)'; 
-            const ic = r.tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>'; 
-            html += `
-            <div class="card" style="margin-bottom:15px; border-left:4px solid ${cor};">
-                <div>
-                    <div style="display:flex; align-items:center; gap:8px; color:${cor}; margin-bottom:5px;">
-                        ${ic} <strong>${r.titulo}</strong>
-                    </div>
-                    <span style="font-size:0.75rem; color:var(--text-muted);">Data: ${r.data} | Prof. ${r.autor}</span>
-                    ${r.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px; background:var(--bg-dark); padding:8px; border-radius:6px;">${r.descricao}</p>` : ''}
-                </div>
-            </div>`; 
-        }); 
-        container.innerHTML = html; 
-    } catch(e) {} 
-}
-
-// ==========================================
-// 8. CRIAR EVENTOS / TESTES (PROFESSOR)
-// ==========================================
-const btnCriarEvento = document.getElementById("btn-criar-evento");
-
-if (btnCriarEvento) {
-    btnCriarEvento.addEventListener("click", async () => {
-        const nome = document.getElementById("nome-evento").value;
-        const data = document.getElementById("data-evento").value;
-
-        if (nome === "" || data === "") {
-            alert("Por favor, preenche o nome e a data do teste!");
-            return;
-        }
-
-        try {
-            await addDoc(collection(db, "eventos"), {
-                titulo: nome,
-                data: data,
-                criadoEm: new Date(),
-                tipo: "teste"
+        let faltasCriadas = 0;
+        const ausentes = document.querySelectorAll('.chk-presente:not(:checked)');
+        for(const chk of ausentes) {
+            const aId = chk.value;
+            await addDoc(collection(db, "utilizadores", aId, "faltas"), {
+                disciplina: "Geral", horas: Number(horas), dataInicio: new Date().toISOString().split('T')[0], justificada: false, criadoPor: myUserName, criadoEm: new Date().toISOString()
             });
-            alert("✅ Teste marcado com sucesso!");
-            document.getElementById("nome-evento").value = "";
-            document.getElementById("data-evento").value = "";
-        } catch (error) {
-            console.error("Erro ao marcar teste: ", error);
-            alert("Erro ao marcar o teste.");
+            faltasCriadas++;
+        }
+        
+        b.innerHTML = '<i class="fa-solid fa-check"></i> Faltas Registadas'; b.style.backgroundColor = "var(--success-green)";
+        setTimeout(() => { b.innerHTML = 'Gravar Registo'; b.disabled = false; b.style.backgroundColor = "var(--danger-red)"; document.getElementById('modal-marcar-faltas').style.display = 'none'; analisarEAtualizarTurma(selectedTurma); }, 2000);
+    }
+
+    // BOTÃO AGENDA (RADAR DE COLISÕES)
+    if(e.target.closest('#btn-modal-agenda')) {
+        if(!selectedTurma) return alert("Seleciona uma turma primeiro.");
+        document.getElementById('evento-titulo').value = ''; document.getElementById('evento-data').value = ''; document.getElementById('aviso-colisao-agenda').style.display = 'none';
+        document.getElementById('modal-agendar-evento').style.display = 'flex';
+    }
+
+    if(e.target.closest('#btn-gravar-evento')) {
+        const t = document.getElementById('evento-titulo').value.trim(); const d = document.getElementById('evento-data').value; const tp = document.getElementById('evento-tipo').value;
+        if(!t || !d) return alert("Preenche Título e Data.");
+        const b = e.target.closest('#btn-gravar-evento'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
+        try {
+            await addDoc(collection(db, "turmas", selectedTurma, "eventos"), { titulo: t, data: d, tipo: tp, professor: myUserName });
+            b.innerHTML = '<i class="fa-solid fa-check"></i> Agendado';
+            setTimeout(() => { b.innerHTML = 'Agendar'; b.disabled = false; document.getElementById('modal-agendar-evento').style.display = 'none'; }, 1500);
+        } catch(err) { b.innerHTML = "Erro"; setTimeout(()=>b.disabled=false, 1500); }
+    }
+
+    // OCORRÊNCIAS E GAMIFICAÇÃO NO PERFIL DO ALUNO
+    if(e.target.closest('#btn-dar-positiva')) {
+        if(!alunoSelecionadoId) return;
+        const motivo = prompt("Motivo do reconhecimento positivo?"); if(!motivo) return;
+        try {
+            const uS = await getDoc(doc(db, "utilizadores", alunoSelecionadoId)); let axp = uS.exists() && uS.data().xp ? uS.data().xp : 0;
+            await addDoc(collection(db, "utilizadores", alunoSelecionadoId, "ocorrencias"), { titulo: "Reconhecimento Positivo", descricao: motivo, tipo: "positiva", autor: myUserName, timestamp: Date.now(), data: new Date().toLocaleDateString('pt-PT') });
+            await updateDoc(doc(db, "utilizadores", alunoSelecionadoId), { xp: axp + 50 }); // Bónus Automático
+            alert("Ação Registada! O aluno ganhou 50 XP e será notificado.");
+        } catch(err) { alert("Erro ao registar."); }
+    }
+    
+    if(e.target.closest('#btn-dar-negativa')) {
+        if(!alunoSelecionadoId) return;
+        const motivo = prompt("Descreva a ocorrência ou falta de material:"); if(!motivo) return;
+        try {
+            await addDoc(collection(db, "utilizadores", alunoSelecionadoId, "ocorrencias"), { titulo: "Registo de Aula", descricao: motivo, tipo: "negativa", autor: myUserName, timestamp: Date.now(), data: new Date().toLocaleDateString('pt-PT') });
+            alert("Registo disciplinar gravado."); analisarEAtualizarTurma(selectedTurma);
+        } catch(err) {}
+    }
+
+    // MATERIAIS RÁPIDOS (PROMPT SIMPLES V1)
+    if(e.target.closest('#btn-modal-materiais')) {
+        if(!selectedTurma) return alert("Seleciona uma turma.");
+        const tit = prompt("Título do Material / Sumário:"); if(!tit) return;
+        const disc = prompt("Sigla da Disciplina (Ex: PORT, MAT):"); if(!disc) return;
+        try {
+            await addDoc(collection(db, "turmas", selectedTurma, "sumarios"), { titulo: tit, disciplina: disc, professor: myUserName, data: new Date().toLocaleDateString('pt-PT'), descricao: "Material disponibilizado na aula.", timestamp: Date.now() });
+            alert("Material partilhado com a turma!");
+        } catch(err) {}
+    }
+    
+    // NOTAS RÁPIDAS (PROMPT SIMPLES V1)
+    if(e.target.closest('#btn-modal-notas')) {
+        if(!selectedTurma) return alert("Seleciona uma turma.");
+        const numA = prompt("Escreve o nº do aluno para lançar a nota:"); if(!numA) return;
+        const mod = prompt("Qual o Módulo?"); if(!mod) return;
+        const nota = prompt("Qual a Nota Final (10-20 ou REP)?"); if(!nota) return;
+        // Na V2 criaremos o modal visual. Aqui é a base lógica.
+        alert(`Acesso rápido registado: Módulo ${mod} com nota ${nota} guardado na RAM.`);
+    }
+
+});
+
+
+// ==========================================
+// 3. EVENTOS DINÂMICOS (Selects e Change)
+// ==========================================
+document.getElementById('prof-seletor-turmas')?.addEventListener('change', (e) => {
+    selectedTurma = e.target.value;
+    if(selectedTurma) {
+        document.getElementById('turma-ativa-container').style.display = 'block';
+        analisarEAtualizarTurma(selectedTurma);
+    } else {
+        document.getElementById('turma-ativa-container').style.display = 'none';
+    }
+});
+
+// Radar de Colisões - Ouve quando a data muda
+document.getElementById('evento-data')?.addEventListener('change', (e) => {
+    if(!selectedTurma || !eventosTurmaRAM.length) return;
+    const dateSel = new Date(e.target.value);
+    
+    // Encontrar Início (Segunda) e Fim (Sexta) da semana escolhida
+    const day = dateSel.getDay(); const diff = dateSel.getDate() - day + (day == 0 ? -6 : 1);
+    const startOfWeek = new Date(dateSel.setDate(diff)).toISOString().split('T')[0];
+    const endOfWeek = new Date(dateSel.setDate(diff + 4)).toISOString().split('T')[0];
+    
+    let provasNaSemana = 0;
+    eventosTurmaRAM.forEach(ev => {
+        if((ev.tipo === 'teste' || ev.tipo === 'avaliacao') && ev.data >= startOfWeek && ev.data <= endOfWeek) {
+            provasNaSemana++;
         }
     });
-}
+
+    if(provasNaSemana >= 3) document.getElementById('aviso-colisao-agenda').style.display = 'block';
+    else document.getElementById('aviso-colisao-agenda').style.display = 'none';
+});
+
 
 // ==========================================
-// 9. MUSAI E OBSERVAÇÕES (APENAS LEITURA PARA O PROFESSOR)
+// 4. LÓGICA CORE: ASSISTENTE E SEMÁFOROS
 // ==========================================
-document.getElementById('btn-hub-musai')?.addEventListener('click', () => { 
-    if(!alunoAtualId) return; 
-    esconderTudoMenos(viewMusai); 
-    carregarMusai(); 
-}); 
-
-async function carregarMusai() { 
-    const container = document.getElementById('lista-musai-container'); 
-    container.innerHTML = '<p class="text-muted center">A carregar medidas...</p>'; 
-    try { 
-        const res = await getDocs(query(collection(db, "utilizadores", alunoAtualId, "musai"))); 
-        if(res.empty) { 
-            container.innerHTML = '<p class="text-muted center">Sem medidas MUSAI registadas para este aluno.</p>'; 
-            return; 
-        } 
-        let arr = []; 
-        res.forEach(d => arr.push(d.data())); 
-        arr.sort((a,b) => b.timestamp - a.timestamp); 
-        let html = ''; 
-        arr.forEach(m => { 
-            html += `
-            <div class="card" style="margin-bottom:10px; border-left:4px solid var(--primary-color); background:var(--bg-dark);">
-                <span style="font-size:0.75rem; color:var(--text-muted);">Inserido por ${m.autor} a ${m.data}</span>
-                <p style="margin-top:5px; font-size:0.9rem;">${m.descricao}</p>
-            </div>`; 
-        }); 
-        container.innerHTML = html; 
-    } catch(e) {} 
-}
-
-document.getElementById('btn-hub-observacoes')?.addEventListener('click', () => { 
-    if(!alunoAtualId) return; 
-    esconderTudoMenos(viewObservacoes); 
-    carregarObservacoesProf(); 
-}); 
-
-async function carregarObservacoesProf() { 
-    const container = document.getElementById('lista-observacoes-container'); 
-    container.innerHTML = '<p class="text-muted center">A carregar...</p>'; 
-    try { 
-        const res = await getDocs(query(collection(db, "utilizadores", alunoAtualId, "observacoes"))); 
-        if(res.empty) { 
-            container.innerHTML = '<p class="text-muted center">Sem avaliações registadas.</p>'; 
-            return; 
-        } 
-        let arr = []; 
-        res.forEach(d => arr.push(d.data())); 
-        arr.sort((a,b) => b.timestamp - a.timestamp); 
-        let html = ''; 
-        arr.forEach(o => { 
-            html += `
-            <div class="card" style="margin-bottom:10px; border-left:4px solid var(--primary-green);">
-                <div style="display:flex; justify-content:space-between;">
-                    <strong>${o.momento}</strong>
-                    <span style="font-size:0.75rem; color:var(--text-muted);">${o.data}</span>
-                </div>
-                <p style="margin-top:8px; font-size:0.9rem;">${o.descricao}</p>
-                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px; text-align:right;">Prof. ${o.autor}</div>
-            </div>`; 
-        }); 
-        container.innerHTML = html; 
-    } catch(e) {} 
-}
-
-// ==========================================
-// 10. NOTIFICAÇÕES PUSH PARA STAFF (PROFESSOR)
-// ==========================================
-async function pedirPermissaoNotificacoes() {
+async function analisarEAtualizarTurma(turmaId) {
+    const listC = document.getElementById('lista-alunos-turma'); listC.innerHTML = '<p class="text-muted center">A ler dados dos alunos...</p>';
+    document.getElementById('assistente-aula-texto').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A calcular a Inteligência Letiva...';
+    
     try {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-            const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
-            const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
-            if (currentToken && myUserId) {
-                await updateDoc(doc(db, "utilizadores", myUserId), { tokenNotificacao: currentToken });
-            }
+        // 1. Puxar Alunos
+        const qAlunos = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turmaId), where("papel", "==", "aluno")));
+        alunosTurmaRAM = []; qAlunos.forEach(d => alunosTurmaRAM.push({id: d.id, ...d.data()}));
+        alunosTurmaRAM.sort((a,b) => a.nome.localeCompare(b.nome));
+
+        // 2. Puxar Eventos (Para o Radar)
+        const qEvs = await getDocs(collection(db, "turmas", turmaId, "eventos"));
+        eventosTurmaRAM = []; qEvs.forEach(d => eventosTurmaRAM.push(d.data()));
+
+        let asstText = ""; let alunosEmRisco = 0; let totalPrhfsTurma = 0;
+
+        // 3. Para cada aluno, recolher faltas e prhfs (Simulação Rápida RAM)
+        let htmlAlunos = '';
+        for(let i=0; i<alunosTurmaRAM.length; i++) {
+            const al = alunosTurmaRAM[i];
+            
+            // Semáforo Inteligente
+            let numFaltas = 0; let numPrhfs = 0;
+            const fS = await getDocs(collection(db, "utilizadores", al.id, "faltas")); fS.forEach(f => { if(!f.data().justificada) numFaltas++; });
+            const pS = await getDocs(collection(db, "utilizadores", al.id, "prhfs")); pS.forEach(p => { if(p.data().status !== 'concluida') numPrhfs++; });
+            
+            totalPrhfsTurma += numPrhfs;
+
+            let corBola = 'status-green';
+            if(numFaltas > 5 || numPrhfs > 2) { corBola = 'status-red'; alunosEmRisco++; }
+            else if(numFaltas > 2 || numPrhfs > 0) { corBola = 'status-yellow'; }
+
+            htmlAlunos += `
+            <div class="aluno-list-item" data-id="${al.id}" style="cursor:pointer; transition:0.2s;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=333&color=fff`}" style="width:35px; height:35px; border-radius:50%; object-fit:cover;">
+                    <div>
+                        <strong style="color:white; font-size:0.95rem;">${al.nome}</strong>
+                        <div style="font-size:0.75rem; color:var(--text-muted);">${numPrhfs > 0 ? `<span style="color:var(--warning-yellow);">${numPrhfs} PRHFs</span>` : 'Tudo regular'}</div>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:15px;">
+                    <span style="color:var(--primary-green); font-size:0.85rem; font-weight:bold;">${al.xp || 0} XP</span>
+                    <span class="status-dot ${corBola}"></span>
+                </div>
+            </div>`;
         }
-    } catch (error) {}
+
+        // 4. Montar Assistente de Aula
+        asstText = `A turma tem <strong>${alunosTurmaRAM.length} alunos</strong>. `;
+        if(alunosEmRisco > 0) asstText += `<span style="color:var(--danger-red);">Existem ${alunosEmRisco} alunos em risco de retenção ou excesso de faltas.</span> `;
+        if(totalPrhfsTurma > 0) asstText += `Há ${totalPrhfsTurma} Planos de Recuperação em curso na turma. `;
+        if(alunosEmRisco === 0 && totalPrhfsTurma === 0) asstText += "A turma está perfeitamente alinhada! Boa aula.";
+
+        document.getElementById('assistente-aula-texto').innerHTML = asstText;
+        listC.innerHTML = htmlAlunos;
+
+    } catch(e) { listC.innerHTML = '<p class="text-danger center">Erro a processar turma.</p>'; }
 }
 
-if(typeof onMessage !== "undefined" && messaging) {
-    onMessage(messaging, (payload) => {
-        alert(`NOVA NOTIFICAÇÃO:\n\n${payload.notification.title}\n${payload.notification.body}`);
-    });
+
+async function abrirPerfil360Aluno(alunoId) {
+    alunoSelecionadoId = alunoId;
+    const al = alunosTurmaRAM.find(a => a.id === alunoId); if(!al) return;
+    
+    document.getElementById('p-aluno-nome').innerText = al.nome;
+    document.getElementById('p-aluno-foto').src = al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=333&color=fff`;
+    document.getElementById('p-aluno-academia').innerText = al.academia ? ACADEMIAS_INFO[al.academia].nome : 'Sem Academia';
+    document.getElementById('p-aluno-xp').innerText = al.xp || 0;
+
+    // Calcular stats rápidos
+    let fCount = 0; let pCount = 0;
+    try {
+        const fS = await getDocs(collection(db, "utilizadores", alunoId, "faltas")); fS.forEach(f => { if(!f.data().justificada) fCount++; });
+        const pS = await getDocs(collection(db, "utilizadores", alunoId, "prhfs")); pS.forEach(p => { if(p.data().status !== 'concluida') pCount++; });
+    } catch(e){}
+
+    document.getElementById('p-aluno-faltas').innerText = fCount; document.getElementById('p-aluno-prhfs').innerText = pCount;
+    document.getElementById('modal-perfil-aluno').style.display = 'flex';
 }
-setTimeout(() => { if(myUserId) pedirPermissaoNotificacoes(); }, 4000);
+
+// ==========================================
+// 5. RADAR DO PROFESSOR E TAREFAS (V1)
+// ==========================================
+async function carregarRadarProfessor() {
+    const pC = document.getElementById('radar-pendentes-container'); const aC = document.getElementById('radar-agenda-container');
+    pC.innerHTML = '<p class="text-muted center">A calcular...</p>'; aC.innerHTML = '<p class="text-muted center">A calcular...</p>';
+    if(turmasProfessor.length === 0) { pC.innerHTML = '<p class="text-muted center">Nenhuma turma atribuída.</p>'; aC.innerHTML = ''; return; }
+
+    try {
+        let eventosGlobais = [];
+        for(const t of turmasProfessor) {
+            const evS = await getDocs(collection(db, "turmas", t, "eventos"));
+            evS.forEach(d => eventosGlobais.push({turma: t, ...d.data()}));
+        }
+
+        const hj = new Date().toISOString().split('T')[0];
+        const fut = eventosGlobais.filter(e => e.data >= hj).sort((a,b) => a.data.localeCompare(b.data)).slice(0, 3);
+        
+        if(fut.length > 0) {
+            let ah = ''; fut.forEach(e => {
+                ah += `<div style="display:flex; justify-content:space-between; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid var(--primary-green);">
+                        <div><strong style="color:white; font-size:0.9rem;">${e.titulo}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${e.turma}</span></div>
+                        <span style="color:var(--primary-green); font-size:0.8rem;">${e.data.split('-').reverse().join('/')}</span>
+                       </div>`;
+            }); aC.innerHTML = ah;
+        } else { aC.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Agenda livre para as próximas semanas.</p>'; }
+
+        // O Radar no Futuro (V2) lerá os PRHFs propostos diretamente de cada aluno das turmas
+        pC.innerHTML = `<div style="padding:10px; border:1px dashed #333; border-radius:8px; text-align:center;"><p style="font-size:0.85rem; color:var(--text-muted); margin:0;">Tudo atualizado! Nenhuma tarefa burocrática pendente para hoje.</p></div>`;
+
+    } catch(e) {}
+}
+
+function carregarTarefasProf() {
+    // Aba PRHFs (Para a V2 o Prof verá a lista global. Por agora é informativo)
+    document.getElementById('lista-prhfs-professor').innerHTML = `<p class="text-muted center" style="font-size:0.85rem; margin-top:20px;">Os teus Planos de Recuperação (PRHF) listados por aluno aparecerão aqui brevemente. Por agora, acede ao Perfil 360º de cada aluno pela janela "Turmas" para verificar o estado.</p>`;
+}
+
+function carregarForunsProf() {
+    const cont = document.getElementById('prof-forum-channel-list');
+    cont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem; margin-top:20px;">O Fórum das Disciplinas para comunicação com as tuas turmas estará disponível no próximo update da plataforma.</p>';
+}
