@@ -8,6 +8,7 @@ try { await enableIndexedDbPersistence(db); console.log("Offline OK!"); } catch 
 
 let myUserId = "", myUserName = "", minhaTurma = "", myAcademia = "";
 let chartInstance = null; let alunoForumAtivoId = null; let chatUnsubscribeAluno = null; let pendingDeleteChatId = null;
+let fQB64 = "";
 
 window.timelineFilterCat = 'all'; window.notifFilterCat = 'all';
 let ahModo = 'dia', ahDOff = 0, ahSOff = 0;
@@ -16,11 +17,11 @@ const ACADEMIAS_INFO = {
     'atlas': { nome: 'Atlas', cor: '#00cc88', icon: 'fa-compass', desc: 'A academia dos Exploradores. Movidos pela curiosidade e descoberta.' },
     'sentinela': { nome: 'Sentinela', cor: '#0088ff', icon: 'fa-shield-halved', desc: 'A academia dos Guardiões. Destacam-se pela responsabilidade e organização.' },
     'nexus': { nome: 'Nexus', cor: '#ff8800', icon: 'fa-microchip', desc: 'A academia dos Inovadores. Criativos, focados em encontrar novas soluções.' },
-    'aurora': { nome: 'Aurora', cor: '#b82bf2', icon: 'fa-bolt', desc: 'A academia dos Desafiadores. Competitivos, resilientes e focados na superação.' }
+    'aurora': { nome: 'Aurora', cor: '#b82bf2', icon: 'fa-bolt', desc: 'A academia dos Desafiadores. Competitivos, resilientes e mestres do foco.' }
 };
 
 // ==========================================
-// 1. INICIALIZAÇÃO E ACADEMIAS
+// 1. INICIALIZAÇÃO
 // ==========================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -40,6 +41,25 @@ onAuthStateChanged(auth, async (user) => {
 
                 const objSelect = document.getElementById('obj-disciplina');
                 if(objSelect) objSelect.innerHTML = ordemDisciplinasGlobal.map(dc => `<option value="${dc}">${dc}</option>`).join('');
+
+                const turmaAno = parseInt(minhaTurma.match(/\d+/)?.[0]) || d.ano || 10;
+                const btnPassaporte = document.getElementById('btn-abrir-passaporte');
+                const secFct = document.getElementById('sec-aluno-fct');
+                const secPap = document.getElementById('sec-aluno-pap');
+                
+                if (turmaAno === 10) {
+                    btnPassaporte.style.display = 'none';
+                } else if (turmaAno === 11) {
+                    btnPassaporte.style.display = 'flex';
+                    document.getElementById('btn-passaporte-texto').innerText = 'FCT (Estágio)';
+                    if(secFct) secFct.style.display = 'block';
+                    if(secPap) secPap.style.display = 'none';
+                } else {
+                    btnPassaporte.style.display = 'flex';
+                    document.getElementById('btn-passaporte-texto').innerText = 'Estágio / PAP';
+                    if(secFct) secFct.style.display = 'block';
+                    if(secPap) secPap.style.display = 'block';
+                }
 
                 carregarDadosPassaporte(d); carregarGamificacao(d);
                 await construirHomeAdaptativa(); verificarEpocaExames();
@@ -79,10 +99,10 @@ document.body.addEventListener('click', async (e) => {
     }
     
     // FERRAMENTAS
-    if(e.target.closest('#btn-open-sumarios')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-sumarios').style.display = 'block'; carregarSumariosAluno(); }
+    if(e.target.closest('#btn-open-materiais')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-materiais').style.display = 'block'; carregarMateriaisAluno(); }
     if(e.target.closest('#btn-abrir-passaporte')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-passaporte').style.display = 'block'; }
     if(e.target.closest('#btn-open-notificacoes')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-notificacoes').style.display = 'block'; carregarNotificacoesAluno(); }
-    if(e.target.closest('#btn-voltar-notificacoes') || e.target.closest('#btn-voltar-sumarios') || e.target.closest('#btn-voltar-passaporte')) {
+    if(e.target.closest('#btn-voltar-notificacoes') || e.target.closest('#btn-voltar-materiais') || e.target.closest('#btn-voltar-passaporte')) {
         document.querySelector('.nav-item[data-target="student-dashboard"]').click();
     }
 
@@ -214,7 +234,7 @@ async function construirHomeAdaptativa() {
             alertHtml += `<div class="card" style="background:linear-gradient(135deg,#ffaa00,#e67e22); color:white; border:none; border-radius:16px; margin-bottom:20px;">
                 <h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-calendar-exclamation"></i> Prepara-te</h3>
                 <p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens <strong>${ev.titulo}</strong> no dia ${dF}. Recomendamos que vejas os teus materiais!</p>
-                <button class="primary-btn" style="background:white; color:#e67e22; width:100%; font-size:1.1rem; padding:15px;" onclick="document.getElementById('btn-open-sumarios').click()"><i class="fa-solid fa-book-open"></i> Abrir Materiais</button>
+                <button class="primary-btn" style="background:white; color:#e67e22; width:100%; font-size:1.1rem; padding:15px;" onclick="document.getElementById('btn-open-materiais').click()"><i class="fa-solid fa-book-open"></i> Abrir Materiais</button>
             </div>`; mMiss = true;
         } else {
             alertHtml += `<div class="card" style="background:linear-gradient(135deg,var(--primary-green),var(--primary-hover)); color:white; border:none; border-radius:16px; margin-bottom:20px;">
@@ -264,7 +284,7 @@ document.getElementById('aluno-search-input')?.addEventListener('input', async (
     if(termo.length < 2) { box.style.display = 'none'; return; } box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">A procurar...</p>'; box.style.display = 'block';
     try {
         let resArr = []; 
-        if (minhaTurma) { const sDb = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); sDb.forEach(d => { if(d.data().titulo?.toLowerCase().includes(termo) || d.data().disciplina?.toLowerCase().includes(termo)) resArr.push({ t: `Sumário - ${d.data().disciplina}`, txt: d.data().titulo, id: 'btn-open-sumarios' }); }); }
+        if (minhaTurma) { const sDb = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); sDb.forEach(d => { if(d.data().titulo?.toLowerCase().includes(termo) || d.data().disciplina?.toLowerCase().includes(termo)) resArr.push({ t: `Materiais - ${d.data().disciplina}`, txt: d.data().titulo, id: 'btn-open-materiais' }); }); }
         if(resArr.length === 0) box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">Sem resultados.</p>'; else { let h = ''; resArr.forEach(r => h += `<div style="padding:8px; border-bottom:1px solid #333; cursor:pointer;" onclick="document.getElementById('${r.id}').click(); document.getElementById('aluno-search-results').style.display='none'; document.getElementById('aluno-search-input').value='';"><span style="font-size:0.7rem; color:var(--primary-green); text-transform:uppercase;">${r.t}</span><div style="font-size:0.9rem; color:white; margin-top:3px;">${r.txt}</div></div>`); box.innerHTML = h; }
     } catch(err) { box.innerHTML = '<p class="text-danger" style="margin:0;">Erro.</p>'; }
 });
@@ -331,15 +351,6 @@ function renderizarGraficoNotas() {
     });
 }
 
-async function carregarEstatisticasEstudo() {
-    try {
-        const s = await getDocs(collection(db, "utilizadores", myUserId, "estudos")); let arr = []; s.forEach(d => arr.push(d.data()));
-        let dU = new Set(); let mTot = 0; arr.forEach(d => { if(d.data) dU.add(d.data.split('T')[0]); mTot += Number(d.minutos || 30); });
-        let stk = 0; let dO = Array.from(dU).sort((a,b)=>b.localeCompare(a));
-        if(dO.length>0){ let hj = new Date(); const hs = hj.toISOString().split('T')[0]; hj.setDate(hj.getDate()-1); const os = hj.toISOString().split('T')[0]; if(dO.includes(hs)||dO.includes(os)){ let cv = new Date(dO[0]); for(let i=0;i<dO.length;i++){ if(dO.includes(cv.toISOString().split('T')[0])){ stk++; cv.setDate(cv.getDate()-1); } else break; } } }
-    } catch(e) {}
-}
-
 document.getElementById('btn-view-mood-history')?.addEventListener('click', carregarHistoricoHumor);
 async function carregarHistoricoHumor() {
     const c = document.getElementById('mood-history-container'); c.innerHTML = '<p class="text-muted center">A atualizar...</p>';
@@ -350,8 +361,16 @@ async function carregarHistoricoHumor() {
     } catch(e){}
 }
 
+document.getElementById('upload-avatar')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0]; if(!file) return;
+    try {
+        const compressedFile = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 500, useWebWorker: true }); const reader = new FileReader();
+        reader.onload = async (ev) => { const base64 = ev.target.result; document.getElementById('perfil-avatar-img').src = base64; document.getElementById('header-avatar-circle').innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`; await updateDoc(doc(db, "utilizadores", myUserId), { fotoPerfil: base64 }); }; reader.readAsDataURL(compressedFile);
+    } catch(err) {}
+});
+
 // ==========================================
-// 6. CADERNETA E LINHA TEMPORAL
+// 6. CADERNETA 
 // ==========================================
 async function obterEventosLinhaTemporal() {
     let ev = [];
@@ -575,17 +594,18 @@ function iniciarChatAluno(fId) {
 // ==========================================
 // 11. SUMÁRIOS E PASSAPORTE
 // ==========================================
-async function carregarSumariosAluno() {
-    const c = document.getElementById('aluno-lista-sumarios-container'); c.innerHTML = '<p class="text-muted center">A carregar sumários...</p>'; if(!minhaTurma) return;
+async function carregarMateriaisAluno() {
+    const c = document.getElementById('aluno-lista-materiais-container'); c.innerHTML = '<p class="text-muted center">A carregar materiais...</p>'; if(!minhaTurma) return;
     try {
         const r = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); if(r.empty) { c.innerHTML = '<p class="text-muted center">Nenhum material publicado pelos professores.</p>'; return; }
         let sum = []; let dU = new Set(); r.forEach(d => { const dt = d.data(); sum.push({id: d.id, ...dt}); dU.add(dt.disciplina); });
-        const fS = document.getElementById('aluno-filtro-sumarios-disc'); if (fS.options.length <= 1) { let oH = '<option value="">Todas as Disciplinas</option>'; dU.forEach(dc => oH += `<option value="${dc}">${dc}</option>`); fS.innerHTML = oH; }
+        const fS = document.getElementById('aluno-filtro-materiais-disc'); if (fS.options.length <= 1) { let oH = '<option value="">Todas as Disciplinas</option>'; dU.forEach(dc => oH += `<option value="${dc}">${dc}</option>`); fS.innerHTML = oH; }
         const fA = fS.value; if(fA) sum = sum.filter(s => s.disciplina === fA); sum.sort((a,b) => b.data.localeCompare(a.data)); 
-        if(sum.length === 0) { c.innerHTML = '<p class="text-muted" style="text-align:center;">Sem sumários para esta disciplina.</p>'; return; }
+        if(sum.length === 0) { c.innerHTML = '<p class="text-muted" style="text-align:center;">Sem materiais para esta disciplina.</p>'; return; }
         let html = ''; sum.forEach(s => { const aB = s.anexoBase64 ? `<a href="${s.anexoBase64}" download="${s.anexoNome}" class="primary-btn small-btn" style="display:inline-block; margin-top:10px; width:auto; padding:8px 12px; background-color:#0099ff;"><i class="fa-solid fa-download"></i> Baixar ${s.anexoNome}</a>` : ''; html += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #0099ff;"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">${s.data} | ${s.disciplina} | Prof. ${s.professor}</span><h4 style="margin:5px 0;">${s.titulo}</h4>${s.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px;">${s.descricao}</p>` : ''}</div></div>${aB}</div>`; }); c.innerHTML = html;
     } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao carregar os dados.</p>'; }
 }
+document.getElementById('aluno-filtro-materiais-disc')?.addEventListener('change', carregarMateriaisAluno);
 
 function carregarDadosPassaporte(dados) {
     if(dados.fct) { document.getElementById('aluno-fct-horas').innerText = `${dados.fct.horasRealizadas||0} / ${dados.fct.horasTotal||0}h`; document.getElementById('aluno-fct-progress').style.width = `${((dados.fct.horasRealizadas||0)/(dados.fct.horasTotal||1))*100}%`; document.getElementById('input-fct-horas').value = dados.fct.horasRealizadas||'';}
