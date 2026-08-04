@@ -104,7 +104,7 @@ document.getElementById('prhf-horas-totais')?.addEventListener('input', (e) => {
 });
 
 // ==========================================
-// 3. O ASSISTENTE GLOBAL (DASHBOARD E HORÁRIO)
+// 3. O ASSISTENTE GLOBAL (COM PROTEÇÕES DE ERRO)
 // ==========================================
 async function carregarRadarProfessor() {
     const aText = document.getElementById('assistente-global-texto');
@@ -116,8 +116,8 @@ async function carregarRadarProfessor() {
 
     try {
         let totalAlunos = 0; let prhfsAtivos = 0; let eventosGlobais = [];
+        let totalFaltasProf = 0; let totalOcorrencias = 0;
         
-        // 1. HORÁRIO REAL DO PROFESSOR (Lê a DB de todas as turmas)
         let profAulasHoje = [];
         const bK = ['1', '2', '3', '4', '1300', '5', '6', '7'];
         const bT = { '1': '08:30', '2': '09:35', '3': '10:50', '4': '11:55', '1300': '13:00', '5': '14:05', '6': '15:15', '7': '16:20' };
@@ -127,19 +127,16 @@ async function carregarRadarProfessor() {
         for (const t of turmasProfessor) {
             const tSnap = await getDoc(doc(db, "turmas", t));
             
-            // Verificação do horário na DB da turma
             if(tSnap.exists() && tSnap.data().horario) {
                 const hT = tSnap.data().horario;
                 for (const b of bK) {
                     const disc = hT[`${hjStr}_${b}`];
-                    // Se o bloco tiver uma disciplina que pertence ao professor, ele dá aula a esta turma!
                     if (disc && disciplinasProfessor.includes(disc)) {
                         profAulasHoje.push({ bloco: b, turma: t, disciplina: disc, hora: bT[b] });
                     }
                 }
             }
 
-            // Estatísticas
             const snapAl = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
             snapAl.forEach(d => totalAlunos++);
             
@@ -153,39 +150,52 @@ async function carregarRadarProfessor() {
                         prhfsAtivos++;
                     }
                 });
+
+                const fSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "faltas"));
+                fSnap.forEach(f => {
+                    if (disciplinasProfessor.includes(f.data().disciplina)) {
+                        totalFaltasProf += Number(f.data().horas || 0);
+                    }
+                });
+
+                const oSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "ocorrencias"));
+                oSnap.forEach(o => { if(o.data().autor === myUserName) totalOcorrencias++; });
             }
         }
 
-        // PREENCHE AS ESTATÍSTICAS
         document.getElementById('dash-stat-turmas').innerText = turmasProfessor.length;
         document.getElementById('dash-stat-alunos').innerText = totalAlunos;
+        document.getElementById('dash-stat-faltas').innerText = `${totalFaltasProf}h`;
         document.getElementById('dash-stat-prhfs').innerText = prhfsAtivos;
+        document.getElementById('dash-stat-ocorrencias').innerText = totalOcorrencias;
 
         let resumo = `Bem-vindo! Estás a gerir o progresso de <strong>${totalAlunos} alunos</strong>. `;
-        if (prhfsAtivos > 0) resumo += `<br><span style="color:var(--warning-yellow); font-weight:bold;">Atenção: Existem ${prhfsAtivos} PRHFs em andamento que exigem o teu acompanhamento.</span>`;
+        if (prhfsAtivos > 0) resumo += `<br><span style="color:var(--warning-yellow); font-weight:bold;">Atenção: Existem ${prhfsAtivos} PRHFs em andamento.</span>`;
         else resumo += `<br><span style="color:var(--success-green);">Excelente! Nenhum aluno com planos pendentes na tua matéria.</span>`;
         aText.innerHTML = resumo;
 
-        // RENDERIZAR HORÁRIO REAL
-        profAulasHoje.sort((a,b) => {
-            const getMin = (hx) => parseInt(hx.split(':')[0])*60 + parseInt(hx.split(':')[1]);
-            return getMin(a.hora) - getMin(b.hora);
-        });
-
         if(profAulasHoje.length > 0) {
-            let hHtml = '';
-            profAulasHoje.forEach(aula => {
-                hHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid #0099ff;">
-                    <div><strong style="color:white; font-size:0.9rem;">${aula.disciplina}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${aula.turma}</span></div>
-                    <span style="color:#0099ff; font-weight:bold; font-size:0.85rem;">${aula.hora}</span>
-                </div>`;
-            });
-            hCont.innerHTML = hHtml;
+            try {
+                profAulasHoje.sort((a,b) => {
+                    if(!a.hora || !b.hora) return 0;
+                    const getMin = (hx) => parseInt(hx.split(':')[0])*60 + parseInt(hx.split(':')[1]);
+                    return getMin(a.hora) - getMin(b.hora);
+                });
+                let hHtml = '';
+                profAulasHoje.forEach(aula => {
+                    hHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid #0099ff;">
+                        <div><strong style="color:white; font-size:0.9rem;">${aula.disciplina}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${aula.turma}</span></div>
+                        <span style="color:#0099ff; font-weight:bold; font-size:0.85rem;">${aula.hora}</span>
+                    </div>`;
+                });
+                hCont.innerHTML = hHtml;
+            } catch(sortErr) {
+                hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Horários não formatados corretamente.</p>';
+            }
         } else {
-            hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Não tens aulas marcadas para hoje na base de dados.</p>';
+            hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Não tens aulas marcadas para hoje.</p>';
         }
 
-        // EVENTOS
         const hjStrFull = hjData.toISOString().split('T')[0];
         const fut = eventosGlobais.filter(e => e.data >= hjStrFull).sort((a,b) => a.data.localeCompare(b.data)).slice(0, 3);
         
@@ -193,7 +203,13 @@ async function carregarRadarProfessor() {
             let ah = ''; fut.forEach(e => { ah += `<div style="display:flex; justify-content:space-between; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid var(--warning-yellow);"><div><strong style="color:white; font-size:0.9rem;">${e.titulo}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${e.turma}</span></div><span style="color:var(--warning-yellow); font-size:0.8rem;">${e.data.split('-').reverse().join('/')}</span></div>`; }); 
             eCont.innerHTML = ah;
         } else { eCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Agenda livre.</p>'; }
-    } catch (e) { aText.innerHTML = "Erro ao carregar dados."; }
+        
+    } catch (e) { 
+        console.error("Erro no Radar:", e);
+        aText.innerHTML = "Dificuldade na ligação. Verifica a tua internet."; 
+        hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Não tens aulas marcadas para hoje.</p>';
+        eCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Sem eventos futuros.</p>';
+    }
 }
 
 // ==========================================
@@ -395,13 +411,11 @@ function abrirChatForum(turma, disciplina) {
 }
 
 // ==========================================
-// 7. MÁQUINA DE CLIQUES (TODOS OS BOTÕES)
+// 7. MÁQUINA DE CLIQUES E EVENTOS GERAIS
 // ==========================================
 function esconderTodasAsVistas() { document.querySelectorAll('.app-content > div').forEach(v => v.style.display = 'none'); }
 
 document.body.addEventListener('click', async (e) => {
-    
-    // NAVEGAÇÃO
     const nav = e.target.closest('.nav-item');
     if (nav) {
         e.preventDefault(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); nav.classList.add('active');
@@ -413,15 +427,13 @@ document.body.addEventListener('click', async (e) => {
         return; 
     }
 
-    // ABRIR PERFIS E MODAIS
     if (e.target.closest('.fechar-modal')) { document.getElementById(e.target.closest('.fechar-modal').getAttribute('data-target')).style.display = 'none'; return; }
     if (e.target.closest('.aluno-list-item')) { abrirPerfil360Aluno(e.target.closest('.aluno-list-item').getAttribute('data-id')); return; }
 
-    // TABS
     if (e.target.closest('#tab-tarefas-prhf')) { document.querySelectorAll('.falta-tab-btn').forEach(b => b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('sec-tarefas-prhf').style.display = 'block'; document.getElementById('sec-tarefas-passaporte').style.display = 'none'; carregarTarefasProf(); return; }
     if (e.target.closest('#tab-tarefas-passaporte')) { document.querySelectorAll('.falta-tab-btn').forEach(b => b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('sec-tarefas-prhf').style.display = 'none'; document.getElementById('sec-tarefas-passaporte').style.display = 'block'; carregarTarefasProf(); return; }
 
-    // FÓRUM
+    // FÓRUM AÇÕES
     if (e.target.closest('.canal-card')) { const card = e.target.closest('.canal-card'); abrirChatForum(card.getAttribute('data-turma'), card.getAttribute('data-disc')); return; }
     if (e.target.closest('#btn-prof-voltar-canais')) { if (chatUnsubscribe) { chatUnsubscribe(); chatUnsubscribe = null; } document.getElementById('prof-forum-chat-view').style.display = 'none'; document.getElementById('btn-create-chat-prof').style.display = 'block'; document.getElementById('prof-forum-channel-list').style.display = 'block'; return; }
     if (e.target.closest('#btn-prof-send-msg')) {
@@ -429,6 +441,7 @@ document.body.addEventListener('click', async (e) => {
         try { await addDoc(collection(db, "turmas", activeChatTurma, "foruns", activeChatDisc, "mensagens"), { texto: msg, autor: myUserName, papel: "professor", timestamp: Date.now() }); msgInput.value = ''; } catch (err) { alert("Erro ao enviar."); }
         return;
     }
+
     if (e.target.closest('#btn-create-chat-prof')) {
         document.getElementById('forum-turma-select').innerHTML = '<option value="">Selecionar Turma...</option>' + turmasProfessor.map(t => `<option value="${t}">Turma ${t}</option>`).join('');
         document.getElementById('input-nome-novo-forum').value = '';
@@ -487,7 +500,6 @@ document.body.addEventListener('click', async (e) => {
         if (!selectedTurma || alunosTurmaRAM.length === 0) return alert("Seleciona uma turma com alunos primeiro.");
         const errDiv = document.getElementById('erro-modal-faltas'); errDiv.style.display = 'none';
         
-        // Simulação de Aulas para faltas (Será lido da DB na Fase 3)
         let aulasHojeH = '';
         if (disciplinasProfessor.length > 0) {
             aulasHojeH += `<option value="90">Hoje - 08:30 às 10:00 (90 min) - ${disciplinasProfessor[0]}</option>`;
@@ -557,7 +569,7 @@ document.body.addEventListener('click', async (e) => {
         return;
     }
 
-    // OCORRÊNCIAS
+    // OCORRÊNCIAS E AÇÕES RESTANTES...
     if (e.target.closest('#btn-dar-positiva')) { if (!alunoSelecionadoId) return; document.getElementById('oco-tipo').value = 'positiva'; document.getElementById('oco-titulo').innerHTML = '<i class="fa-solid fa-star" style="color:var(--success-green);"></i> Ocorrência Positiva'; document.getElementById('oco-motivo').value = ''; document.getElementById('btn-gravar-ocorrencia').style.background = 'var(--success-green)'; document.getElementById('modal-ocorrencia').style.display = 'flex'; return; }
     if (e.target.closest('#btn-dar-negativa')) { if (!alunoSelecionadoId) return; document.getElementById('oco-tipo').value = 'negativa'; document.getElementById('oco-titulo').innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color:var(--danger-red);"></i> Ocorrência Negativa'; document.getElementById('oco-motivo').value = ''; document.getElementById('btn-gravar-ocorrencia').style.background = 'var(--danger-red)'; document.getElementById('modal-ocorrencia').style.display = 'flex'; return; }
     if (e.target.closest('#btn-gravar-ocorrencia')) {
@@ -570,8 +582,6 @@ document.body.addEventListener('click', async (e) => {
         } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 1500); }
         return;
     }
-
-    // AÇÕES DE REJEITAR / ACEITAR / OBSERVAÇÕES
     if (e.target.closest('.btn-rejeitar-proposta')) { const btn = e.target.closest('.btn-rejeitar-proposta'); document.getElementById('rej-aluno-id').value = btn.getAttribute('data-aluno'); document.getElementById('rej-prhf-id').value = btn.getAttribute('data-prhf'); document.getElementById('rej-motivo').value = ''; document.getElementById('modal-rejeitar-prhf').style.display = 'flex'; return; }
     if (e.target.closest('#btn-confirmar-rejeicao')) {
         const aId = document.getElementById('rej-aluno-id').value; const pId = document.getElementById('rej-prhf-id').value; const feedback = document.getElementById('rej-motivo').value.trim(); if (!feedback) return alert("Indica o motivo.");
