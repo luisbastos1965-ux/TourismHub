@@ -53,6 +53,7 @@ onAuthStateChanged(auth, async (user) => {
                     let titleStr = "Professor";
                     if (myRoles.includes('diretor_turma')) titleStr += " / DT";
                     if (myRoles.includes('orientador_pap')) titleStr += " / PAP";
+                    if (myRoles.includes('coordenador')) titleStr += " / Coord"; // ATUALIZADO
                     
                     document.getElementById('header-user-name-prof').innerText = myUserName;
                     document.getElementById('header-user-name-prof').nextElementSibling.innerText = titleStr;
@@ -63,7 +64,8 @@ onAuthStateChanged(auth, async (user) => {
                         document.getElementById('prof-avatar-img').src = profData.fotoPerfil;
                     }
                     
-                    if (!myRoles.includes('diretor_turma') && !myRoles.includes('orientador_pap')) {
+                    // ATUALIZADO: O Coordenador também precisa de ver esta aba
+                    if (!myRoles.includes('diretor_turma') && !myRoles.includes('orientador_pap') && !myRoles.includes('coordenador')) {
                         document.getElementById('tab-tarefas-passaporte').style.display = 'none';
                     }
 
@@ -426,7 +428,7 @@ document.body.addEventListener('click', async (e) => {
         }
     }
 
-    // --- AÇÕES DT ---
+    // --- AÇÕES DT E COORDENADOR ---
     if (e.target.closest('#btn-salvar-obs-dt')) {
         if (!alunoSelecionadoId) return; const txt = document.getElementById('p-aluno-obs-dt').value.trim();
         const b = e.target.closest('#btn-salvar-obs-dt'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
@@ -611,22 +613,56 @@ async function carregarTarefasProf() {
             let todosAlunos = []; 
             for (const t of turmasProfessor) { const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); snap.forEach(d => todosAlunos.push({ id: d.id, ...d.data() })); }
             let h = '';
+            
             todosAlunos.forEach(al => {
+                // ATUALIZADO: FCT (Apenas Coordenador valida)
                 let fctHtml = ''; 
                 if (al.fct && al.fct.horasRealizadas > 0) { 
-                    if (al.fct.validadoDT) { fctHtml = `<span style="color:var(--success-green); font-size:0.8rem;"><i class="fa-solid fa-check-double"></i> ${al.fct.horasRealizadas}h Validadas</span>`; } 
-                    else { fctHtml = `<div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:var(--warning-yellow); font-size:0.8rem;">${al.fct.horasRealizadas}h declaradas</span> <button class="primary-btn small-btn btn-validar-fct" data-id="${al.id}" style="width:auto; padding:4px 10px;">Validar</button></div>`; }
-                } else { fctHtml = `<span style="color:var(--text-muted); font-size:0.8rem;">Sem registos FCT.</span>`; }
+                    if (al.fct.validadoDT) { 
+                        fctHtml = `<span style="color:var(--success-green); font-size:0.8rem;"><i class="fa-solid fa-check-double"></i> ${al.fct.horasRealizadas}h Validadas</span>`; 
+                    } else { 
+                        let btnValidar = myRoles.includes('coordenador') 
+                            ? `<button class="primary-btn small-btn btn-validar-fct" data-id="${al.id}" style="width:auto; padding:4px 10px;">Validar</button>` 
+                            : `<span style="font-size:0.75rem; color:var(--text-muted);">A aguardar Coord.</span>`;
+
+                        fctHtml = `<div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:var(--warning-yellow); font-size:0.8rem;">${al.fct.horasRealizadas}h declaradas</span> ${btnValidar}</div>`; 
+                    }
+                } else { 
+                    fctHtml = `<span style="color:var(--text-muted); font-size:0.8rem;">Sem registos FCT.</span>`; 
+                }
                 
+                // ATUALIZADO: PAP (Orientador e DT veem o ficheiro, outros só veem se foi entregue)
                 let papHtml = ''; 
-                if (al.papFicheiroEnviado && al.papFicheiroBase64) { papHtml = `<a href="${al.papFicheiroBase64}" download="PAP_${al.nome.replace(/\s+/g, '_')}" class="secondary-btn small-btn" style="color:#0099ff; border-color:#0099ff; display:inline-block; text-align:center;"><i class="fa-solid fa-download"></i> Baixar Relatório</a>`; } 
-                else if (al.pap && al.pap.tema) { papHtml = `<span style="color:var(--text-light); font-size:0.8rem;">Tema: ${al.pap.tema} (Pendente)</span>`; } 
-                else { papHtml = `<span style="color:var(--text-muted); font-size:0.8rem;">Sem registos PAP.</span>`; }
+                if (al.papFicheiroEnviado && al.papFicheiroBase64) { 
+                    if (myRoles.includes('orientador_pap') || myRoles.includes('diretor_turma')) {
+                        papHtml = `<a href="${al.papFicheiroBase64}" download="PAP_${al.nome.replace(/\s+/g, '_')}" class="secondary-btn small-btn" style="color:#0099ff; border-color:#0099ff; display:inline-block; text-align:center;"><i class="fa-solid fa-download"></i> Baixar Relatório</a>`;
+                    } else {
+                        papHtml = `<span style="color:var(--success-green); font-size:0.8rem;"><i class="fa-solid fa-check"></i> Relatório submetido</span>`;
+                    }
+                } else if (al.pap && al.pap.tema) { 
+                    papHtml = `<span style="color:var(--text-light); font-size:0.8rem;">Tema: ${al.pap.tema} (Pendente)</span>`; 
+                } else { 
+                    papHtml = `<span style="color:var(--text-muted); font-size:0.8rem;">Sem registos PAP.</span>`; 
+                }
                 
-                if (fctHtml.includes('declaradas') || fctHtml.includes('Validadas') || papHtml.includes('Tema') || papHtml.includes('Baixar')) {
-                    h += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #ff9900;"><strong style="color:white; font-size:1.05rem;">${al.nome} <span style="font-size:0.75rem; color:var(--text-muted);">(${al.turma})</span></strong><div style="margin-top:10px; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px dashed #333;"><strong style="font-size:0.85rem; color:white;"><i class="fa-solid fa-briefcase" style="color:var(--primary-green);"></i> FCT (Estágio)</strong><div style="margin-top:5px;">${fctHtml}</div></div><div style="margin-top:10px; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px dashed #333;"><strong style="font-size:0.85rem; color:white;"><i class="fa-solid fa-laptop-code" style="color:#0099ff;"></i> Projeto de Aptidão Profissional (PAP)</strong><div style="margin-top:5px;">${papHtml}</div></div></div>`;
+                if (fctHtml.includes('declaradas') || fctHtml.includes('Validadas') || papHtml.includes('Tema') || papHtml.includes('Baixar') || papHtml.includes('submetido')) {
+                    h += `
+                    <div class="card" style="margin-bottom:15px; border-left: 4px solid #ff9900;">
+                        <strong style="color:white; font-size:1.05rem;">${al.nome} <span style="font-size:0.75rem; color:var(--text-muted);">(${al.turma})</span></strong>
+                        
+                        <div style="margin-top:10px; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px dashed #333;">
+                            <strong style="font-size:0.85rem; color:white;"><i class="fa-solid fa-briefcase" style="color:var(--primary-green);"></i> FCT (Estágio)</strong>
+                            <div style="margin-top:5px;">${fctHtml}</div>
+                        </div>
+
+                        <div style="margin-top:10px; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px dashed #333;">
+                            <strong style="font-size:0.85rem; color:white;"><i class="fa-solid fa-laptop-code" style="color:#0099ff;"></i> Projeto de Aptidão Profissional (PAP)</strong>
+                            <div style="margin-top:5px;">${papHtml}</div>
+                        </div>
+                    </div>`;
                 }
             }); 
+            
             container.innerHTML = h === '' ? '<p class="text-muted center">Nenhum aluno submeteu horas ou relatórios ainda.</p>' : h;
         } catch (e) { container.innerHTML = '<p class="text-danger center">Erro ao carregar passaportes.</p>'; }
     }
