@@ -1,302 +1,451 @@
-<!DOCTYPE html>
-<html lang="pt-PT">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Turma PRO - Professor</title>
-    <link rel="icon" type="image/png" href="logo_tur.png">
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body>
-    <div id="app-content">
-        <!-- HEADER -->
-        <header id="header-prof" class="app-header">
-            <div class="user-profile" style="display: flex; align-items: center; gap: 12px; height: 100%;">
-                <div class="profile-avatar" id="header-avatar-circle" style="width: 38px; height: 38px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 0; flex-shrink: 0;">
-                    <i class="fa-solid fa-user-tie" style="color: white; font-size: 1rem;"></i>
-                </div>
-                <div>
-                    <span id="header-user-name-prof" style="margin: 0; font-weight: bold; display: block; line-height: 1.2;">A carregar...</span>
-                    <span style="font-size: 0.7rem; color: var(--text-muted);">Professor</span>
-                </div>
-            </div>
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <button id="btn-logout-prof" class="logout-btn" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button>
-            </div>
-        </header>
+import { auth, db, messaging, VAPID_KEY, getToken } from "./firebase.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { doc, getDoc, collection, updateDoc, getDocs, query, addDoc, deleteDoc, where, setDoc, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        <main class="app-content" style="padding-bottom: 80px;">
+let myUserId = "";
+let myUserName = "";
+let profData = {};
+let myRoles = [];
+
+let turmasProfessor = [];
+let disciplinasProfessor = []; // O SEGREDO DO FILTRO
+let selectedTurma = "";
+let alunosTurmaRAM = [];
+let eventosTurmaRAM = [];
+
+let alunoSelecionadoId = null;
+let materialBase64 = null;
+let prhfBase64 = null;
+
+let chatUnsubscribe = null;
+let activeChatTurma = "";
+let activeChatDisc = "";
+let chartEvolucao = null;
+
+const ACADEMIAS_INFO = { 'atlas': { nome: 'Atlas' }, 'sentinela': { nome: 'Sentinela' }, 'nexus': { nome: 'Nexus' }, 'aurora': { nome: 'Aurora' } };
+
+// ==========================================
+// 1. INICIALIZAÇÃO
+// ==========================================
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        myUserId = user.email.split('@')[0];
+        try {
+            const docSnap = await getDoc(doc(db, "utilizadores", myUserId));
+            if (docSnap.exists()) {
+                profData = docSnap.data();
+                myRoles = profData.papeis || [];
+                disciplinasProfessor = profData.disciplinas || []; // LÊ AS DISCIPLINAS
+
+                if (profData.papel && !myRoles.includes(profData.papel)) myRoles.push(profData.papel);
+                
+                if (myRoles.some(r => ['professor', 'diretor_turma', 'orientador_pap', 'coordenador'].includes(r))) {
+                    myUserName = profData.nome || myUserId;
+                    turmasProfessor = profData.turmas || []; 
+                    
+                    let titleStr = "Professor";
+                    if (myRoles.includes('diretor_turma')) titleStr += " / DT";
+                    if (myRoles.includes('orientador_pap')) titleStr += " / PAP";
+                    if (myRoles.includes('coordenador')) titleStr += " / Coord"; 
+                    
+                    document.getElementById('header-user-name-prof').innerText = myUserName;
+                    document.getElementById('header-user-name-prof').nextElementSibling.innerText = titleStr;
+                    document.getElementById('perfil-nome-prof').innerText = myUserName;
+                    
+                    if (profData.fotoPerfil) {
+                        document.getElementById('header-avatar-circle').innerHTML = `<img src="${profData.fotoPerfil}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+                        document.getElementById('prof-avatar-img').src = profData.fotoPerfil;
+                    }
+                    
+                    if (!myRoles.includes('diretor_turma') && !myRoles.includes('orientador_pap') && !myRoles.includes('coordenador')) {
+                        document.getElementById('tab-tarefas-passaporte').style.display = 'none';
+                    }
+
+                    const sel = document.getElementById('prof-seletor-turmas');
+                    if (turmasProfessor.length > 0) {
+                        sel.innerHTML = '<option value="">-- Selecionar Turma --</option>' + turmasProfessor.map(t => `<option value="${t}">Turma ${t}</option>`).join('');
+                    } else {
+                        sel.innerHTML = '<option value="">Sem turmas atribuídas</option>';
+                    }
+
+                    carregarRadarProfessor(); 
+                } else { window.location.href = "index.html"; }
+            }
+        } catch (e) { console.error("Erro na inicialização:", e); }
+    } else { window.location.href = "index.html"; }
+});
+
+document.getElementById('btn-logout-prof')?.addEventListener('click', () => signOut(auth));
+
+// ==========================================
+// 2. CONVERSÃO DE FICHEIROS PARA BASE64
+// ==========================================
+function setupBase64Upload(inputId, nameId, varSetter) {
+    document.getElementById(inputId)?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) return alert("O ficheiro é muito grande. O limite máximo é 5MB.");
+        
+        document.getElementById(nameId).innerText = file.name;
+        document.getElementById(nameId).style.color = "var(--primary-green)";
+        
+        const reader = new FileReader();
+        reader.onload = (event) => { varSetter(event.target.result); };
+        reader.readAsDataURL(file);
+    });
+}
+setupBase64Upload('mat-file', 'mat-file-name', (val) => materialBase64 = val);
+setupBase64Upload('prhf-file', 'prhf-file-name', (val) => prhfBase64 = val); 
+
+// ==========================================
+// 3. O ASSISTENTE GLOBAL
+// ==========================================
+async function carregarRadarProfessor() {
+    const aText = document.getElementById('assistente-global-texto');
+    const hCont = document.getElementById('dashboard-horario-container');
+    const eCont = document.getElementById('radar-agenda-container');
+    
+    aText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A calcular inteligência letiva...';
+    if (turmasProfessor.length === 0) { aText.innerHTML = 'Não tens turmas atribuídas de momento.'; return; }
+
+    try {
+        let totalAlunos = 0; let prhfsAtivos = 0; let eventosGlobais = [];
+
+        for (const t of turmasProfessor) {
+            const snapAl = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
+            snapAl.forEach(d => totalAlunos++);
             
-            <!-- VISTA 1: INÍCIO (DASHBOARD) -->
-            <div id="view-prof-dashboard">
-                <div class="card" style="background: linear-gradient(135deg, rgba(0, 204, 136, 0.15), rgba(0, 0, 0, 0.3)); border: 1px solid var(--primary-green); margin-bottom: 20px;">
-                    <h3 style="font-size: 1.1rem; margin-bottom: 10px; color: var(--primary-green);"><i class="fa-solid fa-robot"></i> O teu Assistente</h3>
-                    <div id="assistente-global-texto" style="font-size: 0.95rem; color: white; line-height: 1.5;">A analisar todas as tuas turmas...</div>
-                </div>
+            const snapEv = await getDocs(collection(db, "turmas", t, "eventos"));
+            snapEv.forEach(d => eventosGlobais.push({ turma: t, ...d.data() }));
 
-                <!-- ESTATÍSTICAS RÁPIDAS NO DASHBOARD -->
-                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <div class="card" style="flex: 1; text-align: center; padding: 15px;">
-                        <h2 id="dash-stat-turmas" style="color: var(--primary-green); margin-bottom: 5px;">0</h2>
-                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Turmas</span>
-                    </div>
-                    <div class="card" style="flex: 1; text-align: center; padding: 15px;">
-                        <h2 id="dash-stat-alunos" style="color: #0099ff; margin-bottom: 5px;">0</h2>
-                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Alunos</span>
-                    </div>
-                    <div class="card" style="flex: 1; text-align: center; padding: 15px;">
-                        <h2 id="dash-stat-prhfs" style="color: var(--warning-yellow); margin-bottom: 5px;">0</h2>
-                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">PRHFs Ativos</span>
-                    </div>
-                </div>
+            for (const docAluno of snapAl.docs) {
+                const pSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "prhfs"));
+                pSnap.forEach(p => {
+                    if (p.data().status !== 'concluida' && disciplinasProfessor.includes(p.data().disciplina)) {
+                        prhfsAtivos++;
+                    }
+                });
+            }
+        }
 
-                <div class="card" style="border-left: 4px solid #0099ff; margin-bottom: 20px;">
-                    <h3 style="font-size: 1rem; margin-bottom: 10px; color: white;"><i class="fa-regular fa-clock" style="color:#0099ff;"></i> O teu Horário de Hoje</h3>
-                    <div id="dashboard-horario-container">
-                        <p class="text-muted center" style="font-size: 0.85rem;">Horários em breve...</p>
-                    </div>
-                </div>
+        let resumo = `Gerir ${totalAlunos} alunos em ${turmasProfessor.length} turmas. `;
+        if (prhfsAtivos > 0) resumo += `<br><span style="color:var(--warning-yellow); font-weight:bold;">Tens ${prhfsAtivos} PRHFs ativos nas tuas disciplinas.</span>`;
+        else resumo += `<br><span style="color:var(--success-green);">Todos os teus alunos estão regulares na tua disciplina!</span>`;
+        aText.innerHTML = resumo;
 
-                <div class="card" style="border-left: 4px solid var(--warning-yellow);">
-                    <h3 style="font-size: 1rem; margin-bottom: 10px; color: white;"><i class="fa-regular fa-calendar-check" style="color:var(--warning-yellow);"></i> Próximos Eventos</h3>
-                    <div id="radar-agenda-container">
-                        <p class="text-muted center" style="font-size: 0.85rem;">A carregar calendário...</p>
-                    </div>
-                </div>
-            </div>
+        const hjData = new Date(); const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+        hCont.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); border:1px solid #333; padding:10px; border-radius:8px;"><div style="color:var(--text-muted); font-size:0.85rem;">${diasSemana[hjData.getDay()]}</div><div style="font-weight:bold; color:white;">O horário do professor estará disponível na Fase 3.</div></div>`;
 
-            <!-- VISTA 2: TURMAS -->
-            <div id="view-prof-turmas" style="display: none;">
-                <div style="margin-bottom: 20px;">
-                    <select id="prof-seletor-turmas" class="input-padrao" style="width: 100%; font-size: 1.1rem; font-weight: bold; text-align: center;">
-                        <option value="">A carregar turmas...</option>
-                    </select>
-                </div>
+        const hjStr = hjData.toISOString().split('T')[0];
+        const fut = eventosGlobais.filter(e => e.data >= hjStr).sort((a,b) => a.data.localeCompare(b.data)).slice(0, 3);
+        
+        if (fut.length > 0) {
+            let ah = ''; fut.forEach(e => { ah += `<div style="display:flex; justify-content:space-between; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid var(--warning-yellow);"><div><strong style="color:white; font-size:0.9rem;">${e.titulo}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${e.turma}</span></div><span style="color:var(--warning-yellow); font-size:0.8rem;">${e.data.split('-').reverse().join('/')}</span></div>`; }); 
+            eCont.innerHTML = ah;
+        } else { eCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Agenda livre.</p>'; }
+    } catch (e) { aText.innerHTML = "Erro ao carregar dados."; }
+}
 
-                <div id="turma-ativa-container" style="display: none;">
-                    <div class="card" style="background: linear-gradient(135deg, rgba(0, 204, 136, 0.1), rgba(0, 0, 0, 0.2)); border: 1px solid var(--primary-green); margin-bottom: 20px;">
-                        <h3 style="font-size: 1.1rem; margin-bottom: 10px; color: var(--primary-green);"><i class="fa-solid fa-robot"></i> Assistente da Turma</h3>
-                        <div id="assistente-aula-texto" style="font-size: 0.9rem; color: var(--text-light); line-height: 1.5;">A analisar dados da turma...</div>
-                    </div>
+// ==========================================
+// 4. ASSISTENTE DA TURMA (ISOLADO)
+// ==========================================
+async function analisarEAtualizarTurma(turmaId) {
+    const listC = document.getElementById('lista-alunos-turma'); listC.innerHTML = '<p class="text-muted center">A ler dados dos alunos...</p>';
+    document.getElementById('assistente-aula-texto').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A focar na tua disciplina...';
+    try {
+        const qAlunos = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turmaId), where("papel", "==", "aluno")));
+        alunosTurmaRAM = []; qAlunos.forEach(d => alunosTurmaRAM.push({ id: d.id, ...d.data() })); alunosTurmaRAM.sort((a,b) => a.nome.localeCompare(b.nome));
 
-                    <div class="lms-action-grid" style="margin-bottom: 25px;">
-                        <button class="lms-btn" id="btn-modal-faltas" style="border-color:var(--danger-red); color:var(--danger-red); background: rgba(255, 77, 77, 0.05);">
-                            <i class="fa-solid fa-user-xmark"></i><span>Faltas</span>
-                        </button>
-                        <button class="lms-btn" id="btn-modal-notas" style="border-color:var(--warning-yellow); color:var(--warning-yellow); background: rgba(255, 204, 0, 0.05);">
-                            <i class="fa-solid fa-star"></i><span>Avaliação</span>
-                        </button>
-                        <button class="lms-btn" id="btn-modal-materiais" style="border-color:#0099ff; color:#0099ff; background: rgba(0, 153, 255, 0.05);">
-                            <i class="fa-solid fa-book-open"></i><span>Materiais</span>
-                        </button>
-                        <button class="lms-btn" id="btn-modal-agenda" style="border-color:#b82bf2; color:#b82bf2; background: rgba(184, 43, 242, 0.05);">
-                            <i class="fa-regular fa-calendar-plus"></i><span>Agenda</span>
-                        </button>
-                    </div>
+        let asstText = ""; let alunosEmRisco = 0; let totalPrhfs = 0; let htmlAlunos = '';
 
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <h3 style="font-size: 1.1rem; color: white;">Lista de Alunos</h3>
-                        <div style="font-size: 0.75rem; color: var(--text-muted);">
-                            <span class="status-dot status-green"></span> Em dia &nbsp; 
-                            <span class="status-dot status-red"></span> Risco
-                        </div>
-                    </div>
-                    <div id="lista-alunos-turma" style="display: flex; flex-direction: column; gap: 8px;"></div>
-                </div>
-            </div>
+        for (let i=0; i<alunosTurmaRAM.length; i++) {
+            const al = alunosTurmaRAM[i]; let nFaltas = 0; let nPrhfs = 0;
+            const fS = await getDocs(collection(db, "utilizadores", al.id, "faltas")); 
+            fS.forEach(f => { if(!f.data().justificada && disciplinasProfessor.includes(f.data().disciplina)) nFaltas++; });
+            const pS = await getDocs(collection(db, "utilizadores", al.id, "prhfs")); 
+            pS.forEach(p => { if(p.data().status !== 'concluida' && disciplinasProfessor.includes(p.data().disciplina)) nPrhfs++; });
+            
+            totalPrhfs += nPrhfs; let corBola = 'status-green';
+            if (nFaltas > 5 || nPrhfs > 2) { corBola = 'status-red'; alunosEmRisco++; } else if (nFaltas > 2 || nPrhfs > 0) { corBola = 'status-yellow'; }
 
-            <!-- VISTA 3: TAREFAS -->
-            <div id="view-prof-tarefas" style="display: none;">
-                <div class="falta-tabs" style="margin-bottom: 15px;">
-                    <button class="falta-tab-btn active" id="tab-tarefas-prhf">PRHF (Planos)</button>
-                    <button class="falta-tab-btn" id="tab-tarefas-passaporte">PAP / Estágio</button>
-                </div>
-                <div id="sec-tarefas-prhf">
-                    <button id="btn-novo-prhf" class="primary-btn" style="width:100%; margin-bottom:15px; background:var(--bg-dark); color:var(--primary-green); border:1px dashed var(--primary-green);"><i class="fa-solid fa-plus"></i> Criar Novo PRHF</button>
-                    <div id="lista-prhfs-professor"><p class="text-muted center">A carregar planos de recuperação...</p></div>
-                </div>
-                <div id="sec-tarefas-passaporte" style="display: none;">
-                    <div id="lista-passaportes-professor"><p class="text-muted center">Apenas disponível para turmas de 11º e 12º Ano.</p></div>
-                </div>
-            </div>
+            htmlAlunos += `<div class="aluno-list-item" data-id="${al.id}" style="cursor:pointer; transition:0.2s;"><div style="display:flex; align-items:center; gap:10px;"><img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=333&color=fff`}" style="width:35px; height:35px; border-radius:50%; object-fit:cover;"><div><strong style="color:white; font-size:0.95rem;">${al.nome}</strong><div style="font-size:0.75rem; color:var(--text-muted);">${nPrhfs > 0 ? `<span style="color:#00d2ff;">${nPrhfs} PRHFs em ${disciplinasProfessor[0]}</span>` : 'Regular em ' + (disciplinasProfessor[0] || 'Geral')}</div></div></div><div style="display:flex; align-items:center; gap:15px;"><span style="color:var(--primary-green); font-size:0.85rem; font-weight:bold;">${al.xp || 0} XP</span><span class="status-dot ${corBola}"></span></div></div>`;
+        }
+        asstText = `A turma tem <strong>${alunosTurmaRAM.length} alunos</strong>. `;
+        if (alunosEmRisco > 0) asstText += `<span style="color:var(--danger-red);">Tens ${alunosEmRisco} alunos em risco na tua disciplina.</span> `;
+        if (totalPrhfs > 0) asstText += `Há ${totalPrhfs} PRHFs a decorrer na tua matéria. `;
+        if (alunosEmRisco === 0 && totalPrhfs === 0) asstText += `Todos os alunos estão alinhados em ${disciplinasProfessor.join(', ') || 'Geral'}.`;
 
-            <!-- VISTA 4: FÓRUNS -->
-            <div id="view-prof-forum" style="display: none; flex-direction:column;">
-                <h2 style="font-size: 1.3rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-comments"></i> Comunicação</h2>
-                
-                <div id="prof-forum-channel-list"></div>
-                
-                <div id="prof-forum-chat-view" style="display: none; flex-direction: column; height: 70vh; background: var(--bg-card); border: 1px solid #333; border-radius: 12px; overflow: hidden;">
-                    <div style="background: #222; padding: 15px; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 15px;">
-                        <button id="btn-prof-voltar-canais" class="icon-btn" style="color:var(--primary-green);"><i class="fa-solid fa-arrow-left"></i></button>
-                        <h3 id="prof-chat-active-title" style="color: white; margin:0; font-size:1.1rem;">Chat</h3>
-                    </div>
-                    <div id="prof-chat-messages-container" class="forum-messages" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:10px;"></div>
-                    <div class="forum-input-area">
-                        <input type="text" id="prof-input-forum-msg" class="input-padrao" placeholder="Escreve uma mensagem...">
-                        <button id="btn-prof-send-msg" class="forum-send-btn"><i class="fa-solid fa-paper-plane"></i></button>
-                    </div>
-                </div>
-            </div>
+        document.getElementById('assistente-aula-texto').innerHTML = asstText; listC.innerHTML = htmlAlunos;
+    } catch (e) { listC.innerHTML = '<p class="text-danger center">Erro a processar turma.</p>'; }
+}
 
-            <!-- VISTA 5: PERFIL -->
-            <div id="view-prof-perfil" style="display: none;">
-                <div class="card" style="text-align: center;">
-                    <div style="position:relative; width: 100px; height: 100px; margin: 0 auto 15px auto;">
-                        <img id="prof-avatar-img" src="https://ui-avatars.com/api/?name=Prof&background=333&color=fff" style="width:100%; height:100%; border-radius:50%; object-fit:cover; border: 3px solid #777;">
-                    </div>
-                    <h3 id="perfil-nome-prof-view" style="margin-bottom: 5px; font-size: 1.3rem;">A carregar...</h3>
-                    <p style="color: var(--primary-green); font-size: 0.9rem; font-weight: bold; margin-bottom: 15px;">Professor da Turma PRO</p>
-                    
-                    <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px dashed #333; text-align: left; margin-top: 20px;">
-                        <strong style="color: white; font-size: 0.9rem;"><i class="fa-solid fa-book-open"></i> As Minhas Disciplinas:</strong>
-                        <p id="perfil-disciplinas-lista" style="color: var(--text-muted); font-size: 0.85rem; margin-top: 5px;">...</p>
-                    </div>
+// ==========================================
+// 5. PERFIL 360 DO ALUNO (ESTATÍSTICAS)
+// ==========================================
+async function abrirPerfil360Aluno(alunoId) {
+    alunoSelecionadoId = alunoId; const al = alunosTurmaRAM.find(a => a.id === alunoId); if (!al) return;
+    document.getElementById('p-aluno-nome').innerText = al.nome; document.getElementById('p-aluno-foto').src = al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=333&color=fff`; document.getElementById('p-aluno-academia').innerText = al.academia ? ACADEMIAS_INFO[al.academia].nome : 'Sem Academia';
 
-                    <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px dashed #333; text-align: left; margin-top: 15px;">
-                        <strong style="color: white; font-size: 0.9rem;"><i class="fa-solid fa-user-shield"></i> Permissões Ativas:</strong>
-                        <p id="perfil-papeis-lista" style="color: var(--warning-yellow); font-size: 0.85rem; margin-top: 5px;">...</p>
-                    </div>
-                </div>
-            </div>
+    let fCount = 0; let pCount = 0; let notasData = [];
+    try {
+        const fS = await getDocs(collection(db, "utilizadores", alunoId, "faltas")); 
+        fS.forEach(f => { if(!f.data().justificada && disciplinasProfessor.includes(f.data().disciplina)) fCount++; });
+        const pS = await getDocs(collection(db, "utilizadores", alunoId, "prhfs")); 
+        pS.forEach(p => { if(p.data().status !== 'concluida' && disciplinasProfessor.includes(p.data().disciplina)) pCount++; });
+        const nS = await getDocs(collection(db, "utilizadores", alunoId, "notas"));
+        nS.forEach(n => { if(disciplinasProfessor.includes(n.data().disciplina)) { notasData.push({ modulo: `Mod ${n.data().modulo}`, valor: isNaN(n.data().nota) ? 0 : Number(n.data().nota) }); } });
+        notasData.sort((a,b) => a.modulo.localeCompare(b.modulo));
 
-            <!-- ============================================== -->
-            <!-- MODAIS DE AÇÃO                                 -->
-            <!-- ============================================== -->
+        if (myRoles.includes('diretor_turma')) {
+            document.getElementById('area-obs-dt').style.display = 'block'; document.getElementById('btn-justificar-faltas').style.display = fCount > 0 ? 'block' : 'none';
+            const rS = await getDoc(doc(db, "utilizadores", alunoId, "reunioes", "1_avaliacao"));
+            if (rS.exists() && rS.data().global) { document.getElementById('p-aluno-obs-dt').value = rS.data().global; } else { document.getElementById('p-aluno-obs-dt').value = ''; }
+        }
+    } catch (e) {}
 
-            <!-- MODAL: PERFIL DO ALUNO -->
-            <div id="modal-perfil-aluno" class="modal-overlay" style="z-index: 2000;">
-                <div class="action-sheet" style="max-width: 500px; height: 85vh; padding: 0; display: flex; flex-direction: column;">
-                    <div style="background: #222; padding: 15px; border-radius: 16px 16px 0 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333;">
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <img id="p-aluno-foto" src="" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
-                            <div>
-                                <h3 id="p-aluno-nome" style="color: white; margin: 0; font-size: 1.1rem;">Nome Aluno</h3>
-                                <span id="p-aluno-academia" style="font-size: 0.75rem; color: var(--primary-green);">Academia</span>
-                            </div>
-                        </div>
-                        <button class="fechar-modal" data-target="modal-perfil-aluno" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
-                    </div>
-                    <div style="flex:1; overflow-y:auto; padding: 15px;">
-                        <h4 style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px; text-transform:uppercase;">Estatísticas na Tua Disciplina</h4>
-                        <div style="display:flex; justify-content:space-between; margin-bottom: 20px; text-align:center;">
-                            <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; margin-right:5px;"><strong id="p-aluno-faltas" style="font-size:1.2rem; color:var(--danger-red);">0</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">Faltas Injus.</span></div>
-                            <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; margin-right:5px;"><strong id="p-aluno-prhfs" style="font-size:1.2rem; color:#00d2ff;">0</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">PRHFs Ativos</span></div>
-                            <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px;"><strong id="p-aluno-notas" style="font-size:1.2rem; color:var(--warning-yellow);">0</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">Mód. Feitos</span></div>
-                        </div>
-                        <div style="background: rgba(0,0,0,0.2); border: 1px solid #333; border-radius: 8px; padding: 10px; margin-bottom: 20px;">
-                            <canvas id="chartEvolucaoAluno" height="120"></canvas>
-                        </div>
-                        <button id="btn-dar-positiva" class="primary-btn" style="width:100%; margin-bottom:10px; background:var(--success-green);"><i class="fa-solid fa-star"></i> Ocorrência Positiva</button>
-                        <button id="btn-dar-negativa" class="secondary-btn" style="width:100%; margin-bottom:10px; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-triangle-exclamation"></i> Ocorrência Negativa</button>
-                        <button id="btn-justificar-faltas" class="secondary-btn" style="width:100%; margin-bottom:20px; border-color:#00d2ff; color:#00d2ff; display:none;"><i class="fa-solid fa-clipboard-check"></i> Justificar Todas as Faltas</button>
-                        <div id="area-obs-dt" style="display:none;">
-                            <h4 style="font-size:0.9rem; color:white; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apreciação do DT (Intercalar/Final)</h4>
-                            <textarea id="p-aluno-obs-dt" class="input-padrao" placeholder="Observações do DT..." style="min-height:80px; width:100%; margin-bottom:10px;"></textarea>
-                            <button id="btn-salvar-obs-dt" class="primary-btn small-btn" style="width:100%;">Gravar Observação</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    document.getElementById('p-aluno-faltas').innerText = fCount; document.getElementById('p-aluno-prhfs').innerText = pCount; document.getElementById('p-aluno-notas').innerText = notasData.length;
 
-            <!-- MODAL: CRIAR PRHF (ATUALIZADO) -->
-            <div id="modal-criar-prhf" class="modal-overlay" style="z-index: 2000;">
-                <div class="action-sheet" style="max-width: 450px; padding: 20px; max-height: 90vh; overflow-y:auto;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                        <h3 style="color: white; margin:0;"><i class="fa-solid fa-file-medical" style="color:var(--danger-red);"></i> Novo PRHF</h3>
-                        <button class="fechar-modal" data-target="modal-criar-prhf" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
-                    </div>
-                    
-                    <div id="erro-modal-prhf" style="color: var(--danger-red); font-size: 0.85rem; display: none; margin-bottom: 10px; text-align: center;"></div>
-                    
-                    <select id="prhf-turma" class="input-padrao" style="width:100%; margin-bottom:10px;"><option value="">Selecione a Turma</option></select>
-                    <select id="prhf-aluno" class="input-padrao" style="width:100%; margin-bottom:10px;"><option value="">Selecione primeiro a Turma</option></select>
-                    <div style="display:flex; gap:10px; margin-bottom:10px;">
-                        <select id="prhf-disciplina" class="input-padrao" style="flex:2; margin:0;"></select>
-                        <input type="number" id="prhf-modulo" class="input-padrao" placeholder="Módulo (Ex: 1)" style="flex:1; margin:0;" min="1">
-                    </div>
-                    <div style="display:flex; gap:10px; margin-bottom:10px;">
-                        <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Horas Totais em Falta</label><input type="number" id="prhf-horas-totais" class="input-padrao" placeholder="Ex: 15" style="width:100%; margin:0;" min="1"></div>
-                        <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Horas Presenciais (Auto)</label><input type="number" id="prhf-horas-presenciais" class="input-padrao" placeholder="50%" style="width:100%; margin:0; background:rgba(255,255,255,0.05);" readonly></div>
-                    </div>
-                    <div style="margin-bottom:15px;">
-                        <label style="font-size:0.75rem; color:var(--text-muted);">Data Limite de Conclusão</label>
-                        <input type="date" id="prhf-prazo" class="input-padrao" style="width:100%; margin:0;">
-                    </div>
-                    <textarea id="prhf-descricao" class="input-padrao" placeholder="Instruções para o aluno (Ex: Resolver ficha anexa e entregar...)" style="width:100%; min-height:80px; margin-bottom:15px;"></textarea>
-                    
-                    <div id="prhf-upload-area" style="padding: 15px 10px; margin-bottom:15px; border:1px dashed var(--danger-red); background:rgba(255,77,77,0.05); text-align:center; border-radius:8px; cursor:pointer;" onclick="document.getElementById('prhf-file').click();">
-                        <i class="fa-solid fa-paperclip" style="font-size:1.5rem; color:var(--danger-red); margin-bottom:5px;"></i>
-                        <h4 style="color:white; margin-bottom:5px; font-size:0.9rem;">Anexar Ficha / Teste</h4>
-                        <span id="prhf-file-name" style="font-size:0.75rem; color:var(--text-muted);">Toca para PDF ou Imagem</span>
-                    </div>
-                    <input type="file" id="prhf-file" style="display:none;" accept=".pdf,.doc,.docx,.jpg,.png">
-                    <button id="btn-gravar-novo-prhf" class="primary-btn" style="width:100%; background:var(--danger-red);"><i class="fa-solid fa-paper-plane"></i> Atribuir PRHF</button>
-                </div>
-            </div>
+    const ctx = document.getElementById('chartEvolucaoAluno').getContext('2d');
+    if(chartEvolucao) chartEvolucao.destroy();
+    chartEvolucao = new Chart(ctx, {
+        type: 'line', data: { labels: notasData.length > 0 ? notasData.map(n => n.modulo) : ['Sem Avaliação'], datasets: [{ label: 'Evolução', data: notasData.length > 0 ? notasData.map(n => n.valor) : [0], borderColor: '#00cc88', backgroundColor: 'rgba(0, 204, 136, 0.2)', borderWidth: 2, fill: true, tension: 0.3 }] },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 20, grid: { color: '#333' } }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } }
+    });
 
-            <!-- MODAL: CONCLUIR PRHF (SEM XP) -->
-            <div id="modal-concluir-prhf" class="modal-overlay" style="z-index: 2001;">
-                <div class="action-sheet" style="max-width: 400px; padding: 20px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                        <h3 style="color: var(--success-green); margin:0;"><i class="fa-solid fa-clipboard-check"></i> Fechar PRHF</h3>
-                        <button class="fechar-modal" data-target="modal-concluir-prhf" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
-                    </div>
-                    <input type="hidden" id="conc-aluno-id" value="">
-                    <input type="hidden" id="conc-prhf-id" value="">
-                    <p style="font-size:0.9rem; color:white; margin-bottom:10px;">O aluno cumpriu com sucesso os objetivos deste Plano de Recuperação?</p>
-                    <textarea id="conc-motivo" class="input-padrao" placeholder="Deixa um pequeno feedback final (Opcional)..." style="width:100%; min-height:60px; margin-bottom:15px;"></textarea>
-                    <button id="btn-confirmar-conclusao-prhf" class="primary-btn" style="width:100%; background:var(--success-green);">Aprovar e Fechar Plano</button>
-                </div>
-            </div>
+    document.getElementById('modal-perfil-aluno').style.display = 'flex';
+}
 
-            <!-- MODAL: MARCAR FALTAS (ATUALIZADO) -->
-            <div id="modal-marcar-faltas" class="modal-overlay" style="z-index: 2000;">
-                <div class="action-sheet" style="max-width: 400px; max-height: 85vh; padding: 15px; display: flex; flex-direction: column;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                        <h3 style="color: white; margin:0;"><i class="fa-solid fa-user-xmark" style="color:var(--danger-red);"></i> Faltas à Disciplina</h3>
-                        <button class="fechar-modal" data-target="modal-marcar-faltas" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
-                    </div>
-                    
-                    <!-- MENSAGEM DE ERRO SUAVE -->
-                    <div id="erro-modal-faltas" style="color: var(--danger-red); font-size: 0.85rem; display: none; margin-bottom: 10px; text-align: center;"></div>
-                    
-                    <div style="margin-bottom: 15px;">
-                        <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 5px;">Selecione a Aula</label>
-                        <select id="falta-aula-select" class="input-padrao" style="width: 100%; margin:0;">
-                            <!-- Preenchido via JS com as aulas do professor -->
-                        </select>
-                    </div>
-                    
-                    <div style="display:flex; gap:10px; margin-bottom: 15px;">
-                        <button id="btn-todos-presentes" class="secondary-btn small-btn" style="flex:1; margin:0; border-color:var(--success-green); color:var(--success-green);">Todos Presentes</button>
-                    </div>
-                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Desmarca os alunos que <strong>faltaram</strong> à aula selecionada:</p>
-                    <div id="lista-metralhadora-faltas" style="flex:1; overflow-y:auto; border: 1px solid #333; border-radius:8px; padding:5px;"></div>
-                    
-                    <button id="btn-confirmar-faltas" class="primary-btn" style="margin-top:15px; width:100%; background:var(--danger-red);">Gravar Faltas</button>
-                </div>
-            </div>
+// ==========================================
+// 6. GESTÃO DE TAREFAS E FÓRUM
+// ==========================================
+async function carregarTarefasProf() {
+    const isPRHFTab = document.getElementById('tab-tarefas-prhf').classList.contains('active');
+    if (isPRHFTab) {
+        const container = document.getElementById('lista-prhfs-professor'); container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A procurar PRHFs...</p>';
+        if (turmasProfessor.length === 0) { container.innerHTML = '<p class="text-muted center">Sem turmas.</p>'; return; }
+        try {
+            let todosAlunos = []; for (const t of turmasProfessor) { const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); snap.forEach(d => todosAlunos.push({ id: d.id, ...d.data() })); }
+            let todosPrhfs = []; for (const al of todosAlunos) { const pSnap = await getDocs(collection(db, "utilizadores", al.id, "prhfs")); pSnap.forEach(p => todosPrhfs.push({ id: p.id, alunoId: al.id, alunoNome: al.nome, turma: al.turma, alunoXP: al.xp || 0, ...p.data() })); }
+            
+            todosPrhfs.sort((a,b) => new Date(a.prazo) - new Date(b.prazo)); 
+            let pendentes = todosPrhfs.filter(p => p.status !== 'concluida' && disciplinasProfessor.includes(p.disciplina));
+            
+            let h = ''; if (pendentes.length === 0) { h = `<div style="padding:15px; border:1px dashed var(--success-green); border-radius:8px; text-align:center;"><p style="color:var(--success-green); font-size:0.9rem; margin:0;">Não há Planos de Recuperação na tua matéria.</p></div>`; }
+            pendentes.forEach(p => {
+                let acoesProposta = '';
+                if (p.propostaAluno && p.propostaLidaDT === false) { acoesProposta = `<div style="background:rgba(255,204,0,0.1); border:1px dashed var(--warning-yellow); padding:10px; border-radius:8px; margin-top:10px;"><strong style="color:var(--warning-yellow); font-size:0.85rem;"><i class="fa-solid fa-clock"></i> Proposta de Agendamento:</strong><p style="font-size:0.85rem; color:white; margin:5px 0;">${p.propostaAluno}</p><div style="display:flex; gap:10px; margin-top:10px;"><button class="primary-btn small-btn btn-aceitar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1; background:var(--success-green);"><i class="fa-solid fa-check"></i> Aceitar</button><button class="secondary-btn small-btn btn-rejeitar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-xmark"></i> Rejeitar</button></div></div>`; } 
+                else if (p.propostaAluno && p.propostaLidaDT === true) { acoesProposta = `<div style="margin-top:10px; font-size:0.8rem; color:var(--success-green);"><i class="fa-solid fa-calendar-check"></i> Sessão Agendada</div>`; }
+                h += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #00d2ff;"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><strong style="color:white; font-size:1.05rem;">${p.alunoNome} <span style="font-size:0.75rem; color:var(--text-muted);">(${p.turma})</span></strong><div style="color:#00d2ff; font-weight:bold; font-size:0.9rem; margin-top:3px;">${p.disciplina} (Módulo ${p.modulo})</div></div><button class="btn-concluir-prhf" data-aluno="${p.alunoId}" data-prhf="${p.id}" data-xp="${p.alunoXP}" style="background:var(--bg-dark); border:1px solid var(--success-green); color:var(--success-green); padding:5px 10px; border-radius:6px; cursor:pointer; font-size:0.8rem;"><i class="fa-solid fa-clipboard-check"></i> Concluir</button></div><p style="font-size:0.85rem; color:var(--text-light); margin:10px 0;">${p.descricao}</p><div style="font-size:0.8rem; color:var(--text-muted);">Prazo: <strong style="color:white;">${p.prazo.split('-').reverse().join('/')}</strong> | Horas: <strong>${p.horasPresenciais}h</strong></div>${acoesProposta}</div>`;
+            }); 
+            container.innerHTML = h;
+        } catch (e) { container.innerHTML = '<p class="text-danger center">Erro a carregar PRHFs.</p>'; }
+    } else {
+        const container = document.getElementById('lista-passaportes-professor'); container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar passaportes...</p>';
+        try {
+            let todosAlunos = []; for (const t of turmasProfessor) { const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); snap.forEach(d => todosAlunos.push({ id: d.id, ...d.data() })); }
+            let h = '';
+            todosAlunos.forEach(al => {
+                let fctHtml = ''; if (al.fct && al.fct.horasRealizadas > 0) { if (al.fct.validadoDT) { fctHtml = `<span style="color:var(--success-green); font-size:0.8rem;"><i class="fa-solid fa-check-double"></i> ${al.fct.horasRealizadas}h Validadas</span>`; } else { let btnValidar = myRoles.includes('coordenador') ? `<button class="primary-btn small-btn btn-validar-fct" data-id="${al.id}" style="width:auto; padding:4px 10px;">Validar</button>` : `<span style="font-size:0.75rem; color:var(--text-muted);">A aguardar Coord.</span>`; fctHtml = `<div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:var(--warning-yellow); font-size:0.8rem;">${al.fct.horasRealizadas}h declaradas</span> ${btnValidar}</div>`; } } else { fctHtml = `<span style="color:var(--text-muted); font-size:0.8rem;">Sem registos FCT.</span>`; }
+                let papHtml = ''; if (al.papFicheiroEnviado && al.papFicheiroBase64) { if (myRoles.includes('orientador_pap') || myRoles.includes('diretor_turma')) { papHtml = `<a href="${al.papFicheiroBase64}" download="PAP_${al.nome.replace(/\s+/g, '_')}" class="secondary-btn small-btn" style="color:#0099ff; border-color:#0099ff; display:inline-block; text-align:center;"><i class="fa-solid fa-download"></i> Baixar Relatório</a>`; } else { papHtml = `<span style="color:var(--success-green); font-size:0.8rem;"><i class="fa-solid fa-check"></i> Relatório submetido</span>`; } } else if (al.pap && al.pap.tema) { papHtml = `<span style="color:var(--text-light); font-size:0.8rem;">Tema: ${al.pap.tema} (Pendente)</span>`; } else { papHtml = `<span style="color:var(--text-muted); font-size:0.8rem;">Sem registos PAP.</span>`; }
+                if (fctHtml.includes('declaradas') || fctHtml.includes('Validadas') || papHtml.includes('Tema') || papHtml.includes('Baixar') || papHtml.includes('submetido')) { h += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #ff9900;"><strong style="color:white; font-size:1.05rem;">${al.nome} <span style="font-size:0.75rem; color:var(--text-muted);">(${al.turma})</span></strong><div style="margin-top:10px; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px dashed #333;"><strong style="font-size:0.85rem; color:white;"><i class="fa-solid fa-briefcase" style="color:var(--primary-green);"></i> FCT (Estágio)</strong><div style="margin-top:5px;">${fctHtml}</div></div><div style="margin-top:10px; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px dashed #333;"><strong style="font-size:0.85rem; color:white;"><i class="fa-solid fa-laptop-code" style="color:#0099ff;"></i> Projeto de Aptidão Profissional (PAP)</strong><div style="margin-top:5px;">${papHtml}</div></div></div>`; }
+            }); 
+            container.innerHTML = h === '' ? '<p class="text-muted center">Nenhum aluno submeteu horas.</p>' : h;
+        } catch (e) { container.innerHTML = '<p class="text-danger center">Erro ao carregar passaportes.</p>'; }
+    }
+}
 
-            <!-- OUTROS MODAIS MANTIDOS INTACTOS -->
-            <div id="modal-ocorrencia" class="modal-overlay" style="z-index: 2001;"><div class="action-sheet" style="max-width: 400px; padding: 20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 id="oco-titulo" style="color: white; margin:0;">Registar Ocorrência</h3><button class="fechar-modal" data-target="modal-ocorrencia" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><input type="hidden" id="oco-tipo" value=""><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">O aluno será notificado.</p><textarea id="oco-motivo" class="input-padrao" placeholder="Descreve o motivo..." style="width:100%; min-height:80px; margin-bottom:15px;"></textarea><button id="btn-gravar-ocorrencia" class="primary-btn" style="width:100%;">Confirmar Registo</button></div></div>
-            <div id="modal-rejeitar-prhf" class="modal-overlay" style="z-index: 2001;"><div class="action-sheet" style="max-width: 400px; padding: 20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color: var(--danger-red); margin:0;"><i class="fa-solid fa-ban"></i> Rejeitar Proposta</h3><button class="fechar-modal" data-target="modal-rejeitar-prhf" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><input type="hidden" id="rej-aluno-id" value=""><input type="hidden" id="rej-prhf-id" value=""><textarea id="rej-motivo" class="input-padrao" placeholder="Motivo da rejeição..." style="width:100%; min-height:80px; margin-bottom:15px;"></textarea><button id="btn-confirmar-rejeicao" class="primary-btn" style="width:100%; background:var(--danger-red);">Rejeitar Agendamento</button></div></div>
-            <div id="modal-lancamento-notas" class="modal-overlay" style="z-index: 2000;"><div class="action-sheet" style="max-width: 450px; max-height: 85vh; padding: 15px; display: flex; flex-direction: column;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color: white; margin:0;"><i class="fa-solid fa-star" style="color:var(--warning-yellow);"></i> Lançar Avaliações</h3><button class="fechar-modal" data-target="modal-lancamento-notas" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><div id="erro-modal-notas" style="color: var(--danger-red); font-size: 0.85rem; display: none; margin-bottom: 10px; text-align: center;"></div><div style="display:flex; gap:10px; margin-bottom: 10px;"><select id="lancar-nota-disciplina" class="input-padrao" style="flex:2; margin:0;"></select><input type="number" id="lancar-nota-modulo" class="input-padrao" placeholder="Módulo (Ex: 1)" style="flex:1; margin:0;" min="1"></div><p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px;">Usa <strong>REP</strong> para reprovado.</p><div id="grid-notas-alunos" style="flex:1; overflow-y:auto; border: 1px solid #333; border-radius:8px; padding:5px; display:flex; flex-direction:column; gap:5px;"></div><button id="btn-confirmar-notas" class="primary-btn" style="margin-top:15px; width:100%; background:var(--warning-yellow); color:black;"><i class="fa-solid fa-save"></i> Gravar Notas</button></div></div>
-            <div id="modal-agendar-evento" class="modal-overlay" style="z-index: 2000;"><div class="action-sheet" style="max-width: 400px;"><h3 style="margin-bottom: 15px; color: white;"><i class="fa-solid fa-calendar-plus" style="color:#b82bf2;"></i> Agendar</h3><input type="text" id="evento-titulo" class="input-padrao" placeholder="Título (Ex: Teste Escrito)" style="width:100%; margin-bottom:10px;"><div style="display:flex; gap:10px; margin-bottom:10px;"><input type="date" id="evento-data" class="input-padrao" style="flex:1; margin:0;"><select id="evento-tipo" class="input-padrao" style="flex:1; margin:0;"><option value="avaliacao">Avaliação / Teste</option><option value="entrega">Entrega Trabalho</option><option value="outro">Outro Evento</option></select></div><div style="display:flex; gap:10px; margin-top: 15px;"><button class="secondary-btn fechar-modal" data-target="modal-agendar-evento" style="flex:1;">Cancelar</button><button id="btn-gravar-evento" class="primary-btn" style="flex:1;">Agendar</button></div></div></div>
-            <div id="modal-materiais" class="modal-overlay" style="z-index: 2001;"><div class="action-sheet" style="max-width: 450px; padding: 20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color: #0099ff; margin:0;"><i class="fa-solid fa-book-open"></i> Enviar Material</h3><button class="fechar-modal" data-target="modal-materiais" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><input type="text" id="mat-titulo" class="input-padrao" placeholder="Título (Ex: Ficha 3)" style="width:100%; margin-bottom:10px;"><select id="mat-disciplina" class="input-padrao" style="width:100%; margin-bottom:15px;"></select><div id="mat-upload-area" style="padding: 20px 10px; margin-bottom:15px; border:1px dashed #0099ff; background:rgba(0,153,255,0.05); text-align:center; border-radius:8px; cursor:pointer;" onclick="document.getElementById('mat-file').click();"><i class="fa-solid fa-cloud-arrow-up" style="font-size:2.2rem; color:#0099ff; margin-bottom:10px;"></i><h4 style="color:white; margin-bottom:5px; font-size:0.95rem;">Anexar Ficheiro</h4><span id="mat-file-name" style="font-size:0.75rem; color:var(--text-muted);">Toca para selecionar</span></div><input type="file" id="mat-file" style="display:none;" accept=".pdf,.doc,.docx,.jpg,.png,.zip"><button id="btn-gravar-material" class="primary-btn" style="width:100%; background:#0099ff;">Partilhar com a Turma</button></div></div>
-        </main>
+async function carregarForunsProf() {
+    const cont = document.getElementById('prof-forum-channel-list'); cont.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A procurar canais...</p>';
+    try {
+        let html = '<div class="forum-canais-grid">'; let encontrou = false;
+        for (const t of turmasProfessor) {
+            const snap = await getDocs(collection(db, "turmas", t, "foruns"));
+            snap.forEach(doc => { encontrou = true; const disc = doc.id; html += `<div class="canal-card" data-turma="${t}" data-disc="${disc}"><div class="canal-icon"><i class="fa-solid fa-chalkboard-user"></i></div><div class="canal-info" style="flex:1;"><h4>${disc}</h4><p>Turma ${t}</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`; });
+        }
+        html += '</div>';
+        if (!encontrou) { cont.innerHTML = '<p class="text-muted center" style="margin-top:20px;">Ainda não criaste nenhum canal de comunicação com as tuas turmas.</p>'; } else { cont.innerHTML = html; }
+    } catch (e) { cont.innerHTML = '<p class="text-danger center">Erro ao carregar os fóruns.</p>'; }
+}
 
-        <nav class="bottom-nav">
-            <a href="#" class="nav-item active" data-target="view-prof-dashboard"><i class="fa-solid fa-house"></i><span>Início</span></a>
-            <a href="#" class="nav-item" data-target="view-prof-turmas"><i class="fa-solid fa-users"></i><span>Turmas</span></a>
-            <a href="#" class="nav-item" data-target="view-prof-tarefas"><i class="fa-solid fa-inbox"></i><span>Tarefas</span></a>
-            <a href="#" class="nav-item" data-target="view-prof-forum"><i class="fa-regular fa-comments"></i><span>Fórum</span></a>
-            <a href="#" class="nav-item" data-target="view-prof-perfil"><i class="fa-solid fa-user-tie"></i><span>Perfil</span></a>
-        </nav>
-    </div>
+function abrirChatForum(turma, disciplina) {
+    activeChatTurma = turma; activeChatDisc = disciplina;
+    document.getElementById('prof-forum-channel-list').style.display = 'none'; document.getElementById('prof-forum-chat-view').style.display = 'flex'; document.getElementById('prof-chat-active-title').innerText = `${disciplina} (Turma ${turma})`;
+    const msgCont = document.getElementById('prof-chat-messages-container'); msgCont.innerHTML = '<p class="text-muted center">A carregar mensagens...</p>';
+    const q = query(collection(db, "turmas", turma, "foruns", disciplina, "mensagens"), orderBy("timestamp", "asc"));
+    if (chatUnsubscribe) chatUnsubscribe(); 
+    chatUnsubscribe = onSnapshot(q, (snapshot) => {
+        let h = '';
+        snapshot.forEach(doc => { const m = doc.data(); const d = new Date(m.timestamp); const hora = `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`; const isMe = m.papel === "professor"; 
+            if (isMe) { h += `<div class="chat-bubble admin"><strong>Eu</strong><br>${m.texto}<span class="chat-meta">${hora}</span></div>`; } 
+            else { h += `<div class="chat-bubble student"><strong style="color:var(--primary-green);">${m.autor}</strong><br>${m.texto}<span class="chat-meta">${hora}</span></div>`; }
+        });
+        if (h === '') h = '<p class="text-muted center" style="margin-top:20px;">Sê o primeiro a enviar uma mensagem!</p>';
+        msgCont.innerHTML = h; setTimeout(() => { msgCont.scrollTop = msgCont.scrollHeight; }, 100);
+    });
+}
 
-    <script type="module" src="./js/prof-app.js"></script>
-</body>
-</html>
+// ==========================================
+// 7. MÁQUINA DE CLIQUES (EVENT LISTENERS DE BOTÕES E NAVEGAÇÃO)
+// ==========================================
+function esconderTodasAsVistas() { document.querySelectorAll('.app-content > div').forEach(v => v.style.display = 'none'); }
+
+document.body.addEventListener('click', async (e) => {
+    // 7.1 NAVEGAÇÃO ENTRE ABAS INFERIORES
+    const nav = e.target.closest('.nav-item');
+    if (nav) {
+        e.preventDefault(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); nav.classList.add('active');
+        esconderTodasAsVistas(); const tId = nav.getAttribute('data-target'); document.getElementById(tId).style.display = (tId === 'view-prof-forum') ? 'flex' : 'block';
+        if (tId === 'view-prof-dashboard') carregarRadarProfessor();
+        if (tId === 'view-prof-turmas' && selectedTurma) analisarEAtualizarTurma(selectedTurma);
+        if (tId === 'view-prof-tarefas') carregarTarefasProf();
+        if (tId === 'view-prof-forum') { if (chatUnsubscribe) { chatUnsubscribe(); chatUnsubscribe = null; } document.getElementById('prof-forum-chat-view').style.display = 'none'; document.getElementById('prof-forum-channel-list').style.display = 'block'; carregarForunsProf(); }
+        return; // Pára aqui se for navegação
+    }
+
+    // 7.2 FECHAR MODAIS
+    if (e.target.closest('.fechar-modal')) { document.getElementById(e.target.closest('.fechar-modal').getAttribute('data-target')).style.display = 'none'; return; }
+
+    // 7.3 ABRIR PERFIL ALUNO
+    if (e.target.closest('.aluno-list-item')) { abrirPerfil360Aluno(e.target.closest('.aluno-list-item').getAttribute('data-id')); return; }
+
+    // 7.4 TABS DE TAREFAS (PRHF VS PASSAPORTE)
+    if (e.target.closest('#tab-tarefas-prhf')) { document.querySelectorAll('.falta-tab-btn').forEach(b => b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('sec-tarefas-prhf').style.display = 'block'; document.getElementById('sec-tarefas-passaporte').style.display = 'none'; carregarTarefasProf(); return; }
+    if (e.target.closest('#tab-tarefas-passaporte')) { document.querySelectorAll('.falta-tab-btn').forEach(b => b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('sec-tarefas-prhf').style.display = 'none'; document.getElementById('sec-tarefas-passaporte').style.display = 'block'; carregarTarefasProf(); return; }
+
+    // 7.5 FÓRUM AÇÕES
+    if (e.target.closest('.canal-card')) { const card = e.target.closest('.canal-card'); abrirChatForum(card.getAttribute('data-turma'), card.getAttribute('data-disc')); return; }
+    if (e.target.closest('#btn-prof-voltar-canais')) { if (chatUnsubscribe) { chatUnsubscribe(); chatUnsubscribe = null; } document.getElementById('prof-forum-chat-view').style.display = 'none'; document.getElementById('prof-forum-channel-list').style.display = 'block'; return; }
+    if (e.target.closest('#btn-prof-send-msg')) {
+        const msgInput = document.getElementById('prof-input-forum-msg'); const msg = msgInput.value.trim(); if (!msg || !activeChatTurma || !activeChatDisc) return;
+        try { await addDoc(collection(db, "turmas", activeChatTurma, "foruns", activeChatDisc, "mensagens"), { texto: msg, autor: myUserName, papel: "professor", timestamp: new Date().toISOString() }); msgInput.value = ''; } catch (err) { alert("Erro ao enviar."); }
+        return;
+    }
+
+    // 7.6 CRIAR E CONCLUIR PRHF
+    if (e.target.closest('#btn-novo-prhf')) {
+        document.getElementById('prhf-turma').innerHTML = '<option value="">-- Turma --</option>' + turmasProfessor.map(t => `<option value="${t}">${t}</option>`).join('');
+        document.getElementById('prhf-disciplina').innerHTML = disciplinasProfessor.length > 0 ? disciplinasProfessor.map(dc => `<option value="${dc}">${dc}</option>`).join('') : '<option value="">Sem Disciplina</option>';
+        document.getElementById('prhf-file').value = ''; prhfBase64 = null; document.getElementById('prhf-file-name').innerText = 'Toca para PDF ou Imagem';
+        document.getElementById('modal-criar-prhf').style.display = 'flex'; return;
+    }
+    if (e.target.closest('#btn-gravar-novo-prhf')) {
+        const tTurma = document.getElementById('prhf-turma').value; const tAluno = document.getElementById('prhf-aluno').value; const tDisc = document.getElementById('prhf-disciplina').value; const tMod = document.getElementById('prhf-modulo').value; const tPrazo = document.getElementById('prhf-prazo').value; const tHoras = document.getElementById('prhf-horas').value; const tDesc = document.getElementById('prhf-descricao').value.trim();
+        if (!tAluno || !tDisc || !tMod || !tPrazo || !tHoras || !tDesc) return alert("Preenche os campos obrigatórios!");
+        const b = e.target.closest('#btn-gravar-novo-prhf'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
+        try {
+            await addDoc(collection(db, "utilizadores", tAluno, "prhfs"), { disciplina: tDisc, modulo: Number(tMod), prazo: tPrazo, horasPresenciais: Number(tHoras), descricao: tDesc, status: 'pendente', dataCriacao: new Date().toISOString(), professor: myUserName, ficheiroBase64: prhfBase64 });
+            b.innerHTML = '<i class="fa-solid fa-check"></i> Atribuído'; setTimeout(() => { b.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Atribuir PRHF'; b.disabled = false; document.getElementById('modal-criar-prhf').style.display = 'none'; carregarTarefasProf(); analisarEAtualizarTurma(selectedTurma); }, 1500);
+        } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 1500); }
+        return;
+    }
+    if (e.target.closest('.btn-concluir-prhf')) {
+        const btn = e.target.closest('.btn-concluir-prhf'); document.getElementById('conc-aluno-id').value = btn.getAttribute('data-aluno'); document.getElementById('conc-prhf-id').value = btn.getAttribute('data-prhf'); document.getElementById('conc-aluno-xp').value = btn.getAttribute('data-xp'); document.getElementById('conc-motivo').value = ''; document.getElementById('modal-concluir-prhf').style.display = 'flex'; return;
+    }
+    if (e.target.closest('#btn-confirmar-conclusao-prhf')) {
+        const aId = document.getElementById('conc-aluno-id').value; const pId = document.getElementById('conc-prhf-id').value; const currXP = parseInt(document.getElementById('conc-aluno-xp').value) || 0; const feedback = document.getElementById('conc-motivo').value.trim() || "Concluído com sucesso.";
+        const b = e.target.closest('#btn-confirmar-conclusao-prhf'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
+        try { 
+            await updateDoc(doc(db, "utilizadores", aId, "prhfs", pId), { status: 'concluida', feedbackProfessor: feedback }); await updateDoc(doc(db, "utilizadores", aId), { xp: currXP + 100 }); 
+            b.innerHTML = '<i class="fa-solid fa-check"></i> Aprovado'; setTimeout(() => { b.innerHTML = 'Aprovar Plano (+100 XP)'; b.disabled = false; document.getElementById('modal-concluir-prhf').style.display = 'none'; carregarTarefasProf(); analisarEAtualizarTurma(selectedTurma); }, 1500);
+        } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 1500); }
+        return;
+    }
+
+    // 7.7 REJEITAR OU ACEITAR PROPOSTA PRHF
+    if (e.target.closest('.btn-rejeitar-proposta')) { const btn = e.target.closest('.btn-rejeitar-proposta'); document.getElementById('rej-aluno-id').value = btn.getAttribute('data-aluno'); document.getElementById('rej-prhf-id').value = btn.getAttribute('data-prhf'); document.getElementById('rej-motivo').value = ''; document.getElementById('modal-rejeitar-prhf').style.display = 'flex'; return; }
+    if (e.target.closest('#btn-confirmar-rejeicao')) {
+        const aId = document.getElementById('rej-aluno-id').value; const pId = document.getElementById('rej-prhf-id').value; const feedback = document.getElementById('rej-motivo').value.trim(); if (!feedback) return alert("Indica o motivo.");
+        const b = e.target.closest('#btn-confirmar-rejeicao'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
+        try { await updateDoc(doc(db, "utilizadores", aId, "prhfs", pId), { propostaLidaDT: true, propostaAluno: null, feedbackProfessor: "Rejeitada: " + feedback }); b.innerHTML = '<i class="fa-solid fa-check"></i> Rejeitado'; setTimeout(() => { b.innerHTML = 'Rejeitar Agendamento'; b.disabled = false; document.getElementById('modal-rejeitar-prhf').style.display = 'none'; carregarTarefasProf(); }, 1500); } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 1500); }
+        return;
+    }
+    if (e.target.closest('.btn-aceitar-proposta')) {
+        const btn = e.target.closest('.btn-aceitar-proposta'); const aId = btn.getAttribute('data-aluno'); const pId = btn.getAttribute('data-prhf'); btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
+        try { await updateDoc(doc(db, "utilizadores", aId, "prhfs", pId), { propostaLidaDT: true, feedbackProfessor: "Proposta Aceite! Comparece no dia/hora combinados." }); carregarTarefasProf(); } catch (err) {}
+        return;
+    }
+
+    // 7.8 FALTAS, NOTAS, AGENDA, MATERIAIS
+    if (e.target.closest('#btn-modal-faltas')) {
+        if (!selectedTurma || alunosTurmaRAM.length === 0) return alert("Seleciona uma turma primeiro.");
+        const c = document.getElementById('lista-metralhadora-faltas'); let h = '';
+        document.getElementById('falta-disciplina-select').innerHTML = disciplinasProfessor.map(dc => `<option value="${dc}">${dc}</option>`).join('');
+        alunosTurmaRAM.forEach(al => { h += `<label style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(255,255,255,0.05); margin-bottom:5px; border-radius:8px; border:1px solid #333; cursor:pointer;"><span style="color:white; font-size:0.95rem;">${al.nome}</span><input type="checkbox" class="chk-presente" value="${al.id}" checked></label>`; });
+        c.innerHTML = h; document.getElementById('falta-horas-bloco').value = ''; document.getElementById('modal-marcar-faltas').style.display = 'flex'; return;
+    }
+    if (e.target.closest('#btn-todos-presentes')) { e.preventDefault(); document.querySelectorAll('.chk-presente').forEach(c => c.checked = true); return; }
+    if (e.target.closest('#btn-confirmar-faltas')) {
+        const horas = document.getElementById('falta-horas-bloco').value; const disc = document.getElementById('falta-disciplina-select').value; if (!horas || !disc) return alert("Preenche todos os campos!");
+        const b = e.target.closest('#btn-confirmar-faltas'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
+        const ausentes = document.querySelectorAll('.chk-presente:not(:checked)');
+        for (const chk of ausentes) { await addDoc(collection(db, "utilizadores", chk.value, "faltas"), { disciplina: disc, horas: Number(horas), dataInicio: new Date().toISOString().split('T')[0], justificada: false, criadoPor: myUserName, criadoEm: new Date().toISOString() }); }
+        b.innerHTML = '<i class="fa-solid fa-check"></i> Gravado'; setTimeout(() => { b.innerHTML = 'Gravar Registo'; b.disabled = false; document.getElementById('modal-marcar-faltas').style.display = 'none'; analisarEAtualizarTurma(selectedTurma); }, 1500); return;
+    }
+
+    if (e.target.closest('#btn-modal-notas')) {
+        if (!selectedTurma || alunosTurmaRAM.length === 0) return alert("Seleciona turma primeiro.");
+        document.getElementById('lancar-nota-disciplina').innerHTML = disciplinasProfessor.map(dc => `<option value="${dc}">${dc}</option>`).join(''); document.getElementById('lancar-nota-modulo').value = '';
+        const grid = document.getElementById('grid-notas-alunos'); let h = '';
+        alunosTurmaRAM.forEach(al => { h += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(255,255,255,0.05); border-radius:8px; border:1px solid #333;"><div style="display:flex; align-items:center; gap:10px;"><img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=333&color=fff`}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"><span style="color:white; font-size:0.9rem;">${al.nome}</span></div><input type="text" class="input-nota-aluno input-padrao" data-id="${al.id}" placeholder="Nota" style="width:70px; text-align:center; padding:5px; margin:0; text-transform:uppercase;"></div>`; });
+        grid.innerHTML = h; document.getElementById('modal-lancamento-notas').style.display = 'flex'; return;
+    }
+    if (e.target.closest('#btn-confirmar-notas')) {
+        const disc = document.getElementById('lancar-nota-disciplina').value; const mod = document.getElementById('lancar-nota-modulo').value; if (!disc || !mod) return alert("Preenche a Disciplina!");
+        const inputs = document.querySelectorAll('.input-nota-aluno'); let notasParaGravar = []; inputs.forEach(inp => { const v = inp.value.trim().toUpperCase(); if (v) notasParaGravar.push({ id: inp.getAttribute('data-id'), nota: v }); });
+        if (notasParaGravar.length === 0) return alert("Não inseriste notas.");
+        const b = e.target.closest('#btn-confirmar-notas'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
+        try {
+            for (const n of notasParaGravar) {
+                await addDoc(collection(db, "utilizadores", n.id, "notas"), { disciplina: disc, modulo: Number(mod), nota: n.nota, data: new Date().toISOString(), professor: myUserName });
+                if (n.nota !== 'REP' && !isNaN(n.nota) && Number(n.nota) >= 10) { const uS = await getDoc(doc(db, "utilizadores", n.id)); if(uS.exists()) await updateDoc(doc(db, "utilizadores", n.id), { xp: (uS.data().xp || 0) + 20 }); }
+            }
+            b.innerHTML = '<i class="fa-solid fa-check"></i> Gravadas'; setTimeout(() => { b.innerHTML = '<i class="fa-solid fa-save"></i> Gravar Notas'; b.disabled = false; document.getElementById('modal-lancamento-notas').style.display = 'none'; analisarEAtualizarTurma(selectedTurma); }, 1500);
+        } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 1500); }
+        return;
+    }
+
+    if (e.target.closest('#btn-modal-materiais')) {
+        if (!selectedTurma) return alert("Seleciona turma primeiro.");
+        document.getElementById('mat-titulo').value = ''; document.getElementById('mat-disciplina').innerHTML = disciplinasProfessor.length > 0 ? disciplinasProfessor.map(dc => `<option value="${dc}">${dc}</option>`).join('') : '<option value="">Geral</option>';
+        document.getElementById('mat-file').value = ''; materialBase64 = null; document.getElementById('mat-file-name').innerText = 'Toca para selecionar PDF'; document.getElementById('modal-materiais').style.display = 'flex'; return;
+    }
+    if (e.target.closest('#btn-gravar-material')) {
+        const tit = document.getElementById('mat-titulo').value.trim(); const disc = document.getElementById('mat-disciplina').value; if (!tit) return alert("Título em falta.");
+        const b = e.target.closest('#btn-gravar-material'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
+        try { await addDoc(collection(db, "turmas", selectedTurma, "sumarios"), { titulo: tit, disciplina: disc, professor: myUserName, data: new Date().toLocaleDateString('pt-PT'), descricao: materialBase64 ? "Ficheiro em anexo." : "Material partilhado pelo professor.", ficheiroBase64: materialBase64, timestamp: Date.now() }); b.innerHTML = '<i class="fa-solid fa-check"></i> Partilhado'; setTimeout(() => { b.innerHTML = 'Partilhar com a Turma'; b.disabled = false; document.getElementById('modal-materiais').style.display = 'none'; }, 1500); } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 1500); }
+        return;
+    }
+
+    if (e.target.closest('#btn-modal-agenda')) {
+        if (!selectedTurma) return alert("Seleciona turma primeiro.");
+        document.getElementById('evento-titulo').value = ''; document.getElementById('evento-data').value = ''; document.getElementById('modal-agendar-evento').style.display = 'flex'; return;
+    }
+    if (e.target.closest('#btn-gravar-evento')) {
+        const t = document.getElementById('evento-titulo').value.trim(); const d = document.getElementById('evento-data').value; const tp = document.getElementById('evento-tipo').value; if (!t || !d) return alert("Preenche Título e Data.");
+        const b = e.target.closest('#btn-gravar-evento'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
+        try { await addDoc(collection(db, "turmas", selectedTurma, "eventos"), { titulo: t, data: d, tipo: tp, professor: myUserName }); b.innerHTML = '<i class="fa-solid fa-check"></i> Agendado'; setTimeout(() => { b.innerHTML = 'Agendar'; b.disabled = false; document.getElementById('modal-agendar-evento').style.display = 'none'; carregarRadarProfessor(); analisarEAtualizarTurma(selectedTurma); }, 1500); } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 1500); }
+        return;
+    }
+
+    // 7.9 OCORRÊNCIAS
+    if (e.target.closest('#btn-dar-positiva')) { if (!alunoSelecionadoId) return; document.getElementById('oco-tipo').value = 'positiva'; document.getElementById('oco-titulo').innerHTML = '<i class="fa-solid fa-star" style="color:var(--success-green);"></i> Ocorrência Positiva'; document.getElementById('oco-motivo').value = ''; document.getElementById('btn-gravar-ocorrencia').style.background = 'var(--success-green)'; document.getElementById('modal-ocorrencia').style.display = 'flex'; return; }
+    if (e.target.closest('#btn-dar-negativa')) { if (!alunoSelecionadoId) return; document.getElementById('oco-tipo').value = 'negativa'; document.getElementById('oco-titulo').innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color:var(--danger-red);"></i> Ocorrência Negativa'; document.getElementById('oco-motivo').value = ''; document.getElementById('btn-gravar-ocorrencia').style.background = 'var(--danger-red)'; document.getElementById('modal-ocorrencia').style.display = 'flex'; return; }
+    if (e.target.closest('#btn-gravar-ocorrencia')) {
+        const tipo = document.getElementById('oco-tipo').value; const motivo = document.getElementById('oco-motivo').value.trim(); if (!motivo) return alert("Preenche o motivo!");
+        const b = e.target.closest('#btn-gravar-ocorrencia'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
+        try {
+            if (tipo === 'positiva') { const uS = await getDoc(doc(db, "utilizadores", alunoSelecionadoId)); let axp = uS.exists() && uS.data().xp ? uS.data().xp : 0; await addDoc(collection(db, "utilizadores", alunoSelecionadoId, "ocorrencias"), { titulo: "Reconhecimento Positivo", descricao: motivo, tipo: "positiva", autor: myUserName, timestamp: Date.now(), data: new Date().toLocaleDateString('pt-PT') }); await updateDoc(doc(db, "utilizadores", alunoSelecionadoId), { xp: axp + 50 }); } 
+            else { await addDoc(collection(db, "utilizadores", alunoSelecionadoId, "ocorrencias"), { titulo: "Registo de Aula", descricao: motivo, tipo: "negativa", autor: myUserName, timestamp: Date.now(), data: new Date().toLocaleDateString('pt-PT') }); }
+            b.innerHTML = '<i class="fa-solid fa-check"></i> Gravado'; setTimeout(() => { b.innerHTML = 'Confirmar Registo'; b.disabled = false; document.getElementById('modal-ocorrencia').style.display = 'none'; document.getElementById('modal-perfil-aluno').style.display = 'none'; analisarEAtualizarTurma(selectedTurma); }, 1500);
+        } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 1500); }
+        return;
+    }
+});
+
+// SELECTS MUDANÇA
+document.getElementById('prof-seletor-turmas')?.addEventListener('change', (e) => { selectedTurma = e.target.value; if (selectedTurma) { document.getElementById('turma-ativa-container').style.display = 'block'; analisarEAtualizarTurma(selectedTurma); } else { document.getElementById('turma-ativa-container').style.display = 'none'; } });
+document.getElementById('prhf-turma')?.addEventListener('change', async (e) => {
+    const s = document.getElementById('prhf-aluno'); const t = e.target.value; if (!t) { s.innerHTML = '<option value="">Selecione primeiro a Turma</option>'; return; }
+    s.innerHTML = '<option value="">A carregar...</option>';
+    try { const qS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); let arr = []; qS.forEach(d => arr.push({ id: d.id, nome: d.data().nome })); arr.sort((a,b) => a.nome.localeCompare(b.nome)); s.innerHTML = '<option value="">-- Selecione o Aluno --</option>' + arr.map(a => `<option value="${a.id}">${a.nome}</option>`).join(''); } catch (err) { s.innerHTML = '<option value="">Erro</option>'; }
+});
