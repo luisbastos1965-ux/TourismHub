@@ -8,7 +8,7 @@ try { await enableIndexedDbPersistence(db); console.log("Offline OK!"); } catch 
 
 let myUserId = "", myUserName = "", minhaTurma = "", myAcademia = "";
 let chartInstance = null; let alunoForumAtivoId = null; let chatUnsubscribeAluno = null; let pendingDeleteChatId = null; let pendingDeleteObjetivoId = null;
-let fQB64 = "";
+let fPB64 = "";
 
 window.timelineFilterCat = 'all'; window.notifFilterCat = 'all';
 let ahModo = 'dia', ahDOff = 0, ahSOff = 0;
@@ -21,7 +21,7 @@ const ACADEMIAS_INFO = {
 };
 
 // ==========================================
-// 1. INICIALIZAÇÃO
+// 1. INICIALIZAÇÃO E ACADEMIAS
 // ==========================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -50,12 +50,10 @@ onAuthStateChanged(auth, async (user) => {
                 if (turmaAno === 10) {
                     btnPassaporte.style.display = 'none';
                 } else if (turmaAno === 11) {
-                    btnPassaporte.style.display = 'flex';
-                    document.getElementById('btn-passaporte-texto').innerText = 'FCT (Estágio)';
+                    btnPassaporte.style.display = 'flex'; document.getElementById('btn-passaporte-texto').innerText = 'FCT (Estágio)';
                     if(secFct) secFct.style.display = 'block'; if(secPap) secPap.style.display = 'none';
                 } else {
-                    btnPassaporte.style.display = 'flex';
-                    document.getElementById('btn-passaporte-texto').innerText = 'Estágio / PAP';
+                    btnPassaporte.style.display = 'flex'; document.getElementById('btn-passaporte-texto').innerText = 'Estágio / PAP';
                     if(secFct) secFct.style.display = 'block'; if(secPap) secPap.style.display = 'block';
                 }
 
@@ -78,13 +76,12 @@ function aplicarTemaAcademia(idHouse) { const ac = ACADEMIAS_INFO[idHouse]; if(!
 
 
 // ==========================================
-// 2. EVENT DELEGATION GLOBAL
+// 2. NAVEGAÇÃO E DELEGAÇÃO DE EVENTOS
 // ==========================================
 function esconderTodasAsVistas() { document.querySelectorAll('.app-content > div').forEach(v => v.style.display = 'none'); }
 
 document.body.addEventListener('click', async (e) => {
-    
-    // NAV BAR INFERIOR
+    // NAVEGAÇÃO
     const nav = e.target.closest('.nav-item');
     if(nav) {
         e.preventDefault(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); nav.classList.add('active');
@@ -96,15 +93,13 @@ document.body.addEventListener('click', async (e) => {
         if(tId === 'view-aluno-forum') carregarForuns();
     }
     
-    // FERRAMENTAS E ACESSO RÁPIDO
+    // BOTÕES RÁPIDOS
     if(e.target.closest('#btn-open-materiais')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-materiais').style.display = 'block'; carregarMateriaisAluno(); }
     if(e.target.closest('#btn-abrir-passaporte')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-passaporte').style.display = 'block'; }
     if(e.target.closest('#btn-open-notificacoes')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-notificacoes').style.display = 'block'; carregarNotificacoesAluno(); }
-    if(e.target.closest('#btn-voltar-notificacoes') || e.target.closest('#btn-voltar-materiais') || e.target.closest('#btn-voltar-passaporte')) {
-        document.querySelector('.nav-item[data-target="student-dashboard"]').click();
-    }
+    if(e.target.closest('#btn-voltar-notificacoes') || e.target.closest('#btn-voltar-materiais') || e.target.closest('#btn-voltar-passaporte')) { document.querySelector('.nav-item[data-target="student-dashboard"]').click(); }
 
-    // CADERNETA TABS
+    // TABS DA CADERNETA
     if(e.target.closest('#tab-aluno-timeline')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='flex'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarTimelineAluno(); }
     if(e.target.closest('#tab-aluno-notas')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarNotasAluno(); }
     if(e.target.closest('#tab-aluno-faltas')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarFaltasAluno(); }
@@ -112,13 +107,13 @@ document.body.addEventListener('click', async (e) => {
     if(e.target.closest('#tab-aluno-comportamento')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarComportamentoAluno(); }
     if(e.target.closest('#tab-aluno-observacoes')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarObservacoesAluno(); }
 
-    // FILTROS
+    // FILTROS CHIPS
     const tChip = e.target.closest('#timeline-filtros .filter-chip');
     if(tChip) { document.querySelectorAll('#timeline-filtros .filter-chip').forEach(c => c.classList.remove('active')); tChip.classList.add('active'); window.timelineFilterCat = tChip.getAttribute('data-cat'); carregarTimelineAluno(); }
     const nChip = e.target.closest('#notificacoes-filtros .filter-chip');
     if(nChip) { document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(c => c.classList.remove('active')); nChip.classList.add('active'); window.notifFilterCat = nChip.getAttribute('data-cat'); carregarNotificacoesAluno(); }
 
-    // AGENDA E HORÁRIO
+    // AGENDA TABS E BOTOES
     if(e.target.closest('#tab-aluno-eventos')) { document.getElementById('tab-aluno-eventos').classList.add('active'); document.getElementById('tab-aluno-horario').classList.remove('active'); document.getElementById('aluno-agenda-filtros').style.display = 'flex'; document.getElementById('aluno-horario-container').style.display = 'none'; carregarAgendaAlunoLista(); }
     if(e.target.closest('#tab-aluno-horario')) { document.getElementById('tab-aluno-horario').classList.add('active'); document.getElementById('tab-aluno-eventos').classList.remove('active'); document.getElementById('aluno-agenda-filtros').style.display = 'none'; document.getElementById('aluno-horario-container').style.display = 'block'; carregarHorarioAluno(); }
     if(e.target.closest('#btn-aluno-horario-dia')) { ahModo = 'dia'; document.getElementById('btn-aluno-horario-dia').classList.add('active'); document.getElementById('btn-aluno-horario-grelha').classList.remove('active'); carregarHorarioAluno(); }
@@ -126,7 +121,7 @@ document.body.addEventListener('click', async (e) => {
     if(e.target.closest('#btn-aluno-prev-horario')) { if(ahModo === 'dia') ahDOff--; else ahSOff--; carregarHorarioAluno(); }
     if(e.target.closest('#btn-aluno-next-horario')) { if(ahModo === 'dia') ahDOff++; else ahSOff++; carregarHorarioAluno(); }
 
-    // FÓRUNS
+    // FÓRUM E CHAT AÇÕES
     if(e.target.closest('#btn-create-chat-aluno')) {
         document.getElementById('modal-criar-forum').style.display = 'flex'; 
         const cCont = document.getElementById('lista-colegas-forum'); cCont.innerHTML = '<p class="text-muted center">A procurar colegas...</p>';
@@ -170,7 +165,7 @@ document.body.addEventListener('click', async (e) => {
         try { await addDoc(collection(db, "turmas", minhaTurma, "foruns", alunoForumAtivoId, "mensagens"), { remetente: myUserName, texto: t, timestamp: Date.now() }); inp.value = ''; } catch(err) {} 
     }
     
-    // Metas
+    // METAS Pessoais
     if(e.target.closest('#btn-add-objetivo')) {
         const tipo = document.getElementById('obj-tipo').value;
         let data = { tipo: tipo, concluido: false, timestamp: Date.now() };
@@ -204,16 +199,13 @@ document.body.addEventListener('click', async (e) => {
     }
 });
 
-// Eventos Automáticos de Mudar o Dropdown
 document.addEventListener('change', async (e) => {
-    if (e.target.id === 'obj-tipo') {
-        const v = e.target.value; document.getElementById('obj-setup-nota').style.display = v === 'nota' ? 'flex' : 'none';
-    }
+    if (e.target.id === 'obj-tipo') { const v = e.target.value; document.getElementById('obj-setup-nota').style.display = v === 'nota' ? 'flex' : 'none'; }
     if (e.target.closest('.agenda-filter-label input')) { carregarAgendaAlunoLista(); }
 });
 
 // ==========================================
-// 3. DASHBOARD ADAPTATIVO MÁGICO
+// 3. DASHBOARD ADAPTATIVO MÁGICO E EXAMES
 // ==========================================
 async function construirHomeAdaptativa() {
     const alertCont = document.getElementById('hero-alert-section'); const emoCont = document.getElementById('hero-emotional-section');
@@ -231,28 +223,14 @@ async function construirHomeAdaptativa() {
             evs.sort((a,b)=>a.data.localeCompare(b.data));
         }
 
-        let alertHtml = ''; let mMiss = false;
+        let alertHtml = ''; 
         if(tFaltas>0 || pAtivos>0 || mRep>0) {
-            alertHtml += `<div class="card" style="background:linear-gradient(135deg,#ff4d4d,#cc0000); color:white; border:none; border-radius:16px; margin-bottom:20px;">
-                <h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-triangle-exclamation"></i> Ação Necessária</h3>
-                <p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens pendências urgentes que prejudicam a tua avaliação.</p>
-                <ul style="margin-bottom:20px; padding-left:20px; font-size:1.1rem; font-weight:bold; line-height:1.6;">
-                    ${tFaltas>0?`<li>${tFaltas} Falta(s)</li>`:''}${mRep>0?`<li>${mRep} Módulo(s) Reprovado(s)</li>`:''}${pAtivos>0?`<li>${pAtivos} PRHF(s) pendentes (${pHoras}h presenciais)</li>`:''}
-                </ul>
-                <button class="primary-btn" style="background:white; color:#cc0000; font-size:1.1rem; padding:15px;" onclick="document.querySelector('.nav-item[data-target=\\'view-aluno-caderneta\\']').click()">Abrir Caderneta e Resolver</button>
-            </div>`;
+            alertHtml += `<div class="card" style="background:linear-gradient(135deg,#ff4d4d,#cc0000); color:white; border:none; border-radius:16px; margin-bottom:20px;"><h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-triangle-exclamation"></i> Ação Necessária</h3><p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens pendências urgentes que prejudicam a tua avaliação.</p><ul style="margin-bottom:20px; padding-left:20px; font-size:1.1rem; font-weight:bold; line-height:1.6;">${tFaltas>0?`<li>${tFaltas} Falta(s)</li>`:''}${mRep>0?`<li>${mRep} Módulo(s) Reprovado(s)</li>`:''}${pAtivos>0?`<li>${pAtivos} PRHF(s) pendentes (${pHoras}h presenciais)</li>`:''}</ul><button class="primary-btn" style="background:white; color:#cc0000; font-size:1.1rem; padding:15px;" onclick="document.querySelector('.nav-item[data-target=\\'view-aluno-caderneta\\']').click()">Abrir Caderneta e Resolver</button></div>`;
         } else if(evs.length>0) {
             const ev = evs[0]; const dF = ev.data.split('-').reverse().join('/');
-            alertHtml += `<div class="card" style="background:linear-gradient(135deg,#ffaa00,#e67e22); color:white; border:none; border-radius:16px; margin-bottom:20px;">
-                <h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-calendar-exclamation"></i> Prepara-te</h3>
-                <p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens <strong>${ev.titulo}</strong> no dia ${dF}. Recomendamos que vejas os teus materiais!</p>
-                <button class="primary-btn" style="background:white; color:#e67e22; width:100%; font-size:1.1rem; padding:15px;" onclick="document.getElementById('btn-open-materiais').click()"><i class="fa-solid fa-book-open"></i> Abrir Materiais</button>
-            </div>`; mMiss = true;
+            alertHtml += `<div class="card" style="background:linear-gradient(135deg,#ffaa00,#e67e22); color:white; border:none; border-radius:16px; margin-bottom:20px;"><h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-calendar-exclamation"></i> Prepara-te</h3><p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens <strong>${ev.titulo}</strong> no dia ${dF}. Recomendamos que vejas os teus materiais!</p><button class="primary-btn" style="background:white; color:#e67e22; width:100%; font-size:1.1rem; padding:15px;" onclick="document.getElementById('btn-open-materiais').click()"><i class="fa-solid fa-book-open"></i> Abrir Materiais</button></div>`;
         } else {
-            alertHtml += `<div class="card" style="background:linear-gradient(135deg,var(--primary-green),var(--primary-hover)); color:white; border:none; border-radius:16px; margin-bottom:20px;">
-                <h3 style="margin-bottom:5px; font-size:1.6rem;"><i class="fa-solid fa-leaf"></i> Dia Tranquilo</h3>
-                <p style="font-size:1.05rem; margin-bottom:0; opacity:0.9;">Não tens avaliações marcadas nem pendências.</p>
-            </div>`; mMiss = true;
+            alertHtml += `<div class="card" style="background:linear-gradient(135deg,var(--primary-green),var(--primary-hover)); color:white; border:none; border-radius:16px; margin-bottom:20px;"><h3 style="margin-bottom:5px; font-size:1.6rem;"><i class="fa-solid fa-leaf"></i> Dia Tranquilo</h3><p style="font-size:1.05rem; margin-bottom:0; opacity:0.9;">Não tens avaliações marcadas nem pendências.</p></div>`;
         }
         alertCont.innerHTML = alertHtml;
 
@@ -280,17 +258,13 @@ async function construirHomeAdaptativa() {
 }
 
 async function verificarEpocaExames() {
-    if(!minhaTurma) return;
-    const tSnap = await getDoc(doc(db, "turmas", minhaTurma));
+    if(!minhaTurma) return; const tSnap = await getDoc(doc(db, "turmas", minhaTurma));
     if(tSnap.exists() && tSnap.data().epocaExames?.ativa) {
         document.getElementById('exam-mode-banner').style.display='block'; document.body.style.borderTop="5px solid #8e2de2";
-        if(tSnap.data().epocaExames.dataFim) {
-            const df = Math.ceil((new Date(tSnap.data().epocaExames.dataFim) - new Date()) / (1000 * 60 * 60 * 24)); document.getElementById('exam-countdown').innerText = df > 0 ? `Faltam ${df} dias` : "Já terminou";
-        }
+        if(tSnap.data().epocaExames.dataFim) { const df = Math.ceil((new Date(tSnap.data().epocaExames.dataFim) - new Date()) / (1000 * 60 * 60 * 24)); document.getElementById('exam-countdown').innerText = df > 0 ? `Faltam ${df} dias` : "Já terminou"; }
     }
 }
 
-// PESQUISA
 document.getElementById('aluno-search-input')?.addEventListener('input', async (e) => {
     const termo = e.target.value.toLowerCase().trim(); const box = document.getElementById('aluno-search-results');
     if(termo.length < 2) { box.style.display = 'none'; return; } box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">A procurar...</p>'; box.style.display = 'block';
@@ -300,10 +274,10 @@ document.getElementById('aluno-search-input')?.addEventListener('input', async (
         if(resArr.length === 0) box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">Sem resultados.</p>'; else { let h = ''; resArr.forEach(r => h += `<div style="padding:8px; border-bottom:1px solid #333; cursor:pointer;" onclick="document.getElementById('${r.id}').click(); document.getElementById('aluno-search-results').style.display='none'; document.getElementById('aluno-search-input').value='';"><span style="font-size:0.7rem; color:var(--primary-green); text-transform:uppercase;">${r.t}</span><div style="font-size:0.9rem; color:white; margin-top:3px;">${r.txt}</div></div>`); box.innerHTML = h; }
     } catch(err) { box.innerHTML = '<p class="text-danger" style="margin:0;">Erro.</p>'; }
 });
-document.addEventListener('click', (e) => { if (!e.target.closest('#aluno-search-input') && !e.target.closest('#aluno-search-results')) { document.getElementById('aluno-search-results').style.display = 'none'; } });
+document.addEventListener('click', (e) => { if (!e.target.closest('#aluno-search-input') && !e.target.closest('#aluno-search-results')) { const el = document.getElementById('aluno-search-results'); if(el) el.style.display = 'none'; } });
 
 // ==========================================
-// 5. PERFIL: RANKING E OBJETIVOS
+// 5. PERFIL: GAMIFICAÇÃO E ESTATÍSTICAS
 // ==========================================
 function carregarGamificacao(dados) {
     const xp = dados.xp || 0; const nivel = Math.floor(xp / 100) + 1; const prog = ((xp - ((nivel - 1) * 100)) / 100) * 100;
@@ -396,7 +370,7 @@ document.getElementById('upload-avatar')?.addEventListener('change', async (e) =
 });
 
 // ==========================================
-// 6. CADERNETA 
+// 6. CADERNETA (FALTAS, NOTAS, PRHFs)
 // ==========================================
 async function obterEventosLinhaTemporal() {
     let ev = [];
@@ -483,35 +457,94 @@ async function carregarFaltasAluno() {
     } catch(e) {}
 }
 
+// ----------------------------------------------------
+// ATUALIZADO: CARREGAR PRHFS E ABRIR AÇÃO DE PROPOSTA
+// ----------------------------------------------------
 async function carregarPrhfsAluno() {
     const cCont = document.getElementById('aluno-caderneta-content');
     try {
         const prhfsDb = await getDocs(collection(db, "utilizadores", myUserId, "prhfs"));
         if(prhfsDb.empty) { cCont.innerHTML = '<p class="text-muted" style="text-align:center;">Não tens Planos de Recuperação.</p>'; return; }
-        let arr = []; prhfsDb.forEach(d => { arr.push({id: d.id, ...d.data()}); }); arr.sort((a,b) => new Date(a.prazo) - new Date(b.prazo));
         
-        let pendentes = arr.filter(p => p.status !== 'concluida'); let concluidos = arr.filter(p => p.status === 'concluida');
+        let arr = []; 
+        prhfsDb.forEach(d => { arr.push({id: d.id, ...d.data()}); }); 
+        arr.sort((a,b) => new Date(a.prazo) - new Date(b.prazo));
+        
+        let pendentes = arr.filter(p => p.status !== 'concluida'); 
+        let concluidos = arr.filter(p => p.status === 'concluida');
+        
         let html = ''; 
         const renderP = (p) => {
-            const isUrgente = p.moduloTerminado === true || p.moduloTerminado === "true"; const cor = isUrgente ? 'var(--danger-red)' : 'var(--warning-yellow)'; const txtSt = p.status === 'concluida' ? 'CONCLUÍDO' : (isUrgente ? 'URGENTE' : 'EM CURSO'); const corFinal = p.status === 'concluida' ? 'var(--success-green)' : cor; const hPres = Number(p.horasPresenciais || 0); 
-            const aHtml = p.anexoBase64 ? `<a href="${p.anexoBase64}" download="PRHF_${p.disciplina}" class="secondary-btn small-btn" style="margin-bottom:10px; color:var(--primary-green); border-color:var(--primary-green);"><i class="fa-solid fa-download"></i> Documento do Professor</a>` : '';
-            const fpHtml = p.feedbackProfessor ? `<div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:10px; font-size:0.85rem;"><strong style="color:var(--primary-green);">Prof:</strong> ${p.feedbackProfessor}</div>` : '';
-            const propHtml = p.propostaAluno ? `<div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:15px; font-size:0.85rem;"><strong style="color:var(--warning-yellow);">A tua Proposta:</strong> ${p.propostaAluno} <br><span style="color:${p.propostaLidaDT ? 'var(--success-green)' : 'var(--text-muted)'}; font-size:0.75rem;"><i class="fa-solid ${p.propostaLidaDT ? 'fa-check-double' : 'fa-check'}"></i> ${p.propostaLidaDT ? 'Validada' : 'A aguardar validação'}</span></div>` : '';
-            let btn = ''; if(p.status !== 'concluida' && hPres > 0) { btn = `<button class="primary-btn small-btn" style="width:100%; background-color:${corFinal}; color:${corFinal === 'var(--warning-yellow)' ? 'black' : 'white'};" onclick="window.abrirAcaoPrhf('${p.id}', '${p.disciplina}', '${p.modulo}', '${p.prazo}')">Agendar Sessão Presencial</button>`; }
-            return `<div class="card" style="margin-bottom:15px; border-left: 4px solid ${corFinal};"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="font-size: 1.1rem; color:white;">${p.disciplina} (Mod. ${p.modulo})</strong><span style="color:${corFinal}; font-size:0.75rem; font-weight:bold;">${txtSt}</span></div><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">${p.descricao}</p>${aHtml} ${fpHtml} ${propHtml}<div style="font-size:0.8rem; margin-bottom: 15px; border-top:1px dashed #333; padding-top:10px;">Data Limite: <strong style="color:${corFinal};">${p.prazo}</strong><br>Horas Presenciais: <strong>${hPres}h</strong></div>${btn}</div>`;
+            const isUrgente = p.moduloTerminado === true || p.moduloTerminado === "true"; 
+            const cor = isUrgente ? 'var(--danger-red)' : 'var(--warning-yellow)'; 
+            const txtSt = p.status === 'concluida' ? 'CONCLUÍDO' : (isUrgente ? 'URGENTE' : 'EM CURSO'); 
+            const corFinal = p.status === 'concluida' ? 'var(--success-green)' : cor; 
+            const hPres = Number(p.horasPresenciais || 0); 
+            
+            // AGORA VAI BUSCAR AO FICHEIROBASE64 (NOVA VARIÁVEL DO PROFESSOR)
+            const b64Var = p.ficheiroBase64 || p.anexoBase64; 
+            const aHtml = b64Var ? `<a href="${b64Var}" download="PRHF_${p.disciplina}_M${p.modulo}" class="secondary-btn small-btn" style="margin-bottom:10px; color:var(--primary-green); border-color:var(--primary-green); display:block; text-align:center;"><i class="fa-solid fa-download"></i> Descarregar Ficha de Trabalho</a>` : '';
+            
+            const fpHtml = p.feedbackProfessor ? `<div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:10px; font-size:0.85rem;"><strong style="color:var(--primary-green);">Prof. ${p.professor || ''}:</strong> ${p.feedbackProfessor}</div>` : '';
+            const propHtml = p.propostaAluno ? `<div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:15px; font-size:0.85rem;"><strong style="color:var(--warning-yellow);">A tua Proposta:</strong> ${p.propostaAluno} <br><span style="color:${p.propostaLidaDT ? 'var(--success-green)' : 'var(--text-muted)'}; font-size:0.75rem;"><i class="fa-solid ${p.propostaLidaDT ? 'fa-check-double' : 'fa-clock'}"></i> ${p.propostaLidaDT ? 'Validada pelo Prof.' : 'A aguardar validação'}</span></div>` : '';
+            
+            let btn = ''; 
+            if(p.status !== 'concluida' && hPres > 0) { 
+                btn = `<button class="primary-btn small-btn" style="width:100%; background-color:${corFinal}; color:${corFinal === 'var(--warning-yellow)' ? 'black' : 'white'};" onclick="window.abrirAcaoPrhf('${p.id}', '${p.disciplina}', '${p.modulo}', '${p.prazo}')"><i class="fa-regular fa-calendar"></i> Sugerir Horário</button>`; 
+            }
+            
+            return `<div class="card" style="margin-bottom:15px; border-left: 4px solid ${corFinal};"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="font-size: 1.1rem; color:white;">${p.disciplina} (Mod. ${p.modulo})</strong><span style="color:${corFinal}; font-size:0.75rem; font-weight:bold;">${txtSt}</span></div><p style="font-size:0.85rem; color:var(--text-light); margin-bottom:10px;">${p.descricao}</p>${aHtml} ${fpHtml} ${propHtml}<div style="font-size:0.8rem; margin-bottom: 15px; border-top:1px dashed #333; padding-top:10px;">Data Limite: <strong style="color:${corFinal};">${p.prazo.split('-').reverse().join('/')}</strong><br>Horas Presenciais: <strong>${hPres}h</strong></div>${btn}</div>`;
         };
-        pendentes.forEach(p => html += renderP(p)); if(concluidos.length > 0) { html += `<div class="falta-date-divider" style="margin-top:20px;"><span>Concluídos</span></div>`; concluidos.forEach(p => html += renderP(p)); } cCont.innerHTML = html;
-    } catch(e) {}
+        
+        pendentes.forEach(p => html += renderP(p)); 
+        if(concluidos.length > 0) { 
+            html += `<div class="falta-date-divider" style="margin-top:20px;"><span>Concluídos</span></div>`; 
+            concluidos.forEach(p => html += renderP(p)); 
+        } 
+        
+        cCont.innerHTML = html;
+    } catch(e) { cCont.innerHTML = '<p class="text-danger center">Erro a carregar planos.</p>'; }
 }
 
 window.abrirAcaoPrhf = (id, disc, mod, prazo) => {
-    esconderTodasAsVistas(); document.getElementById('view-aluno-acao-prhf').style.display = 'block'; document.getElementById('prhf-acao-titulo').innerText = `${disc} (Mod. ${mod})`; document.getElementById('prhf-acao-prazo').innerText = prazo;
-    document.getElementById('btn-voltar-acao-prhf').onclick = () => { esconderTodasAsVistas(); document.getElementById('view-aluno-caderneta').style.display = 'block'; carregarPrhfsAluno(); };
+    esconderTodasAsVistas(); 
+    document.getElementById('view-aluno-acao-prhf').style.display = 'block'; 
+    document.getElementById('prhf-acao-titulo').innerText = `${disc} (Mod. ${mod})`; 
+    document.getElementById('prhf-acao-prazo').innerText = prazo.split('-').reverse().join('/');
+    
+    document.getElementById('btn-voltar-acao-prhf').onclick = () => { 
+        esconderTodasAsVistas(); 
+        document.getElementById('view-aluno-caderneta').style.display = 'block'; 
+        carregarPrhfsAluno(); 
+    };
+    
     document.getElementById('btn-enviar-proposta-prhf').onclick = async (e) => {
-        const d = document.getElementById('aluno-prhf-proposta-data').value; const hi = document.getElementById('aluno-prhf-proposta-hora-inicio').value; const hf = document.getElementById('aluno-prhf-proposta-hora-fim').value;
-        if(!d || !hi || !hf) { alert("Preenche a data e horas!"); return; }
+        const d = document.getElementById('aluno-prhf-proposta-data').value; 
+        const hi = document.getElementById('aluno-prhf-proposta-hora-inicio').value; 
+        const hf = document.getElementById('aluno-prhf-proposta-hora-fim').value;
+        
+        if(!d || !hi || !hf) { alert("Preenche a data e as horas da tua sugestão!"); return; }
+        
         const btn = e.currentTarget; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
-        try { await updateDoc(doc(db, "utilizadores", myUserId, "prhfs", id), { propostaAluno: `Data: ${d.split('-').reverse().join('/')} | Das ${hi} às ${hf}`, propostaLidaDT: false }); btn.innerHTML = '<i class="fa-solid fa-check"></i> Enviado'; btn.style.backgroundColor = 'var(--success-green)'; setTimeout(() => { document.getElementById('btn-voltar-acao-prhf').click(); btn.innerHTML = 'Enviar Proposta'; btn.disabled = false; btn.style.backgroundColor = 'var(--primary-green)';}, 1500); } catch(err) { btn.innerHTML = "Erro"; setTimeout(() => { btn.disabled = false; }, 1500); }
+        
+        try { 
+            await updateDoc(doc(db, "utilizadores", myUserId, "prhfs", id), { 
+                propostaAluno: `O aluno propõe: ${d.split('-').reverse().join('/')} das ${hi} às ${hf}`, 
+                propostaLidaDT: false 
+            }); 
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Enviado ao Professor'; 
+            btn.style.backgroundColor = 'var(--success-green)'; 
+            
+            setTimeout(() => { 
+                document.getElementById('btn-voltar-acao-prhf').click(); 
+                btn.innerHTML = 'Enviar Proposta'; 
+                btn.disabled = false; 
+                btn.style.backgroundColor = 'var(--primary-green)';
+            }, 1500); 
+            
+        } catch(err) { 
+            btn.innerHTML = "Erro de Ligação"; setTimeout(() => { btn.disabled = false; }, 1500); 
+        }
     };
 };
 
@@ -593,16 +626,17 @@ async function carregarHorarioAluno() {
 }
 
 // ==========================================
-// 8. FÓRUNS E CHAT
+// 8. FÓRUNS E CHAT EM TEMPO REAL
 // ==========================================
 async function carregarForuns() {
     const cont = document.getElementById('aluno-forum-channel-list'); cont.innerHTML = '<p class="text-muted center">A configurar fóruns...</p>'; if(!minhaTurma) return;
     let html = `<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apoio & Turma</h3><div class="canal-card" data-id="turma_global" data-nome="Turma ${minhaTurma}" style="margin-bottom: 15px;"><div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-users"></i></div><div class="canal-info"><h4>Turma ${minhaTurma}</h4><p>Canal Geral</p></div></div><div class="canal-card" data-id="dt_${myUserId}" data-nome="Chat DT"><div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div><div class="canal-info"><h4>Diretor de Turma</h4><p>Mensagem Privada</p></div></div><h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Disciplinas</h3><div style="display:flex; flex-direction:column; gap:10px;">`;
-    ordemDisciplinasGlobal.forEach(disc => { html += `<div class="canal-card" data-id="disc_${disc}" data-nome="Fórum ${disc}"><div class="canal-info" style="text-align:left;"><h4 style="margin:0; font-size:0.9rem; color:#00d2ff;"><i class="fa-solid fa-book-open"></i> ${disc}</h4></div></div>`; }); html += '</div>';
+    ordemDisciplinasGlobal.forEach(disc => { html += `<div class="canal-card" data-id="${disc}" data-nome="Fórum ${disc}"><div class="canal-info" style="text-align:left;"><h4 style="margin:0; font-size:0.9rem; color:#00d2ff;"><i class="fa-solid fa-book-open"></i> ${disc}</h4></div></div>`; }); html += '</div>';
+    
     try {
         const s = await getDocs(collection(db, "turmas", minhaTurma, "foruns")); let eH = ''; let arr = []; s.forEach(d => arr.push({id: d.id, ...d.data()}));
         arr.forEach(f => { if(f.membros && f.membros.includes(myUserId) && !f.isDefault) { eH += `<div class="canal-card" data-id="${f.id}" data-nome="${f.nome}" style="position:relative;"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-comments"></i></div><div class="canal-info"><h4>${f.nome}</h4><p>Grupo de Estudo</p></div><i class="fa-solid fa-trash btn-delete-chat" data-id="${f.id}" style="color:var(--danger-red); position:absolute; right:15px; font-size:1.1rem; cursor:pointer;"></i></div>`; } });
-        if (eH !== '') html += `<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Os Meus Chats</h3><div style="display:flex; flex-direction:column; gap:10px;">${eH}</div>`;
+        if (eH !== '') html += `<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Os Meus Grupos</h3><div style="display:flex; flex-direction:column; gap:10px;">${eH}</div>`;
     } catch(e) {}
     cont.innerHTML = html;
 }
@@ -610,27 +644,68 @@ async function carregarForuns() {
 function iniciarChatAluno(fId) {
     const chatContainer = document.getElementById('aluno-chat-messages-container'); chatContainer.innerHTML = ''; if(chatUnsubscribeAluno) chatUnsubscribeAluno();
     chatUnsubscribeAluno = onSnapshot(query(collection(db, "turmas", minhaTurma, "foruns", fId, "mensagens"), orderBy("timestamp")), (snapshot) => {
-        let html = ''; snapshot.forEach(doc => { const msg = doc.data(); const isMe = msg.remetente === myUserName; const classe = isMe ? 'admin' : 'student'; html += `<div class="chat-bubble ${classe}"><strong>${isMe ? 'Tu' : msg.remetente}</strong><br>${msg.texto}<span class="chat-meta">${new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span></div>`; });
-        chatContainer.innerHTML = html; chatContainer.scrollTop = chatContainer.scrollHeight;
+        let html = ''; 
+        snapshot.forEach(doc => { 
+            const msg = doc.data(); 
+            const isMe = msg.remetente === myUserName || msg.autor === myUserName; // Adicionado compatibilidade com o formato do Prof
+            const remetenteNome = msg.remetente || msg.autor || 'Desconhecido';
+            const isProf = msg.papel === 'professor';
+            
+            const d = new Date(msg.timestamp);
+            const hora = isNaN(d.getTime()) ? '' : `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+            
+            if (isMe) {
+                html += `<div class="chat-bubble student"><strong>Eu</strong><br>${msg.texto}<span class="chat-meta">${hora}</span></div>`;
+            } else if (isProf) {
+                html += `<div class="chat-bubble admin"><strong>Prof. ${remetenteNome}</strong><br>${msg.texto}<span class="chat-meta">${hora}</span></div>`;
+            } else {
+                html += `<div class="chat-bubble student"><strong style="color:var(--primary-green);">${remetenteNome}</strong><br>${msg.texto}<span class="chat-meta">${hora}</span></div>`;
+            }
+        });
+        
+        if (html === '') html = '<p class="text-muted center" style="margin-top:20px;">Sê o primeiro a falar na tua turma!</p>';
+        chatContainer.innerHTML = html; 
+        setTimeout(() => { chatContainer.scrollTop = chatContainer.scrollHeight; }, 100);
     });
 }
 
-// ==========================================
-// 11. SUMÁRIOS (MATERIAIS) E PASSAPORTE
-// ==========================================
+// ----------------------------------------------------
+// ATUALIZADO: MATERIAIS / SUMÁRIOS COM DOWNLOAD BASE64
+// ----------------------------------------------------
 async function carregarMateriaisAluno() {
     const c = document.getElementById('aluno-lista-materiais-container'); c.innerHTML = '<p class="text-muted center">A carregar materiais...</p>'; if(!minhaTurma) return;
     try {
-        const r = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); if(r.empty) { c.innerHTML = '<p class="text-muted center">Nenhum material publicado pelos professores.</p>'; return; }
+        const r = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); 
+        if(r.empty) { c.innerHTML = '<p class="text-muted center">Nenhum material publicado pelos professores.</p>'; return; }
+        
         let sum = []; let dU = new Set(); r.forEach(d => { const dt = d.data(); sum.push({id: d.id, ...dt}); dU.add(dt.disciplina); });
-        const fS = document.getElementById('aluno-filtro-materiais-disc'); if (fS.options.length <= 1) { let oH = '<option value="">Todas as Disciplinas</option>'; dU.forEach(dc => oH += `<option value="${dc}">${dc}</option>`); fS.innerHTML = oH; }
-        const fA = fS.value; if(fA) sum = sum.filter(s => s.disciplina === fA); sum.sort((a,b) => b.data.localeCompare(a.data)); 
+        
+        const fS = document.getElementById('aluno-filtro-materiais-disc'); 
+        if (fS.options.length <= 1) { let oH = '<option value="">Todas as Disciplinas</option>'; dU.forEach(dc => oH += `<option value="${dc}">${dc}</option>`); fS.innerHTML = oH; }
+        
+        const fA = fS.value; if(fA) sum = sum.filter(s => s.disciplina === fA); 
+        sum.sort((a,b) => b.timestamp - a.timestamp || b.data.localeCompare(a.data)); 
+        
         if(sum.length === 0) { c.innerHTML = '<p class="text-muted" style="text-align:center;">Sem materiais para esta disciplina.</p>'; return; }
-        let html = ''; sum.forEach(s => { const aB = s.anexoBase64 ? `<a href="${s.anexoBase64}" download="${s.anexoNome}" class="primary-btn small-btn" style="display:inline-block; margin-top:10px; width:auto; padding:8px 12px; background-color:#0099ff;"><i class="fa-solid fa-download"></i> Baixar ${s.anexoNome}</a>` : ''; html += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #0099ff;"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">${s.data} | ${s.disciplina} | Prof. ${s.professor}</span><h4 style="margin:5px 0;">${s.titulo}</h4>${s.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px;">${s.descricao}</p>` : ''}</div></div>${aB}</div>`; }); c.innerHTML = html;
+        
+        let html = ''; 
+        sum.forEach(s => { 
+            // O PROFESSOR GRAVA COMO ficheiroBase64
+            const ficheiro = s.ficheiroBase64 || s.anexoBase64;
+            const nomeFicheiro = s.anexoNome || 'Material_Anexo';
+            
+            const aB = ficheiro ? `<a href="${ficheiro}" download="${nomeFicheiro}" class="primary-btn small-btn" style="display:block; margin-top:15px; width:100%; text-align:center; padding:10px 12px; background-color:#0099ff;"><i class="fa-solid fa-download"></i> Baixar Anexo</a>` : ''; 
+            
+            html += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #0099ff;"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">${s.data} | ${s.disciplina} | Prof. ${s.professor || ''}</span><h4 style="margin:5px 0;">${s.titulo}</h4>${s.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px;">${s.descricao}</p>` : ''}</div></div>${aB}</div>`; 
+        }); 
+        c.innerHTML = html;
     } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao carregar os dados.</p>'; }
 }
 document.getElementById('aluno-filtro-materiais-disc')?.addEventListener('change', carregarMateriaisAluno);
 
+// ----------------------------------------------------
+// MANUTENÇÃO PASSAPORTE / PAP 
+// ----------------------------------------------------
 function carregarDadosPassaporte(dados) {
     if(dados.fct) { document.getElementById('aluno-fct-horas').innerText = `${dados.fct.horasRealizadas||0} / ${dados.fct.horasTotal||0}h`; document.getElementById('aluno-fct-progress').style.width = `${((dados.fct.horasRealizadas||0)/(dados.fct.horasTotal||1))*100}%`; document.getElementById('input-fct-horas').value = dados.fct.horasRealizadas||'';}
     if(dados.pap) { document.getElementById('input-pap-tema').value = dados.pap.tema || ''; }
