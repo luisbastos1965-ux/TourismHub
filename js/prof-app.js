@@ -51,7 +51,6 @@ onAuthStateChanged(auth, async (user) => {
                     document.getElementById('header-user-name-prof').innerText = myUserName;
                     document.getElementById('header-user-name-prof').nextElementSibling.innerText = titleStr;
                     
-                    // PREENCHER O NOVO PERFIL DO PROFESSOR
                     document.getElementById('perfil-nome-prof-view').innerText = myUserName;
                     document.getElementById('perfil-disciplinas-lista').innerText = disciplinasProfessor.length > 0 ? disciplinasProfessor.join(' • ') : 'Nenhuma disciplina configurada.';
                     document.getElementById('perfil-papeis-lista').innerText = myRoles.map(r => r.toUpperCase().replace('_', ' ')).join(' • ');
@@ -92,11 +91,15 @@ function setupBase64Upload(inputId, nameId, varSetter) {
 setupBase64Upload('mat-file', 'mat-file-name', (val) => materialBase64 = val);
 setupBase64Upload('prhf-file', 'prhf-file-name', (val) => prhfBase64 = val); 
 
-// Cálculo automático de PRHFs (Horas Presenciais)
+// MATEMÁTICA DO PRHF: =SE(C5<=4;0;ARRED.EXCESSO(C5*0,3;1))
 document.getElementById('prhf-horas-totais')?.addEventListener('input', (e) => {
     const val = Number(e.target.value);
     const pres = document.getElementById('prhf-horas-presenciais');
-    if(val > 0) { pres.value = Math.ceil(val / 2); } else { pres.value = ''; }
+    if(val > 0) {
+        pres.value = val <= 4 ? 0 : Math.ceil(val * 0.3);
+    } else {
+        pres.value = '';
+    }
 });
 
 // ==========================================
@@ -112,6 +115,7 @@ async function carregarRadarProfessor() {
 
     try {
         let totalAlunos = 0; let prhfsAtivos = 0; let eventosGlobais = [];
+        let profMateriais = 0; let profOcorrencias = 0;
 
         for (const t of turmasProfessor) {
             const snapAl = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
@@ -120,6 +124,9 @@ async function carregarRadarProfessor() {
             const snapEv = await getDocs(collection(db, "turmas", t, "eventos"));
             snapEv.forEach(d => eventosGlobais.push({ turma: t, ...d.data() }));
 
+            const sDb = await getDocs(query(collection(db, "turmas", t, "sumarios")));
+            sDb.forEach(d => { if(d.data().professor === myUserName) profMateriais++; });
+
             for (const docAluno of snapAl.docs) {
                 const pSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "prhfs"));
                 pSnap.forEach(p => {
@@ -127,13 +134,19 @@ async function carregarRadarProfessor() {
                         prhfsAtivos++;
                     }
                 });
+
+                const oSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "ocorrencias"));
+                oSnap.forEach(o => { if(o.data().autor === myUserName) profOcorrencias++; });
             }
         }
 
-        // PREENCHE AS ESTATÍSTICAS RÁPIDAS
+        // PREENCHE AS ESTATÍSTICAS
         document.getElementById('dash-stat-turmas').innerText = turmasProfessor.length;
         document.getElementById('dash-stat-alunos').innerText = totalAlunos;
         document.getElementById('dash-stat-prhfs').innerText = prhfsAtivos;
+        
+        document.getElementById('perfil-stat-materiais').innerText = profMateriais;
+        document.getElementById('perfil-stat-ocorrencias').innerText = profOcorrencias;
 
         let resumo = `Bem-vindo! Estás a gerir o progresso de <strong>${totalAlunos} alunos</strong>. `;
         if (prhfsAtivos > 0) resumo += `<br><span style="color:var(--warning-yellow); font-weight:bold;">Atenção: Existem ${prhfsAtivos} PRHFs em andamento que exigem o teu acompanhamento.</span>`;
@@ -203,7 +216,6 @@ async function abrirPerfil360Aluno(alunoId) {
         
         nS.forEach(n => { 
             if(disciplinasProfessor.includes(n.data().disciplina)) { 
-                // GUARDA O NÚMERO DO MÓDULO REAL PARA ORDENAR
                 notasData.push({ 
                     moduloReal: Number(n.data().modulo), 
                     moduloStr: `Mod ${n.data().modulo}`, 
@@ -211,7 +223,6 @@ async function abrirPerfil360Aluno(alunoId) {
                 }); 
             } 
         });
-        // ORDENA MATEMATICAMENTE PELO MÓDULO (1, 2, 3...)
         notasData.sort((a,b) => a.moduloReal - b.moduloReal);
 
         if (myRoles.includes('diretor_turma')) {
@@ -278,7 +289,7 @@ async function carregarTarefasProf() {
     }
 }
 
-// OS FÓRUNS PERMANENTES BEM CONFIGURADOS
+// OS FÓRUNS BEM CONFIGURADOS
 async function carregarForunsProf() {
     const cont = document.getElementById('prof-forum-channel-list'); 
     cont.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A ler canais...</p>';
@@ -295,24 +306,44 @@ async function carregarForunsProf() {
     });
 
     // 2. Canais Institucionais
-    html += '<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Sala de Professores</h3>';
+    html += '<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Estrutura da Turma</h3>';
     turmasProfessor.forEach(t => {
         html += `<div class="canal-card" data-turma="${t}" data-disc="Professores"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-chalkboard-user"></i></div><div class="canal-info" style="flex:1;"><h4>Conselho de Turma</h4><p>Professores do ${t}</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
+        html += `<div class="canal-card" data-turma="${t}" data-disc="DT_Privado"><div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div><div class="canal-info" style="flex:1;"><h4>Diretor de Turma</h4><p>Assuntos Privados - ${t}</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
+        html += `<div class="canal-card" data-turma="${t}" data-disc="Coordenador"><div class="canal-icon" style="color:#ff4d4d; border-color:#ff4d4d;"><i class="fa-solid fa-sitemap"></i></div><div class="canal-info" style="flex:1;"><h4>Coordenador de Curso</h4><p>Gestão - ${t}</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
     });
 
-    if(myRoles.includes('diretor_turma')) {
-        html += '<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Direção de Turma</h3>';
-        turmasProfessor.forEach(t => {
-            html += `<div class="canal-card" data-turma="${t}" data-disc="DT"><div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div><div class="canal-info" style="flex:1;"><h4>Avisos Gerais</h4><p>Alunos do ${t}</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
-        });
+    // 3. Chats Personalizados
+    html += '<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Chats Personalizados</h3>';
+    let encontrouPersonalizado = false;
+    let htmlPersonalizado = '<div style="display:flex; flex-direction:column; gap:10px;">';
+    
+    try {
+        for (const t of turmasProfessor) {
+            const s = await getDocs(collection(db, "turmas", t, "foruns")); 
+            let arr = []; s.forEach(d => arr.push({id: d.id, ...d.data()}));
+            
+            arr.forEach(f => { 
+                if(f.membros && f.membros.includes(myUserId) && !f.isDefault) { 
+                    encontrouPersonalizado = true;
+                    htmlPersonalizado += `<div class="canal-card" data-turma="${t}" data-disc="${f.id}" style="position:relative;"><div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-comments"></i></div><div class="canal-info" style="flex:1;"><h4>${f.nome}</h4><p>Turma ${t}</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`; 
+                } 
+            });
+        }
+        if (!encontrouPersonalizado) {
+            htmlPersonalizado += '<p class="text-muted center" style="font-size:0.85rem;">Nenhum chat extra criado.</p>';
+        }
+        htmlPersonalizado += '</div>';
+        
+        cont.innerHTML = `<div class="forum-canais-grid">${html}${htmlPersonalizado}</div>`;
+    } catch (e) {
+        cont.innerHTML = '<p class="text-danger center">Erro a carregar chats.</p>';
     }
-
-    cont.innerHTML = `<div class="forum-canais-grid">${html}</div>`;
 }
 
 function abrirChatForum(turma, disciplina) {
     activeChatTurma = turma; activeChatDisc = disciplina;
-    document.getElementById('prof-forum-channel-list').style.display = 'none'; 
+    document.getElementById('prof-forum-channel-list').style.display = 'none'; document.getElementById('btn-create-chat-prof').style.display = 'none'; 
     document.getElementById('prof-forum-chat-view').style.display = 'flex'; 
     document.getElementById('prof-chat-active-title').innerText = `${disciplina} (${turma})`;
     const msgCont = document.getElementById('prof-chat-messages-container'); msgCont.innerHTML = '<p class="text-muted center">A carregar mensagens...</p>';
@@ -322,10 +353,11 @@ function abrirChatForum(turma, disciplina) {
     chatUnsubscribe = onSnapshot(q, (snapshot) => {
         let h = '';
         snapshot.forEach(doc => { 
-            const m = doc.data(); const d = new Date(m.timestamp); const hora = `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`; 
-            const isMe = m.autor === myUserName; 
+            const m = doc.data(); const d = new Date(m.timestamp); const hora = isNaN(d.getTime()) ? '' : `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`; 
+            const isMe = m.autor === myUserName || m.remetente === myUserName;
+            const nomeStr = m.autor || m.remetente || 'Desconhecido';
             if (isMe) { h += `<div class="chat-bubble admin"><strong>Eu</strong><br>${m.texto}<span class="chat-meta">${hora}</span></div>`; } 
-            else { h += `<div class="chat-bubble student"><strong style="color:var(--primary-green);">${m.autor}</strong><br>${m.texto}<span class="chat-meta">${hora}</span></div>`; }
+            else { h += `<div class="chat-bubble student"><strong style="color:var(--primary-green);">${nomeStr}</strong><br>${m.texto}<span class="chat-meta">${hora}</span></div>`; }
         });
         if (h === '') h = '<p class="text-muted center" style="margin-top:20px;">Sê o primeiro a enviar uma mensagem para este canal!</p>';
         msgCont.innerHTML = h; setTimeout(() => { msgCont.scrollTop = msgCont.scrollHeight; }, 100);
@@ -345,7 +377,7 @@ document.body.addEventListener('click', async (e) => {
         if (tId === 'view-prof-dashboard') carregarRadarProfessor();
         if (tId === 'view-prof-turmas' && selectedTurma) analisarEAtualizarTurma(selectedTurma);
         if (tId === 'view-prof-tarefas') carregarTarefasProf();
-        if (tId === 'view-prof-forum') { if (chatUnsubscribe) { chatUnsubscribe(); chatUnsubscribe = null; } document.getElementById('prof-forum-chat-view').style.display = 'none'; document.getElementById('prof-forum-channel-list').style.display = 'block'; carregarForunsProf(); }
+        if (tId === 'view-prof-forum') { if (chatUnsubscribe) { chatUnsubscribe(); chatUnsubscribe = null; } document.getElementById('prof-forum-chat-view').style.display = 'none'; document.getElementById('btn-create-chat-prof').style.display = 'block'; document.getElementById('prof-forum-channel-list').style.display = 'block'; carregarForunsProf(); }
         return; 
     }
 
@@ -357,14 +389,34 @@ document.body.addEventListener('click', async (e) => {
 
     // FÓRUM AÇÕES
     if (e.target.closest('.canal-card')) { const card = e.target.closest('.canal-card'); abrirChatForum(card.getAttribute('data-turma'), card.getAttribute('data-disc')); return; }
-    if (e.target.closest('#btn-prof-voltar-canais')) { if (chatUnsubscribe) { chatUnsubscribe(); chatUnsubscribe = null; } document.getElementById('prof-forum-chat-view').style.display = 'none'; document.getElementById('prof-forum-channel-list').style.display = 'block'; return; }
+    if (e.target.closest('#btn-prof-voltar-canais')) { if (chatUnsubscribe) { chatUnsubscribe(); chatUnsubscribe = null; } document.getElementById('prof-forum-chat-view').style.display = 'none'; document.getElementById('btn-create-chat-prof').style.display = 'block'; document.getElementById('prof-forum-channel-list').style.display = 'block'; return; }
     if (e.target.closest('#btn-prof-send-msg')) {
         const msgInput = document.getElementById('prof-input-forum-msg'); const msg = msgInput.value.trim(); if (!msg || !activeChatTurma || !activeChatDisc) return;
-        try { await addDoc(collection(db, "turmas", activeChatTurma, "foruns", activeChatDisc, "mensagens"), { texto: msg, autor: myUserName, papel: "professor", timestamp: new Date().toISOString() }); msgInput.value = ''; } catch (err) { alert("Erro ao enviar."); }
+        try { await addDoc(collection(db, "turmas", activeChatTurma, "foruns", activeChatDisc, "mensagens"), { texto: msg, autor: myUserName, papel: "professor", timestamp: Date.now() }); msgInput.value = ''; } catch (err) { alert("Erro ao enviar."); }
         return;
     }
 
-    // CRIAR PRHF COM CÁLCULO DE HORAS
+    if (e.target.closest('#btn-create-chat-prof')) {
+        document.getElementById('forum-turma-select').innerHTML = '<option value="">Selecionar Turma...</option>' + turmasProfessor.map(t => `<option value="${t}">Turma ${t}</option>`).join('');
+        document.getElementById('input-nome-novo-forum').value = '';
+        document.getElementById('lista-alunos-forum').innerHTML = '<p class="text-muted center" style="font-size:0.8rem;">Seleciona uma turma primeiro.</p>';
+        document.getElementById('modal-criar-forum').style.display = 'flex';
+        return;
+    }
+    if (e.target.closest('#btn-cancelar-novo-forum')) { document.getElementById('modal-criar-forum').style.display = 'none'; return; }
+    if (e.target.closest('#btn-confirm-novo-forum')) {
+        const nome = document.getElementById('input-nome-novo-forum').value.trim(); const turma = document.getElementById('forum-turma-select').value;
+        if(!nome || !turma) { alert("Preenche o nome do chat e a turma."); return; }
+        let mbr = [myUserId]; document.querySelectorAll('.forum-aluno-check:checked').forEach(c => mbr.push(c.value));
+        const btnConf = e.target.closest('#btn-confirm-novo-forum'); btnConf.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btnConf.disabled = true;
+        try { 
+            await addDoc(collection(db, "turmas", turma, "foruns"), { nome: nome, tipo: 'permanente', isDefault: false, membros: mbr, criadoPor: myUserName }); 
+            document.getElementById('modal-criar-forum').style.display = 'none'; btnConf.innerHTML = 'Criar Chat'; btnConf.disabled = false; carregarForunsProf(); 
+        } catch(err) { btnConf.innerHTML = 'Erro!'; setTimeout(() => { btnConf.innerHTML = 'Criar Chat'; btnConf.disabled = false; }, 2000); }
+        return;
+    }
+
+    // CRIAR PRHF COM CÁLCULO DE HORAS E FORMULA
     if (e.target.closest('#btn-novo-prhf')) {
         document.getElementById('erro-modal-prhf').style.display = 'none';
         document.getElementById('prhf-turma').innerHTML = '<option value="">-- Turma --</option>' + turmasProfessor.map(t => `<option value="${t}">${t}</option>`).join('');
@@ -376,11 +428,7 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('#btn-gravar-novo-prhf')) {
         const tTurma = document.getElementById('prhf-turma').value; const tAluno = document.getElementById('prhf-aluno').value; const tDisc = document.getElementById('prhf-disciplina').value; const tMod = document.getElementById('prhf-modulo').value; const tPrazo = document.getElementById('prhf-prazo').value; const tHorasP = document.getElementById('prhf-horas-presenciais').value; const tDesc = document.getElementById('prhf-descricao').value.trim();
         const errDiv = document.getElementById('erro-modal-prhf');
-        
-        if (!tAluno || !tDisc || !tMod || !tPrazo || !tHorasP || !tDesc) {
-            errDiv.innerText = "Por favor, preenche todos os campos obrigatórios e define as Horas Totais."; errDiv.style.display = 'block'; return;
-        }
-        
+        if (!tAluno || !tDisc || !tMod || !tPrazo || tHorasP === '' || !tDesc) { errDiv.innerText = "Por favor, preenche todos os campos obrigatórios e define as Horas Totais."; errDiv.style.display = 'block'; return; }
         const b = e.target.closest('#btn-gravar-novo-prhf'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
         try {
             await addDoc(collection(db, "utilizadores", tAluno, "prhfs"), { disciplina: tDisc, modulo: Number(tMod), prazo: tPrazo, horasPresenciais: Number(tHorasP), descricao: tDesc, status: 'pendente', dataCriacao: new Date().toISOString(), professor: myUserName, ficheiroBase64: prhfBase64 });
@@ -391,11 +439,7 @@ document.body.addEventListener('click', async (e) => {
 
     // CONCLUIR PRHF (SEM XP)
     if (e.target.closest('.btn-concluir-prhf')) {
-        const btn = e.target.closest('.btn-concluir-prhf'); 
-        document.getElementById('conc-aluno-id').value = btn.getAttribute('data-aluno'); 
-        document.getElementById('conc-prhf-id').value = btn.getAttribute('data-prhf'); 
-        document.getElementById('conc-motivo').value = ''; 
-        document.getElementById('modal-concluir-prhf').style.display = 'flex'; return;
+        const btn = e.target.closest('.btn-concluir-prhf'); document.getElementById('conc-aluno-id').value = btn.getAttribute('data-aluno'); document.getElementById('conc-prhf-id').value = btn.getAttribute('data-prhf'); document.getElementById('conc-motivo').value = ''; document.getElementById('modal-concluir-prhf').style.display = 'flex'; return;
     }
     if (e.target.closest('#btn-confirmar-conclusao-prhf')) {
         const aId = document.getElementById('conc-aluno-id').value; const pId = document.getElementById('conc-prhf-id').value; const feedback = document.getElementById('conc-motivo').value.trim() || "Concluído com sucesso.";
@@ -411,32 +455,23 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('#btn-modal-faltas')) {
         if (!selectedTurma || alunosTurmaRAM.length === 0) return alert("Seleciona uma turma com alunos primeiro.");
         const errDiv = document.getElementById('erro-modal-faltas'); errDiv.style.display = 'none';
-        
-        // Simulação de Aulas Reais do Professor (Fase 3 trará do BD)
         const aulasHoje = `<option value="90">Hoje - 08:30 às 10:00 (90 min)</option><option value="45">Hoje - 10:15 às 11:00 (45 min)</option><option value="90">Ontem - 14:00 às 15:30 (90 min)</option>`;
         document.getElementById('falta-aula-select').innerHTML = `<option value="">-- Escolhe a Aula --</option>${aulasHoje}`;
-        
         const c = document.getElementById('lista-metralhadora-faltas'); let h = '';
         alunosTurmaRAM.forEach(al => { h += `<label style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(255,255,255,0.05); margin-bottom:5px; border-radius:8px; border:1px solid #333; cursor:pointer;"><span style="color:white; font-size:0.95rem;">${al.nome}</span><input type="checkbox" class="chk-presente" value="${al.id}" checked></label>`; });
         c.innerHTML = h; document.getElementById('modal-marcar-faltas').style.display = 'flex'; return;
     }
     if (e.target.closest('#btn-todos-presentes')) { e.preventDefault(); document.querySelectorAll('.chk-presente').forEach(c => c.checked = true); return; }
     if (e.target.closest('#btn-confirmar-faltas')) {
-        const aulaMinutos = document.getElementById('falta-aula-select').value; 
-        const disc = disciplinasProfessor[0] || "Geral"; // Grava na disciplina principal do prof
-        const errDiv = document.getElementById('erro-modal-faltas');
-        
+        const aulaMinutos = document.getElementById('falta-aula-select').value; const disc = disciplinasProfessor[0] || "Geral"; const errDiv = document.getElementById('erro-modal-faltas');
         if (!aulaMinutos) { errDiv.innerText = "Por favor, seleciona a aula em que estás a marcar a falta."; errDiv.style.display = 'block'; return; }
-        const horasFormatadas = (Number(aulaMinutos) / 45).toFixed(1).replace('.0',''); // Converte 90min em "2" horas letivas
-        
+        const horasFormatadas = (Number(aulaMinutos) / 45).toFixed(1).replace('.0',''); 
         const b = e.target.closest('#btn-confirmar-faltas'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
         const ausentes = document.querySelectorAll('.chk-presente:not(:checked)');
         for (const chk of ausentes) { await addDoc(collection(db, "utilizadores", chk.value, "faltas"), { disciplina: disc, horas: Number(horasFormatadas), dataInicio: new Date().toISOString().split('T')[0], justificada: false, criadoPor: myUserName, criadoEm: new Date().toISOString() }); }
         b.innerHTML = '<i class="fa-solid fa-check"></i> Gravado'; setTimeout(() => { b.innerHTML = 'Gravar Faltas'; b.disabled = false; document.getElementById('modal-marcar-faltas').style.display = 'none'; analisarEAtualizarTurma(selectedTurma); }, 1500); return;
     }
 
-    // OUTROS EVENTOS MANTIDOS (Rejeitar Proposta, Notas, Materiais, Ocorrências)
-    // ...
     if (e.target.closest('.btn-rejeitar-proposta')) { const btn = e.target.closest('.btn-rejeitar-proposta'); document.getElementById('rej-aluno-id').value = btn.getAttribute('data-aluno'); document.getElementById('rej-prhf-id').value = btn.getAttribute('data-prhf'); document.getElementById('rej-motivo').value = ''; document.getElementById('modal-rejeitar-prhf').style.display = 'flex'; return; }
     if (e.target.closest('#btn-confirmar-rejeicao')) {
         const aId = document.getElementById('rej-aluno-id').value; const pId = document.getElementById('rej-prhf-id').value; const feedback = document.getElementById('rej-motivo').value.trim(); if (!feedback) return alert("Indica o motivo.");
@@ -464,16 +499,25 @@ document.body.addEventListener('click', async (e) => {
         if (notasParaGravar.length === 0) { errDiv.innerText = "Não inseriste notas."; errDiv.style.display = 'block'; return; }
         const b = e.target.closest('#btn-confirmar-notas'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
         try {
-            for (const n of notasParaGravar) {
-                await addDoc(collection(db, "utilizadores", n.id, "notas"), { disciplina: disc, modulo: Number(mod), nota: n.nota, data: new Date().toISOString(), professor: myUserName });
-            }
+            for (const n of notasParaGravar) { await addDoc(collection(db, "utilizadores", n.id, "notas"), { disciplina: disc, modulo: Number(mod), nota: n.nota, data: new Date().toISOString(), professor: myUserName }); }
             b.innerHTML = '<i class="fa-solid fa-check"></i> Gravadas'; setTimeout(() => { b.innerHTML = '<i class="fa-solid fa-save"></i> Gravar Notas'; b.disabled = false; document.getElementById('modal-lancamento-notas').style.display = 'none'; analisarEAtualizarTurma(selectedTurma); }, 1500);
         } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 1500); }
         return;
     }
 });
 
-// SELECTS MUDANÇA
+// DROPDOWNS E EVENTOS MUDANÇA
+document.getElementById('forum-turma-select')?.addEventListener('change', async (e) => {
+    const t = e.target.value; const cCont = document.getElementById('lista-alunos-forum');
+    if (!t) { cCont.innerHTML = '<p class="text-muted center" style="font-size:0.8rem;">Seleciona uma turma primeiro.</p>'; return; }
+    cCont.innerHTML = '<p class="text-muted center" style="font-size:0.8rem;"><i class="fa-solid fa-spinner fa-spin"></i> A carregar alunos...</p>';
+    try {
+        const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); let cH = ''; 
+        cS.forEach(d => { cH += `<label style="display:flex; align-items:center; gap:10px; color:white; font-size:0.9rem; padding:8px 0; cursor:pointer;"><input type="checkbox" class="forum-aluno-check" value="${d.id}" checked style="width:18px;height:18px;accent-color:var(--primary-green);"> ${d.data().nome}</label>`; });
+        cCont.innerHTML = cH === '' ? '<p class="text-muted center" style="font-size:0.8rem;">Turma vazia.</p>' : cH;
+    } catch(err) { cCont.innerHTML = '<p class="text-danger center">Erro.</p>'; }
+});
+
 document.getElementById('prof-seletor-turmas')?.addEventListener('change', (e) => { selectedTurma = e.target.value; if (selectedTurma) { document.getElementById('turma-ativa-container').style.display = 'block'; analisarEAtualizarTurma(selectedTurma); } else { document.getElementById('turma-ativa-container').style.display = 'none'; } });
 document.getElementById('prhf-turma')?.addEventListener('change', async (e) => {
     const s = document.getElementById('prhf-aluno'); const t = e.target.value; if (!t) { s.innerHTML = '<option value="">Selecione primeiro a Turma</option>'; return; }
