@@ -8,14 +8,9 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- FullCalendar -->
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/locales/pt.global.min.js'></script>
-
-    <!-- Compressão de Imagens (Para o Avatar do Perfil) -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
-
-    <!-- Chart.js (Para os Gráficos de Desempenho) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
@@ -54,7 +49,7 @@
                         <h2 id="welcome-message" style="margin-bottom: 3px; font-size: 1.4rem;">Olá, <span id="welcome-nome">Aluno</span>!</h2>
                         <p style="font-size: 0.85rem; color: var(--text-muted);"><span id="aluno-rank-title">Novato</span> • Lvl <span id="aluno-nivel">1</span></p>
                     </div>
-                    <div style="background: rgba(0, 204, 136, 0.1); border: 1px solid var(--primary-green); padding: 6px 12px; border-radius: 20px; text-align: center; cursor: pointer;" onclick="document.querySelector('.nav-item[data-target=\\'view-aluno-perfil\\']').click()">
+                    <div style="background: rgba(0, 204, 136, 0.1); border: 1px solid var(--primary-green); padding: 6px 12px; border-radius: 20px; text-align: center; cursor: pointer;" onclick="document.querySelector('.nav-item[data-target=\'view-aluno-perfil\']').click()">
                         <div style="font-weight: bold; color: var(--primary-green); font-size: 1rem;"><i class="fa-solid fa-bolt"></i> <span id="aluno-xp-atual">0</span> <span style="font-size: 0.7rem;">XP</span></div>
                     </div>
                 </div>
@@ -65,13 +60,9 @@
                     <div id="exam-countdown" style="font-size: 1.5rem; font-weight: bold; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; display: inline-block;">Faltam X dias</div>
                 </div>
 
-                <!-- ALARMES E AVISOS ESCOLARES (Assistente no TOPO) -->
                 <div id="hero-alert-section"></div>
-
-                <!-- EMOCIONAL E MISSÕES DA TURMA -->
                 <div id="hero-emotional-section"></div>
 
-                <!-- ACESSO RÁPIDO NO FUNDO -->
                 <div class="lms-action-grid" style="margin-bottom: 20px;">
                     <button class="lms-btn" id="btn-open-materiais" style="border-color:#0099ff; color:#0099ff; background: rgba(0, 153, 255, 0.05); display: flex;">
                         <i class="fa-solid fa-book-open"></i><span>Materiais</span>
@@ -84,8 +75,6 @@
 
             <!-- VISTA PERFIL -->
             <div id="view-aluno-perfil" style="display: none; padding-top: 10px;">
-                
-                <!-- Info do Utilizador -->
                 <div class="card" style="text-align: center;">
                     <div style="position:relative; width: 100px; height: 100px; margin: 0 auto 15px auto;">
                         <img id="perfil-avatar-img" src="https://via.placeholder.com/100" style="width:100%; height:100%; border-radius:50%; object-fit:cover; border: 3px solid var(--primary-green);">
@@ -98,7 +87,6 @@
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;"><span id="perfil-xp-totais">0</span> XP totais alcançados</p>
                 </div>
 
-                <!-- OBJETIVOS -->
                 <div class="card" style="border-left: 4px solid var(--warning-yellow);">
                     <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-bullseye"></i> Metas</h3>
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">A app valida o teu progresso automaticamente e dá-te <strong style="color:var(--warning-yellow);">+50 XP</strong> quando cumprires os objetivos.</p>
@@ -109,19 +97,16 @@
                             <option value="prhf">Concluir Plano de Recuperação (PRHF)</option>
                             <option value="reconhecimento">Receber Reconhecimento Positivo</option>
                         </select>
-                        
                         <div id="obj-setup-nota" style="display:flex; gap:8px;">
                             <select id="obj-disciplina" class="input-padrao" style="flex:1; margin:0;"></select>
                             <input type="number" id="obj-modulo" placeholder="Mod." class="input-padrao" style="width:60px; margin:0;" min="1">
                             <input type="number" id="obj-nota-alvo" placeholder="Nota" class="input-padrao" style="width:70px; margin:0;" min="10" max="20">
                         </div>
-
                         <button id="btn-add-objetivo" class="primary-btn" style="width:100%; margin-top:5px; background:var(--warning-yellow); color:black;"><i class="fa-solid fa-plus"></i> Guardar Meta</button>
                     </div>
                     <div id="lista-objetivos-container"></div>
                 </div>
 
-                <!-- TOP RANKINGS E ACADEMIAS -->
                 <div class="card" style="border-left: 4px solid #ffd700; margin-bottom: 20px;">
                     <h3 style="font-size: 1.1rem; color: white; margin-bottom: 15px;"><i class="fa-solid fa-trophy"></i> Ranking da Turma</h3>
                     <div id="ranking-turma-container">
@@ -166,14 +151,12 @@
                 <div class="class-header" style="margin-bottom: 15px;">
                     <button id="btn-voltar-materiais" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                 </div>
-                
                 <div style="margin-bottom:15px; position: relative;">
                     <div style="display:flex; align-items:center; background: var(--bg-card); border: 1px solid #333; border-radius: 8px; padding: 0 10px;">
                         <i class="fa-solid fa-magnifying-glass" style="color:var(--text-muted);"></i>
                         <input type="text" id="aluno-search-materiais" placeholder="Pesquisar material..." style="width: 100%; border: none; background: transparent; padding: 12px 10px; margin: 0; outline: none; box-shadow: none; color: white;">
                     </div>
                 </div>
-
                 <div style="margin-bottom:15px;"><select id="aluno-filtro-materiais-disc" class="input-padrao" style="width: 100%;"><option value="">Todas as Disciplinas</option></select></div>
                 <div id="aluno-lista-materiais-container"></div>
             </div>
@@ -214,11 +197,11 @@
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Indica o dia e o horário para validação do Professor.</p>
                     
                     <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                        <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Data</label><input type="date" id="aluno-prhf-proposta-data" style="margin:0; width:100%;" class="input-padrao"></div>
+                        <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Data Sugerida</label><input type="date" id="aluno-prhf-proposta-data" style="margin:0; width:100%;" class="input-padrao"></div>
                     </div>
                     <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                        <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Início</label><input type="time" id="aluno-prhf-proposta-hora-inicio" style="margin:0; width:100%;" class="input-padrao"></div>
-                        <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Fim</label><input type="time" id="aluno-prhf-proposta-hora-fim" style="margin:0; width:100%;" class="input-padrao"></div>
+                        <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Hora de Início</label><input type="time" id="aluno-prhf-proposta-hora-inicio" style="margin:0; width:100%;" class="input-padrao"></div>
+                        <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Hora de Fim</label><input type="time" id="aluno-prhf-proposta-hora-fim" style="margin:0; width:100%;" class="input-padrao"></div>
                     </div>
                     
                     <button id="btn-enviar-proposta-prhf" class="primary-btn" style="width:100%; background-color: var(--primary-green);">Enviar Proposta</button>
@@ -257,7 +240,7 @@
 
             <!-- VISTA FÓRUM -->
             <div id="view-aluno-forum" style="display: none; flex-direction:column;">
-                <button id="btn-create-chat-aluno" class="primary-btn" style="background:var(--bg-dark); border:2px dashed var(--primary-green); color:var(--primary-green); width: 100%; margin-bottom: 20px; font-size:1.1rem; padding:15px;"><i class="fa-solid fa-plus"></i> Novo Chat / Fórum</button>
+                <button id="btn-create-chat-aluno" class="primary-btn" style="background:var(--bg-dark); border:2px dashed var(--primary-green); color:var(--primary-green); width: 100%; margin-bottom: 20px; font-size:1.1rem; padding:15px;"><i class="fa-solid fa-plus"></i> Novo Grupo de Estudo</button>
                 
                 <div id="aluno-forum-channel-list"></div>
 
@@ -335,13 +318,13 @@
                 </div>
             </div>
 
-            <!-- MODAL TESTE DAS ACADEMIAS (INICIAL) -->
+            <!-- MODAL ACADEMIA QUIZ -->
             <div id="modal-academia-quiz" class="modal-overlay" style="z-index: 4000; background: var(--bg-dark);">
                 <div class="action-sheet" style="max-width:500px; border-radius:12px; margin:20px; text-align: center; height: auto; max-height: 90vh;">
                     <div id="quiz-question-container">
                         <i class="fa-solid fa-chess-rook" style="font-size: 3rem; color: white; margin-bottom: 15px;"></i>
                         <h2 style="margin-bottom: 10px; color: white;">Bem-vindo à Turma PRO</h2>
-                        <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;">Antes de começares, precisamos de descobrir qual é a tua Academia. Responde a estas rápidas questões com sinceridade!</p>
+                        <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;">Antes de começares, precisamos de descobrir qual é a tua Academia.</p>
                         
                         <h3 id="quiz-question-text" style="font-size: 1.1rem; color: var(--primary-green); margin-bottom: 20px;">1. O que mais valorizas na escola?</h3>
                         
@@ -361,12 +344,12 @@
                 </div>
             </div>
             
-            <!-- MODAL CONFIRMAR APAGAR CHAT -->
+            <!-- MODAIS DE ELIMINAÇÃO -->
             <div id="modal-confirm-delete-chat" class="modal-overlay" style="z-index: 5000;">
                 <div class="action-sheet" style="max-width:350px; border-radius:12px; margin:20px; text-align: center;">
                     <i class="fa-solid fa-trash-can" style="font-size: 3rem; color: var(--danger-red); margin-bottom: 15px;"></i>
                     <h3 style="margin-bottom: 10px; color: white;">Apagar Chat?</h3>
-                    <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;">Esta ação não pode ser revertida e o chat vai desaparecer para todos os teus colegas de imediato.</p>
+                    <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;">Esta ação não pode ser revertida.</p>
                     <div style="display:flex; gap:10px;">
                         <button id="btn-cancel-delete-chat" class="secondary-btn" style="flex:1;">Cancelar</button>
                         <button id="btn-confirm-delete-chat" class="primary-btn" style="flex:1; background:var(--danger-red); color:white; border:none;">Sim, Apagar</button>
@@ -374,12 +357,11 @@
                 </div>
             </div>
 
-            <!-- MODAL CONFIRMAR APAGAR META -->
             <div id="modal-confirm-delete-objetivo" class="modal-overlay" style="z-index: 5000;">
                 <div class="action-sheet" style="max-width:350px; border-radius:12px; margin:20px; text-align: center;">
                     <i class="fa-solid fa-bullseye" style="font-size: 3rem; color: var(--danger-red); margin-bottom: 15px;"></i>
                     <h3 style="margin-bottom: 10px; color: white;">Apagar Meta?</h3>
-                    <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;">Queres mesmo eliminar este objetivo? O teu progresso associado a ele será descartado.</p>
+                    <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;">O teu progresso associado a este objetivo será descartado.</p>
                     <div style="display:flex; gap:10px;">
                         <button id="btn-cancel-delete-objetivo" class="secondary-btn" style="flex:1;">Cancelar</button>
                         <button id="btn-confirm-delete-objetivo" class="primary-btn" style="flex:1; background:var(--danger-red); color:white; border:none;">Sim, Apagar</button>
