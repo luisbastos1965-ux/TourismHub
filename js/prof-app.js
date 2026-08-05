@@ -13,7 +13,7 @@ let disciplinasProfessor = [];
 let selectedTurma = "";
 let alunosTurmaRAM = [];
 let eventosTurmaRAM = [];
-let notasAlunoRAM = []; // Guarda as notas para desenhar o gráfico rápido
+let notasAlunoRAM = []; 
 
 let alunoSelecionadoId = null;
 let materialBase64 = null;
@@ -24,6 +24,8 @@ let activeChatTurma = "";
 let activeChatDisc = "";
 let chartEvolucao = null;
 let carouselInterval = null;
+
+window.prhfViewMode = 'minha'; 
 
 const ACADEMIAS_INFO = { 'atlas': { nome: 'Atlas' }, 'sentinela': { nome: 'Sentinela' }, 'nexus': { nome: 'Nexus' }, 'aurora': { nome: 'Aurora' } };
 const ordemDisciplinasGlobal = ['PORT', 'ING', 'AI', 'EF', 'TIC', 'GEO', 'HCA', 'MAT', 'CF', 'TIAT', 'TCAT', 'OTET'];
@@ -363,9 +365,9 @@ document.getElementById('pauta-disc-select')?.addEventListener('change', renderi
 document.getElementById('faltas-disc-select')?.addEventListener('change', renderizarFaltasTurma);
 
 // ==========================================
-// 5. PERFIL 360 DO ALUNO (Com Toggle DT)
+// 5. PERFIL 360 DO ALUNO (Toggles Graph)
 // ==========================================
-function desenharGraficoAluno(modo) {
+window.desenharGraficoAluno = function(modo) {
     const ctx = document.getElementById('chartEvolucaoAluno').getContext('2d');
     if(chartEvolucao) chartEvolucao.destroy();
     
@@ -384,7 +386,6 @@ function desenharGraficoAluno(modo) {
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 20, grid: { color: '#333' } }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } }
         });
     } else {
-        // Modo Global: Médias por Disciplina
         let medias = {};
         notasAlunoRAM.forEach(n => {
             if(!medias[n.disciplina]) medias[n.disciplina] = { soma: 0, count: 0 };
@@ -445,21 +446,20 @@ async function abrirPerfil360Aluno(alunoId) {
 
     document.getElementById('p-aluno-faltas').innerText = fCount; document.getElementById('p-aluno-prhfs').innerText = pCount; document.getElementById('p-aluno-notas').innerText = notasAlunoRAM.length;
 
-    // Reset aos botões de toggle do gráfico
     document.getElementById('btn-graph-disc').classList.add('active');
     document.getElementById('btn-graph-global').classList.remove('active');
-    desenharGraficoAluno('disc');
+    window.desenharGraficoAluno('disc');
 
     document.getElementById('modal-perfil-aluno').style.display = 'flex';
 }
 
 document.getElementById('btn-graph-disc')?.addEventListener('click', (e) => {
     document.getElementById('btn-graph-disc').classList.add('active'); document.getElementById('btn-graph-global').classList.remove('active');
-    desenharGraficoAluno('disc');
+    window.desenharGraficoAluno('disc');
 });
 document.getElementById('btn-graph-global')?.addEventListener('click', (e) => {
     document.getElementById('btn-graph-global').classList.add('active'); document.getElementById('btn-graph-disc').classList.remove('active');
-    desenharGraficoAluno('global');
+    window.desenharGraficoAluno('global');
 });
 
 
@@ -470,7 +470,13 @@ async function carregarTarefasProf() {
     const isPRHFTab = document.getElementById('tab-tarefas-prhf').classList.contains('active');
     if (isPRHFTab) {
         const isDT = (myRoles.includes('diretor_turma') && selectedTurma === minhaTurmaDT);
-        if(isDT) document.getElementById('btn-radar-conflitos').style.display = 'block'; else document.getElementById('btn-radar-conflitos').style.display = 'none';
+        if(isDT) {
+            document.getElementById('btn-radar-conflitos').style.display = 'block';
+            document.getElementById('prhf-dt-toggles').style.display = 'flex';
+        } else {
+            document.getElementById('btn-radar-conflitos').style.display = 'none';
+            document.getElementById('prhf-dt-toggles').style.display = 'none';
+        }
 
         const container = document.getElementById('lista-prhfs-professor'); container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A procurar PRHFs...</p>';
         if (turmasProfessor.length === 0) { container.innerHTML = '<p class="text-muted center">Sem turmas.</p>'; return; }
@@ -480,12 +486,12 @@ async function carregarTarefasProf() {
             
             todosPrhfs.sort((a,b) => new Date(a.prazo || 0) - new Date(b.prazo || 0)); 
             
-            const matVerificar = isDT ? ordemDisciplinasGlobal : disciplinasProfessor;
+            const matVerificar = (isDT && window.prhfViewMode === 'todas') ? ordemDisciplinasGlobal : disciplinasProfessor;
             let pendentes = todosPrhfs.filter(p => p.status !== 'concluida' && matVerificar.includes(p.disciplina));
             let concluidos = todosPrhfs.filter(p => p.status === 'concluida' && matVerificar.includes(p.disciplina));
             
             let h = ''; 
-            if (pendentes.length === 0) { h = `<div style="padding:15px; border:1px dashed var(--success-green); border-radius:8px; text-align:center;"><p style="color:var(--success-green); font-size:0.9rem; margin:0;">Não há Planos de Recuperação ativos.</p></div>`; }
+            if (pendentes.length === 0) { h = `<div style="padding:15px; border:1px dashed var(--success-green); border-radius:8px; text-align:center;"><p style="color:var(--success-green); font-size:0.9rem; margin:0;">Não há Planos de Recuperação ativos na tua matéria.</p></div>`; }
             
             pendentes.forEach(p => {
                 const souOProfessorDoPRHF = disciplinasProfessor.includes(p.disciplina) || p.professor === myUserName;
@@ -497,6 +503,14 @@ async function carregarTarefasProf() {
                     acoesProposta = `<div style="background:rgba(255,204,0,0.1); border:1px dashed var(--warning-yellow); padding:10px; border-radius:8px; margin-top:10px;"><strong style="color:var(--warning-yellow); font-size:0.85rem;"><i class="fa-solid fa-clock"></i> Aluno sugere:</strong><p style="font-size:0.85rem; color:white; margin:5px 0;">${p.propostaAluno}</p><div style="display:flex; gap:10px; margin-top:10px;">${souOProfessorDoPRHF ? `<button class="primary-btn small-btn btn-aceitar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1; background:var(--success-green);"><i class="fa-solid fa-check"></i> Aceitar</button><button class="secondary-btn small-btn btn-rejeitar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-xmark"></i> Rejeitar</button>` : `<span style="font-size:0.75rem; color:var(--warning-yellow);">A aguardar aprovação do prof. ${p.disciplina}</span>`}</div></div>`; 
                 } else if (p.propostaAluno && p.propostaLidaDT === true) { 
                     acoesProposta = `<div style="margin-top:10px; font-size:0.8rem; color:var(--success-green);"><i class="fa-solid fa-calendar-check"></i> Sessão Presencial Agendada (${p.propostaProfessor || p.propostaAluno})</div>`; 
+                }
+
+                let conflitoTag = '';
+                if(isDT && p.propostaLidaDT) {
+                    const allDataDesc = todosPrhfs.filter(px => px.id !== p.id && px.propostaLidaDT).map(px => px.propostaProfessor || px.propostaAluno);
+                    if(allDataDesc.includes(p.propostaProfessor || p.propostaAluno)) {
+                        conflitoTag = `<span style="background:var(--danger-red); color:white; font-size:0.6rem; padding:2px 6px; border-radius:4px; font-weight:bold; margin-left:8px;">⚠️ CONFLITO</span>`;
+                    }
                 }
 
                 const isUrgente = p.urgente;
@@ -516,7 +530,7 @@ async function carregarTarefasProf() {
                 }
                 
                 const dataPrint = p.prazo ? p.prazo.split('-').reverse().join('/') : 'S/ Prazo';
-                h += `<div class="card" style="margin-bottom:15px; border-left: 4px solid ${corCard};"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><strong style="color:white; font-size:1.05rem;">${nomeCurto(p.alunoNome)} <span style="font-size:0.75rem; color:var(--text-muted);">(${p.turma})</span></strong><div style="color:${corCard}; font-weight:bold; font-size:0.8rem; margin-top:3px;">${p.disciplina} (Mod. ${p.modulo}) - ${txtSt}</div></div></div><p style="font-size:0.85rem; color:var(--text-light); margin:10px 0;">${p.descricao}</p><div style="font-size:0.8rem; color:var(--text-muted);">Prazo: <strong style="color:white;">${dataPrint}</strong> | Presenciais: <strong>${hPres}h</strong></div>${acoesProposta} <div style="display:flex; gap:10px; margin-top:10px;">${souOProfessorDoPRHF ? `<button class="secondary-btn small-btn btn-propor-prof" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1;"><i class="fa-regular fa-calendar"></i> Sugerir</button>` : ''} ${btnAction}</div></div>`;
+                h += `<div class="card" style="margin-bottom:15px; border-left: 4px solid ${corCard};"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><strong style="color:white; font-size:1.05rem;">${nomeCurto(p.alunoNome)} <span style="font-size:0.75rem; color:var(--text-muted);">(${p.turma})</span></strong><div style="color:${corCard}; font-weight:bold; font-size:0.9rem; margin-top:3px;">${p.disciplina} (Mod. ${p.modulo}) - ${txtSt} ${conflitoTag}</div></div></div><p style="font-size:0.85rem; color:var(--text-light); margin:10px 0;">${p.descricao}</p><div style="font-size:0.8rem; color:var(--text-muted);">Prazo: <strong style="color:white;">${dataPrint}</strong> | Presenciais: <strong>${hPres}h</strong></div>${acoesProposta} <div style="display:flex; gap:10px; margin-top:10px;">${souOProfessorDoPRHF ? `<button class="secondary-btn small-btn btn-propor-prof" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1;"><i class="fa-regular fa-calendar"></i> Sugerir</button>` : ''} ${btnAction}</div></div>`;
             }); 
             container.innerHTML = h;
 
@@ -548,19 +562,30 @@ async function carregarTarefasProf() {
         const container = document.getElementById('lista-passaportes-professor'); container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar passaportes...</p>';
         try {
             let todosAlunos = []; for (const t of turmasProfessor) { const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); snap.forEach(d => todosAlunos.push({ id: d.id, ...d.data() })); }
+            
+            const sortMode = document.getElementById('sort-passaporte').value;
+            if(sortMode === 'fct') { todosAlunos.sort((a,b) => (b.fct?.horasRealizadas || 0) - (a.fct?.horasRealizadas || 0)); }
+
             let h = '';
             todosAlunos.forEach(al => {
                 let fctHtml = ''; if (al.fct && al.fct.horasRealizadas > 0) { if (al.fct.validadoDT) { fctHtml = `<span style="color:var(--success-green); font-size:0.8rem;"><i class="fa-solid fa-check-double"></i> ${al.fct.horasRealizadas}h Validadas</span>`; } else { let btnValidar = myRoles.includes('coordenador') ? `<button class="primary-btn small-btn btn-validar-fct" data-id="${al.id}" style="width:auto; padding:4px 10px;">Validar</button>` : `<span style="font-size:0.75rem; color:var(--text-muted);">A aguardar Coord.</span>`; fctHtml = `<div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:var(--warning-yellow); font-size:0.8rem;">${al.fct.horasRealizadas}h declaradas</span> ${btnValidar}</div>`; } } else { fctHtml = `<span style="color:var(--text-muted); font-size:0.8rem;">Sem registos FCT.</span>`; }
-                let papHtml = ''; if (al.papFicheiroEnviado && al.papFicheiroBase64) { if (myRoles.includes('orientador_pap') || myRoles.includes('diretor_turma')) { papHtml = `<a href="${al.papFicheiroBase64}" download="PAP_${al.nome.replace(/\s+/g, '_')}" class="secondary-btn small-btn" style="color:#0099ff; border-color:#0099ff; display:inline-block; text-align:center;"><i class="fa-solid fa-download"></i> Baixar Relatório</a>`; } else { papHtml = `<span style="color:var(--success-green); font-size:0.8rem;"><i class="fa-solid fa-check"></i> Relatório submetido</span>`; } } else if (al.pap && al.pap.tema) { papHtml = `<span style="color:var(--text-light); font-size:0.8rem;">Tema: ${al.pap.tema} (Pendente)</span>`; } else { papHtml = `<span style="color:var(--text-muted); font-size:0.8rem;">Sem registos PAP.</span>`; }
-                if (fctHtml.includes('declaradas') || fctHtml.includes('Validadas') || papHtml.includes('Tema') || papHtml.includes('Baixar') || papHtml.includes('submetido')) { h += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #ff9900;"><strong style="color:white; font-size:1.05rem;">${nomeCurto(al.nome)} <span style="font-size:0.75rem; color:var(--text-muted);">(${al.turma})</span></strong><div style="margin-top:10px; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px dashed #333;"><strong style="font-size:0.85rem; color:white;"><i class="fa-solid fa-briefcase" style="color:var(--primary-green);"></i> FCT (Estágio)</strong><div style="margin-top:5px;">${fctHtml}</div></div><div style="margin-top:10px; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px dashed #333;"><strong style="font-size:0.85rem; color:white;"><i class="fa-solid fa-laptop-code" style="color:#0099ff;"></i> Projeto de Aptidão Profissional (PAP)</strong><div style="margin-top:5px;">${papHtml}</div></div></div>`; }
+                let fasePAP = al.papFicheiroEnviado ? "Relatório Final Entregue" : (al.pap?.tema ? "Em Desenvolvimento" : "Por Iniciar");
+                let papHtml = `<span style="color:var(--text-light); font-size:0.8rem; display:block;">Fase: <strong style="color:white;">${fasePAP}</strong></span>`;
+                if(al.pap?.tema) papHtml += `<span style="color:var(--text-muted); font-size:0.75rem; display:block; margin-top:3px;">Tema: ${al.pap.tema}</span>`;
+                if (al.papFicheiroEnviado && al.papFicheiroBase64 && (myRoles.includes('orientador_pap') || myRoles.includes('diretor_turma'))) { papHtml += `<a href="${al.papFicheiroBase64}" download="PAP_${al.nome.replace(/\s+/g, '_')}" class="secondary-btn small-btn" style="color:#0099ff; border-color:#0099ff; display:inline-block; margin-top:8px; text-align:center;"><i class="fa-solid fa-download"></i> Baixar Relatório</a>`; }
+                
+                h += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #ff9900;"><strong style="color:white; font-size:1.05rem;">${nomeCurto(al.nome)} <span style="font-size:0.75rem; color:var(--text-muted);">(${al.turma})</span></strong><div style="margin-top:10px; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px dashed #333;"><strong style="font-size:0.85rem; color:white;"><i class="fa-solid fa-briefcase" style="color:var(--primary-green);"></i> FCT (Estágio)</strong><div style="margin-top:5px;">${fctHtml}</div></div><div style="margin-top:10px; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px dashed #333;"><strong style="font-size:0.85rem; color:white;"><i class="fa-solid fa-laptop-code" style="color:#0099ff;"></i> Projeto de Aptidão Profissional (PAP)</strong><div style="margin-top:5px;">${papHtml}</div></div></div>`;
             }); 
-            container.innerHTML = h === '' ? '<p class="text-muted center">Nenhum aluno submeteu horas.</p>' : h;
+            container.innerHTML = h === '' ? '<p class="text-muted center">Nenhum aluno nesta turma.</p>' : h;
         } catch (e) { container.innerHTML = '<p class="text-danger center">Erro ao carregar passaportes.</p>'; }
     }
 }
 
+document.getElementById('sort-passaporte')?.addEventListener('change', carregarTarefasProf);
 document.getElementById('filtro-prhf-data')?.addEventListener('change', carregarTarefasProf);
 document.getElementById('filtro-prhf-modulo')?.addEventListener('change', carregarTarefasProf);
+document.getElementById('btn-prhf-minha')?.addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('btn-prhf-todas').classList.remove('active'); window.prhfViewMode = 'minha'; carregarTarefasProf(); });
+document.getElementById('btn-prhf-todas')?.addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('btn-prhf-minha').classList.remove('active'); window.prhfViewMode = 'todas'; carregarTarefasProf(); });
 
 async function gerarRadarConflitos() {
     const isDT = (myRoles.includes('diretor_turma') && selectedTurma === minhaTurmaDT);
@@ -608,8 +633,10 @@ async function carregarForunsProf() {
     turmasProfessor.forEach(t => {
         html += `<div class="canal-card" data-turma="${t}" data-disc="Professores" data-nome="Conselho de Turma"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-chalkboard-user"></i></div><div class="canal-info" style="flex:1;"><h4>Conselho de Turma</h4><p>Professores do ${t}</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
         html += `<div class="canal-card" data-turma="${t}" data-disc="DT_Privado" data-nome="Diretor de Turma"><div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div><div class="canal-info" style="flex:1;"><h4>Diretor de Turma</h4><p>Assuntos Privados - ${t}</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
-        html += `<div class="canal-card" data-turma="${t}" data-disc="Coordenador" data-nome="Coordenador de Curso"><div class="canal-icon" style="color:#ff4d4d; border-color:#ff4d4d;"><i class="fa-solid fa-sitemap"></i></div><div class="canal-info" style="flex:1;"><h4>Coordenador de Curso</h4><p>Gestão - ${t}</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
     });
+    
+    // Coordenador (Apenas um global)
+    html += `<div class="canal-card" data-turma="Global" data-disc="Coordenador" data-nome="Coordenador de Curso"><div class="canal-icon" style="color:#ff4d4d; border-color:#ff4d4d;"><i class="fa-solid fa-sitemap"></i></div><div class="canal-info" style="flex:1;"><h4>Coordenador de Curso</h4><p>Chat Global do Curso</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
 
     html += '<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Chats Personalizados</h3>';
     let encontrouPersonalizado = false; let htmlPersonalizado = '<div style="display:flex; flex-direction:column; gap:10px;">';
@@ -829,7 +856,7 @@ document.body.addEventListener('click', async (e) => {
         return;
     }
 
-    // PRHF (CRIAR, PROPOR, VALIDAR PRESENÇA, CONCLUIR)
+    // PRHF
     if (e.target.closest('#btn-novo-prhf')) {
         document.getElementById('erro-modal-prhf').style.display = 'none'; document.getElementById('prhf-urgente').checked = false;
         document.getElementById('prhf-turma').innerHTML = '<option value="">-- Turma --</option>' + turmasProfessor.map(t => `<option value="${t}">${t}</option>`).join('');
@@ -882,7 +909,6 @@ document.body.addEventListener('click', async (e) => {
         return;
     }
 
-    // FALTAS INVERTIDAS
     if (e.target.closest('#btn-modal-faltas')) {
         if (!selectedTurma || alunosTurmaRAM.length === 0) return alert("Seleciona uma turma com alunos primeiro.");
         document.getElementById('erro-modal-faltas').style.display = 'none';
@@ -918,7 +944,6 @@ document.body.addEventListener('click', async (e) => {
         b.innerHTML = '<i class="fa-solid fa-check"></i> Gravado'; setTimeout(() => { b.innerHTML = 'Gravar Faltas'; b.disabled = false; document.getElementById('modal-marcar-faltas').style.display = 'none'; analisarEAtualizarTurma(selectedTurma); }, 1500); return;
     }
 
-    // NOTAS
     if (e.target.closest('#btn-modal-notas')) {
         if (!selectedTurma || alunosTurmaRAM.length === 0) return alert("Seleciona turma primeiro.");
         document.getElementById('erro-modal-notas').style.display = 'none';
@@ -948,7 +973,6 @@ document.body.addEventListener('click', async (e) => {
         return;
     }
 
-    // MATERIAIS
     if (e.target.closest('#btn-modal-materiais')) {
         if (!selectedTurma) return alert("Seleciona turma primeiro.");
         document.getElementById('mat-titulo').value = ''; 
@@ -969,7 +993,6 @@ document.body.addEventListener('click', async (e) => {
         return;
     }
 
-    // AGENDA
     if (e.target.closest('#btn-modal-agenda')) {
         if (!selectedTurma) return alert("Seleciona turma primeiro.");
         
@@ -1008,7 +1031,7 @@ document.body.addEventListener('click', async (e) => {
         return;
     }
     
-    // JUSTIFICAR TODAS AS FALTAS (Novo Modal)
+    // JUSTIFICAR FALTAS DT
     if (e.target.closest('#btn-justificar-faltas')) {
         if (!alunoSelecionadoId) return;
         document.getElementById('modal-confirm-justificar').style.display = 'flex';
