@@ -13,6 +13,7 @@ let disciplinasProfessor = [];
 let selectedTurma = "";
 let alunosTurmaRAM = [];
 let eventosTurmaRAM = [];
+let notasAlunoRAM = []; // Guarda as notas para desenhar o gráfico rápido
 
 let alunoSelecionadoId = null;
 let materialBase64 = null;
@@ -50,13 +51,13 @@ onAuthStateChanged(auth, async (user) => {
                 profData = docSnap.data();
                 myRoles = profData.papeis || [];
                 disciplinasProfessor = profData.disciplinas || []; 
-                minhaTurmaDT = profData.turmaDT || (turmasProfessor.length > 0 ? turmasProfessor[0] : "10T"); // Simulação DT 
+                turmasProfessor = profData.turmas || []; 
+                minhaTurmaDT = profData.turmaDT || (turmasProfessor.length > 0 ? turmasProfessor[0] : "10T"); 
 
                 if (profData.papel && !myRoles.includes(profData.papel)) myRoles.push(profData.papel);
                 
                 if (myRoles.some(r => ['professor', 'diretor_turma', 'orientador_pap', 'coordenador'].includes(r))) {
                     myUserName = profData.nome || myUserId;
-                    turmasProfessor = profData.turmas || []; 
                     
                     let titleStr = "Professor";
                     if (myRoles.includes('diretor_turma')) titleStr += " / DT";
@@ -250,7 +251,7 @@ async function carregarRadarProfessor() {
 }
 
 // ==========================================
-// 4. ASSISTENTE DA TURMA (LÓGICA DT)
+// 4. ASSISTENTE DA TURMA E PAUTAS
 // ==========================================
 async function analisarEAtualizarTurma(turmaId) {
     const listC = document.getElementById('lista-alunos-turma'); listC.innerHTML = '<p class="text-muted center">A ler dados dos alunos...</p>';
@@ -362,16 +363,61 @@ document.getElementById('pauta-disc-select')?.addEventListener('change', renderi
 document.getElementById('faltas-disc-select')?.addEventListener('change', renderizarFaltasTurma);
 
 // ==========================================
-// 5. PERFIL 360 DO ALUNO (LÓGICA DT)
+// 5. PERFIL 360 DO ALUNO (Com Toggle DT)
 // ==========================================
+function desenharGraficoAluno(modo) {
+    const ctx = document.getElementById('chartEvolucaoAluno').getContext('2d');
+    if(chartEvolucao) chartEvolucao.destroy();
+    
+    let gradient = ctx.createLinearGradient(0, 0, 0, 150);
+    gradient.addColorStop(0, 'rgba(0, 204, 136, 0.6)');
+    gradient.addColorStop(1, 'rgba(0, 204, 136, 0.0)');
+
+    if(modo === 'disc') {
+        const minhaDisc = disciplinasProfessor[0] || 'Geral';
+        let dadosFiltrados = notasAlunoRAM.filter(n => n.disciplina === minhaDisc);
+        dadosFiltrados.sort((a,b) => a.moduloReal - b.moduloReal);
+        
+        chartEvolucao = new Chart(ctx, {
+            type: 'line', 
+            data: { labels: dadosFiltrados.length > 0 ? dadosFiltrados.map(n => `Mod ${n.moduloReal}`) : ['Sem Avaliação'], datasets: [{ label: minhaDisc, data: dadosFiltrados.length > 0 ? dadosFiltrados.map(n => n.valor) : [0], borderColor: '#00cc88', backgroundColor: gradient, borderWidth: 3, fill: true, tension: 0.4, pointBackgroundColor: '#00cc88', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 5 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 20, grid: { color: '#333' } }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } }
+        });
+    } else {
+        // Modo Global: Médias por Disciplina
+        let medias = {};
+        notasAlunoRAM.forEach(n => {
+            if(!medias[n.disciplina]) medias[n.disciplina] = { soma: 0, count: 0 };
+            medias[n.disciplina].soma += n.valor; medias[n.disciplina].count++;
+        });
+        
+        let labels = []; let values = []; let colors = [];
+        Object.keys(medias).forEach(d => {
+            labels.push(d);
+            const m = medias[d].soma / medias[d].count;
+            values.push(m.toFixed(1));
+            colors.push(m >= 10 ? '#00cc88' : '#ff4d4d');
+        });
+        
+        chartEvolucao = new Chart(ctx, {
+            type: 'bar', 
+            data: { labels: labels.length > 0 ? labels : ['Sem Avaliação'], datasets: [{ label: 'Média Global', data: values.length > 0 ? values : [0], backgroundColor: colors, borderRadius: 6 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 20, grid: { color: '#333' } }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } }
+        });
+    }
+}
+
 async function abrirPerfil360Aluno(alunoId) {
     alunoSelecionadoId = alunoId; const al = alunosTurmaRAM.find(a => a.id === alunoId); if (!al) return;
     document.getElementById('p-aluno-nome').innerText = nomeCurto(al.nome); document.getElementById('p-aluno-foto').src = al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=333&color=fff`; document.getElementById('p-aluno-academia').innerText = al.academia ? ACADEMIAS_INFO[al.academia].nome : 'Sem Academia';
 
     const isDT = (myRoles.includes('diretor_turma') && selectedTurma === minhaTurmaDT);
     document.getElementById('perfil-aluno-title-estat').innerText = isDT ? 'Estatísticas Globais' : 'Estatísticas na Tua Disciplina';
+    
+    const togDiv = document.getElementById('dt-graph-toggles');
+    if(isDT) togDiv.style.display = 'flex'; else togDiv.style.display = 'none';
 
-    let fCount = 0; let pCount = 0; let notasData = [];
+    let fCount = 0; let pCount = 0; notasAlunoRAM = [];
     try {
         const matVerificar = isDT ? ordemDisciplinasGlobal : disciplinasProfessor;
         
@@ -384,11 +430,9 @@ async function abrirPerfil360Aluno(alunoId) {
         const nS = await getDocs(collection(db, "utilizadores", alunoId, "notas"));
         nS.forEach(n => { 
             if(matVerificar.includes(n.data().disciplina)) { 
-                notasData.push({ moduloReal: Number(n.data().modulo), moduloStr: `${n.data().disciplina} M${n.data().modulo}`, valor: isNaN(n.data().nota) ? 0 : Number(n.data().nota) }); 
+                notasAlunoRAM.push({ disciplina: n.data().disciplina, moduloReal: Number(n.data().modulo), valor: isNaN(n.data().nota) ? 0 : Number(n.data().nota) }); 
             } 
         });
-        
-        if(!isDT) notasData.sort((a,b) => a.moduloReal - b.moduloReal);
 
         if (isDT) {
             document.getElementById('area-obs-dt').style.display = 'block'; document.getElementById('btn-justificar-faltas').style.display = fCount > 0 ? 'block' : 'none';
@@ -399,26 +443,28 @@ async function abrirPerfil360Aluno(alunoId) {
         }
     } catch (e) {}
 
-    document.getElementById('p-aluno-faltas').innerText = fCount; document.getElementById('p-aluno-prhfs').innerText = pCount; document.getElementById('p-aluno-notas').innerText = notasData.length;
+    document.getElementById('p-aluno-faltas').innerText = fCount; document.getElementById('p-aluno-prhfs').innerText = pCount; document.getElementById('p-aluno-notas').innerText = notasAlunoRAM.length;
 
-    const ctx = document.getElementById('chartEvolucaoAluno').getContext('2d');
-    if(chartEvolucao) chartEvolucao.destroy();
-    
-    let gradient = ctx.createLinearGradient(0, 0, 0, 150);
-    gradient.addColorStop(0, 'rgba(0, 204, 136, 0.6)');
-    gradient.addColorStop(1, 'rgba(0, 204, 136, 0.0)');
-
-    chartEvolucao = new Chart(ctx, {
-        type: 'line', 
-        data: { labels: notasData.length > 0 ? notasData.map(n => n.moduloStr) : ['Sem Avaliação'], datasets: [{ label: 'Evolução', data: notasData.length > 0 ? notasData.map(n => n.valor) : [0], borderColor: '#00cc88', backgroundColor: gradient, borderWidth: 3, fill: true, tension: 0.4, pointBackgroundColor: '#00cc88', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 5 }] },
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 20, grid: { color: '#333' }, ticks: { font: {size: 10} } }, x: { grid: { display: false }, ticks: { font: {size: 10} } } }, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#222', titleColor: '#00cc88', bodyFont: {size: 14} } } }
-    });
+    // Reset aos botões de toggle do gráfico
+    document.getElementById('btn-graph-disc').classList.add('active');
+    document.getElementById('btn-graph-global').classList.remove('active');
+    desenharGraficoAluno('disc');
 
     document.getElementById('modal-perfil-aluno').style.display = 'flex';
 }
 
+document.getElementById('btn-graph-disc')?.addEventListener('click', (e) => {
+    document.getElementById('btn-graph-disc').classList.add('active'); document.getElementById('btn-graph-global').classList.remove('active');
+    desenharGraficoAluno('disc');
+});
+document.getElementById('btn-graph-global')?.addEventListener('click', (e) => {
+    document.getElementById('btn-graph-global').classList.add('active'); document.getElementById('btn-graph-disc').classList.remove('active');
+    desenharGraficoAluno('global');
+});
+
+
 // ==========================================
-// 6. GESTÃO DE TAREFAS E PRHF (Validação Presença e DT)
+// 6. GESTÃO DE TAREFAS E PRHF 
 // ==========================================
 async function carregarTarefasProf() {
     const isPRHFTab = document.getElementById('tab-tarefas-prhf').classList.contains('active');
@@ -650,41 +696,10 @@ document.body.addEventListener('click', async (e) => {
         document.getElementById('modal-cidadania').style.display = 'flex';
         
         if (isDT) {
-            cont.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A ler contributos...</p>';
-            try {
-                let html = '<h4 style="color:var(--text-muted); font-size:0.9rem; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Contributos dos Professores</h4>';
-                const s = await getDocs(collection(db, "turmas", selectedTurma, "cidadania"));
-                let achou = false;
-                s.forEach(d => {
-                    if(d.id !== "projeto_global") {
-                        achou = true;
-                        html += `<div style="background:rgba(0,0,0,0.2); border-left:3px solid #b82bf2; padding:10px; margin-bottom:10px; border-radius:6px;">
-                            <strong style="color:white; font-size:0.9rem;">${d.id}</strong>
-                            <p style="font-size:0.8rem; color:var(--text-light); margin:5px 0;"><strong>Ideias:</strong> ${d.data().proposta || 'Sem dados'}</p>
-                            <p style="font-size:0.8rem; color:var(--text-light); margin:0;"><strong>Situação:</strong> ${d.data().pontoSituacao || 'Sem dados'}</p>
-                        </div>`;
-                    }
-                });
-                if(!achou) html += '<p style="font-size:0.8rem; color:var(--text-muted);">Nenhum professor submeteu dados ainda.</p>';
-                
-                html += `<h4 style="color:white; font-size:0.9rem; margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Projeto Global (Para o Relatório Final)</h4>
-                        <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px; display:block;">Tema e Ideias Centrais</label>
-                        <textarea id="cid-dt-ideias" class="input-padrao" style="width:100%; min-height:80px; margin-bottom:15px;"></textarea>
-                        <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px; display:block;">Etapas de Desenvolvimento</label>
-                        <textarea id="cid-dt-etapas" class="input-padrao" style="width:100%; min-height:80px; margin-bottom:15px;"></textarea>
-                        <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px; display:block;">Concretização Final</label>
-                        <textarea id="cid-dt-concret" class="input-padrao" style="width:100%; min-height:80px; margin-bottom:15px;"></textarea>
-                        <button id="btn-gravar-cidadania-dt" class="primary-btn" style="width:100%; background-color:#b82bf2;">Gravar Projeto Global</button>`;
-                
-                cont.innerHTML = html;
-                const dtSnap = await getDoc(doc(db, "turmas", selectedTurma, "cidadania", "projeto_global"));
-                if(dtSnap.exists()) {
-                    document.getElementById('cid-dt-ideias').value = dtSnap.data().ideias || '';
-                    document.getElementById('cid-dt-etapas').value = dtSnap.data().etapas || '';
-                    document.getElementById('cid-dt-concret').value = dtSnap.data().concretizacao || '';
-                }
-            } catch(err) { cont.innerHTML = "Erro"; }
+            document.getElementById('dt-cidadania-tabs').style.display = 'flex';
+            document.getElementById('btn-cid-global').click(); // Começa na visão global
         } else {
+            document.getElementById('dt-cidadania-tabs').style.display = 'none';
             cont.innerHTML = `<p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Informa o Diretor de Turma sobre o ponto de situação do projeto na tua disciplina.</p>
                         <label style="font-size:0.8rem; color:white; margin-bottom:5px; display:block;">Ideias e Propostas de Tema</label>
                         <textarea id="cidadania-proposta" class="input-padrao" placeholder="Sugestões de temas ou ações da tua disciplina..." style="width:100%; min-height:100px; margin-bottom:15px;"></textarea>
@@ -701,24 +716,59 @@ document.body.addEventListener('click', async (e) => {
         }
         return;
     }
+
+    if (e.target.closest('#btn-cid-global')) {
+        document.getElementById('btn-cid-global').classList.add('active'); document.getElementById('btn-cid-minha').classList.remove('active');
+        const cont = document.getElementById('cidadania-dinamico-content'); cont.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A ler contributos...</p>';
+        try {
+            let html = '<h4 style="color:var(--text-muted); font-size:0.9rem; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Contributos dos Professores</h4>';
+            const s = await getDocs(collection(db, "turmas", selectedTurma, "cidadania"));
+            let achou = false;
+            s.forEach(d => {
+                if(d.id !== "projeto_global") {
+                    achou = true;
+                    html += `<div style="background:rgba(0,0,0,0.2); border-left:3px solid #b82bf2; padding:10px; margin-bottom:10px; border-radius:6px;"><strong style="color:white; font-size:0.9rem;">${d.id}</strong><p style="font-size:0.8rem; color:var(--text-light); margin:5px 0;"><strong>Ideias:</strong> ${d.data().proposta || 'Sem dados'}</p><p style="font-size:0.8rem; color:var(--text-light); margin:0;"><strong>Situação:</strong> ${d.data().pontoSituacao || 'Sem dados'}</p></div>`;
+                }
+            });
+            if(!achou) html += '<p style="font-size:0.8rem; color:var(--text-muted);">Nenhum professor submeteu dados ainda.</p>';
+            html += `<h4 style="color:white; font-size:0.9rem; margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Projeto Global (Relatório Final)</h4>
+                    <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px; display:block;">Tema e Ideias Centrais</label>
+                    <textarea id="cid-dt-ideias" class="input-padrao" style="width:100%; min-height:80px; margin-bottom:15px;"></textarea>
+                    <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px; display:block;">Etapas de Desenvolvimento</label>
+                    <textarea id="cid-dt-etapas" class="input-padrao" style="width:100%; min-height:80px; margin-bottom:15px;"></textarea>
+                    <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px; display:block;">Concretização Final</label>
+                    <textarea id="cid-dt-concret" class="input-padrao" style="width:100%; min-height:80px; margin-bottom:15px;"></textarea>
+                    <button id="btn-gravar-cidadania-dt" class="primary-btn" style="width:100%; background-color:#b82bf2;">Gravar Projeto Global</button>`;
+            cont.innerHTML = html;
+            const dtSnap = await getDoc(doc(db, "turmas", selectedTurma, "cidadania", "projeto_global"));
+            if(dtSnap.exists()) {
+                document.getElementById('cid-dt-ideias').value = dtSnap.data().ideias || ''; document.getElementById('cid-dt-etapas').value = dtSnap.data().etapas || ''; document.getElementById('cid-dt-concret').value = dtSnap.data().concretizacao || '';
+            }
+        } catch(err) { cont.innerHTML = "Erro"; }
+        return;
+    }
+
+    if (e.target.closest('#btn-cid-minha')) {
+        document.getElementById('btn-cid-minha').classList.add('active'); document.getElementById('btn-cid-global').classList.remove('active');
+        const cont = document.getElementById('cidadania-dinamico-content'); const disc = disciplinasProfessor[0] || "Geral";
+        cont.innerHTML = `<p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Informa o Diretor de Turma sobre o ponto de situação do projeto na tua disciplina.</p><label style="font-size:0.8rem; color:white; margin-bottom:5px; display:block;">Ideias e Propostas de Tema</label><textarea id="cidadania-proposta" class="input-padrao" placeholder="Sugestões..." style="width:100%; min-height:100px; margin-bottom:15px;"></textarea><label style="font-size:0.8rem; color:white; margin-bottom:5px; display:block;">Ponto de Situação Atual</label><textarea id="cidadania-ponto-situacao" class="input-padrao" placeholder="O que os alunos já fizeram na tua aula..." style="width:100%; min-height:100px; margin-bottom:15px;"></textarea><button id="btn-gravar-cidadania" class="primary-btn" style="width:100%; background-color:#b82bf2;">Gravar Ponto de Situação</button>`;
+        try { const snap = await getDoc(doc(db, "turmas", selectedTurma, "cidadania", disc)); if(snap.exists()) { document.getElementById('cidadania-proposta').value = snap.data().proposta || ''; document.getElementById('cidadania-ponto-situacao').value = snap.data().pontoSituacao || ''; } } catch(err) {}
+        return;
+    }
+
     if (e.target.closest('#btn-gravar-cidadania')) {
         const disc = disciplinasProfessor[0] || "Geral";
         const btn = e.target.closest('#btn-gravar-cidadania'); btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
         try {
-            await setDoc(doc(db, "turmas", selectedTurma, "cidadania", disc), {
-                proposta: document.getElementById('cidadania-proposta').value, 
-                pontoSituacao: document.getElementById('cidadania-ponto-situacao').value
-            }, { merge: true });
-            btn.innerHTML = '<i class="fa-solid fa-check"></i> Gravado'; setTimeout(() => { btn.innerHTML = 'Gravar Ponto de Situação'; btn.disabled = false; document.getElementById('modal-cidadania').style.display = 'none'; }, 1500);
+            await setDoc(doc(db, "turmas", selectedTurma, "cidadania", disc), { proposta: document.getElementById('cidadania-proposta').value, pontoSituacao: document.getElementById('cidadania-ponto-situacao').value }, { merge: true });
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Gravado'; setTimeout(() => { btn.innerHTML = 'Gravar Ponto de Situação'; btn.disabled = false; }, 1500);
         } catch(err) { btn.innerHTML = 'Erro!'; setTimeout(() => { btn.innerHTML = 'Gravar Ponto de Situação'; btn.disabled = false; }, 2000); }
         return;
     }
     if (e.target.closest('#btn-gravar-cidadania-dt')) {
         const btn = e.target.closest('#btn-gravar-cidadania-dt'); btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
         try {
-            await setDoc(doc(db, "turmas", selectedTurma, "cidadania", "projeto_global"), {
-                ideias: document.getElementById('cid-dt-ideias').value, etapas: document.getElementById('cid-dt-etapas').value, concretizacao: document.getElementById('cid-dt-concret').value
-            }, { merge: true });
+            await setDoc(doc(db, "turmas", selectedTurma, "cidadania", "projeto_global"), { ideias: document.getElementById('cid-dt-ideias').value, etapas: document.getElementById('cid-dt-etapas').value, concretizacao: document.getElementById('cid-dt-concret').value }, { merge: true });
             btn.innerHTML = '<i class="fa-solid fa-check"></i> Projeto Global Guardado'; setTimeout(() => { btn.innerHTML = 'Gravar Projeto Global'; btn.disabled = false; document.getElementById('modal-cidadania').style.display = 'none'; }, 1500);
         } catch(err) { btn.innerHTML = 'Erro!'; setTimeout(() => { btn.innerHTML = 'Gravar Projeto Global'; btn.disabled = false; }, 2000); }
         return;
@@ -836,9 +886,11 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('#btn-modal-faltas')) {
         if (!selectedTurma || alunosTurmaRAM.length === 0) return alert("Seleciona uma turma com alunos primeiro.");
         document.getElementById('erro-modal-faltas').style.display = 'none';
-        document.getElementById('lancar-falta-disciplina').innerHTML = getDisciplinasPermitidas().map(dc => `<option value="${dc}">${dc}</option>`).join('');
-        const isDT = (myRoles.includes('diretor_turma') && selectedTurma === minhaTurmaDT);
-        if(isDT) document.getElementById('lancar-falta-disciplina').style.display = 'block'; else document.getElementById('lancar-falta-disciplina').style.display = 'none';
+        
+        const permitidas = getDisciplinasPermitidas();
+        const discFalta = document.getElementById('lancar-falta-disciplina');
+        discFalta.innerHTML = permitidas.map(dc => `<option value="${dc}">${dc}</option>`).join('');
+        discFalta.style.display = permitidas.length > 1 ? 'block' : 'none';
         
         const c = document.getElementById('lista-metralhadora-faltas'); let h = '';
         alunosTurmaRAM.forEach(al => { 
@@ -870,14 +922,22 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('#btn-modal-notas')) {
         if (!selectedTurma || alunosTurmaRAM.length === 0) return alert("Seleciona turma primeiro.");
         document.getElementById('erro-modal-notas').style.display = 'none';
-        document.getElementById('lancar-nota-disciplina').innerHTML = getDisciplinasPermitidas().map(dc => `<option value="${dc}">${dc}</option>`).join(''); document.getElementById('lancar-nota-modulo').value = '';
+        
+        const permitidas = getDisciplinasPermitidas();
+        const selDisc = document.getElementById('lancar-nota-disciplina');
+        selDisc.innerHTML = permitidas.map(dc => `<option value="${dc}">${dc}</option>`).join('');
+        selDisc.style.display = permitidas.length > 1 ? 'block' : 'none';
+        
+        document.getElementById('lancar-nota-modulo').value = '';
         const grid = document.getElementById('grid-notas-alunos'); let h = '';
         alunosTurmaRAM.forEach(al => { h += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(255,255,255,0.05); border-radius:8px; border:1px solid #333;"><div style="display:flex; align-items:center; gap:10px;"><img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=333&color=fff`}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"><span style="color:white; font-size:0.9rem;">${nomeCurto(al.nome)}</span></div><input type="text" class="input-nota-aluno input-padrao" data-id="${al.id}" placeholder="Nota" style="width:70px; text-align:center; padding:5px; margin:0; text-transform:uppercase;"></div>`; });
         grid.innerHTML = h; document.getElementById('modal-lancamento-notas').style.display = 'flex'; return;
     }
     if (e.target.closest('#btn-confirmar-notas')) {
-        const disc = document.getElementById('lancar-nota-disciplina').value; const mod = document.getElementById('lancar-nota-modulo').value; const errDiv = document.getElementById('erro-modal-notas');
-        if (!disc || !mod) { errDiv.innerText = "Preenche o módulo e disciplina."; errDiv.style.display = 'block'; return; }
+        const discSelect = document.getElementById('lancar-nota-disciplina');
+        const disc = discSelect.style.display === 'block' ? discSelect.value : (disciplinasProfessor[0] || "Geral");
+        const mod = document.getElementById('lancar-nota-modulo').value; const errDiv = document.getElementById('erro-modal-notas');
+        if (!mod) { errDiv.innerText = "Preenche o módulo."; errDiv.style.display = 'block'; return; }
         const inputs = document.querySelectorAll('.input-nota-aluno'); let notasParaGravar = []; inputs.forEach(inp => { const v = inp.value.trim().toUpperCase(); if (v) notasParaGravar.push({ id: inp.getAttribute('data-id'), nota: v }); });
         if (notasParaGravar.length === 0) { errDiv.innerText = "Não inseriste notas."; errDiv.style.display = 'block'; return; }
         const b = e.target.closest('#btn-confirmar-notas'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
@@ -891,11 +951,19 @@ document.body.addEventListener('click', async (e) => {
     // MATERIAIS
     if (e.target.closest('#btn-modal-materiais')) {
         if (!selectedTurma) return alert("Seleciona turma primeiro.");
-        document.getElementById('mat-titulo').value = ''; document.getElementById('mat-disciplina').innerHTML = getDisciplinasPermitidas().map(dc => `<option value="${dc}">${dc}</option>`).join('');
+        document.getElementById('mat-titulo').value = ''; 
+        const permitidas = getDisciplinasPermitidas();
+        const matDisc = document.getElementById('mat-disciplina');
+        matDisc.innerHTML = permitidas.length > 0 ? permitidas.map(dc => `<option value="${dc}">${dc}</option>`).join('') : '<option value="">Geral</option>';
+        matDisc.style.display = permitidas.length > 1 ? 'block' : 'none';
+        
         document.getElementById('mat-file').value = ''; materialBase64 = null; document.getElementById('mat-file-name').innerText = 'Toca para selecionar PDF'; document.getElementById('modal-materiais').style.display = 'flex'; return;
     }
     if (e.target.closest('#btn-gravar-material')) {
-        const tit = document.getElementById('mat-titulo').value.trim(); const disc = document.getElementById('mat-disciplina').value; if (!tit) return alert("Título em falta.");
+        const tit = document.getElementById('mat-titulo').value.trim(); 
+        const matDisc = document.getElementById('mat-disciplina');
+        const disc = matDisc.style.display === 'block' ? matDisc.value : (disciplinasProfessor[0] || "Geral");
+        if (!tit) return alert("Título em falta.");
         const b = e.target.closest('#btn-gravar-material'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
         try { await addDoc(collection(db, "turmas", selectedTurma, "sumarios"), { titulo: tit, disciplina: disc, professor: myUserName, data: new Date().toLocaleDateString('pt-PT'), descricao: materialBase64 ? "Ficheiro em anexo." : "Material partilhado pelo professor.", ficheiroBase64: materialBase64, timestamp: Date.now() }); b.innerHTML = '<i class="fa-solid fa-check"></i> Partilhado'; setTimeout(() => { b.innerHTML = 'Partilhar com a Turma'; b.disabled = false; document.getElementById('modal-materiais').style.display = 'none'; }, 1500); } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 1500); }
         return;
@@ -904,19 +972,21 @@ document.body.addEventListener('click', async (e) => {
     // AGENDA
     if (e.target.closest('#btn-modal-agenda')) {
         if (!selectedTurma) return alert("Seleciona turma primeiro.");
-        const isDT = (myRoles.includes('diretor_turma') && selectedTurma === minhaTurmaDT);
+        
+        const permitidas = getDisciplinasPermitidas();
         const sd = document.getElementById('agendar-disciplina');
-        if(isDT) { sd.innerHTML = ordemDisciplinasGlobal.map(dc => `<option value="${dc}">${dc}</option>`).join(''); sd.style.display = 'block'; } else { sd.style.display = 'none'; }
+        sd.innerHTML = permitidas.map(dc => `<option value="${dc}">${dc}</option>`).join(''); 
+        sd.style.display = permitidas.length > 1 ? 'block' : 'none';
 
         document.getElementById('evento-titulo').value = ''; document.getElementById('evento-data').value = ''; 
         document.getElementById('evento-hora').value = ''; document.getElementById('evento-hora').style.display = 'none'; document.getElementById('evento-periodo').value = 'dia';
         document.getElementById('modal-agendar-evento').style.display = 'flex'; return;
     }
     if (e.target.closest('#btn-gravar-evento')) {
-        const isDT = (myRoles.includes('diretor_turma') && selectedTurma === minhaTurmaDT);
         const t = document.getElementById('evento-titulo').value.trim(); const d = document.getElementById('evento-data').value; const tp = document.getElementById('evento-tipo').value; 
         const p = document.getElementById('evento-periodo').value; const h = document.getElementById('evento-hora').value;
-        const disc = isDT ? document.getElementById('agendar-disciplina').value : (disciplinasProfessor[0] || "Geral");
+        const sd = document.getElementById('agendar-disciplina');
+        const disc = sd.style.display === 'block' ? sd.value : (disciplinasProfessor[0] || "Geral");
 
         if (!t || !d) return alert("Preenche Título e Data.");
         if (p === 'hora' && !h) return alert("Preenche a hora exata do evento.");
@@ -937,34 +1007,27 @@ document.body.addEventListener('click', async (e) => {
         } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 1500); }
         return;
     }
-    if (e.target.closest('.btn-rejeitar-proposta')) { const btn = e.target.closest('.btn-rejeitar-proposta'); document.getElementById('rej-aluno-id').value = btn.getAttribute('data-aluno'); document.getElementById('rej-prhf-id').value = btn.getAttribute('data-prhf'); document.getElementById('rej-motivo').value = ''; document.getElementById('modal-rejeitar-prhf').style.display = 'flex'; return; }
-    if (e.target.closest('#btn-confirmar-rejeicao')) {
-        const aId = document.getElementById('rej-aluno-id').value; const pId = document.getElementById('rej-prhf-id').value; const feedback = document.getElementById('rej-motivo').value.trim(); if (!feedback) return alert("Indica o motivo.");
-        const b = e.target.closest('#btn-confirmar-rejeicao'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
-        try { await updateDoc(doc(db, "utilizadores", aId, "prhfs", pId), { propostaLidaDT: true, propostaAluno: null, feedbackProfessor: "Rejeitada: " + feedback }); b.innerHTML = '<i class="fa-solid fa-check"></i> Rejeitado'; setTimeout(() => { b.innerHTML = 'Rejeitar Agendamento'; b.disabled = false; document.getElementById('modal-rejeitar-prhf').style.display = 'none'; carregarTarefasProf(); }, 1500); } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 1500); }
+    
+    // JUSTIFICAR TODAS AS FALTAS (Novo Modal)
+    if (e.target.closest('#btn-justificar-faltas')) {
+        if (!alunoSelecionadoId) return;
+        document.getElementById('modal-confirm-justificar').style.display = 'flex';
         return;
     }
-    if (e.target.closest('.btn-aceitar-proposta')) {
-        const btn = e.target.closest('.btn-aceitar-proposta'); const aId = btn.getAttribute('data-aluno'); const pId = btn.getAttribute('data-prhf'); btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
-        try { await updateDoc(doc(db, "utilizadores", aId, "prhfs", pId), { propostaLidaDT: true, feedbackProfessor: "Proposta Aceite! Comparece no dia/hora combinados." }); carregarTarefasProf(); } catch (err) {}
+    if (e.target.closest('#btn-executar-justificar')) {
+        const b = e.target.closest('#btn-executar-justificar'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
+        try {
+            const fS = await getDocs(query(collection(db, "utilizadores", alunoSelecionadoId, "faltas"), where("justificada", "==", false)));
+            for (const f of fS.docs) { await updateDoc(doc(db, "utilizadores", alunoSelecionadoId, "faltas", f.id), { justificada: true, justificadaPor: myUserName }); }
+            b.innerHTML = '<i class="fa-solid fa-check"></i> Faltas Justificadas';
+            setTimeout(() => { b.innerHTML = 'Sim, Justificar'; b.disabled = false; document.getElementById('modal-confirm-justificar').style.display = 'none'; abrirPerfil360Aluno(alunoSelecionadoId); analisarEAtualizarTurma(selectedTurma); }, 2000);
+        } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 2000); }
         return;
     }
+    
     if (e.target.closest('#btn-salvar-obs-dt')) {
         if (!alunoSelecionadoId) return; const txt = document.getElementById('p-aluno-obs-dt').value.trim(); const b = e.target.closest('#btn-salvar-obs-dt'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
         try { await setDoc(doc(db, "utilizadores", alunoSelecionadoId, "reunioes", "1_avaliacao"), { global: txt }, { merge: true }); b.innerHTML = '<i class="fa-solid fa-check"></i> Gravado'; b.style.backgroundColor = "var(--success-green)"; setTimeout(() => { b.innerHTML = 'Gravar'; b.disabled = false; b.style.backgroundColor = "var(--primary-green)"; }, 2000); } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 2000); }
-        return;
-    }
-    if (e.target.closest('#btn-justificar-faltas')) {
-        if (!alunoSelecionadoId) return;
-        if (confirm("Pretendes justificar todas as faltas pendentes deste aluno?")) {
-            const b = e.target.closest('#btn-justificar-faltas'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
-            try {
-                const fS = await getDocs(query(collection(db, "utilizadores", alunoSelecionadoId, "faltas"), where("justificada", "==", false)));
-                for (const f of fS.docs) { await updateDoc(doc(db, "utilizadores", alunoSelecionadoId, "faltas", f.id), { justificada: true, justificadaPor: myUserName }); }
-                b.innerHTML = '<i class="fa-solid fa-check"></i> Faltas Justificadas'; b.style.color = "var(--success-green)"; b.style.borderColor = "var(--success-green)";
-                setTimeout(() => { b.innerHTML = '<i class="fa-solid fa-clipboard-check"></i> Justificar Todas as Faltas'; b.disabled = false; b.style.color = "#00d2ff"; b.style.borderColor = "#00d2ff"; abrirPerfil360Aluno(alunoSelecionadoId); analisarEAtualizarTurma(selectedTurma); }, 2000);
-            } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 2000); }
-        }
         return;
     }
 });
