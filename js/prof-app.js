@@ -185,6 +185,7 @@ async function carregarRadarProfessor() {
         else resumo += `<br><span style="color:var(--success-green);">Excelente! Tudo em dia na tua matéria.</span>`;
         aText.innerHTML = resumo;
 
+        // INJETAR CARROSSEL
         const carouselTrack = document.getElementById('stats-carousel-container');
         const statsHtmlBlock = `
             <div class="stat-card"><h2 style="color: var(--primary-green); margin-bottom: 5px;">${turmasProfessor.length}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Turmas</span></div>
@@ -324,7 +325,7 @@ async function renderizarFaltasTurma() {
 }
 
 // ==========================================
-// 5. PERFIL 360 DO ALUNO (GRÁFICO CURVO)
+// 5. PERFIL 360 DO ALUNO
 // ==========================================
 async function abrirPerfil360Aluno(alunoId) {
     alunoSelecionadoId = alunoId; const al = alunosTurmaRAM.find(a => a.id === alunoId); if (!al) return;
@@ -353,9 +354,7 @@ async function abrirPerfil360Aluno(alunoId) {
         }
     } catch (e) {}
 
-    document.getElementById('p-aluno-faltas').innerText = fCount; 
-    document.getElementById('p-aluno-prhfs').innerText = pCount; 
-    document.getElementById('p-aluno-notas').innerText = notasData.length;
+    document.getElementById('p-aluno-faltas').innerText = fCount; document.getElementById('p-aluno-prhfs').innerText = pCount; document.getElementById('p-aluno-notas').innerText = notasData.length;
 
     const ctx = document.getElementById('chartEvolucaoAluno').getContext('2d');
     if(chartEvolucao) chartEvolucao.destroy();
@@ -366,15 +365,7 @@ async function abrirPerfil360Aluno(alunoId) {
 
     chartEvolucao = new Chart(ctx, {
         type: 'line', 
-        data: { 
-            labels: notasData.length > 0 ? notasData.map(n => n.moduloStr) : ['Sem Avaliação'], 
-            datasets: [{ 
-                label: 'Evolução', 
-                data: notasData.length > 0 ? notasData.map(n => n.valor) : [0], 
-                borderColor: '#00cc88', backgroundColor: gradient, borderWidth: 3, fill: true, tension: 0.4, 
-                pointBackgroundColor: '#00cc88', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 5
-            }] 
-        },
+        data: { labels: notasData.length > 0 ? notasData.map(n => n.moduloStr) : ['Sem Avaliação'], datasets: [{ label: 'Evolução', data: notasData.length > 0 ? notasData.map(n => n.valor) : [0], borderColor: '#00cc88', backgroundColor: gradient, borderWidth: 3, fill: true, tension: 0.4, pointBackgroundColor: '#00cc88', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 5 }] },
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 20, grid: { color: '#333' }, ticks: { font: {size: 10} } }, x: { grid: { display: false }, ticks: { font: {size: 10} } } }, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#222', titleColor: '#00cc88', bodyFont: {size: 14} } } }
     });
 
@@ -382,7 +373,7 @@ async function abrirPerfil360Aluno(alunoId) {
 }
 
 // ==========================================
-// 6. GESTÃO DE TAREFAS E HISTÓRICO DE PRHF
+// 6. GESTÃO DE TAREFAS (PRHF COM FILTROS E CORES)
 // ==========================================
 async function carregarTarefasProf() {
     const isPRHFTab = document.getElementById('tab-tarefas-prhf').classList.contains('active');
@@ -403,21 +394,42 @@ async function carregarTarefasProf() {
             
             pendentes.forEach(p => {
                 let acoesProposta = '';
-                if (p.propostaAluno && p.propostaLidaDT === false) { acoesProposta = `<div style="background:rgba(255,204,0,0.1); border:1px dashed var(--warning-yellow); padding:10px; border-radius:8px; margin-top:10px;"><strong style="color:var(--warning-yellow); font-size:0.85rem;"><i class="fa-solid fa-clock"></i> Proposta de Agendamento:</strong><p style="font-size:0.85rem; color:white; margin:5px 0;">${p.propostaAluno}</p><div style="display:flex; gap:10px; margin-top:10px;"><button class="primary-btn small-btn btn-aceitar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1; background:var(--success-green);"><i class="fa-solid fa-check"></i> Aceitar</button><button class="secondary-btn small-btn btn-rejeitar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-xmark"></i> Rejeitar</button></div></div>`; } 
-                else if (p.propostaAluno && p.propostaLidaDT === true) { acoesProposta = `<div style="margin-top:10px; font-size:0.8rem; color:var(--success-green);"><i class="fa-solid fa-calendar-check"></i> Sessão Agendada</div>`; }
-                const dataPrint = p.prazo ? p.prazo.split('-').reverse().join('/') : 'S/ Prazo';
-                h += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #00d2ff;"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><strong style="color:white; font-size:1.05rem;">${nomeCurto(p.alunoNome)} <span style="font-size:0.75rem; color:var(--text-muted);">(${p.turma})</span></strong><div style="color:#00d2ff; font-weight:bold; font-size:0.9rem; margin-top:3px;">${p.disciplina} (Módulo ${p.modulo})</div></div><button class="btn-concluir-prhf" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="background:var(--bg-dark); border:1px solid var(--success-green); color:var(--success-green); padding:5px 10px; border-radius:6px; cursor:pointer; font-size:0.8rem;"><i class="fa-solid fa-clipboard-check"></i> Fechar</button></div><p style="font-size:0.85rem; color:var(--text-light); margin:10px 0;">${p.descricao}</p><div style="font-size:0.8rem; color:var(--text-muted);">Prazo: <strong style="color:white;">${dataPrint}</strong> | Presenciais: <strong>${p.horasPresenciais}h</strong></div>${acoesProposta}</div>`;
-            }); 
+                if (p.propostaProfessor) {
+                    acoesProposta = `<div style="background:rgba(0,153,255,0.1); border:1px dashed #0099ff; padding:10px; border-radius:8px; margin-top:10px;"><strong style="color:#0099ff; font-size:0.85rem;"><i class="fa-solid fa-clock"></i> Tu sugeriste:</strong><p style="font-size:0.85rem; color:white; margin:5px 0;">${p.propostaProfessor}</p><span style="font-size:0.75rem; color:var(--text-muted);">A aguardar que o aluno aceite.</span></div>`;
+                } else if (p.propostaAluno && p.propostaLidaDT === false) { 
+                    acoesProposta = `<div style="background:rgba(255,204,0,0.1); border:1px dashed var(--warning-yellow); padding:10px; border-radius:8px; margin-top:10px;"><strong style="color:var(--warning-yellow); font-size:0.85rem;"><i class="fa-solid fa-clock"></i> Aluno sugere:</strong><p style="font-size:0.85rem; color:white; margin:5px 0;">${p.propostaAluno}</p><div style="display:flex; gap:10px; margin-top:10px;"><button class="primary-btn small-btn btn-aceitar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1; background:var(--success-green);"><i class="fa-solid fa-check"></i> Aceitar</button><button class="secondary-btn small-btn btn-rejeitar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-xmark"></i> Rejeitar</button></div></div>`; 
+                } else if (p.propostaAluno && p.propostaLidaDT === true) { 
+                    acoesProposta = `<div style="margin-top:10px; font-size:0.8rem; color:var(--success-green);"><i class="fa-solid fa-calendar-check"></i> Sessão Agendada</div>`; 
+                }
 
-            h += `<h3 style="margin-top: 30px; font-size: 1.1rem; color: var(--text-muted); border-bottom: 1px solid #333; padding-bottom: 10px;">Histórico Concluído</h3>`;
-            if (concluidos.length === 0) { h += `<p class="text-muted center" style="font-size:0.85rem; margin-top:15px;">Ainda não tens histórico de planos fechados.</p>`; } 
+                const isUrgente = p.urgente;
+                const corCard = isUrgente ? 'var(--danger-red)' : 'var(--warning-yellow)';
+                const txtSt = isUrgente ? 'MÓD. TERMINADO' : 'MÓD. EM CURSO';
+                
+                const dataPrint = p.prazo ? p.prazo.split('-').reverse().join('/') : 'S/ Prazo';
+                
+                h += `<div class="card" style="margin-bottom:15px; border-left: 4px solid ${corCard};"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><strong style="color:white; font-size:1.05rem;">${nomeCurto(p.alunoNome)} <span style="font-size:0.75rem; color:var(--text-muted);">(${p.turma})</span></strong><div style="color:${corCard}; font-weight:bold; font-size:0.8rem; margin-top:3px;">${p.disciplina} (Mod. ${p.modulo}) - ${txtSt}</div></div><button class="btn-concluir-prhf" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="background:var(--bg-dark); border:1px solid var(--success-green); color:var(--success-green); padding:5px 10px; border-radius:6px; cursor:pointer; font-size:0.8rem;"><i class="fa-solid fa-clipboard-check"></i> Fechar</button></div><p style="font-size:0.85rem; color:var(--text-light); margin:10px 0;">${p.descricao}</p><div style="font-size:0.8rem; color:var(--text-muted);">Prazo: <strong style="color:white;">${dataPrint}</strong> | Presenciais: <strong>${p.horasPresenciais}h</strong></div>${acoesProposta} <button class="secondary-btn small-btn btn-propor-prof" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="width:100%; margin-top:10px;"><i class="fa-regular fa-calendar"></i> Sugerir Horário</button></div>`;
+            }); 
+            container.innerHTML = h;
+
+            // HISTÓRICO COM FILTROS
+            const dFiltro = document.getElementById('filtro-prhf-data').value;
+            const mFiltro = document.getElementById('filtro-prhf-modulo').value;
+            
+            let concluidosFiltrados = concluidos;
+            if(dFiltro) concluidosFiltrados = concluidosFiltrados.filter(c => c.dataCriacao && c.dataCriacao.startsWith(dFiltro));
+            if(mFiltro) concluidosFiltrados = concluidosFiltrados.filter(c => c.modulo == mFiltro);
+
+            let histHtml = '';
+            if (concluidosFiltrados.length === 0) { histHtml += `<p class="text-muted center" style="font-size:0.85rem; margin-top:15px;">Nenhum histórico encontrado com estes filtros.</p>`; } 
             else {
-                concluidos.forEach(c => {
+                concluidosFiltrados.forEach(c => {
                     const dataConcluida = c.dataCriacao ? new Date(c.dataCriacao).toLocaleDateString('pt-PT') : 'Antigo';
-                    h += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); border-left: 3px solid var(--success-green); padding:10px; border-radius:6px; margin-bottom:8px;"><div><strong style="color:white; font-size:0.95rem;">${nomeCurto(c.alunoNome)} <span style="font-size:0.75rem; color:var(--text-muted);">(${c.turma})</span></strong><br><span style="font-size:0.8rem; color:var(--success-green);">${c.disciplina} - Módulo ${c.modulo}</span></div><div style="text-align:right;"><span style="font-size:0.7rem; color:var(--text-muted);">Concluído</span><br><strong style="font-size:0.8rem; color:white;">${dataConcluida}</strong></div></div>`;
+                    histHtml += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); border-left: 3px solid var(--success-green); padding:10px; border-radius:6px; margin-bottom:8px;"><div><strong style="color:white; font-size:0.95rem;">${nomeCurto(c.alunoNome)} <span style="font-size:0.75rem; color:var(--text-muted);">(${c.turma})</span></strong><br><span style="font-size:0.8rem; color:var(--success-green);">${c.disciplina} - Módulo ${c.modulo}</span></div><div style="text-align:right;"><span style="font-size:0.7rem; color:var(--text-muted);">Concluído</span><br><strong style="font-size:0.8rem; color:white;">${dataConcluida}</strong></div></div>`;
                 });
             }
-            container.innerHTML = h;
+            document.getElementById('lista-prhfs-historico').innerHTML = histHtml;
+
         } catch (e) { container.innerHTML = '<p class="text-danger center">Erro a carregar PRHFs.</p>'; }
     } else {
         const container = document.getElementById('lista-passaportes-professor'); container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar passaportes...</p>';
@@ -434,7 +446,12 @@ async function carregarTarefasProf() {
     }
 }
 
+document.getElementById('filtro-prhf-data')?.addEventListener('change', carregarTarefasProf);
+document.getElementById('filtro-prhf-modulo')?.addEventListener('change', carregarTarefasProf);
+
+// ==========================================
 // OS FÓRUNS PERMANENTES E EDITÁVEIS
+// ==========================================
 async function carregarForunsProf() {
     const cont = document.getElementById('prof-forum-channel-list'); 
     cont.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A ler canais...</p>';
@@ -464,7 +481,7 @@ async function carregarForunsProf() {
                 } 
             });
         }
-        if (!encontrouPersonalizado) { htmlPersonalizado += '<p class="text-muted center" style="font-size:0.85rem;">Nenhum chat extra criado.</p>'; }
+        if (!encontrouPersonalizado) htmlPersonalizado += '<p class="text-muted center" style="font-size:0.85rem;">Nenhum chat extra criado.</p>';
         htmlPersonalizado += '</div>';
         cont.innerHTML = `<div class="forum-canais-grid">${html}${htmlPersonalizado}</div>`;
     } catch (e) { cont.innerHTML = '<p class="text-danger center">Erro a carregar chats.</p>'; }
@@ -524,6 +541,33 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('#btn-ver-pauta')) { renderizarPautaTurma(); return; }
     if (e.target.closest('#btn-ver-faltas-turma')) { renderizarFaltasTurma(); return; }
 
+    // CIDADANIA
+    if (e.target.closest('#btn-ver-cidadania')) {
+        if(!selectedTurma) return alert("Seleciona uma turma primeiro.");
+        document.getElementById('modal-cidadania').style.display = 'flex';
+        try {
+            const snap = await getDoc(doc(db, "turmas", selectedTurma, "cidadania", "projeto"));
+            if(snap.exists()) {
+                document.getElementById('cidadania-ideias').value = snap.data().ideias || '';
+                document.getElementById('cidadania-etapas').value = snap.data().etapas || '';
+                document.getElementById('cidadania-concretizacao').value = snap.data().concretizacao || '';
+            } else {
+                document.getElementById('cidadania-ideias').value = ''; document.getElementById('cidadania-etapas').value = ''; document.getElementById('cidadania-concretizacao').value = '';
+            }
+        } catch(err) {}
+        return;
+    }
+    if (e.target.closest('#btn-gravar-cidadania')) {
+        const btn = e.target.closest('#btn-gravar-cidadania'); btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
+        try {
+            await setDoc(doc(db, "turmas", selectedTurma, "cidadania", "projeto"), {
+                ideias: document.getElementById('cidadania-ideias').value, etapas: document.getElementById('cidadania-etapas').value, concretizacao: document.getElementById('cidadania-concretizacao').value
+            });
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Gravado'; setTimeout(() => { btn.innerHTML = 'Guardar Projeto'; btn.disabled = false; document.getElementById('modal-cidadania').style.display = 'none'; }, 1500);
+        } catch(err) { btn.innerHTML = 'Erro!'; setTimeout(() => { btn.innerHTML = 'Guardar Projeto'; btn.disabled = false; }, 2000); }
+        return;
+    }
+
     // FÓRUM AÇÕES E EDIÇÃO
     if (e.target.closest('.btn-edit-chat')) {
         e.stopPropagation(); const btn = e.target.closest('.btn-edit-chat'); const cId = btn.getAttribute('data-id'); const t = btn.getAttribute('data-turma');
@@ -579,9 +623,9 @@ document.body.addEventListener('click', async (e) => {
         return;
     }
 
-    // PRHF (CRIAR E CONCLUIR)
+    // PRHF
     if (e.target.closest('#btn-novo-prhf')) {
-        document.getElementById('erro-modal-prhf').style.display = 'none';
+        document.getElementById('erro-modal-prhf').style.display = 'none'; document.getElementById('prhf-urgente').checked = false;
         document.getElementById('prhf-turma').innerHTML = '<option value="">-- Turma --</option>' + turmasProfessor.map(t => `<option value="${t}">${t}</option>`).join('');
         document.getElementById('prhf-disciplina').innerHTML = disciplinasProfessor.length > 0 ? disciplinasProfessor.map(dc => `<option value="${dc}">${dc}</option>`).join('') : '<option value="">Sem Disciplina</option>';
         document.getElementById('prhf-file').value = ''; prhfBase64 = null; document.getElementById('prhf-file-name').innerText = 'Toca para PDF ou Imagem';
@@ -589,16 +633,37 @@ document.body.addEventListener('click', async (e) => {
         document.getElementById('modal-criar-prhf').style.display = 'flex'; return;
     }
     if (e.target.closest('#btn-gravar-novo-prhf')) {
-        const tTurma = document.getElementById('prhf-turma').value; const tAluno = document.getElementById('prhf-aluno').value; const tDisc = document.getElementById('prhf-disciplina').value; const tMod = document.getElementById('prhf-modulo').value; const tPrazo = document.getElementById('prhf-prazo').value; const tHorasT = document.getElementById('prhf-horas-totais').value; const tHorasP = document.getElementById('prhf-horas-presenciais').value; const tDesc = document.getElementById('prhf-descricao').value.trim();
+        const tTurma = document.getElementById('prhf-turma').value; const tAluno = document.getElementById('prhf-aluno').value; const tDisc = document.getElementById('prhf-disciplina').value; const tMod = document.getElementById('prhf-modulo').value; const tPrazo = document.getElementById('prhf-prazo').value; const tHorasT = document.getElementById('prhf-horas-totais').value; const tHorasP = document.getElementById('prhf-horas-presenciais').value; const tDesc = document.getElementById('prhf-descricao').value.trim(); const urg = document.getElementById('prhf-urgente').checked;
         const errDiv = document.getElementById('erro-modal-prhf');
         if (!tAluno || !tDisc || !tMod || !tHorasT || !tPrazo || !tDesc) { errDiv.innerText = "Por favor, preenche todos os campos obrigatórios e define as Horas Totais."; errDiv.style.display = 'block'; return; }
         const b = e.target.closest('#btn-gravar-novo-prhf'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
         try {
-            await addDoc(collection(db, "utilizadores", tAluno, "prhfs"), { disciplina: tDisc, modulo: Number(tMod), prazo: tPrazo, horasTotais: Number(tHorasT), horasPresenciais: Number(tHorasP), descricao: tDesc, status: 'pendente', dataCriacao: new Date().toISOString(), professor: myUserName, ficheiroBase64: prhfBase64 });
+            await addDoc(collection(db, "utilizadores", tAluno, "prhfs"), { disciplina: tDisc, modulo: Number(tMod), prazo: tPrazo, horasTotais: Number(tHorasT), horasPresenciais: Number(tHorasP), descricao: tDesc, status: 'pendente', dataCriacao: new Date().toISOString(), professor: myUserName, ficheiroBase64: prhfBase64, urgente: urg });
             b.innerHTML = '<i class="fa-solid fa-check"></i> Atribuído'; setTimeout(() => { b.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Atribuir PRHF'; b.disabled = false; document.getElementById('modal-criar-prhf').style.display = 'none'; carregarTarefasProf(); analisarEAtualizarTurma(selectedTurma); }, 1500);
         } catch (err) { errDiv.innerText = "Erro ao gravar. Tenta de novo."; errDiv.style.display = 'block'; b.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Atribuir PRHF'; b.disabled = false; }
         return;
     }
+
+    if (e.target.closest('.btn-propor-prof')) {
+        const btn = e.target.closest('.btn-propor-prof');
+        document.getElementById('prop-prof-aluno-id').value = btn.getAttribute('data-aluno');
+        document.getElementById('prop-prof-prhf-id').value = btn.getAttribute('data-prhf');
+        document.getElementById('prop-prof-data').value = ''; document.getElementById('prop-prof-inicio').value = ''; document.getElementById('prop-prof-fim').value = '';
+        document.getElementById('modal-propor-prhf-prof').style.display = 'flex';
+        return;
+    }
+    if (e.target.closest('#btn-confirmar-proposta-prof')) {
+        const aId = document.getElementById('prop-prof-aluno-id').value; const pId = document.getElementById('prop-prof-prhf-id').value;
+        const pd = document.getElementById('prop-prof-data').value; const pi = document.getElementById('prop-prof-inicio').value; const pf = document.getElementById('prop-prof-fim').value;
+        if(!pd || !pi || !pf) return alert("Preenche todos os campos.");
+        const btn = e.target.closest('#btn-confirmar-proposta-prof'); btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
+        try {
+            await updateDoc(doc(db, "utilizadores", aId, "prhfs", pId), { propostaProfessor: `Dia ${pd.split('-').reverse().join('/')} das ${pi} às ${pf}` });
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Sugerido'; setTimeout(() => { btn.innerHTML = 'Sugerir Horário'; btn.disabled = false; document.getElementById('modal-propor-prhf-prof').style.display = 'none'; carregarTarefasProf(); }, 1500);
+        } catch(err) { btn.innerHTML = 'Erro'; setTimeout(()=>btn.disabled=false, 1500); }
+        return;
+    }
+
     if (e.target.closest('.btn-concluir-prhf')) {
         const btn = e.target.closest('.btn-concluir-prhf'); document.getElementById('conc-aluno-id').value = btn.getAttribute('data-aluno'); document.getElementById('conc-prhf-id').value = btn.getAttribute('data-prhf'); document.getElementById('conc-motivo').value = ''; document.getElementById('modal-concluir-prhf').style.display = 'flex'; return;
     }
@@ -612,7 +677,6 @@ document.body.addEventListener('click', async (e) => {
         return;
     }
 
-    // FALTAS E NOTAS
     if (e.target.closest('#btn-modal-faltas')) {
         if (!selectedTurma || alunosTurmaRAM.length === 0) return alert("Seleciona uma turma com alunos primeiro.");
         document.getElementById('erro-modal-faltas').style.display = 'none';
@@ -628,11 +692,11 @@ document.body.addEventListener('click', async (e) => {
         const disc = disciplinasProfessor[0] || "Geral"; const errDiv = document.getElementById('erro-modal-faltas');
         if (!aulaMinutos || !modSelect) { errDiv.innerText = "Seleciona a duração e o módulo associado."; errDiv.style.display = 'block'; return; }
         
-        const horasFormatadas = (Number(aulaMinutos) / 45).toFixed(1).replace('.0',''); 
+        const horasFormatadas = Number(aulaMinutos); 
         const b = e.target.closest('#btn-confirmar-faltas'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
         const ausentes = document.querySelectorAll('.chk-presente:not(:checked)');
         
-        for (const chk of ausentes) { await addDoc(collection(db, "utilizadores", chk.value, "faltas"), { disciplina: disc, modulo: modSelect, horas: Number(horasFormatadas), dataInicio: new Date().toISOString().split('T')[0], justificada: false, criadoPor: myUserName, criadoEm: new Date().toISOString() }); }
+        for (const chk of ausentes) { await addDoc(collection(db, "utilizadores", chk.value, "faltas"), { disciplina: disc, modulo: modSelect, horas: horasFormatadas, dataInicio: new Date().toISOString().split('T')[0], justificada: false, criadoPor: myUserName, criadoEm: new Date().toISOString() }); }
         b.innerHTML = '<i class="fa-solid fa-check"></i> Gravado'; setTimeout(() => { b.innerHTML = 'Gravar Faltas'; b.disabled = false; document.getElementById('modal-marcar-faltas').style.display = 'none'; analisarEAtualizarTurma(selectedTurma); }, 1500); return;
     }
 
@@ -682,49 +746,6 @@ document.body.addEventListener('click', async (e) => {
         if (p === 'hora' && !h) return alert("Preenche a hora exata do evento.");
         const b = e.target.closest('#btn-gravar-evento'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
         try { await addDoc(collection(db, "turmas", selectedTurma, "eventos"), { titulo: t, data: d, tipo: tp, periodo: p, hora: h, professor: myUserName }); b.innerHTML = '<i class="fa-solid fa-check"></i> Agendado'; setTimeout(() => { b.innerHTML = 'Agendar'; b.disabled = false; document.getElementById('modal-agendar-evento').style.display = 'none'; carregarRadarProfessor(); analisarEAtualizarTurma(selectedTurma); }, 1500); } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 1500); }
-        return;
-    }
-
-    if (e.target.closest('#btn-dar-positiva')) { if (!alunoSelecionadoId) return; document.getElementById('oco-tipo').value = 'positiva'; document.getElementById('oco-titulo').innerHTML = '<i class="fa-solid fa-star" style="color:var(--success-green);"></i> Ocorrência Positiva'; document.getElementById('oco-motivo').value = ''; document.getElementById('btn-gravar-ocorrencia').style.background = 'var(--success-green)'; document.getElementById('modal-ocorrencia').style.display = 'flex'; return; }
-    if (e.target.closest('#btn-dar-negativa')) { if (!alunoSelecionadoId) return; document.getElementById('oco-tipo').value = 'negativa'; document.getElementById('oco-titulo').innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color:var(--danger-red);"></i> Ocorrência Negativa'; document.getElementById('oco-motivo').value = ''; document.getElementById('btn-gravar-ocorrencia').style.background = 'var(--danger-red)'; document.getElementById('modal-ocorrencia').style.display = 'flex'; return; }
-    if (e.target.closest('#btn-gravar-ocorrencia')) {
-        const tipo = document.getElementById('oco-tipo').value; const motivo = document.getElementById('oco-motivo').value.trim(); if (!motivo) return alert("Preenche o motivo!");
-        const b = e.target.closest('#btn-gravar-ocorrencia'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
-        try {
-            if (tipo === 'positiva') { const uS = await getDoc(doc(db, "utilizadores", alunoSelecionadoId)); let axp = uS.exists() && uS.data().xp ? uS.data().xp : 0; await addDoc(collection(db, "utilizadores", alunoSelecionadoId, "ocorrencias"), { titulo: "Reconhecimento Positivo", descricao: motivo, tipo: "positiva", autor: myUserName, timestamp: Date.now(), data: new Date().toLocaleDateString('pt-PT') }); await updateDoc(doc(db, "utilizadores", alunoSelecionadoId), { xp: axp + 50 }); } 
-            else { await addDoc(collection(db, "utilizadores", alunoSelecionadoId, "ocorrencias"), { titulo: "Registo de Aula", descricao: motivo, tipo: "negativa", autor: myUserName, timestamp: Date.now(), data: new Date().toLocaleDateString('pt-PT') }); }
-            b.innerHTML = '<i class="fa-solid fa-check"></i> Gravado'; setTimeout(() => { b.innerHTML = 'Confirmar Registo'; b.disabled = false; document.getElementById('modal-ocorrencia').style.display = 'none'; document.getElementById('modal-perfil-aluno').style.display = 'none'; analisarEAtualizarTurma(selectedTurma); }, 1500);
-        } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 1500); }
-        return;
-    }
-    if (e.target.closest('.btn-rejeitar-proposta')) { const btn = e.target.closest('.btn-rejeitar-proposta'); document.getElementById('rej-aluno-id').value = btn.getAttribute('data-aluno'); document.getElementById('rej-prhf-id').value = btn.getAttribute('data-prhf'); document.getElementById('rej-motivo').value = ''; document.getElementById('modal-rejeitar-prhf').style.display = 'flex'; return; }
-    if (e.target.closest('#btn-confirmar-rejeicao')) {
-        const aId = document.getElementById('rej-aluno-id').value; const pId = document.getElementById('rej-prhf-id').value; const feedback = document.getElementById('rej-motivo').value.trim(); if (!feedback) return alert("Indica o motivo.");
-        const b = e.target.closest('#btn-confirmar-rejeicao'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
-        try { await updateDoc(doc(db, "utilizadores", aId, "prhfs", pId), { propostaLidaDT: true, propostaAluno: null, feedbackProfessor: "Rejeitada: " + feedback }); b.innerHTML = '<i class="fa-solid fa-check"></i> Rejeitado'; setTimeout(() => { b.innerHTML = 'Rejeitar Agendamento'; b.disabled = false; document.getElementById('modal-rejeitar-prhf').style.display = 'none'; carregarTarefasProf(); }, 1500); } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 1500); }
-        return;
-    }
-    if (e.target.closest('.btn-aceitar-proposta')) {
-        const btn = e.target.closest('.btn-aceitar-proposta'); const aId = btn.getAttribute('data-aluno'); const pId = btn.getAttribute('data-prhf'); btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
-        try { await updateDoc(doc(db, "utilizadores", aId, "prhfs", pId), { propostaLidaDT: true, feedbackProfessor: "Proposta Aceite! Comparece no dia/hora combinados." }); carregarTarefasProf(); } catch (err) {}
-        return;
-    }
-    if (e.target.closest('#btn-salvar-obs-dt')) {
-        if (!alunoSelecionadoId) return; const txt = document.getElementById('p-aluno-obs-dt').value.trim(); const b = e.target.closest('#btn-salvar-obs-dt'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
-        try { await setDoc(doc(db, "utilizadores", alunoSelecionadoId, "reunioes", "1_avaliacao"), { global: txt }, { merge: true }); b.innerHTML = '<i class="fa-solid fa-check"></i> Gravado'; b.style.backgroundColor = "var(--success-green)"; setTimeout(() => { b.innerHTML = 'Gravar Observação'; b.disabled = false; b.style.backgroundColor = "var(--primary-green)"; }, 2000); } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 2000); }
-        return;
-    }
-    if (e.target.closest('#btn-justificar-faltas')) {
-        if (!alunoSelecionadoId) return;
-        if (confirm("Pretendes justificar todas as faltas pendentes deste aluno?")) {
-            const b = e.target.closest('#btn-justificar-faltas'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
-            try {
-                const fS = await getDocs(query(collection(db, "utilizadores", alunoSelecionadoId, "faltas"), where("justificada", "==", false)));
-                for (const f of fS.docs) { await updateDoc(doc(db, "utilizadores", alunoSelecionadoId, "faltas", f.id), { justificada: true, justificadaPor: myUserName }); }
-                b.innerHTML = '<i class="fa-solid fa-check"></i> Faltas Justificadas'; b.style.color = "var(--success-green)"; b.style.borderColor = "var(--success-green)";
-                setTimeout(() => { b.innerHTML = '<i class="fa-solid fa-clipboard-check"></i> Justificar Todas as Faltas'; b.disabled = false; b.style.color = "#00d2ff"; b.style.borderColor = "#00d2ff"; abrirPerfil360Aluno(alunoSelecionadoId); analisarEAtualizarTurma(selectedTurma); }, 2000);
-            } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 2000); }
-        }
         return;
     }
 });
