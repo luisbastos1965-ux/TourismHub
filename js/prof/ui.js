@@ -1,141 +1,63 @@
-// js/prof/ui.js
 import { db } from "../../firebase.js";
 import { doc, getDoc, collection, getDocs, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-import { state, ACADEMIAS_INFO, ordemDisciplinasGlobal, nomeCurto } from "./store.js";
+import { state, ACADEMIAS_INFO, ordemDisciplinasGlobal, nomeCurto, getDisciplinasPermitidas } from "./store.js";
 
 export function iniciarCarrossel() {
-    const track = document.getElementById('stats-carousel-container');
-    if(!track) return;
+    const track = document.getElementById('stats-carousel-container'); if(!track) return;
     if(state.carouselInterval) clearInterval(state.carouselInterval);
     const startScroll = () => {
         state.carouselInterval = setInterval(() => {
-            if(track.scrollWidth > track.clientWidth) {
-                track.scrollLeft += 1;
-                if(track.scrollLeft >= (track.scrollWidth - track.clientWidth) - 1) track.scrollLeft = 0;
-            }
+            if(track.scrollWidth > track.clientWidth) { track.scrollLeft += 1; if(track.scrollLeft >= (track.scrollWidth - track.clientWidth) - 1) track.scrollLeft = 0; }
         }, 30);
     };
-    track.addEventListener('mouseenter', () => clearInterval(state.carouselInterval));
-    track.addEventListener('mouseleave', startScroll);
-    track.addEventListener('touchstart', () => clearInterval(state.carouselInterval));
-    track.addEventListener('touchend', startScroll);
+    track.addEventListener('mouseenter', () => clearInterval(state.carouselInterval)); track.addEventListener('mouseleave', startScroll);
+    track.addEventListener('touchstart', () => clearInterval(state.carouselInterval)); track.addEventListener('touchend', startScroll);
     startScroll();
 }
 
 export async function carregarRadarProfessor() {
-    const aText = document.getElementById('assistente-global-texto');
-    const hCont = document.getElementById('dashboard-horario-container');
-    const eCont = document.getElementById('radar-agenda-container');
-    
+    const aText = document.getElementById('assistente-global-texto'); const hCont = document.getElementById('dashboard-horario-container'); const eCont = document.getElementById('radar-agenda-container');
     aText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A calcular estatísticas...';
     if (state.turmasProfessor.length === 0) { aText.innerHTML = 'Não tens turmas atribuídas.'; return; }
 
     try {
-        let totalAlunos = 0; let prhfsAtivos = 0; let eventosGlobais = [];
-        let totalFaltasProf = 0; let totalOcorrencias = 0; let avaliacoesEmFalta = 0;
-        let profAulasHoje = [];
-        
-        const bK = ['1', '2', '3', '4', '1300', '5', '6', '7'];
-        const bT = { '1': '08:30', '2': '09:35', '3': '10:50', '4': '11:55', '1300': '13:00', '5': '14:05', '6': '15:15', '7': '16:20' };
-        const hjD = new Date();
-        const hjStr = `${hjD.getFullYear()}-${String(hjD.getMonth()+1).padStart(2,'0')}-${String(hjD.getDate()).padStart(2,'0')}`;
+        let totalAlunos = 0; let prhfsAtivos = 0; let eventosGlobais = []; let totalFaltasProf = 0; let totalOcorrencias = 0; let avaliacoesEmFalta = 0; let profAulasHoje = [];
+        const bK = ['1', '2', '3', '4', '1300', '5', '6', '7']; const bT = { '1': '08:30', '2': '09:35', '3': '10:50', '4': '11:55', '1300': '13:00', '5': '14:05', '6': '15:15', '7': '16:20' };
+        const hjD = new Date(); const hjStr = `${hjD.getFullYear()}-${String(hjD.getMonth()+1).padStart(2,'0')}-${String(hjD.getDate()).padStart(2,'0')}`;
 
         for (const t of state.turmasProfessor) {
+            try { const tSnap = await getDoc(doc(db, "turmas", t)); if(tSnap.exists() && tSnap.data().horario) { const hT = tSnap.data().horario; for (const b of bK) { const disc = hT[`${hjStr}_${b}`]; if (disc && state.disciplinasProfessor.includes(disc)) profAulasHoje.push({ bloco: b, turma: t, disciplina: disc, hora: bT[b] }); } } } catch(e) {}
             try {
-                const tSnap = await getDoc(doc(db, "turmas", t));
-                if(tSnap.exists() && tSnap.data().horario) {
-                    const hT = tSnap.data().horario;
-                    for (const b of bK) {
-                        const disc = hT[`${hjStr}_${b}`];
-                        if (disc && state.disciplinasProfessor.includes(disc)) profAulasHoje.push({ bloco: b, turma: t, disciplina: disc, hora: bT[b] });
-                    }
-                }
-            } catch(e) {}
-
-            try {
-                const snapAl = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
-                snapAl.forEach(d => totalAlunos++);
-                
+                const snapAl = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); snapAl.forEach(d => totalAlunos++);
                 for (const docAluno of snapAl.docs) {
-                    const pSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "prhfs"));
-                    pSnap.forEach(p => { if (p.data().status !== 'concluida' && state.disciplinasProfessor.includes(p.data().disciplina)) prhfsAtivos++; });
-
-                    const fSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "faltas"));
-                    fSnap.forEach(f => { if (state.disciplinasProfessor.includes(f.data().disciplina)) totalFaltasProf += Number(f.data().horas || 0); });
-
-                    const oSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "ocorrencias"));
-                    oSnap.forEach(o => { if(o.data().autor === state.myUserName) totalOcorrencias++; });
-                    
+                    const pSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "prhfs")); pSnap.forEach(p => { if (p.data().status !== 'concluida' && state.disciplinasProfessor.includes(p.data().disciplina)) prhfsAtivos++; });
+                    const fSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "faltas")); fSnap.forEach(f => { if (state.disciplinasProfessor.includes(f.data().disciplina)) totalFaltasProf += Number(f.data().horas || 0); });
+                    const oSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "ocorrencias")); oSnap.forEach(o => { if(o.data().autor === state.myUserName) totalOcorrencias++; });
                     avaliacoesEmFalta += Math.floor(Math.random() * 2); 
                 }
             } catch(e) {}
-
-            try {
-                const snapEv = await getDocs(collection(db, "turmas", t, "eventos"));
-                snapEv.forEach(d => eventosGlobais.push({ turma: t, ...d.data() }));
-            } catch(e) {}
+            try { const snapEv = await getDocs(collection(db, "turmas", t, "eventos")); snapEv.forEach(d => eventosGlobais.push({ turma: t, ...d.data() })); } catch(e) {}
         }
 
         let resumo = `Gerir ${totalAlunos} alunos em ${state.turmasProfessor.length} turmas. `;
-        if (prhfsAtivos > 0) resumo += `<br><span style="color:var(--warning-yellow); font-weight:bold;">Atenção: Existem ${prhfsAtivos} PRHFs em andamento.</span>`;
-        else resumo += `<br><span style="color:var(--success-green);">Excelente! Tudo em dia na tua matéria.</span>`;
+        if (prhfsAtivos > 0) resumo += `<br><span style="color:var(--warning-yellow); font-weight:bold;">Atenção: Existem ${prhfsAtivos} PRHFs em andamento.</span>`; else resumo += `<br><span style="color:var(--success-green);">Excelente! Tudo em dia na tua matéria.</span>`;
         aText.innerHTML = resumo;
 
         const carouselTrack = document.getElementById('stats-carousel-container');
-        const statsHtmlBlock = `
-            <div class="stat-card"><h2 style="color: var(--primary-green); margin-bottom: 5px;">${state.turmasProfessor.length}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Turmas</span></div>
-            <div class="stat-card"><h2 style="color: #0099ff; margin-bottom: 5px;">${totalAlunos}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Alunos</span></div>
-            <div class="stat-card"><h2 style="color: var(--danger-red); margin-bottom: 5px;">${totalFaltasProf}h</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Total Faltas</span></div>
-            <div class="stat-card"><h2 style="color: var(--warning-yellow); margin-bottom: 5px;">${prhfsAtivos}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">PRHFs Ativos</span></div>
-            <div class="stat-card"><h2 style="color: #b82bf2; margin-bottom: 5px;">${totalOcorrencias}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Ocorrências</span></div>
-            <div class="stat-card"><h2 style="color: #ffaa00; margin-bottom: 5px;">${avaliacoesEmFalta}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">A Lançar</span></div>
-        `;
-        carouselTrack.innerHTML = statsHtmlBlock + statsHtmlBlock; 
-        iniciarCarrossel();
+        const statsHtmlBlock = `<div class="stat-card"><h2 style="color: var(--primary-green); margin-bottom: 5px;">${state.turmasProfessor.length}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Turmas</span></div><div class="stat-card"><h2 style="color: #0099ff; margin-bottom: 5px;">${totalAlunos}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Alunos</span></div><div class="stat-card"><h2 style="color: var(--danger-red); margin-bottom: 5px;">${totalFaltasProf}h</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Total Faltas</span></div><div class="stat-card"><h2 style="color: var(--warning-yellow); margin-bottom: 5px;">${prhfsAtivos}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">PRHFs Ativos</span></div><div class="stat-card"><h2 style="color: #b82bf2; margin-bottom: 5px;">${totalOcorrencias}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Ocorrências</span></div><div class="stat-card"><h2 style="color: #ffaa00; margin-bottom: 5px;">${avaliacoesEmFalta}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">A Lançar</span></div>`;
+        carouselTrack.innerHTML = statsHtmlBlock + statsHtmlBlock; iniciarCarrossel();
 
         let modHtml = '<div style="display:flex; flex-direction:column; gap:8px;">';
-        state.turmasProfessor.forEach(t => {
-            state.disciplinasProfessor.forEach(d => {
-                const hDadas = 24 + Math.floor(Math.random() * 5); const hTotais = 30; const hFaltam = hTotais - hDadas;
-                modHtml += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;"><div><strong style="color:white; font-size:0.9rem;">${t} - ${d}</strong> <span style="color:var(--text-muted); font-size:0.8rem;">(Módulo 1)</span><br><span style="font-size:0.75rem; color:var(--warning-yellow);">Faltam ${hFaltam}h para terminar</span></div><div style="text-align:right;"><strong style="color:var(--primary-green);">${hDadas}h</strong> <span style="color:var(--text-muted); font-size:0.8rem;">/ ${hTotais}h</span></div></div>`;
-            });
-        });
-        modHtml += '</div>';
-        document.getElementById('dashboard-modulos-container').innerHTML = modHtml;
+        state.turmasProfessor.forEach(t => { state.disciplinasProfessor.forEach(d => { const hDadas = 24 + Math.floor(Math.random() * 5); const hTotais = 30; const hFaltam = hTotais - hDadas; modHtml += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;"><div><strong style="color:white; font-size:0.9rem;">${t} - ${d}</strong> <span style="color:var(--text-muted); font-size:0.8rem;">(Módulo 1)</span><br><span style="font-size:0.75rem; color:var(--warning-yellow);">Faltam ${hFaltam}h para terminar</span></div><div style="text-align:right;"><strong style="color:var(--primary-green);">${hDadas}h</strong> <span style="color:var(--text-muted); font-size:0.8rem;">/ ${hTotais}h</span></div></div>`; }); });
+        modHtml += '</div>'; document.getElementById('dashboard-modulos-container').innerHTML = modHtml;
 
         if(profAulasHoje.length > 0) {
-            try {
-                profAulasHoje.sort((a,b) => {
-                    if(!a.hora || !b.hora) return 0;
-                    const getMin = (hx) => parseInt(hx.split(':')[0])*60 + parseInt(hx.split(':')[1]);
-                    return getMin(a.hora) - getMin(b.hora);
-                });
-                let hHtml = '';
-                profAulasHoje.forEach(aula => {
-                    hHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid #0099ff;"><div><strong style="color:white; font-size:0.9rem;">${aula.disciplina}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${aula.turma}</span></div><span style="color:#0099ff; font-weight:bold; font-size:0.85rem;">${aula.hora}</span></div>`;
-                });
-                hCont.innerHTML = hHtml;
-            } catch(sortErr) { hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Não tens aulas marcadas para hoje.</p>'; }
-        } else {
-            hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Não tens aulas marcadas para hoje.</p>';
-        }
+            try { profAulasHoje.sort((a,b) => { if(!a.hora || !b.hora) return 0; const getMin = (hx) => parseInt(hx.split(':')[0])*60 + parseInt(hx.split(':')[1]); return getMin(a.hora) - getMin(b.hora); }); let hHtml = ''; profAulasHoje.forEach(aula => { hHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid #0099ff;"><div><strong style="color:white; font-size:0.9rem;">${aula.disciplina}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${aula.turma}</span></div><span style="color:#0099ff; font-weight:bold; font-size:0.85rem;">${aula.hora}</span></div>`; }); hCont.innerHTML = hHtml; } catch(sortErr) { hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Não tens aulas marcadas para hoje.</p>'; }
+        } else { hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Não tens aulas marcadas para hoje.</p>'; }
 
-        // CORREÇÃO: hjD aplicado corretamente aqui em vez de hjData
-        const hjStrFull = hjD.toISOString().split('T')[0];
-        const fut = eventosGlobais.filter(e => e.data && e.data >= hjStrFull).sort((a,b) => a.data.localeCompare(b.data)).slice(0, 3);
-        
-        if (fut.length > 0) {
-            let ah = ''; fut.forEach(e => { 
-                const datePrint = e.data ? e.data.split('-').reverse().join('/') : 'Brevemente';
-                const timePrint = e.periodo === 'hora' ? ` às ${e.hora}` : (e.periodo === 'manha' ? ' (Manhã)' : (e.periodo === 'tarde' ? ' (Tarde)' : ''));
-                ah += `<div style="display:flex; justify-content:space-between; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid var(--warning-yellow);"><div><strong style="color:white; font-size:0.9rem;">${e.titulo}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${e.turma}</span></div><span style="color:var(--warning-yellow); font-size:0.8rem;">${datePrint}${timePrint}</span></div>`; 
-            }); 
-            eCont.innerHTML = ah;
-        } else { eCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Agenda livre.</p>'; }
-        
-    } catch (e) { 
-        aText.innerHTML = "Problema na ligação. Por favor, tenta novamente."; 
-    }
+        const hjStrFull = hjD.toISOString().split('T')[0]; const fut = eventosGlobais.filter(e => e.data && e.data >= hjStrFull).sort((a,b) => a.data.localeCompare(b.data)).slice(0, 3);
+        if (fut.length > 0) { let ah = ''; fut.forEach(e => { const datePrint = e.data ? e.data.split('-').reverse().join('/') : 'Brevemente'; const timePrint = e.periodo === 'hora' ? ` às ${e.hora}` : (e.periodo === 'manha' ? ' (Manhã)' : (e.periodo === 'tarde' ? ' (Tarde)' : '')); ah += `<div style="display:flex; justify-content:space-between; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid var(--warning-yellow);"><div><strong style="color:white; font-size:0.9rem;">${e.titulo}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${e.turma}</span></div><span style="color:var(--warning-yellow); font-size:0.8rem;">${datePrint}${timePrint}</span></div>`; }); eCont.innerHTML = ah; } else { eCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Agenda livre.</p>'; }
+    } catch (e) { aText.innerHTML = "Problema na ligação. Por favor, tenta novamente."; }
 }
 
 export async function analisarEAtualizarTurma(turmaId) {
@@ -155,10 +77,8 @@ export async function analisarEAtualizarTurma(turmaId) {
             const al = state.alunosTurmaRAM[i]; let nFaltas = 0; let nPrhfs = 0;
             const matVerificar = isDT ? ordemDisciplinasGlobal : state.disciplinasProfessor;
             
-            const fS = await getDocs(collection(db, "utilizadores", al.id, "faltas")); 
-            fS.forEach(f => { if(!f.data().justificada && matVerificar.includes(f.data().disciplina)) nFaltas++; });
-            const pS = await getDocs(collection(db, "utilizadores", al.id, "prhfs")); 
-            pS.forEach(p => { if(p.data().status !== 'concluida' && matVerificar.includes(p.data().disciplina)) nPrhfs++; });
+            const fS = await getDocs(collection(db, "utilizadores", al.id, "faltas")); fS.forEach(f => { if(!f.data().justificada && matVerificar.includes(f.data().disciplina)) nFaltas++; });
+            const pS = await getDocs(collection(db, "utilizadores", al.id, "prhfs")); pS.forEach(p => { if(p.data().status !== 'concluida' && matVerificar.includes(p.data().disciplina)) nPrhfs++; });
             
             totalPrhfs += nPrhfs; let corBola = 'status-green';
             if (nFaltas > 5 || nPrhfs > 2) { corBola = 'status-red'; alunosEmRisco++; } else if (nFaltas > 2 || nPrhfs > 0) { corBola = 'status-yellow'; }
@@ -181,29 +101,16 @@ export async function renderizarPautaTurma() {
     document.getElementById('modal-pauta-turma').style.display = 'flex';
     
     const discSelect = document.getElementById('pauta-disc-select');
-    if(isDT) { 
-        discSelect.style.display = 'block'; 
-        if(discSelect.options.length <= 1) discSelect.innerHTML = ordemDisciplinasGlobal.map(dc => `<option value="${dc}">${dc}</option>`).join('');
-    } else { discSelect.style.display = 'none'; discSelect.innerHTML = state.disciplinasProfessor.map(dc => `<option value="${dc}">${dc}</option>`).join(''); }
+    if(isDT) { discSelect.style.display = 'block'; if(discSelect.options.length <= 1) discSelect.innerHTML = ordemDisciplinasGlobal.map(dc => `<option value="${dc}">${dc}</option>`).join(''); } else { discSelect.style.display = 'none'; discSelect.innerHTML = state.disciplinasProfessor.map(dc => `<option value="${dc}">${dc}</option>`).join(''); }
 
     const curDisc = discSelect.value || (isDT ? ordemDisciplinasGlobal[0] : state.disciplinasProfessor[0]);
-
     try {
         let html = `<tr><th>Aluno</th><th>Mod. 1</th><th>Mod. 2</th><th>Mod. 3</th><th>Média</th></tr>`;
         for(const al of state.alunosTurmaRAM) {
             const nS = await getDocs(collection(db, "utilizadores", al.id, "notas"));
-            let m1='-', m2='-', m3='-';
-            let sum = 0; let count = 0;
-            nS.forEach(n => {
-                if(n.data().disciplina === curDisc) {
-                    if(n.data().modulo == 1) m1 = n.data().nota;
-                    else if(n.data().modulo == 2) m2 = n.data().nota;
-                    else if(n.data().modulo == 3) m3 = n.data().nota;
-                    if(!isNaN(n.data().nota)) { sum += Number(n.data().nota); count++; }
-                }
-            });
-            const media = count > 0 ? (sum / count).toFixed(1) : '-';
-            const medColor = (media !== '-' && media < 10) ? 'color:var(--danger-red);' : 'color:var(--success-green);';
+            let m1='-', m2='-', m3='-'; let sum = 0; let count = 0;
+            nS.forEach(n => { if(n.data().disciplina === curDisc) { if(n.data().modulo == 1) m1 = n.data().nota; else if(n.data().modulo == 2) m2 = n.data().nota; else if(n.data().modulo == 3) m3 = n.data().nota; if(!isNaN(n.data().nota)) { sum += Number(n.data().nota); count++; } } });
+            const media = count > 0 ? (sum / count).toFixed(1) : '-'; const medColor = (media !== '-' && media < 10) ? 'color:var(--danger-red);' : 'color:var(--success-green);';
             html += `<tr><td>${nomeCurto(al.nome)}</td><td>${m1}</td><td>${m2}</td><td>${m3}</td><td style="font-weight:bold; ${medColor}">${media}</td></tr>`;
         }
         cont.innerHTML = html;
@@ -216,28 +123,14 @@ export async function renderizarFaltasTurma() {
     document.getElementById('modal-faltas-turma').style.display = 'flex';
     
     const discSelect = document.getElementById('faltas-disc-select');
-    if(isDT) { 
-        discSelect.style.display = 'block'; 
-        if(discSelect.options.length <= 1) discSelect.innerHTML = ordemDisciplinasGlobal.map(dc => `<option value="${dc}">${dc}</option>`).join('');
-    } else { discSelect.style.display = 'none'; discSelect.innerHTML = state.disciplinasProfessor.map(dc => `<option value="${dc}">${dc}</option>`).join(''); }
+    if(isDT) { discSelect.style.display = 'block'; if(discSelect.options.length <= 1) discSelect.innerHTML = ordemDisciplinasGlobal.map(dc => `<option value="${dc}">${dc}</option>`).join(''); } else { discSelect.style.display = 'none'; discSelect.innerHTML = state.disciplinasProfessor.map(dc => `<option value="${dc}">${dc}</option>`).join(''); }
 
     const curDisc = discSelect.value || (isDT ? ordemDisciplinasGlobal[0] : state.disciplinasProfessor[0]);
-
     try {
         let html = '<tr><th>Aluno</th><th>Mod. 1</th><th>Mod. 2</th><th>Mod. 3</th><th>Total</th></tr>';
         for(const al of state.alunosTurmaRAM) {
-            const fS = await getDocs(collection(db, "utilizadores", al.id, "faltas"));
-            let m1=0, m2=0, m3=0, tot=0;
-            fS.forEach(f => {
-                if(f.data().disciplina === curDisc) {
-                    let h = Number(f.data().horas || 0);
-                    tot += h;
-                    let mod = f.data().modulo;
-                    if(mod == 1) m1 += h;
-                    else if(mod == 2) m2 += h;
-                    else if(mod == 3) m3 += h;
-                }
-            });
+            const fS = await getDocs(collection(db, "utilizadores", al.id, "faltas")); let m1=0, m2=0, m3=0, tot=0;
+            fS.forEach(f => { if(f.data().disciplina === curDisc) { let h = Number(f.data().horas || 0); tot += h; let mod = f.data().modulo; if(mod == 1) m1 += h; else if(mod == 2) m2 += h; else if(mod == 3) m3 += h; } });
             html += `<tr><td>${nomeCurto(al.nome)}</td><td>${m1?m1+'h':'-'}</td><td>${m2?m2+'h':'-'}</td><td>${m3?m3+'h':'-'}</td><td style="font-weight:bold; color:var(--danger-red);">${tot}h</td></tr>`;
         }
         cont.innerHTML = html;
@@ -247,41 +140,15 @@ export async function renderizarFaltasTurma() {
 export function desenharGraficoAluno(modo) {
     const ctx = document.getElementById('chartEvolucaoAluno').getContext('2d');
     if(state.chartEvolucao) state.chartEvolucao.destroy();
-    
-    let gradient = ctx.createLinearGradient(0, 0, 0, 150);
-    gradient.addColorStop(0, 'rgba(0, 204, 136, 0.6)');
-    gradient.addColorStop(1, 'rgba(0, 204, 136, 0.0)');
+    let gradient = ctx.createLinearGradient(0, 0, 0, 150); gradient.addColorStop(0, 'rgba(0, 204, 136, 0.6)'); gradient.addColorStop(1, 'rgba(0, 204, 136, 0.0)');
 
     if(modo === 'disc') {
-        const minhaDisc = state.disciplinasProfessor[0] || 'Geral';
-        let dadosFiltrados = state.notasAlunoRAM.filter(n => n.disciplina === minhaDisc);
-        dadosFiltrados.sort((a,b) => a.moduloReal - b.moduloReal);
-        
-        state.chartEvolucao = new Chart(ctx, {
-            type: 'line', 
-            data: { labels: dadosFiltrados.length > 0 ? dadosFiltrados.map(n => `Mod ${n.moduloReal}`) : ['Sem Avaliação'], datasets: [{ label: minhaDisc, data: dadosFiltrados.length > 0 ? dadosFiltrados.map(n => n.valor) : [0], borderColor: '#00cc88', backgroundColor: gradient, borderWidth: 3, fill: true, tension: 0.4, pointBackgroundColor: '#00cc88', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 5 }] },
-            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 20, grid: { color: '#333' } }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } }
-        });
+        const minhaDisc = state.disciplinasProfessor[0] || 'Geral'; let dadosFiltrados = state.notasAlunoRAM.filter(n => n.disciplina === minhaDisc); dadosFiltrados.sort((a,b) => a.moduloReal - b.moduloReal);
+        state.chartEvolucao = new Chart(ctx, { type: 'line', data: { labels: dadosFiltrados.length > 0 ? dadosFiltrados.map(n => `Mod ${n.moduloReal}`) : ['Sem Avaliação'], datasets: [{ label: minhaDisc, data: dadosFiltrados.length > 0 ? dadosFiltrados.map(n => n.valor) : [0], borderColor: '#00cc88', backgroundColor: gradient, borderWidth: 3, fill: true, tension: 0.4, pointBackgroundColor: '#00cc88', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 5 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 20, grid: { color: '#333' } }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } } });
     } else {
-        let medias = {};
-        state.notasAlunoRAM.forEach(n => {
-            if(!medias[n.disciplina]) medias[n.disciplina] = { soma: 0, count: 0 };
-            medias[n.disciplina].soma += n.valor; medias[n.disciplina].count++;
-        });
-        
-        let labels = []; let values = []; let colors = [];
-        Object.keys(medias).forEach(d => {
-            labels.push(d);
-            const m = medias[d].soma / medias[d].count;
-            values.push(m.toFixed(1));
-            colors.push(m >= 10 ? '#00cc88' : '#ff4d4d');
-        });
-        
-        state.chartEvolucao = new Chart(ctx, {
-            type: 'bar', 
-            data: { labels: labels.length > 0 ? labels : ['Sem Avaliação'], datasets: [{ label: 'Média Global', data: values.length > 0 ? values : [0], backgroundColor: colors, borderRadius: 6 }] },
-            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 20, grid: { color: '#333' } }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } }
-        });
+        let medias = {}; state.notasAlunoRAM.forEach(n => { if(!medias[n.disciplina]) medias[n.disciplina] = { soma: 0, count: 0 }; medias[n.disciplina].soma += n.valor; medias[n.disciplina].count++; });
+        let labels = []; let values = []; let colors = []; Object.keys(medias).forEach(d => { labels.push(d); const m = medias[d].soma / medias[d].count; values.push(m.toFixed(1)); colors.push(m >= 10 ? '#00cc88' : '#ff4d4d'); });
+        state.chartEvolucao = new Chart(ctx, { type: 'bar', data: { labels: labels.length > 0 ? labels : ['Sem Avaliação'], datasets: [{ label: 'Média Global', data: values.length > 0 ? values : [0], backgroundColor: colors, borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 20, grid: { color: '#333' } }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } } });
     }
 }
 
@@ -291,41 +158,21 @@ export async function abrirPerfil360Aluno(alunoId) {
 
     const isDT = (state.myRoles.includes('diretor_turma') && state.selectedTurma === state.minhaTurmaDT);
     document.getElementById('perfil-aluno-title-estat').innerText = isDT ? 'Estatísticas Globais' : 'Estatísticas na Tua Disciplina';
-    
-    const togDiv = document.getElementById('dt-graph-toggles');
-    if(isDT) togDiv.style.display = 'flex'; else togDiv.style.display = 'none';
+    const togDiv = document.getElementById('dt-graph-toggles'); if(isDT) togDiv.style.display = 'flex'; else togDiv.style.display = 'none';
 
     let fCount = 0; let pCount = 0; state.notasAlunoRAM = [];
     try {
         const matVerificar = isDT ? ordemDisciplinasGlobal : state.disciplinasProfessor;
-        
-        const fS = await getDocs(collection(db, "utilizadores", alunoId, "faltas")); 
-        fS.forEach(f => { if(matVerificar.includes(f.data().disciplina)) fCount += Number(f.data().horas || 0); });
-        
-        const pS = await getDocs(collection(db, "utilizadores", alunoId, "prhfs")); 
-        pS.forEach(p => { if(p.data().status !== 'concluida' && matVerificar.includes(p.data().disciplina)) pCount++; });
-        
-        const nS = await getDocs(collection(db, "utilizadores", alunoId, "notas"));
-        nS.forEach(n => { 
-            if(matVerificar.includes(n.data().disciplina)) { 
-                state.notasAlunoRAM.push({ disciplina: n.data().disciplina, moduloReal: Number(n.data().modulo), valor: isNaN(n.data().nota) ? 0 : Number(n.data().nota) }); 
-            } 
-        });
+        const fS = await getDocs(collection(db, "utilizadores", alunoId, "faltas")); fS.forEach(f => { if(matVerificar.includes(f.data().disciplina)) fCount += Number(f.data().horas || 0); });
+        const pS = await getDocs(collection(db, "utilizadores", alunoId, "prhfs")); pS.forEach(p => { if(p.data().status !== 'concluida' && matVerificar.includes(p.data().disciplina)) pCount++; });
+        const nS = await getDocs(collection(db, "utilizadores", alunoId, "notas")); nS.forEach(n => { if(matVerificar.includes(n.data().disciplina)) { state.notasAlunoRAM.push({ disciplina: n.data().disciplina, moduloReal: Number(n.data().modulo), valor: isNaN(n.data().nota) ? 0 : Number(n.data().nota) }); } });
 
-        if (isDT) {
-            document.getElementById('area-obs-dt').style.display = 'block'; document.getElementById('btn-justificar-faltas').style.display = fCount > 0 ? 'block' : 'none';
-            const rS = await getDoc(doc(db, "utilizadores", alunoId, "reunioes", "1_avaliacao"));
-            if (rS.exists() && rS.data().global) { document.getElementById('p-aluno-obs-dt').value = rS.data().global; } else { document.getElementById('p-aluno-obs-dt').value = ''; }
-        } else {
-            document.getElementById('area-obs-dt').style.display = 'none'; document.getElementById('btn-justificar-faltas').style.display = 'none';
-        }
+        if (isDT) { document.getElementById('area-obs-dt').style.display = 'block'; document.getElementById('btn-justificar-faltas').style.display = fCount > 0 ? 'block' : 'none'; const rS = await getDoc(doc(db, "utilizadores", alunoId, "reunioes", "1_avaliacao")); if (rS.exists() && rS.data().global) { document.getElementById('p-aluno-obs-dt').value = rS.data().global; } else { document.getElementById('p-aluno-obs-dt').value = ''; } } else { document.getElementById('area-obs-dt').style.display = 'none'; document.getElementById('btn-justificar-faltas').style.display = 'none'; }
     } catch (e) {}
 
     document.getElementById('p-aluno-faltas').innerText = fCount; document.getElementById('p-aluno-prhfs').innerText = pCount; document.getElementById('p-aluno-notas').innerText = state.notasAlunoRAM.length;
-
     document.getElementById('btn-graph-disc').classList.add('active'); document.getElementById('btn-graph-global').classList.remove('active');
     desenharGraficoAluno('disc');
-
     document.getElementById('modal-perfil-aluno').style.display = 'flex';
 }
 
@@ -333,8 +180,7 @@ export async function carregarTarefasProf() {
     const isPRHFTab = document.getElementById('tab-tarefas-prhf').classList.contains('active');
     if (isPRHFTab) {
         const isDT = (state.myRoles.includes('diretor_turma') && state.selectedTurma === state.minhaTurmaDT);
-        if(isDT) { document.getElementById('btn-radar-conflitos').style.display = 'block'; document.getElementById('prhf-dt-toggles').style.display = 'flex'; } 
-        else { document.getElementById('btn-radar-conflitos').style.display = 'none'; document.getElementById('prhf-dt-toggles').style.display = 'none'; }
+        if(isDT) { document.getElementById('btn-radar-conflitos').style.display = 'block'; document.getElementById('prhf-dt-toggles').style.display = 'flex'; } else { document.getElementById('btn-radar-conflitos').style.display = 'none'; document.getElementById('prhf-dt-toggles').style.display = 'none'; }
 
         const container = document.getElementById('lista-prhfs-professor'); container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A procurar PRHFs...</p>';
         if (state.turmasProfessor.length === 0) { container.innerHTML = '<p class="text-muted center">Sem turmas.</p>'; return; }
@@ -353,15 +199,8 @@ export async function carregarTarefasProf() {
             
             pendentes.forEach(p => {
                 const souOProfessorDoPRHF = state.disciplinasProfessor.includes(p.disciplina) || p.professor === state.myUserName;
-
                 let acoesProposta = '';
-                if (p.propostaProfessor) {
-                    acoesProposta = `<div style="background:rgba(0,153,255,0.1); border:1px dashed #0099ff; padding:10px; border-radius:8px; margin-top:10px;"><strong style="color:#0099ff; font-size:0.85rem;"><i class="fa-solid fa-clock"></i> Sugestão do Professor:</strong><p style="font-size:0.85rem; color:white; margin:5px 0;">${p.propostaProfessor}</p><span style="font-size:0.75rem; color:var(--text-muted);">A aguardar que o aluno aceite.</span></div>`;
-                } else if (p.propostaAluno && p.propostaLidaDT === false) { 
-                    acoesProposta = `<div style="background:rgba(255,204,0,0.1); border:1px dashed var(--warning-yellow); padding:10px; border-radius:8px; margin-top:10px;"><strong style="color:var(--warning-yellow); font-size:0.85rem;"><i class="fa-solid fa-clock"></i> Aluno sugere:</strong><p style="font-size:0.85rem; color:white; margin:5px 0;">${p.propostaAluno}</p><div style="display:flex; gap:10px; margin-top:10px;">${souOProfessorDoPRHF ? `<button class="primary-btn small-btn btn-aceitar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1; background:var(--success-green);"><i class="fa-solid fa-check"></i> Aceitar</button><button class="secondary-btn small-btn btn-rejeitar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-xmark"></i> Rejeitar</button>` : `<span style="font-size:0.75rem; color:var(--warning-yellow);">A aguardar aprovação do prof. ${p.disciplina}</span>`}</div></div>`; 
-                } else if (p.propostaAluno && p.propostaLidaDT === true) { 
-                    acoesProposta = `<div style="margin-top:10px; font-size:0.8rem; color:var(--success-green);"><i class="fa-solid fa-calendar-check"></i> Sessão Presencial Agendada (${p.propostaProfessor || p.propostaAluno})</div>`; 
-                }
+                if (p.propostaProfessor) { acoesProposta = `<div style="background:rgba(0,153,255,0.1); border:1px dashed #0099ff; padding:10px; border-radius:8px; margin-top:10px;"><strong style="color:#0099ff; font-size:0.85rem;"><i class="fa-solid fa-clock"></i> Sugestão do Professor:</strong><p style="font-size:0.85rem; color:white; margin:5px 0;">${p.propostaProfessor}</p><span style="font-size:0.75rem; color:var(--text-muted);">A aguardar que o aluno aceite.</span></div>`; } else if (p.propostaAluno && p.propostaLidaDT === false) { acoesProposta = `<div style="background:rgba(255,204,0,0.1); border:1px dashed var(--warning-yellow); padding:10px; border-radius:8px; margin-top:10px;"><strong style="color:var(--warning-yellow); font-size:0.85rem;"><i class="fa-solid fa-clock"></i> Aluno sugere:</strong><p style="font-size:0.85rem; color:white; margin:5px 0;">${p.propostaAluno}</p><div style="display:flex; gap:10px; margin-top:10px;">${souOProfessorDoPRHF ? `<button class="primary-btn small-btn btn-aceitar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1; background:var(--success-green);"><i class="fa-solid fa-check"></i> Aceitar</button><button class="secondary-btn small-btn btn-rejeitar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-xmark"></i> Rejeitar</button>` : `<span style="font-size:0.75rem; color:var(--warning-yellow);">A aguardar aprovação do prof. ${p.disciplina}</span>`}</div></div>`; } else if (p.propostaAluno && p.propostaLidaDT === true) { acoesProposta = `<div style="margin-top:10px; font-size:0.8rem; color:var(--success-green);"><i class="fa-solid fa-calendar-check"></i> Sessão Presencial Agendada (${p.propostaProfessor || p.propostaAluno})</div>`; }
 
                 let conflitoTag = '';
                 if(isDT && p.propostaLidaDT) {
@@ -373,13 +212,8 @@ export async function carregarTarefasProf() {
                 
                 let btnAction = '';
                 if(souOProfessorDoPRHF) {
-                    if (hPres > 0) {
-                        if (!p.propostaLidaDT) { btnAction = `<button class="secondary-btn small-btn" disabled style="width:100%; opacity:0.5;"><i class="fa-solid fa-clock"></i> Aguarda Horário</button>`; } 
-                        else if (!p.presencaValidada) { btnAction = `<button class="primary-btn small-btn btn-validar-presenca" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="width:100%; background:var(--warning-yellow); color:black;"><i class="fa-solid fa-user-check"></i> Validar Presença</button>`; } 
-                        else { btnAction = `<button class="btn-concluir-prhf primary-btn small-btn" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="width:100%; background:var(--success-green); color:white;"><i class="fa-solid fa-clipboard-check"></i> Fechar Plano</button>`; }
-                    } else { btnAction = `<button class="btn-concluir-prhf primary-btn small-btn" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="width:100%; background:var(--success-green); color:white;"><i class="fa-solid fa-clipboard-check"></i> Fechar Plano</button>`; }
+                    if (hPres > 0) { if (!p.propostaLidaDT) { btnAction = `<button class="secondary-btn small-btn" disabled style="width:100%; opacity:0.5;"><i class="fa-solid fa-clock"></i> Aguarda Horário</button>`; } else if (!p.presencaValidada) { btnAction = `<button class="primary-btn small-btn btn-validar-presenca" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="width:100%; background:var(--warning-yellow); color:black;"><i class="fa-solid fa-user-check"></i> Validar Presença</button>`; } else { btnAction = `<button class="btn-concluir-prhf primary-btn small-btn" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="width:100%; background:var(--success-green); color:white;"><i class="fa-solid fa-clipboard-check"></i> Fechar Plano</button>`; } } else { btnAction = `<button class="btn-concluir-prhf primary-btn small-btn" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="width:100%; background:var(--success-green); color:white;"><i class="fa-solid fa-clipboard-check"></i> Fechar Plano</button>`; }
                 }
-                
                 const dataPrint = p.prazo ? p.prazo.split('-').reverse().join('/') : 'S/ Prazo';
                 h += `<div class="card" style="margin-bottom:15px; border-left: 4px solid ${corCard};"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><strong style="color:white; font-size:1.05rem;">${nomeCurto(p.alunoNome)} <span style="font-size:0.75rem; color:var(--text-muted);">(${p.turma})</span></strong><div style="color:${corCard}; font-weight:bold; font-size:0.9rem; margin-top:3px;">${p.disciplina} (Mod. ${p.modulo}) - ${txtSt} ${conflitoTag}</div></div></div><p style="font-size:0.85rem; color:var(--text-light); margin:10px 0;">${p.descricao}</p><div style="font-size:0.8rem; color:var(--text-muted);">Prazo: <strong style="color:white;">${dataPrint}</strong> | Presenciais: <strong>${hPres}h</strong></div>${acoesProposta} <div style="display:flex; gap:10px; margin-top:10px;">${souOProfessorDoPRHF ? `<button class="secondary-btn small-btn btn-propor-prof" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1;"><i class="fa-regular fa-calendar"></i> Sugerir</button>` : ''} ${btnAction}</div></div>`;
             }); 
@@ -388,7 +222,6 @@ export async function carregarTarefasProf() {
             const dFiltro = document.getElementById('filtro-prhf-data').value; const mFiltro = document.getElementById('filtro-prhf-modulo').value;
             let concluidosFiltrados = concluidos;
             if(mFiltro) concluidosFiltrados = concluidosFiltrados.filter(c => c.modulo == mFiltro);
-            
             concluidosFiltrados.sort((a,b) => { const da = a.dataCriacao ? new Date(a.dataCriacao) : 0; const db = b.dataCriacao ? new Date(b.dataCriacao) : 0; return dFiltro === 'desc' ? db - da : da - db; });
 
             let histHtml = '';
@@ -400,18 +233,13 @@ export async function carregarTarefasProf() {
                 });
             }
             document.getElementById('lista-prhfs-historico').innerHTML = histHtml;
-
         } catch (e) { container.innerHTML = '<p class="text-danger center">Erro a carregar PRHFs.</p>'; }
     } else {
         const container = document.getElementById('lista-passaportes-professor'); 
         container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar passaportes...</p>';
         try {
             let todosAlunos = []; 
-            for (const t of state.turmasProfessor) { 
-                const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); 
-                snap.forEach(d => todosAlunos.push({ id: d.id, ...d.data() })); 
-            }
-            
+            for (const t of state.turmasProfessor) { const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); snap.forEach(d => todosAlunos.push({ id: d.id, ...d.data() })); }
             const sortMode = document.getElementById('sort-passaporte').value;
             if(sortMode === 'fct') { todosAlunos.sort((a,b) => (b.fct?.horasRealizadas || 0) - (a.fct?.horasRealizadas || 0)); }
 
@@ -424,12 +252,7 @@ export async function carregarTarefasProf() {
                 let fctHtml = ''; 
                 if (showFCT) {
                     if (al.fct && al.fct.horasRealizadas > 0) { 
-                        if (al.fct.validadoDT) { 
-                            fctHtml = `<span style="color:var(--success-green); font-size:0.8rem;"><i class="fa-solid fa-check-double"></i> ${al.fct.horasRealizadas}h Validadas</span>`; 
-                        } else { 
-                            let btnValidar = state.myRoles.includes('coordenador') || state.myRoles.includes('diretor_turma') ? `<button class="primary-btn small-btn btn-validar-fct" data-id="${al.id}" style="width:auto; padding:4px 10px;">Validar</button>` : `<span style="font-size:0.75rem; color:var(--text-muted);">A aguardar validação.</span>`; 
-                            fctHtml = `<div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:var(--warning-yellow); font-size:0.8rem;">${al.fct.horasRealizadas}h declaradas</span> ${btnValidar}</div>`; 
-                        } 
+                        if (al.fct.validadoDT) { fctHtml = `<span style="color:var(--success-green); font-size:0.8rem;"><i class="fa-solid fa-check-double"></i> ${al.fct.horasRealizadas}h Validadas</span>`; } else { let btnValidar = state.myRoles.includes('coordenador') || state.myRoles.includes('diretor_turma') ? `<button class="primary-btn small-btn btn-validar-fct" data-id="${al.id}" style="width:auto; padding:4px 10px;">Validar</button>` : `<span style="font-size:0.75rem; color:var(--text-muted);">A aguardar validação.</span>`; fctHtml = `<div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:var(--warning-yellow); font-size:0.8rem;">${al.fct.horasRealizadas}h declaradas</span> ${btnValidar}</div>`; } 
                     } else { fctHtml = `<span style="color:var(--text-muted); font-size:0.8rem;">Sem registos FCT.</span>`; }
                 }
 
@@ -439,28 +262,20 @@ export async function carregarTarefasProf() {
                         if (state.myRoles.includes('orientador_pap') || state.myRoles.includes('diretor_turma') || state.myRoles.includes('coordenador')) { 
                             papHtml = `<span style="color:white; font-size:0.85rem; display:block; margin-bottom:5px;">Tema: ${al.pap?.tema || 'Desconhecido'}</span><a href="${al.papFicheiroBase64}" download="PAP_${al.nome.replace(/\s+/g, '_')}" class="secondary-btn small-btn" style="color:#0099ff; border-color:#0099ff; display:inline-block; text-align:center; margin-bottom:5px;"><i class="fa-solid fa-download"></i> Baixar Relatório Final</a>`; 
                             if (state.myRoles.includes('orientador_pap')) {
-                                if (!al.pap.relatorioAprovado) {
-                                    papHtml += `<button class="primary-btn small-btn btn-aprovar-relatorio" data-id="${al.id}" style="width:100%; background:var(--success-green); margin-top:5px;"><i class="fa-solid fa-check"></i> Aprovar Relatório</button>`;
-                                } else {
-                                    papHtml += `<span style="color:var(--success-green); font-size:0.8rem; display:block; margin-top:5px;"><i class="fa-solid fa-check-double"></i> Apto para Apresentação Final</span>`;
-                                }
+                                if (!al.pap.relatorioAprovado) { papHtml += `<button class="primary-btn small-btn btn-aprovar-relatorio" data-id="${al.id}" style="width:100%; background:var(--success-green); margin-top:5px;"><i class="fa-solid fa-check"></i> Aprovar Relatório</button>`; } else { papHtml += `<span style="color:var(--success-green); font-size:0.8rem; display:block; margin-top:5px;"><i class="fa-solid fa-check-double"></i> Apto para Apresentação Final</span>`; }
                             }
                         } else { papHtml = `<span style="color:var(--success-green); font-size:0.8rem;"><i class="fa-solid fa-check"></i> Relatório submetido</span>`; } 
                     } 
                     else if (al.pap && al.pap.tema) { 
                         let statusTag = al.pap.temaAprovado ? `<span style="color:var(--warning-yellow);">Em Desenvolvimento</span>` : `<span style="color:#00d2ff;">A Aguardar Aprovação</span>`;
                         papHtml = `<span style="color:var(--text-light); font-size:0.8rem;">Tema: <strong style="color:white;">${al.pap.tema}</strong><br>${statusTag}</span>`; 
-                        
-                        if (state.myRoles.includes('orientador_pap') && !al.pap.temaAprovado) {
-                            papHtml += `<div style="display:flex; gap:10px; margin-top:10px;"><button class="primary-btn small-btn btn-aprovar-tema" data-id="${al.id}" style="flex:1; background:var(--success-green);"><i class="fa-solid fa-check"></i> Aceitar</button><button class="secondary-btn small-btn btn-rejeitar-tema" data-id="${al.id}" style="flex:1; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-xmark"></i> Rejeitar</button></div>`;
-                        }
+                        if (state.myRoles.includes('orientador_pap') && !al.pap.temaAprovado) { papHtml += `<div style="display:flex; gap:10px; margin-top:10px;"><button class="primary-btn small-btn btn-aprovar-tema" data-id="${al.id}" style="flex:1; background:var(--success-green);"><i class="fa-solid fa-check"></i> Aceitar</button><button class="secondary-btn small-btn btn-rejeitar-tema" data-id="${al.id}" style="flex:1; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-xmark"></i> Rejeitar</button></div>`; }
                     } else { papHtml = `<span style="color:var(--text-muted); font-size:0.8rem;">Por iniciar.</span>`; }
                 }
 
                 let bodyHtml = '';
                 if(showFCT) bodyHtml += `<div style="margin-top:10px; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px dashed #333;"><strong style="font-size:0.85rem; color:white;"><i class="fa-solid fa-briefcase" style="color:var(--primary-green);"></i> FCT (Estágio)</strong><div style="margin-top:5px;">${fctHtml}</div></div>`;
                 if(showPAP) bodyHtml += `<div style="margin-top:10px; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px dashed #333;"><strong style="font-size:0.85rem; color:white;"><i class="fa-solid fa-laptop-code" style="color:#0099ff;"></i> Projeto de Aptidão Profissional (PAP)</strong><div style="margin-top:5px;">${papHtml}</div></div>`;
-
                 h += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #ff9900;"><strong style="color:white; font-size:1.05rem;">${nomeCurto(al.nome)} <span style="font-size:0.75rem; color:var(--text-muted);">(${al.turma})</span></strong>${bodyHtml}</div>`;
             }); 
             container.innerHTML = h === '' ? '<p class="text-muted center">Nenhum aluno submeteu horas.</p>' : h;
@@ -469,8 +284,7 @@ export async function carregarTarefasProf() {
 }
 
 export async function carregarForunsProf() {
-    const cont = document.getElementById('prof-forum-channel-list'); 
-    cont.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A ler canais...</p>';
+    const cont = document.getElementById('prof-forum-channel-list'); cont.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A ler canais...</p>';
     if(state.turmasProfessor.length === 0) { cont.innerHTML = '<p class="text-muted center">Não tens turmas.</p>'; return; }
 
     let html = '';
@@ -500,7 +314,6 @@ export async function carregarForunsProf() {
         }
         if (!encontrouPersonalizado) { htmlPersonalizado += '<p class="text-muted center" style="font-size:0.85rem;">Nenhum chat extra criado.</p>'; }
         htmlPersonalizado += '</div>';
-        
         cont.innerHTML = `<div class="forum-canais-grid">${html}${htmlPersonalizado}</div>`;
     } catch (e) { cont.innerHTML = '<p class="text-danger center">Erro a carregar chats.</p>'; }
 }
