@@ -1,4 +1,5 @@
-import { db } from "../../firebase.js";
+// js/prof/ui.js
+import { db } from "../firebase.js"; // <-- O erro estava aqui! Corrigido para ../
 import { doc, getDoc, collection, getDocs, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { state, ACADEMIAS_INFO, ordemDisciplinasGlobal, nomeCurto, getDisciplinasPermitidas } from "./store.js";
 
@@ -101,16 +102,29 @@ export async function renderizarPautaTurma() {
     document.getElementById('modal-pauta-turma').style.display = 'flex';
     
     const discSelect = document.getElementById('pauta-disc-select');
-    if(isDT) { discSelect.style.display = 'block'; if(discSelect.options.length <= 1) discSelect.innerHTML = ordemDisciplinasGlobal.map(dc => `<option value="${dc}">${dc}</option>`).join(''); } else { discSelect.style.display = 'none'; discSelect.innerHTML = state.disciplinasProfessor.map(dc => `<option value="${dc}">${dc}</option>`).join(''); }
+    if(isDT) { 
+        discSelect.style.display = 'block'; 
+        if(discSelect.options.length <= 1) discSelect.innerHTML = ordemDisciplinasGlobal.map(dc => `<option value="${dc}">${dc}</option>`).join('');
+    } else { discSelect.style.display = 'none'; discSelect.innerHTML = state.disciplinasProfessor.map(dc => `<option value="${dc}">${dc}</option>`).join(''); }
 
     const curDisc = discSelect.value || (isDT ? ordemDisciplinasGlobal[0] : state.disciplinasProfessor[0]);
+
     try {
         let html = `<tr><th>Aluno</th><th>Mod. 1</th><th>Mod. 2</th><th>Mod. 3</th><th>Média</th></tr>`;
         for(const al of state.alunosTurmaRAM) {
             const nS = await getDocs(collection(db, "utilizadores", al.id, "notas"));
-            let m1='-', m2='-', m3='-'; let sum = 0; let count = 0;
-            nS.forEach(n => { if(n.data().disciplina === curDisc) { if(n.data().modulo == 1) m1 = n.data().nota; else if(n.data().modulo == 2) m2 = n.data().nota; else if(n.data().modulo == 3) m3 = n.data().nota; if(!isNaN(n.data().nota)) { sum += Number(n.data().nota); count++; } } });
-            const media = count > 0 ? (sum / count).toFixed(1) : '-'; const medColor = (media !== '-' && media < 10) ? 'color:var(--danger-red);' : 'color:var(--success-green);';
+            let m1='-', m2='-', m3='-';
+            let sum = 0; let count = 0;
+            nS.forEach(n => {
+                if(n.data().disciplina === curDisc) {
+                    if(n.data().modulo == 1) m1 = n.data().nota;
+                    else if(n.data().modulo == 2) m2 = n.data().nota;
+                    else if(n.data().modulo == 3) m3 = n.data().nota;
+                    if(!isNaN(n.data().nota)) { sum += Number(n.data().nota); count++; }
+                }
+            });
+            const media = count > 0 ? (sum / count).toFixed(1) : '-';
+            const medColor = (media !== '-' && media < 10) ? 'color:var(--danger-red);' : 'color:var(--success-green);';
             html += `<tr><td>${nomeCurto(al.nome)}</td><td>${m1}</td><td>${m2}</td><td>${m3}</td><td style="font-weight:bold; ${medColor}">${media}</td></tr>`;
         }
         cont.innerHTML = html;
@@ -123,14 +137,28 @@ export async function renderizarFaltasTurma() {
     document.getElementById('modal-faltas-turma').style.display = 'flex';
     
     const discSelect = document.getElementById('faltas-disc-select');
-    if(isDT) { discSelect.style.display = 'block'; if(discSelect.options.length <= 1) discSelect.innerHTML = ordemDisciplinasGlobal.map(dc => `<option value="${dc}">${dc}</option>`).join(''); } else { discSelect.style.display = 'none'; discSelect.innerHTML = state.disciplinasProfessor.map(dc => `<option value="${dc}">${dc}</option>`).join(''); }
+    if(isDT) { 
+        discSelect.style.display = 'block'; 
+        if(discSelect.options.length <= 1) discSelect.innerHTML = ordemDisciplinasGlobal.map(dc => `<option value="${dc}">${dc}</option>`).join('');
+    } else { discSelect.style.display = 'none'; discSelect.innerHTML = state.disciplinasProfessor.map(dc => `<option value="${dc}">${dc}</option>`).join(''); }
 
     const curDisc = discSelect.value || (isDT ? ordemDisciplinasGlobal[0] : state.disciplinasProfessor[0]);
+
     try {
         let html = '<tr><th>Aluno</th><th>Mod. 1</th><th>Mod. 2</th><th>Mod. 3</th><th>Total</th></tr>';
         for(const al of state.alunosTurmaRAM) {
-            const fS = await getDocs(collection(db, "utilizadores", al.id, "faltas")); let m1=0, m2=0, m3=0, tot=0;
-            fS.forEach(f => { if(f.data().disciplina === curDisc) { let h = Number(f.data().horas || 0); tot += h; let mod = f.data().modulo; if(mod == 1) m1 += h; else if(mod == 2) m2 += h; else if(mod == 3) m3 += h; } });
+            const fS = await getDocs(collection(db, "utilizadores", al.id, "faltas"));
+            let m1=0, m2=0, m3=0, tot=0;
+            fS.forEach(f => {
+                if(f.data().disciplina === curDisc) {
+                    let h = Number(f.data().horas || 0);
+                    tot += h;
+                    let mod = f.data().modulo;
+                    if(mod == 1) m1 += h;
+                    else if(mod == 2) m2 += h;
+                    else if(mod == 3) m3 += h;
+                }
+            });
             html += `<tr><td>${nomeCurto(al.nome)}</td><td>${m1?m1+'h':'-'}</td><td>${m2?m2+'h':'-'}</td><td>${m3?m3+'h':'-'}</td><td style="font-weight:bold; color:var(--danger-red);">${tot}h</td></tr>`;
         }
         cont.innerHTML = html;
