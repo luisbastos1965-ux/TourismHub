@@ -1,5 +1,3 @@
-// js/prof/store.js
-
 export const state = {
     myUserId: "", myUserName: "", profData: {}, myRoles: [], minhaTurmaDT: "",
     turmasProfessor: [], disciplinasProfessor: [], selectedTurma: "",
