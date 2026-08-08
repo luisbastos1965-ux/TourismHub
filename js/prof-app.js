@@ -7,6 +7,7 @@ import { gerarRadarConflitos } from "./prof/roles/dt.js";
 import { validarFCT } from "./prof/roles/coord.js"; 
 import { aprovarTemaPAP, rejeitarTemaPAPExecutar, aprovarRelatorioPAP } from "./prof/roles/pap.js";
 import { carregarRadarProfessor, analisarEAtualizarTurma, renderizarPautaTurma, renderizarFaltasTurma, desenharGraficoAluno, abrirPerfil360Aluno, carregarTarefasProf, carregarForunsProf, abrirChatForum } from "./prof/ui.js";
+import { carregarEcraOrientandos, carregarEcraDiario, prepararModalNovaSessao } from "./prof/roles/pap-diario.js";
 
 onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -53,6 +54,18 @@ onAuthStateChanged(auth, async (user) => {
                         badge.innerText = config.nome;
                         badge.style.backgroundColor = config.cor;
                         
+                        // Lógica da Barra Inferior Dinâmica
+                        const navBase = document.querySelectorAll('.nav-role-base');
+                        const navPap = document.querySelectorAll('.nav-role-pap');
+                        
+                        if (novoPapel === 'orientador_pap') {
+                            navBase.forEach(el => el.style.display = 'none');
+                            navPap.forEach(el => el.style.display = 'flex');
+                        } else {
+                            navPap.forEach(el => el.style.display = 'none');
+                            navBase.forEach(el => el.style.display = 'flex');
+                        }
+
                         document.getElementById('dropdown-perfis').style.display = 'none';
                         document.querySelector('.nav-item[data-target="view-prof-dashboard"]').click();
                     };
@@ -131,6 +144,8 @@ document.body.addEventListener('click', async (e) => {
         if (tId === 'view-prof-dashboard') carregarRadarProfessor();
         if (tId === 'view-prof-turmas' && state.selectedTurma) analisarEAtualizarTurma(state.selectedTurma);
         if (tId === 'view-prof-tarefas') carregarTarefasProf();
+        if (tId === 'view-prof-orientandos') carregarEcraOrientandos();
+        if (tId === 'view-prof-diario') carregarEcraDiario();
         if (tId === 'view-prof-forum') { if (state.chatUnsubscribe) { state.chatUnsubscribe(); state.chatUnsubscribe = null; } document.getElementById('prof-forum-chat-view').style.display = 'none'; document.getElementById('btn-create-chat-prof').style.display = 'block'; document.getElementById('prof-forum-channel-list').style.display = 'block'; carregarForunsProf(); }
         return; 
     }
@@ -139,6 +154,7 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('.aluno-list-item')) { abrirPerfil360Aluno(e.target.closest('.aluno-list-item').getAttribute('data-id')); return; }
     if (e.target.closest('#tab-tarefas-prhf')) { document.querySelectorAll('.falta-tab-btn').forEach(b => b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('sec-tarefas-prhf').style.display = 'block'; document.getElementById('sec-tarefas-passaporte').style.display = 'none'; carregarTarefasProf(); return; }
     if (e.target.closest('#tab-tarefas-passaporte')) { document.querySelectorAll('.falta-tab-btn').forEach(b => b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('sec-tarefas-prhf').style.display = 'none'; document.getElementById('sec-tarefas-passaporte').style.display = 'block'; carregarTarefasProf(); return; }
+    if (e.target.closest('#btn-nova-sessao-pap')) { prepararModalNovaSessao(); return; }
 
     // BLOCOS TURMA E DT
     if (e.target.closest('#btn-ver-pauta')) { renderizarPautaTurma(); return; }
@@ -155,7 +171,7 @@ document.body.addEventListener('click', async (e) => {
     // CIDADANIA
     if (e.target.closest('#btn-ver-cidadania')) {
         if(!state.selectedTurma) return alert("Seleciona uma turma primeiro.");
-        const isDT = (state.myRoles.includes('diretor_turma') && state.selectedTurma === state.minhaTurmaDT);
+        const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
         const disc = state.disciplinasProfessor[0] || "Geral";
         const cont = document.getElementById('cidadania-dinamico-content'); document.getElementById('modal-cidadania').style.display = 'flex';
         if (isDT) { document.getElementById('dt-cidadania-tabs').style.display = 'flex'; document.getElementById('btn-cid-global').click(); } 
@@ -277,3 +293,5 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('#btn-executar-justificar')) { const b = e.target.closest('#btn-executar-justificar'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { const fS = await getDocs(query(collection(db, "utilizadores", state.alunoSelecionadoId, "faltas"), where("justificada", "==", false))); for (const f of fS.docs) { await updateDoc(doc(db, "utilizadores", state.alunoSelecionadoId, "faltas", f.id), { justificada: true, justificadaPor: state.myUserName }); } b.innerHTML = '<i class="fa-solid fa-check"></i> Faltas Justificadas'; setTimeout(() => { b.innerHTML = 'Sim, Justificar'; b.disabled = false; document.getElementById('modal-confirm-justificar').style.display = 'none'; abrirPerfil360Aluno(state.alunoSelecionadoId); analisarEAtualizarTurma(state.selectedTurma); }, 2000); } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 2000); } return; }
     if (e.target.closest('#btn-salvar-obs-dt')) { if (!state.alunoSelecionadoId) return; const txt = document.getElementById('p-aluno-obs-dt').value.trim(); const b = e.target.closest('#btn-salvar-obs-dt'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await setDoc(doc(db, "utilizadores", state.alunoSelecionadoId, "reunioes", "1_avaliacao"), { global: txt }, { merge: true }); b.innerHTML = '<i class="fa-solid fa-check"></i> Gravado'; b.style.backgroundColor = "var(--success-green)"; setTimeout(() => { b.innerHTML = 'Gravar Apreciação'; b.disabled = false; b.style.backgroundColor = "var(--primary-green)"; }, 2000); } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 2000); } return; }
 });
+
+// Nota: Quando quiseres tratar de adicionar as outras formas de login (Google, telemóvel) no menu que preparámos, avisa.
