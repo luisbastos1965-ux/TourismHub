@@ -1,4 +1,5 @@
 export const state = {
+    activeRole: "professor",
     myUserId: "", myUserName: "", profData: {}, myRoles: [], minhaTurmaDT: "",
     turmasProfessor: [], disciplinasProfessor: [], selectedTurma: "",
     alunosTurmaRAM: [], eventosTurmaRAM: [], notasAlunoRAM: [],
