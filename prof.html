@@ -318,10 +318,17 @@
             <div id="modal-materiais" class="modal-overlay" style="z-index: 2001;"><div class="action-sheet" style="max-width: 450px; padding: 20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color: #0099ff; margin:0;"><i class="fa-solid fa-book-open"></i> Enviar Material</h3><button class="fechar-modal" data-target="modal-materiais" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><input type="text" id="mat-titulo" class="input-padrao" placeholder="Título (Ex: Ficha 3)" style="width:100%; margin-bottom:10px;"><select id="mat-disciplina" class="input-padrao" style="width:100%; margin-bottom:15px;"></select><div id="mat-upload-area" style="padding: 20px 10px; margin-bottom:15px; border:1px dashed #0099ff; background:rgba(0,153,255,0.05); text-align:center; border-radius:8px; cursor:pointer;" onclick="document.getElementById('mat-file').click();"><i class="fa-solid fa-cloud-arrow-up" style="font-size:2.2rem; color:#0099ff; margin-bottom:10px;"></i><h4 style="color:white; margin-bottom:5px; font-size:0.95rem;">Anexar Ficheiro</h4><span id="mat-file-name" style="font-size:0.75rem; color:var(--text-muted);">Toca para selecionar</span></div><input type="file" id="mat-file" style="display:none;" accept=".pdf,.doc,.docx,.jpg,.png,.zip"><button id="btn-gravar-material" class="primary-btn" style="width:100%; background:#0099ff;">Partilhar com a Turma</button></div></div>
         </main>
 
-        <nav class="bottom-nav">
+        <nav class="bottom-nav" id="main-bottom-nav">
             <a href="#" class="nav-item active" data-target="view-prof-dashboard"><i class="fa-solid fa-house"></i><span>Início</span></a>
-            <a href="#" class="nav-item" data-target="view-prof-turmas"><i class="fa-solid fa-users"></i><span>Turmas</span></a>
-            <a href="#" class="nav-item" data-target="view-prof-tarefas"><i class="fa-solid fa-inbox"></i><span>Tarefas</span></a>
+            
+            <!-- ITENS NORMAIS (Prof Base, DT, Coordenador) -->
+            <a href="#" class="nav-item nav-role-base" data-target="view-prof-turmas"><i class="fa-solid fa-users"></i><span>Turmas</span></a>
+            <a href="#" class="nav-item nav-role-base" data-target="view-prof-tarefas"><i class="fa-solid fa-inbox"></i><span>Tarefas</span></a>
+            
+            <!-- ITENS EXCLUSIVOS (Orientador PAP) -->
+            <a href="#" class="nav-item nav-role-pap" data-target="view-prof-orientandos" style="display: none;"><i class="fa-solid fa-user-graduate"></i><span>Orientandos</span></a>
+            <a href="#" class="nav-item nav-role-pap" data-target="view-prof-diario" style="display: none;"><i class="fa-solid fa-book-journal-whills"></i><span>Diário</span></a>
+
             <a href="#" class="nav-item" data-target="view-prof-forum"><i class="fa-regular fa-comments"></i><span>Fórum</span></a>
             <a href="#" class="nav-item" data-target="view-prof-perfil"><i class="fa-solid fa-user-tie"></i><span>Perfil</span></a>
         </nav>
