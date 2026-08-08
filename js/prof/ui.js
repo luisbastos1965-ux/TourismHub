@@ -17,7 +17,113 @@ export function iniciarCarrossel() {
 }
 
 export async function carregarRadarProfessor() {
-    const aText = document.getElementById('assistente-global-texto'); const hCont = document.getElementById('dashboard-horario-container'); const eCont = document.getElementById('radar-agenda-container');
+    // 1. Identificar todos os blocos do Professor Base no HTML
+    const cardAssistente = document.getElementById('assistente-global-texto')?.closest('.card');
+    const divCarrossel = document.getElementById('stats-carousel-container')?.parentNode;
+    const cardModulos = document.getElementById('dashboard-modulos-container')?.closest('.card');
+    const cardHorario = document.getElementById('dashboard-horario-container')?.closest('.card');
+    const cardEventos = document.getElementById('radar-agenda-container')?.closest('.card');
+    
+    // 2. Preparar o contentor dinâmico para a PAP no topo do Dashboard
+    const papContainerId = 'dyn-pap-dashboard';
+    let papCont = document.getElementById(papContainerId);
+    if (!papCont) {
+        papCont = document.createElement('div');
+        papCont.id = papContainerId;
+        document.getElementById('view-prof-dashboard').prepend(papCont);
+    }
+
+    // =========================================================
+    // MODO: ORIENTADOR PAP (Esconde a base, mostra a Montra PAP)
+    // =========================================================
+    if (state.activeRole === 'orientador_pap') {
+        
+        // Esconde imediatamente o "ruído" do professor base
+        if(cardAssistente) cardAssistente.style.display = 'none';
+        if(divCarrossel) divCarrossel.style.display = 'none';
+        if(cardModulos) cardModulos.style.display = 'none';
+        if(cardHorario) cardHorario.style.display = 'none';
+        if(cardEventos) cardEventos.style.display = 'none';
+        
+        // Constrói e mostra a Montra Exclusiva PAP
+        papCont.style.display = 'block';
+        papCont.innerHTML = `
+            <div class="card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(0, 0, 0, 0.3)); border: 1px solid var(--success-green); margin-bottom: 20px;">
+                <h3 style="font-size: 1.1rem; margin-bottom: 10px; color: var(--success-green);"><i class="fa-solid fa-robot"></i> Assistente de Orientação</h3>
+                <div id="pap-assistente-texto" style="font-size: 0.95rem; color: white; line-height: 1.5;"><i class="fa-solid fa-spinner fa-spin"></i> A analisar projetos...</div>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--success-green); margin-bottom: 20px;">
+                <h3 style="font-size: 1rem; margin-bottom: 10px; color: white;"><i class="fa-solid fa-chart-pie" style="color:var(--success-green);"></i> O Teu Raio-X</h3>
+                <div id="pap-dashboard-content"><p class="text-muted center" style="font-size:0.85rem;"><i class="fa-solid fa-spinner fa-spin"></i> A calcular progresso...</p></div>
+            </div>
+        `;
+        
+        try {
+            let meusOrientandos = [];
+            for (const t of state.turmasProfessor) {
+                const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
+                snap.forEach(d => {
+                    const data = d.data();
+                    // Filtra apenas os alunos cujo orientador é este professor
+                    if (data.pap && (data.pap.orientador === state.myUserName || data.pap.orientador === state.myUserId)) {
+                        meusOrientandos.push(data);
+                    }
+                });
+            }
+            
+            let htmlPap = '';
+            if (meusOrientandos.length === 0) {
+                document.getElementById('pap-assistente-texto').innerHTML = "Ainda não tens alunos atribuídos para orientação neste momento.";
+                document.getElementById('pap-dashboard-content').innerHTML = '<p class="text-muted center" style="font-size:0.85rem; margin:0;">Sem dados.</p>';
+            } else {
+                let temasAprovados = 0;
+                let relatoriosAprovados = 0;
+                meusOrientandos.forEach(al => {
+                    if (al.pap && al.pap.temaAprovado) temasAprovados++;
+                    if (al.pap && al.pap.relatorioAprovado) relatoriosAprovados++;
+                });
+                
+                // Assistente inteligente que avisa se há temas pendentes
+                document.getElementById('pap-assistente-texto').innerHTML = `Estás a orientar <strong>${meusOrientandos.length} alunos</strong>. ${temasAprovados === meusOrientandos.length ? 'Todos os teus alunos já têm o tema aprovado! 🎉' : `Atenção: Tens ${meusOrientandos.length - temasAprovados} aluno(s) a aguardar aprovação de tema.`}`;
+                
+                htmlPap = `
+                <div style="display:flex; justify-content:space-between; gap:10px; text-align:center;">
+                    <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;">
+                        <strong style="color:white; font-size:1.2rem;">${meusOrientandos.length}</strong><br><span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Alunos</span>
+                    </div>
+                    <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;">
+                        <strong style="color:var(--warning-yellow); font-size:1.2rem;">${temasAprovados}</strong><br><span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Temas Ok</span>
+                    </div>
+                    <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;">
+                        <strong style="color:var(--success-green); font-size:1.2rem;">${relatoriosAprovados}</strong><br><span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Finais Ok</span>
+                    </div>
+                </div>
+                <button onclick="document.querySelector('.nav-role-pap[data-target=\\'view-prof-orientandos\\']').click()" class="secondary-btn" style="width:100%; margin-top:15px; border-color:var(--success-green); color:var(--success-green);"><i class="fa-solid fa-list-check"></i> Gerir Projetos</button>
+                `;
+                document.getElementById('pap-dashboard-content').innerHTML = htmlPap;
+            }
+        } catch(e) {
+            document.getElementById('pap-assistente-texto').innerHTML = "Erro ao ler a base de dados.";
+            document.getElementById('pap-dashboard-content').innerHTML = '<p class="text-danger center">Erro a ler PAPs.</p>';
+        }
+        
+        // Termina a execução da função aqui. O código debaixo (do prof base) nunca é lido.
+        return; 
+    }
+
+    // ============================================================
+    // MODO: PROFESSOR BASE / DT / COORDENADOR (Esconde Montra PAP)
+    // ============================================================
+    papCont.style.display = 'none';
+    if(cardAssistente) cardAssistente.style.display = 'block';
+    if(divCarrossel) divCarrossel.style.display = 'block';
+    if(cardModulos) cardModulos.style.display = 'block';
+    if(cardHorario) cardHorario.style.display = 'block';
+    if(cardEventos) cardEventos.style.display = 'block';
+
+    const aText = document.getElementById('assistente-global-texto'); 
+    const hCont = document.getElementById('dashboard-horario-container'); 
+    const eCont = document.getElementById('radar-agenda-container');
     aText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A calcular estatísticas...';
     if (state.turmasProfessor.length === 0) { aText.innerHTML = 'Não tens turmas atribuídas.'; return; }
 
@@ -55,70 +161,6 @@ export async function carregarRadarProfessor() {
         if(profAulasHoje.length > 0) {
             try { profAulasHoje.sort((a,b) => { if(!a.hora || !b.hora) return 0; const getMin = (hx) => parseInt(hx.split(':')[0])*60 + parseInt(hx.split(':')[1]); return getMin(a.hora) - getMin(b.hora); }); let hHtml = ''; profAulasHoje.forEach(aula => { hHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid #0099ff;"><div><strong style="color:white; font-size:0.9rem;">${aula.disciplina}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${aula.turma}</span></div><span style="color:#0099ff; font-weight:bold; font-size:0.85rem;">${aula.hora}</span></div>`; }); hCont.innerHTML = hHtml; } catch(sortErr) { hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Não tens aulas marcadas para hoje.</p>'; }
         } else { hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Não tens aulas marcadas para hoje.</p>'; }
-
-        // === NOVA MONTRA RÁPIDA PAP ===
-        const papContainerId = 'dyn-pap-dashboard';
-        let papCont = document.getElementById(papContainerId);
-        if (!papCont) {
-            papCont = document.createElement('div');
-            papCont.id = papContainerId;
-            const containerEventos = document.getElementById('radar-agenda-container').closest('.card');
-            containerEventos.parentNode.insertBefore(papCont, containerEventos);
-        }
-
-        if (state.activeRole === 'orientador_pap') {
-            papCont.style.display = 'block';
-            papCont.innerHTML = `<div class="card" style="border-left: 4px solid var(--success-green); margin-bottom: 20px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(0, 0, 0, 0.2));">
-                <h3 style="font-size: 1rem; margin-bottom: 10px; color: white;"><i class="fa-solid fa-laptop-code" style="color:var(--success-green);"></i> Ponto de Situação (PAPs)</h3>
-                <div id="pap-dashboard-content"><p class="text-muted center" style="font-size:0.85rem;"><i class="fa-solid fa-spinner fa-spin"></i> A calcular progresso...</p></div>
-            </div>`;
-            
-            try {
-                let meusOrientandos = [];
-                for (const t of state.turmasProfessor) {
-                    const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
-                    snap.forEach(d => {
-                        const data = d.data();
-                        if (data.pap && (data.pap.orientador === state.myUserName || data.pap.orientador === state.myUserId)) {
-                            meusOrientandos.push(data);
-                        }
-                    });
-                }
-                
-                let htmlPap = '';
-                if (meusOrientandos.length === 0) {
-                    htmlPap = '<p class="text-muted center" style="font-size:0.85rem; margin:0;">Não tens alunos sob a tua orientação.</p>';
-                } else {
-                    let temasAprovados = 0;
-                    let relatoriosAprovados = 0;
-                    meusOrientandos.forEach(al => {
-                        if (al.pap && al.pap.temaAprovado) temasAprovados++;
-                        if (al.pap && al.pap.relatorioAprovado) relatoriosAprovados++;
-                    });
-                    
-                    htmlPap = `
-                    <div style="display:flex; justify-content:space-between; gap:10px; text-align:center;">
-                        <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;">
-                            <strong style="color:white; font-size:1.2rem;">${meusOrientandos.length}</strong><br><span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Alunos</span>
-                        </div>
-                        <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;">
-                            <strong style="color:var(--warning-yellow); font-size:1.2rem;">${temasAprovados}</strong><br><span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Temas Ok</span>
-                        </div>
-                        <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;">
-                            <strong style="color:var(--success-green); font-size:1.2rem;">${relatoriosAprovados}</strong><br><span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Finais Ok</span>
-                        </div>
-                    </div>
-                    <button onclick="document.querySelector('.nav-role-pap[data-target=\\'view-prof-orientandos\\']').click()" class="secondary-btn" style="width:100%; margin-top:15px; border-color:var(--success-green); color:var(--success-green);"><i class="fa-solid fa-list-check"></i> Gerir Projetos</button>
-                    `;
-                }
-                document.getElementById('pap-dashboard-content').innerHTML = htmlPap;
-            } catch(e) {
-                document.getElementById('pap-dashboard-content').innerHTML = '<p class="text-danger center">Erro a ler PAPs.</p>';
-            }
-        } else {
-            papCont.style.display = 'none';
-        }
-        // === FIM NOVA MONTRA ===
 
         const hjStrFull = hjD.toISOString().split('T')[0]; const fut = eventosGlobais.filter(e => e.data && e.data >= hjStrFull).sort((a,b) => a.data.localeCompare(b.data)).slice(0, 3);
         if (fut.length > 0) { let ah = ''; fut.forEach(e => { const datePrint = e.data ? e.data.split('-').reverse().join('/') : 'Brevemente'; const timePrint = e.periodo === 'hora' ? ` às ${e.hora}` : (e.periodo === 'manha' ? ' (Manhã)' : (e.periodo === 'tarde' ? ' (Tarde)' : '')); ah += `<div style="display:flex; justify-content:space-between; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid var(--warning-yellow);"><div><strong style="color:white; font-size:0.9rem;">${e.titulo}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${e.turma}</span></div><span style="color:var(--warning-yellow); font-size:0.8rem;">${datePrint}${timePrint}</span></div>`; }); eCont.innerHTML = ah; } else { eCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Agenda livre.</p>'; }
