@@ -25,13 +25,48 @@ onAuthStateChanged(auth, async (user) => {
                 if (state.myRoles.some(r => ['professor', 'diretor_turma', 'orientador_pap', 'coordenador'].includes(r))) {
                     state.myUserName = state.profData.nome || state.myUserId;
                     
-                    let titleStr = "Professor";
-                    if (state.myRoles.includes('diretor_turma')) titleStr += " / DT";
-                    if (state.myRoles.includes('orientador_pap')) titleStr += " / PAP";
-                    if (state.myRoles.includes('coordenador')) titleStr += " / Coord"; 
-                    
+                    // --- INÍCIO DA TROCA DE CONTEXTO ---
                     document.getElementById('header-user-name-prof').innerText = state.myUserName;
-                    document.getElementById('header-user-name-prof').nextElementSibling.innerText = titleStr;
+                    
+                    const configuracaoPerfis = {
+                        'professor': { nome: 'Professor', cor: '#64748b' },
+                        'diretor_turma': { nome: 'Diretor de Turma', cor: '#f59e0b' },
+                        'coordenador': { nome: 'Coordenador', cor: '#9333ea' },
+                        'orientador_pap': { nome: 'Orientador PAP', cor: '#10b981' }
+                    };
+
+                    let dropdownHtml = '';
+                    state.myRoles.forEach(papel => {
+                        if(configuracaoPerfis[papel]) {
+                            dropdownHtml += `<button onclick="window.mudarCapaProfessor('${papel}')" style="width: 100%; text-align: left; padding: 12px 15px; background: transparent; border: none; color: white; cursor: pointer; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 10px;">
+                                <span style="width: 10px; height: 10px; border-radius: 50%; background-color: ${configuracaoPerfis[papel].cor};"></span> ${configuracaoPerfis[papel].nome}
+                            </button>`;
+                        }
+                    });
+                    document.getElementById('lista-capas-dropdown').innerHTML = dropdownHtml;
+
+                    window.mudarCapaProfessor = (novoPapel) => {
+                        state.activeRole = novoPapel;
+                        const config = configuracaoPerfis[novoPapel];
+                        
+                        const badge = document.getElementById('badge-perfil-ativo');
+                        badge.innerText = config.nome;
+                        badge.style.backgroundColor = config.cor;
+                        
+                        document.getElementById('dropdown-perfis').style.display = 'none';
+                        document.querySelector('.nav-item[data-target="view-prof-dashboard"]').click();
+                    };
+
+                    // Inicia sempre como professor padrão
+                    window.mudarCapaProfessor('professor');
+
+                    document.getElementById('btn-toggle-perfis').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const drop = document.getElementById('dropdown-perfis');
+                        drop.style.display = drop.style.display === 'none' ? 'block' : 'none';
+                    });
+                    // --- FIM DA TROCA DE CONTEXTO ---
+
                     document.getElementById('perfil-nome-prof-view').innerText = state.myUserName;
                     document.getElementById('perfil-disciplinas-lista').innerText = state.disciplinasProfessor.length > 0 ? state.disciplinasProfessor.join(' • ') : 'Nenhuma disciplina configurada.';
                     document.getElementById('perfil-papeis-lista').innerText = state.myRoles.map(r => r.toUpperCase().replace('_', ' ')).join(' • ');
@@ -57,7 +92,15 @@ onAuthStateChanged(auth, async (user) => {
     } else { window.location.href = "index.html"; }
 });
 
-document.getElementById('btn-logout-prof')?.addEventListener('click', () => signOut(auth));
+// Fechar o menu suspenso se clicar fora
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('#header-prof')) {
+        const drop = document.getElementById('dropdown-perfis');
+        if(drop) drop.style.display = 'none';
+    }
+});
+
+document.getElementById('btn-logout-dropdown')?.addEventListener('click', () => signOut(auth));
 function esconderTodasAsVistas() { document.querySelectorAll('.app-content > div').forEach(v => v.style.display = 'none'); }
 
 // DROPDOWNS DIRETOS
