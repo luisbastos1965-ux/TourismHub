@@ -67,7 +67,7 @@
             </div>
             
             <div style="display: flex; align-items: center; gap: 15px;">
-                <!-- O botão de logout antigo saltou para a gaveta, o topo fica limpo -->
+                <!-- O botão de logout saltou para a gaveta -->
             </div>
         </header>
 
@@ -197,25 +197,7 @@
                 </div>
             </div>
 
-            <!-- VISTA 4: FÓRUNS -->
-            <div id="view-prof-forum" style="display: none; flex-direction:column;">
-                <button id="btn-create-chat-prof" class="primary-btn" style="background:var(--bg-dark); border:2px dashed var(--primary-green); color:var(--primary-green); width: 100%; margin-bottom: 20px; font-size:1.1rem; padding:15px;"><i class="fa-solid fa-plus"></i> Criar Novo Chat</button>
-                <div id="prof-forum-channel-list"></div>
-                
-                <div id="prof-forum-chat-view" style="display: none; flex-direction: column; height: 70vh; background: var(--bg-card); border: 1px solid #333; border-radius: 12px; overflow: hidden;">
-                    <div style="background: #222; padding: 15px; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 15px;">
-                        <button id="btn-prof-voltar-canais" class="icon-btn" style="color:var(--primary-green);"><i class="fa-solid fa-arrow-left"></i></button>
-                        <h3 id="prof-chat-active-title" style="color: white; margin:0; font-size:1.1rem;">Chat</h3>
-                    </div>
-                    <div id="prof-chat-messages-container" class="forum-messages" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:10px;"></div>
-                    <div class="forum-input-area">
-                        <input type="text" id="prof-input-forum-msg" class="input-padrao" placeholder="Escreve uma mensagem...">
-                        <button id="btn-prof-send-msg" class="forum-send-btn"><i class="fa-solid fa-paper-plane"></i></button>
-                    </div>
-                </div>
-            </div>
-
-<!-- VISTA: ORIENTANDOS (EXCLUSIVA PAP) -->
+            <!-- VISTA: ORIENTANDOS (EXCLUSIVA PAP) -->
             <div id="view-prof-orientandos" style="display: none;">
                 <div class="card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(0, 0, 0, 0.3)); border: 1px solid var(--success-green); margin-bottom: 20px;">
                     <h3 style="font-size: 1.1rem; margin-bottom: 5px; color: var(--success-green);"><i class="fa-solid fa-user-graduate"></i> Os Meus Orientandos</h3>
@@ -254,7 +236,42 @@
                     <p class="text-muted center">A carregar histórico de reuniões e faltas...</p>
                 </div>
             </div>
-            
+
+            <!-- VISTA: PROJETOS FCT/PAP (EXCLUSIVA COORDENADOR) -->
+            <div id="view-coord-projetos" style="display: none;">
+                <div class="card" style="background: linear-gradient(135deg, rgba(147, 51, 234, 0.15), rgba(0, 0, 0, 0.3)); border: 1px solid #9333ea; margin-bottom: 20px;">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 5px; color: #9333ea;"><i class="fa-solid fa-briefcase"></i> Gestão de Estágios e PAPs</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-light);">Visão global de todos os alunos de 11º e 12º ano do curso.</p>
+                </div>
+
+                <div class="falta-tabs" style="margin-bottom: 15px;">
+                    <button class="falta-tab-btn active" id="tab-coord-fct" style="border-color: #9333ea;">Estágios (FCT)</button>
+                    <button class="falta-tab-btn" id="tab-coord-pap" style="border-color: #9333ea;">Projetos Finais (PAP)</button>
+                </div>
+
+                <div id="lista-coord-projetos-dinamico" style="display: flex; flex-direction: column; gap: 10px;">
+                    <p class="text-muted center">A carregar o ponto de situação...</p>
+                </div>
+            </div>
+
+            <!-- VISTA 4: FÓRUNS -->
+            <div id="view-prof-forum" style="display: none; flex-direction:column;">
+                <button id="btn-create-chat-prof" class="primary-btn" style="background:var(--bg-dark); border:2px dashed var(--primary-green); color:var(--primary-green); width: 100%; margin-bottom: 20px; font-size:1.1rem; padding:15px;"><i class="fa-solid fa-plus"></i> Criar Novo Chat</button>
+                <div id="prof-forum-channel-list"></div>
+                
+                <div id="prof-forum-chat-view" style="display: none; flex-direction: column; height: 70vh; background: var(--bg-card); border: 1px solid #333; border-radius: 12px; overflow: hidden;">
+                    <div style="background: #222; padding: 15px; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 15px;">
+                        <button id="btn-prof-voltar-canais" class="icon-btn" style="color:var(--primary-green);"><i class="fa-solid fa-arrow-left"></i></button>
+                        <h3 id="prof-chat-active-title" style="color: white; margin:0; font-size:1.1rem;">Chat</h3>
+                    </div>
+                    <div id="prof-chat-messages-container" class="forum-messages" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:10px;"></div>
+                    <div class="forum-input-area">
+                        <input type="text" id="prof-input-forum-msg" class="input-padrao" placeholder="Escreve uma mensagem...">
+                        <button id="btn-prof-send-msg" class="forum-send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+
             <!-- VISTA 5: PERFIL -->
             <div id="view-prof-perfil" style="display: none;">
                 <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: calc(100vh - 180px);">
@@ -308,13 +325,19 @@
                     </div>
                     <div style="flex:1; overflow-y:auto; padding: 15px;">
                         <div id="dt-graph-toggles" class="falta-tabs" style="display:none; margin-bottom:15px;"><button class="falta-tab-btn active" id="btn-graph-disc">Minha Disciplina</button><button class="falta-tab-btn" id="btn-graph-global">Visão Global</button></div>
+                        
+                        <h4 id="perfil-aluno-title-estat" style="color:white; font-size:0.9rem; margin-bottom:10px;">Estatísticas</h4>
+                        
                         <div style="display:flex; justify-content:space-between; margin-bottom: 20px; text-align:center;">
                             <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; margin-right:5px;"><strong id="p-aluno-faltas" style="font-size:1.2rem; color:var(--danger-red);">0</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">Total Faltas (h)</span></div>
                             <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; margin-right:5px;"><strong id="p-aluno-prhfs" style="font-size:1.2rem; color:#00d2ff;">0</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">PRHFs Ativos</span></div>
                             <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px;"><strong id="p-aluno-notas" style="font-size:1.2rem; color:var(--warning-yellow);">0</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">Mód. Feitos</span></div>
                         </div>
                         <div style="background: rgba(0,0,0,0.2); border: 1px solid #333; border-radius: 8px; padding: 10px; margin-bottom: 20px;"><canvas id="chartEvolucaoAluno" height="150"></canvas></div>
-                        <div style="display:flex; gap:10px; margin-bottom: 20px;"><button class="btn-ocorrencia-premium btn-pos" id="btn-dar-positiva"><i class="fa-solid fa-star" style="font-size: 1.5rem; color: var(--success-green); margin-bottom: 5px;"></i><br><strong style="color: white; font-size: 0.85rem;">Positiva</strong></button><button class="btn-ocorrencia-premium btn-neg" id="btn-dar-negativa"><i class="fa-solid fa-triangle-exclamation" style="font-size: 1.5rem; color: var(--danger-red); margin-bottom: 5px;"></i><br><strong style="color: white; font-size: 0.85rem;">Negativa</strong></button></div>
+                        <div style="display:flex; gap:10px; margin-bottom: 20px;">
+                            <button class="btn-ocorrencia-premium btn-pos" id="btn-dar-positiva"><i class="fa-solid fa-star" style="font-size: 1.5rem; color: var(--success-green); margin-bottom: 5px;"></i><br><strong style="color: white; font-size: 0.85rem;">Positiva</strong></button>
+                            <button class="btn-ocorrencia-premium btn-neg" id="btn-dar-negativa"><i class="fa-solid fa-triangle-exclamation" style="font-size: 1.5rem; color: var(--danger-red); margin-bottom: 5px;"></i><br><strong style="color: white; font-size: 0.85rem;">Negativa</strong></button>
+                        </div>
                         <button id="btn-justificar-faltas" class="secondary-btn" style="width:100%; margin-bottom:20px; border-color:#00d2ff; color:#00d2ff; display:none;"><i class="fa-solid fa-clipboard-check"></i> Justificar Todas as Faltas</button>
                         <div id="area-obs-dt" style="display:none;"><h4 style="font-size:0.9rem; color:white; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apreciação do DT</h4><textarea id="p-aluno-obs-dt" class="input-padrao" placeholder="Observações e notas da reunião..." style="min-height:80px; width:100%; margin-bottom:10px;"></textarea><button id="btn-salvar-obs-dt" class="primary-btn small-btn" style="width:100%;">Gravar Apreciação</button></div>
                     </div>
@@ -346,7 +369,7 @@
             <div id="modal-criar-forum" class="modal-overlay"><div class="action-sheet" style="max-width:400px; border-radius:12px; margin:20px;"><h3 style="margin-bottom: 15px; color:var(--primary-green);"><i class="fa-solid fa-comments"></i> Criar Novo Chat</h3><input type="text" id="input-nome-novo-forum" placeholder="Nome do Chat (Ex: Projeto Global)" style="width:100%; margin-bottom:15px;" class="input-padrao"><select id="forum-turma-select" class="input-padrao" style="width:100%; margin-bottom:15px;"><option value="">Selecionar Turma...</option></select><div id="lista-alunos-forum" style="max-height: 150px; overflow-y: auto; background: #111; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333;"><p class="text-muted center" style="font-size:0.8rem;">Seleciona turma primeiro.</p></div><div style="display:flex; gap:10px;"><button id="btn-cancelar-novo-forum" class="secondary-btn" style="flex:1;">Cancelar</button><button id="btn-confirm-novo-forum" class="primary-btn" style="flex:1;">Criar Chat</button></div></div></div>
             <div id="modal-editar-forum" class="modal-overlay"><div class="action-sheet" style="max-width:400px; border-radius:12px; margin:20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color:var(--warning-yellow); margin:0;"><i class="fa-solid fa-gear"></i> Editar Chat</h3><button class="fechar-modal" data-target="modal-editar-forum" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><input type="hidden" id="edit-forum-id"><input type="hidden" id="edit-forum-turma"><input type="text" id="input-nome-edit-forum" placeholder="Nome do Chat" style="width:100%; margin-bottom:15px;" class="input-padrao"><div id="lista-alunos-edit-forum" style="max-height: 150px; overflow-y: auto; background: #111; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333;"><p class="text-muted center" style="font-size:0.8rem;">A carregar membros...</p></div><div style="display:flex; gap:10px; margin-bottom: 10px;"><button id="btn-guardar-edit-forum" class="primary-btn" style="flex:1; background:var(--warning-yellow); color:black;">Guardar Alterações</button></div><button id="btn-apagar-forum" class="secondary-btn" style="width:100%; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-trash"></i> Apagar Chat Definitivamente</button></div></div>
 
-            <!-- MODAIS DE OPERAÇÃO PADRÃO COM SELECTS ATUALIZADOS -->
+            <!-- MODAIS DE OPERAÇÃO PADRÃO -->
             <div id="modal-criar-prhf" class="modal-overlay" style="z-index: 2000;"><div class="action-sheet" style="max-width: 450px; padding: 20px; max-height: 90vh; overflow-y:auto;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color: white; margin:0;"><i class="fa-solid fa-file-medical" style="color:var(--danger-red);"></i> Novo PRHF</h3><button class="fechar-modal" data-target="modal-criar-prhf" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><div id="erro-modal-prhf" style="color: var(--danger-red); font-size: 0.85rem; display: none; margin-bottom: 10px; text-align: center;"></div><select id="prhf-turma" class="input-padrao" style="width:100%; margin-bottom:10px;"><option value="">Selecione a Turma</option></select><select id="prhf-aluno" class="input-padrao" style="width:100%; margin-bottom:10px;"><option value="">Selecione primeiro a Turma</option></select><div style="display:flex; gap:10px; margin-bottom:10px;"><select id="prhf-disciplina" class="input-padrao" style="flex:2; margin:0;"></select><select id="prhf-modulo" class="input-padrao" style="flex:1; margin:0;"><option value="">Mod...</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option></select></div><div style="display:flex; gap:10px; margin-bottom:10px;"><div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Horas Totais em Falta</label><input type="number" id="prhf-horas-totais" class="input-padrao" placeholder="Ex: 15" style="width:100%; margin:0;" min="1"></div><div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Horas Presenciais (Auto)</label><input type="number" id="prhf-horas-presenciais" class="input-padrao" placeholder="Calc." style="width:100%; margin:0; background:rgba(255,255,255,0.05);" readonly></div></div><label style="display:flex; align-items:center; gap:8px; margin-bottom:15px; color:var(--danger-red); font-size:0.85rem; cursor:pointer;"><input type="checkbox" id="prhf-urgente" style="width:16px; height:16px; accent-color:var(--danger-red);"> Módulo já terminado (Urgente)</label><div style="margin-bottom:15px;"><label style="font-size:0.75rem; color:var(--text-muted);">Data Limite</label><input type="date" id="prhf-prazo" class="input-padrao" style="width:100%; margin:0;"></div><textarea id="prhf-descricao" class="input-padrao" placeholder="Instruções para o aluno..." style="width:100%; min-height:80px; margin-bottom:15px;"></textarea><div id="prhf-upload-area" style="padding: 15px 10px; margin-bottom:15px; border:1px dashed var(--danger-red); background:rgba(255,77,77,0.05); text-align:center; border-radius:8px; cursor:pointer;" onclick="document.getElementById('prhf-file').click();"><i class="fa-solid fa-paperclip" style="font-size:1.5rem; color:var(--danger-red); margin-bottom:5px;"></i><h4 style="color:white; margin-bottom:5px; font-size:0.9rem;">Anexar Ficha / Teste</h4><span id="prhf-file-name" style="font-size:0.75rem; color:var(--text-muted);">Toca para PDF ou Imagem</span></div><input type="file" id="prhf-file" style="display:none;" accept=".pdf,.doc,.docx,.jpg,.png"><button id="btn-gravar-novo-prhf" class="primary-btn" style="width:100%; background:var(--danger-red);"><i class="fa-solid fa-paper-plane"></i> Atribuir PRHF</button></div></div>
             <div id="modal-propor-prhf-prof" class="modal-overlay" style="z-index: 2001;"><div class="action-sheet" style="max-width: 400px; padding: 20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color: var(--primary-green); margin:0;"><i class="fa-regular fa-calendar"></i> Agendar Sessão</h3><button class="fechar-modal" data-target="modal-propor-prhf-prof" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><input type="hidden" id="prop-prof-aluno-id"><input type="hidden" id="prop-prof-prhf-id"><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">Propõe uma data e hora. O aluno terá de aceitar na sua aplicação.</p><input type="date" id="prop-prof-data" class="input-padrao" style="width:100%; margin-bottom:10px;"><div style="display:flex; gap:10px; margin-bottom:15px;"><input type="time" id="prop-prof-inicio" class="input-padrao" style="flex:1; margin:0;" title="Início"><input type="time" id="prop-prof-fim" class="input-padrao" style="flex:1; margin:0;" title="Fim"></div><button id="btn-confirmar-proposta-prof" class="primary-btn" style="width:100%;">Sugerir Horário</button></div></div>
             <div id="modal-concluir-prhf" class="modal-overlay" style="z-index: 2001;"><div class="action-sheet" style="max-width: 400px; padding: 20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color: var(--success-green); margin:0;"><i class="fa-solid fa-clipboard-check"></i> Fechar PRHF</h3><button class="fechar-modal" data-target="modal-concluir-prhf" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><input type="hidden" id="conc-aluno-id" value=""><input type="hidden" id="conc-prhf-id" value=""><p style="font-size:0.9rem; color:white; margin-bottom:10px;">O aluno cumpriu com sucesso os objetivos deste Plano de Recuperação?</p><textarea id="conc-motivo" class="input-padrao" placeholder="Deixa um pequeno feedback final (Opcional)..." style="width:100%; min-height:60px; margin-bottom:15px;"></textarea><button id="btn-confirmar-conclusao-prhf" class="primary-btn" style="width:100%; background:var(--success-green);">Aprovar e Fechar Plano</button></div></div>
@@ -366,7 +389,6 @@
                     </div>
                     
                     <select id="sessao-pap-aluno" class="input-padrao" style="width:100%; margin-bottom:15px;">
-                        <!-- JS vai injetar apenas os meus orientandos aqui -->
                     </select>
                     <input type="date" id="sessao-pap-data" class="input-padrao" style="width:100%; margin-bottom:15px;">
                     
@@ -374,7 +396,6 @@
                     <div style="display:flex; gap:10px; margin-bottom:15px;">
                         <button id="btn-presenca-sim" class="secondary-btn presenca-toggle active" style="flex:1; border-color:var(--success-green); color:var(--success-green); background:rgba(16,185,129,0.1);">Compareceu</button>
                         <button id="btn-presenca-nao" class="secondary-btn presenca-toggle" style="flex:1;">Faltou</button>
-                        <!-- O JS vai gerir a troca visual e lógica destas cores quando clicares -->
                     </div>
                     
                     <textarea id="sessao-pap-notas" class="input-padrao" placeholder="Resumo da reunião e tarefas que o aluno deve realizar até à próxima sessão..." style="width:100%; min-height:100px; margin-bottom:15px;"></textarea>
@@ -382,18 +403,23 @@
                     <button id="btn-gravar-sessao-pap" class="primary-btn" style="width:100%; background:var(--success-green);">Gravar e Notificar Aluno</button>
                 </div>
             </div>
+
         </main>
 
         <nav class="bottom-nav" id="main-bottom-nav">
             <a href="#" class="nav-item active" data-target="view-prof-dashboard"><i class="fa-solid fa-house"></i><span>Início</span></a>
             
-            <!-- ITENS NORMAIS (Prof Base, DT, Coordenador) -->
+            <!-- ITENS NORMAIS (Prof Base, DT) -->
             <a href="#" class="nav-item nav-role-base" data-target="view-prof-turmas"><i class="fa-solid fa-users"></i><span>Turmas</span></a>
             <a href="#" class="nav-item nav-role-base" data-target="view-prof-tarefas"><i class="fa-solid fa-inbox"></i><span>Tarefas</span></a>
             
             <!-- ITENS EXCLUSIVOS (Orientador PAP) -->
             <a href="#" class="nav-item nav-role-pap" data-target="view-prof-orientandos" style="display: none;"><i class="fa-solid fa-user-graduate"></i><span>Orientandos</span></a>
             <a href="#" class="nav-item nav-role-pap" data-target="view-prof-diario" style="display: none;"><i class="fa-solid fa-book-journal-whills"></i><span>Diário</span></a>
+
+            <!-- ITENS EXCLUSIVOS (Coordenador) -->
+            <a href="#" class="nav-item nav-role-coord" data-target="view-prof-turmas" style="display: none;"><i class="fa-solid fa-users"></i><span>Turmas</span></a>
+            <a href="#" class="nav-item nav-role-coord" data-target="view-coord-projetos" style="display: none;"><i class="fa-solid fa-briefcase"></i><span>FCT/PAP</span></a>
 
             <a href="#" class="nav-item" data-target="view-prof-forum"><i class="fa-regular fa-comments"></i><span>Fórum</span></a>
             <a href="#" class="nav-item" data-target="view-prof-perfil"><i class="fa-solid fa-user-tie"></i><span>Perfil</span></a>
