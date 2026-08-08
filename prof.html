@@ -215,6 +215,46 @@
                 </div>
             </div>
 
+<!-- VISTA: ORIENTANDOS (EXCLUSIVA PAP) -->
+            <div id="view-prof-orientandos" style="display: none;">
+                <div class="card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(0, 0, 0, 0.3)); border: 1px solid var(--success-green); margin-bottom: 20px;">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 5px; color: var(--success-green);"><i class="fa-solid fa-user-graduate"></i> Os Meus Orientandos</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-light);">Alunos sob a tua orientação direta. Gere fases, prazos e entregas aqui.</p>
+                </div>
+                
+                <!-- ZONA DE DESTAQUE: Os meus alunos -->
+                <div id="lista-meus-orientandos" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px;">
+                    <p class="text-muted center">A carregar os teus orientandos...</p>
+                </div>
+
+                <div style="margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 5px;">
+                    <h3 style="font-size: 1rem; color: var(--text-muted);">Restantes Alunos (Consulta)</h3>
+                </div>
+                
+                <!-- ZONA NEUTRA: Restantes alunos do ano -->
+                <div id="lista-restantes-alunos-pap" style="display: flex; flex-direction: column; gap: 8px;">
+                    <p class="text-muted center">A carregar colegas de curso...</p>
+                </div>
+            </div>
+
+            <!-- VISTA: DIÁRIO DE BORDO (EXCLUSIVA PAP) -->
+            <div id="view-prof-diario" style="display: none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                    <h3 style="font-size: 1.2rem; color: white;">Diário de Sessões</h3>
+                    <button id="btn-nova-sessao-pap" class="primary-btn" style="background: var(--success-green); padding: 8px 15px;"><i class="fa-solid fa-plus"></i> Nova Sessão</button>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <select id="filtro-diario-aluno" class="input-padrao" style="width: 100%;">
+                        <option value="todos">Todos os meus orientandos</option>
+                    </select>
+                </div>
+
+                <div id="lista-sessoes-diario" style="display: flex; flex-direction: column; gap: 12px;">
+                    <p class="text-muted center">A carregar histórico de reuniões e faltas...</p>
+                </div>
+            </div>
+            
             <!-- VISTA 5: PERFIL -->
             <div id="view-prof-perfil" style="display: none;">
                 <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: calc(100vh - 180px);">
@@ -316,6 +356,32 @@
             <div id="modal-rejeitar-prhf" class="modal-overlay" style="z-index: 2001;"><div class="action-sheet" style="max-width: 400px; padding: 20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color: var(--danger-red); margin:0;"><i class="fa-solid fa-ban"></i> Rejeitar Proposta</h3><button class="fechar-modal" data-target="modal-rejeitar-prhf" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><input type="hidden" id="rej-aluno-id" value=""><input type="hidden" id="rej-prhf-id" value=""><textarea id="rej-motivo" class="input-padrao" placeholder="Motivo da rejeição..." style="width:100%; min-height:80px; margin-bottom:15px;"></textarea><button id="btn-confirmar-rejeicao" class="primary-btn" style="width:100%; background:var(--danger-red);">Rejeitar Agendamento</button></div></div>
             <div id="modal-agendar-evento" class="modal-overlay" style="z-index: 2000;"><div class="action-sheet" style="max-width: 400px;"><h3 style="margin-bottom: 15px; color: white;"><i class="fa-solid fa-calendar-plus" style="color:#b82bf2;"></i> Agendar Evento</h3><input type="text" id="evento-titulo" class="input-padrao" placeholder="Título (Ex: Teste Escrito)" style="width:100%; margin-bottom:10px;"><div style="display:flex; gap:10px; margin-bottom:10px;"><select id="agendar-disciplina" class="input-padrao" style="flex:1; margin:0; display:none;"></select><input type="date" id="evento-data" class="input-padrao" style="flex:1; margin:0;"><select id="evento-tipo" class="input-padrao" style="flex:1; margin:0;"><option value="avaliacao">Avaliação / Teste</option><option value="entrega">Entrega Trabalho</option><option value="outro">Outro Evento</option></select></div><div style="display:flex; gap:10px; margin-bottom:10px;"><select id="evento-periodo" class="input-padrao" style="flex:1; margin:0;"><option value="dia">Dia Inteiro</option><option value="manha">Manhã</option><option value="tarde">Tarde</option><option value="hora">Hora Exata...</option></select><input type="time" id="evento-hora" class="input-padrao" style="flex:1; margin:0; display:none;"></div><div style="display:flex; gap:10px; margin-top: 15px;"><button class="secondary-btn fechar-modal" data-target="modal-agendar-evento" style="flex:1;">Cancelar</button><button id="btn-gravar-evento" class="primary-btn" style="flex:1;">Agendar</button></div></div></div>
             <div id="modal-materiais" class="modal-overlay" style="z-index: 2001;"><div class="action-sheet" style="max-width: 450px; padding: 20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color: #0099ff; margin:0;"><i class="fa-solid fa-book-open"></i> Enviar Material</h3><button class="fechar-modal" data-target="modal-materiais" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><input type="text" id="mat-titulo" class="input-padrao" placeholder="Título (Ex: Ficha 3)" style="width:100%; margin-bottom:10px;"><select id="mat-disciplina" class="input-padrao" style="width:100%; margin-bottom:15px;"></select><div id="mat-upload-area" style="padding: 20px 10px; margin-bottom:15px; border:1px dashed #0099ff; background:rgba(0,153,255,0.05); text-align:center; border-radius:8px; cursor:pointer;" onclick="document.getElementById('mat-file').click();"><i class="fa-solid fa-cloud-arrow-up" style="font-size:2.2rem; color:#0099ff; margin-bottom:10px;"></i><h4 style="color:white; margin-bottom:5px; font-size:0.95rem;">Anexar Ficheiro</h4><span id="mat-file-name" style="font-size:0.75rem; color:var(--text-muted);">Toca para selecionar</span></div><input type="file" id="mat-file" style="display:none;" accept=".pdf,.doc,.docx,.jpg,.png,.zip"><button id="btn-gravar-material" class="primary-btn" style="width:100%; background:#0099ff;">Partilhar com a Turma</button></div></div>
+
+            <!-- MODAL: NOVA SESSÃO DE ORIENTAÇÃO (PAP) -->
+            <div id="modal-nova-sessao-pap" class="modal-overlay" style="z-index: 2000;">
+                <div class="action-sheet" style="max-width: 450px; padding: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                        <h3 style="color: var(--success-green); margin:0;"><i class="fa-solid fa-calendar-check"></i> Registar Sessão</h3>
+                        <button class="fechar-modal" data-target="modal-nova-sessao-pap" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    
+                    <select id="sessao-pap-aluno" class="input-padrao" style="width:100%; margin-bottom:15px;">
+                        <!-- JS vai injetar apenas os meus orientandos aqui -->
+                    </select>
+                    <input type="date" id="sessao-pap-data" class="input-padrao" style="width:100%; margin-bottom:15px;">
+                    
+                    <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:8px;">Presença do Aluno:</label>
+                    <div style="display:flex; gap:10px; margin-bottom:15px;">
+                        <button id="btn-presenca-sim" class="secondary-btn presenca-toggle active" style="flex:1; border-color:var(--success-green); color:var(--success-green); background:rgba(16,185,129,0.1);">Compareceu</button>
+                        <button id="btn-presenca-nao" class="secondary-btn presenca-toggle" style="flex:1;">Faltou</button>
+                        <!-- O JS vai gerir a troca visual e lógica destas cores quando clicares -->
+                    </div>
+                    
+                    <textarea id="sessao-pap-notas" class="input-padrao" placeholder="Resumo da reunião e tarefas que o aluno deve realizar até à próxima sessão..." style="width:100%; min-height:100px; margin-bottom:15px;"></textarea>
+                    
+                    <button id="btn-gravar-sessao-pap" class="primary-btn" style="width:100%; background:var(--success-green);">Gravar e Notificar Aluno</button>
+                </div>
+            </div>
         </main>
 
         <nav class="bottom-nav" id="main-bottom-nav">
