@@ -18,6 +18,9 @@ export const nomeCurto = (nomeStr) => {
 };
 
 export const getDisciplinasPermitidas = () => {
-    if (state.myRoles.includes('diretor_turma') && state.selectedTurma === state.minhaTurmaDT) return ordemDisciplinasGlobal;
+    // Agora verifica a CAPA ATIVA e não apenas as autorizações globais do professor
+    if (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT) {
+        return ordemDisciplinasGlobal;
+    }
     return state.disciplinasProfessor;
 };
