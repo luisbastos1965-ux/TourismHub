@@ -7,7 +7,9 @@ import { gerarRadarConflitos } from "./prof/roles/dt.js";
 import { validarFCT } from "./prof/roles/coord.js"; 
 import { aprovarTemaPAP, rejeitarTemaPAPExecutar, aprovarRelatorioPAP } from "./prof/roles/pap.js";
 import { carregarRadarProfessor, analisarEAtualizarTurma, renderizarPautaTurma, renderizarFaltasTurma, desenharGraficoAluno, abrirPerfil360Aluno, carregarTarefasProf, carregarForunsProf, abrirChatForum } from "./prof/ui.js";
+
 import { carregarEcraOrientandos, carregarEcraDiario, prepararModalNovaSessao } from "./prof/roles/pap-diario.js";
+import { carregarEcraProjetosCoord } from "./prof/roles/coord-dashboard.js";
 
 onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -26,7 +28,6 @@ onAuthStateChanged(auth, async (user) => {
                 if (state.myRoles.some(r => ['professor', 'diretor_turma', 'orientador_pap', 'coordenador'].includes(r))) {
                     state.myUserName = state.profData.nome || state.myUserId;
                     
-                    // --- INÍCIO DA TROCA DE CONTEXTO ---
                     document.getElementById('header-user-name-prof').innerText = state.myUserName;
                     
                     const configuracaoPerfis = {
@@ -54,15 +55,21 @@ onAuthStateChanged(auth, async (user) => {
                         badge.innerText = config.nome;
                         badge.style.backgroundColor = config.cor;
                         
-                        // Lógica da Barra Inferior Dinâmica
                         const navBase = document.querySelectorAll('.nav-role-base');
                         const navPap = document.querySelectorAll('.nav-role-pap');
+                        const navCoord = document.querySelectorAll('.nav-role-coord');
                         
                         if (novoPapel === 'orientador_pap') {
                             navBase.forEach(el => el.style.display = 'none');
+                            navCoord.forEach(el => el.style.display = 'none');
                             navPap.forEach(el => el.style.display = 'flex');
+                        } else if (novoPapel === 'coordenador') {
+                            navBase.forEach(el => el.style.display = 'none');
+                            navPap.forEach(el => el.style.display = 'none');
+                            navCoord.forEach(el => el.style.display = 'flex');
                         } else {
                             navPap.forEach(el => el.style.display = 'none');
+                            navCoord.forEach(el => el.style.display = 'none');
                             navBase.forEach(el => el.style.display = 'flex');
                         }
 
@@ -70,7 +77,6 @@ onAuthStateChanged(auth, async (user) => {
                         document.querySelector('.nav-item[data-target="view-prof-dashboard"]').click();
                     };
 
-                    // Inicia sempre como professor padrão
                     window.mudarCapaProfessor('professor');
 
                     document.getElementById('btn-toggle-perfis').addEventListener('click', (e) => {
@@ -78,7 +84,6 @@ onAuthStateChanged(auth, async (user) => {
                         const drop = document.getElementById('dropdown-perfis');
                         drop.style.display = drop.style.display === 'none' ? 'block' : 'none';
                     });
-                    // --- FIM DA TROCA DE CONTEXTO ---
 
                     document.getElementById('perfil-nome-prof-view').innerText = state.myUserName;
                     document.getElementById('perfil-disciplinas-lista').innerText = state.disciplinasProfessor.length > 0 ? state.disciplinasProfessor.join(' • ') : 'Nenhuma disciplina configurada.';
@@ -105,7 +110,6 @@ onAuthStateChanged(auth, async (user) => {
     } else { window.location.href = "index.html"; }
 });
 
-// Fechar o menu suspenso se clicar fora
 document.addEventListener('click', (e) => {
     if (!e.target.closest('#header-prof')) {
         const drop = document.getElementById('dropdown-perfis');
@@ -116,12 +120,10 @@ document.addEventListener('click', (e) => {
 document.getElementById('btn-logout-dropdown')?.addEventListener('click', () => signOut(auth));
 function esconderTodasAsVistas() { document.querySelectorAll('.app-content > div').forEach(v => v.style.display = 'none'); }
 
-// DROPDOWNS DIRETOS
 document.getElementById('sort-passaporte')?.addEventListener('change', carregarTarefasProf);
 document.getElementById('filtro-prhf-data')?.addEventListener('change', carregarTarefasProf);
 document.getElementById('filtro-prhf-modulo')?.addEventListener('change', carregarTarefasProf);
 
-// TOGGLES E TABS DIRETOS
 document.getElementById('btn-prhf-minha')?.addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('btn-prhf-todas').classList.remove('active'); state.prhfViewMode = 'minha'; carregarTarefasProf(); });
 document.getElementById('btn-prhf-todas')?.addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('btn-prhf-minha').classList.remove('active'); state.prhfViewMode = 'todas'; carregarTarefasProf(); });
 document.getElementById('btn-graph-disc')?.addEventListener('click', () => { document.getElementById('btn-graph-disc').classList.add('active'); document.getElementById('btn-graph-global').classList.remove('active'); desenharGraficoAluno('disc'); });
@@ -146,8 +148,29 @@ document.body.addEventListener('click', async (e) => {
         if (tId === 'view-prof-tarefas') carregarTarefasProf();
         if (tId === 'view-prof-orientandos') carregarEcraOrientandos();
         if (tId === 'view-prof-diario') carregarEcraDiario();
+        if (tId === 'view-coord-projetos') carregarEcraProjetosCoord();
         if (tId === 'view-prof-forum') { if (state.chatUnsubscribe) { state.chatUnsubscribe(); state.chatUnsubscribe = null; } document.getElementById('prof-forum-chat-view').style.display = 'none'; document.getElementById('btn-create-chat-prof').style.display = 'block'; document.getElementById('prof-forum-channel-list').style.display = 'block'; carregarForunsProf(); }
         return; 
+    }
+
+    if (e.target.closest('#tab-coord-fct')) {
+        document.getElementById('tab-coord-fct').classList.add('active');
+        document.getElementById('tab-coord-pap').classList.remove('active');
+        import('./prof/roles/coord-dashboard.js').then(module => {
+            module.coordTabAtiva = 'fct';
+            module.carregarEcraProjetosCoord();
+        });
+        return;
+    }
+    
+    if (e.target.closest('#tab-coord-pap')) {
+        document.getElementById('tab-coord-pap').classList.add('active');
+        document.getElementById('tab-coord-fct').classList.remove('active');
+        import('./prof/roles/coord-dashboard.js').then(module => {
+            module.coordTabAtiva = 'pap';
+            module.carregarEcraProjetosCoord();
+        });
+        return;
     }
 
     if (e.target.closest('.fechar-modal')) { document.getElementById(e.target.closest('.fechar-modal').getAttribute('data-target')).style.display = 'none'; return; }
@@ -293,5 +316,3 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('#btn-executar-justificar')) { const b = e.target.closest('#btn-executar-justificar'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { const fS = await getDocs(query(collection(db, "utilizadores", state.alunoSelecionadoId, "faltas"), where("justificada", "==", false))); for (const f of fS.docs) { await updateDoc(doc(db, "utilizadores", state.alunoSelecionadoId, "faltas", f.id), { justificada: true, justificadaPor: state.myUserName }); } b.innerHTML = '<i class="fa-solid fa-check"></i> Faltas Justificadas'; setTimeout(() => { b.innerHTML = 'Sim, Justificar'; b.disabled = false; document.getElementById('modal-confirm-justificar').style.display = 'none'; abrirPerfil360Aluno(state.alunoSelecionadoId); analisarEAtualizarTurma(state.selectedTurma); }, 2000); } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 2000); } return; }
     if (e.target.closest('#btn-salvar-obs-dt')) { if (!state.alunoSelecionadoId) return; const txt = document.getElementById('p-aluno-obs-dt').value.trim(); const b = e.target.closest('#btn-salvar-obs-dt'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await setDoc(doc(db, "utilizadores", state.alunoSelecionadoId, "reunioes", "1_avaliacao"), { global: txt }, { merge: true }); b.innerHTML = '<i class="fa-solid fa-check"></i> Gravado'; b.style.backgroundColor = "var(--success-green)"; setTimeout(() => { b.innerHTML = 'Gravar Apreciação'; b.disabled = false; b.style.backgroundColor = "var(--primary-green)"; }, 2000); } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 2000); } return; }
 });
-
-// Nota: Quando quiseres tratar de adicionar as outras formas de login (Google, telemóvel) no menu que preparámos, avisa.
