@@ -56,6 +56,70 @@ export async function carregarRadarProfessor() {
             try { profAulasHoje.sort((a,b) => { if(!a.hora || !b.hora) return 0; const getMin = (hx) => parseInt(hx.split(':')[0])*60 + parseInt(hx.split(':')[1]); return getMin(a.hora) - getMin(b.hora); }); let hHtml = ''; profAulasHoje.forEach(aula => { hHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid #0099ff;"><div><strong style="color:white; font-size:0.9rem;">${aula.disciplina}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${aula.turma}</span></div><span style="color:#0099ff; font-weight:bold; font-size:0.85rem;">${aula.hora}</span></div>`; }); hCont.innerHTML = hHtml; } catch(sortErr) { hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Não tens aulas marcadas para hoje.</p>'; }
         } else { hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Não tens aulas marcadas para hoje.</p>'; }
 
+        // === NOVA MONTRA RÁPIDA PAP ===
+        const papContainerId = 'dyn-pap-dashboard';
+        let papCont = document.getElementById(papContainerId);
+        if (!papCont) {
+            papCont = document.createElement('div');
+            papCont.id = papContainerId;
+            const containerEventos = document.getElementById('radar-agenda-container').closest('.card');
+            containerEventos.parentNode.insertBefore(papCont, containerEventos);
+        }
+
+        if (state.activeRole === 'orientador_pap') {
+            papCont.style.display = 'block';
+            papCont.innerHTML = `<div class="card" style="border-left: 4px solid var(--success-green); margin-bottom: 20px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(0, 0, 0, 0.2));">
+                <h3 style="font-size: 1rem; margin-bottom: 10px; color: white;"><i class="fa-solid fa-laptop-code" style="color:var(--success-green);"></i> Ponto de Situação (PAPs)</h3>
+                <div id="pap-dashboard-content"><p class="text-muted center" style="font-size:0.85rem;"><i class="fa-solid fa-spinner fa-spin"></i> A calcular progresso...</p></div>
+            </div>`;
+            
+            try {
+                let meusOrientandos = [];
+                for (const t of state.turmasProfessor) {
+                    const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
+                    snap.forEach(d => {
+                        const data = d.data();
+                        if (data.pap && (data.pap.orientador === state.myUserName || data.pap.orientador === state.myUserId)) {
+                            meusOrientandos.push(data);
+                        }
+                    });
+                }
+                
+                let htmlPap = '';
+                if (meusOrientandos.length === 0) {
+                    htmlPap = '<p class="text-muted center" style="font-size:0.85rem; margin:0;">Não tens alunos sob a tua orientação.</p>';
+                } else {
+                    let temasAprovados = 0;
+                    let relatoriosAprovados = 0;
+                    meusOrientandos.forEach(al => {
+                        if (al.pap && al.pap.temaAprovado) temasAprovados++;
+                        if (al.pap && al.pap.relatorioAprovado) relatoriosAprovados++;
+                    });
+                    
+                    htmlPap = `
+                    <div style="display:flex; justify-content:space-between; gap:10px; text-align:center;">
+                        <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;">
+                            <strong style="color:white; font-size:1.2rem;">${meusOrientandos.length}</strong><br><span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Alunos</span>
+                        </div>
+                        <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;">
+                            <strong style="color:var(--warning-yellow); font-size:1.2rem;">${temasAprovados}</strong><br><span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Temas Ok</span>
+                        </div>
+                        <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;">
+                            <strong style="color:var(--success-green); font-size:1.2rem;">${relatoriosAprovados}</strong><br><span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Finais Ok</span>
+                        </div>
+                    </div>
+                    <button onclick="document.querySelector('.nav-role-pap[data-target=\\'view-prof-orientandos\\']').click()" class="secondary-btn" style="width:100%; margin-top:15px; border-color:var(--success-green); color:var(--success-green);"><i class="fa-solid fa-list-check"></i> Gerir Projetos</button>
+                    `;
+                }
+                document.getElementById('pap-dashboard-content').innerHTML = htmlPap;
+            } catch(e) {
+                document.getElementById('pap-dashboard-content').innerHTML = '<p class="text-danger center">Erro a ler PAPs.</p>';
+            }
+        } else {
+            papCont.style.display = 'none';
+        }
+        // === FIM NOVA MONTRA ===
+
         const hjStrFull = hjD.toISOString().split('T')[0]; const fut = eventosGlobais.filter(e => e.data && e.data >= hjStrFull).sort((a,b) => a.data.localeCompare(b.data)).slice(0, 3);
         if (fut.length > 0) { let ah = ''; fut.forEach(e => { const datePrint = e.data ? e.data.split('-').reverse().join('/') : 'Brevemente'; const timePrint = e.periodo === 'hora' ? ` às ${e.hora}` : (e.periodo === 'manha' ? ' (Manhã)' : (e.periodo === 'tarde' ? ' (Tarde)' : '')); ah += `<div style="display:flex; justify-content:space-between; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid var(--warning-yellow);"><div><strong style="color:white; font-size:0.9rem;">${e.titulo}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${e.turma}</span></div><span style="color:var(--warning-yellow); font-size:0.8rem;">${datePrint}${timePrint}</span></div>`; }); eCont.innerHTML = ah; } else { eCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Agenda livre.</p>'; }
     } catch (e) { aText.innerHTML = "Problema na ligação. Por favor, tenta novamente."; }
@@ -343,9 +407,50 @@ export async function carregarTarefasProf() {
 }
 
 export async function carregarForunsProf() {
-    const cont = document.getElementById('prof-forum-channel-list'); cont.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A ler canais...</p>';
+    const cont = document.getElementById('prof-forum-channel-list'); 
+    cont.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A ler canais...</p>';
     if(state.turmasProfessor.length === 0) { cont.innerHTML = '<p class="text-muted center">Não tens turmas.</p>'; return; }
 
+    // === VISTA FÓRUM: ORIENTADOR PAP ===
+    if (state.activeRole === 'orientador_pap') {
+        let html = '<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Rede de Orientação</h3>';
+        html += `<div class="canal-card" data-turma="Global" data-disc="Orientadores" data-nome="Equipa de Orientadores"><div class="canal-icon" style="color:var(--success-green); border-color:var(--success-green);"><i class="fa-solid fa-users-viewfinder"></i></div><div class="canal-info" style="flex:1;"><h4>Equipa de Orientadores</h4><p>Chat fechado de coordenação</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
+        
+        html += '<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Os Meus Orientandos</h3>';
+        
+        let temAlunos = false;
+        try {
+            let meusOrientandos = [];
+            for (const t of state.turmasProfessor) {
+                const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
+                snap.forEach(d => {
+                    const data = d.data();
+                    if (data.pap && (data.pap.orientador === state.myUserName || data.pap.orientador === state.myUserId)) {
+                        meusOrientandos.push({ id: d.id, ...data });
+                    }
+                });
+            }
+            
+            if (meusOrientandos.length > 0) {
+                temAlunos = true;
+                // Grupo Geral para enviar recados a todos os orientandos de uma vez
+                html += `<div class="canal-card" data-turma="Global" data-disc="Avisos_Orientandos_${state.myUserId}" data-nome="Avisos (Todos os Orientandos)"><div class="canal-icon" style="color:#0099ff; border-color:#0099ff;"><i class="fa-solid fa-bullhorn"></i></div><div class="canal-info" style="flex:1;"><h4>Avisos Gerais</h4><p>Mensagem para os teus alunos</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
+                
+                // Chats Individuais
+                meusOrientandos.forEach(al => {
+                    html += `<div class="canal-card" data-turma="${al.turma}" data-disc="PAP_${al.id}" data-nome="PAP - ${nomeCurto(al.nome)}"><div class="canal-icon" style="color:var(--warning-yellow); border-color:var(--warning-yellow); padding:0; overflow:hidden;"><img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=333&color=fff`}" style="width:100%;height:100%;object-fit:cover;"></div><div class="canal-info" style="flex:1;"><h4>${nomeCurto(al.nome)}</h4><p>Apoio Individual</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
+                });
+            }
+        } catch(e) {}
+        
+        if (!temAlunos) html += '<p class="text-muted center" style="font-size:0.85rem;">Não tens orientandos atribuídos neste momento.</p>';
+        
+        cont.innerHTML = `<div class="forum-canais-grid">${html}</div>`;
+        return; 
+    }
+    // === FIM VISTA PAP ===
+
+    // === VISTA FÓRUM: PROFESSOR BASE / DT / COORDENADOR ===
     let html = '';
     html += '<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">A Minha Disciplina</h3>';
     state.turmasProfessor.forEach(t => { state.disciplinasProfessor.forEach(d => { html += `<div class="canal-card" data-turma="${t}" data-disc="${d}" data-nome="Apoio a ${d}"><div class="canal-icon" style="color:#00d2ff; border-color:#00d2ff;"><i class="fa-solid fa-book-open"></i></div><div class="canal-info" style="flex:1;"><h4>Apoio a ${d}</h4><p>Turma ${t}</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`; }); });
