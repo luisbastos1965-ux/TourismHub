@@ -1,5 +1,5 @@
 // js/prof/ui.js
-import { db } from "../firebase.js"; // <-- O erro estava aqui! Corrigido para ../
+import { db } from "../firebase.js";
 import { doc, getDoc, collection, getDocs, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { state, ACADEMIAS_INFO, ordemDisciplinasGlobal, nomeCurto, getDisciplinasPermitidas } from "./store.js";
 
@@ -65,9 +65,30 @@ export async function analisarEAtualizarTurma(turmaId) {
     const listC = document.getElementById('lista-alunos-turma'); listC.innerHTML = '<p class="text-muted center">A ler dados dos alunos...</p>';
     document.getElementById('assistente-aula-texto').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A analisar a turma...';
     
-    const isDT = (state.myRoles.includes('diretor_turma') && turmaId === state.minhaTurmaDT);
+    // AQUI USAMOS O ACTIVEROLE
+    const isDT = (state.activeRole === 'diretor_turma' && turmaId === state.minhaTurmaDT);
     if(isDT) { document.getElementById('badge-dt-turma').style.display = 'inline-block'; } else { document.getElementById('badge-dt-turma').style.display = 'none'; }
     
+    // ESCONDER FERRAMENTAS PESADAS SEGUNDO O CONTEXTO
+    const btnPauta = document.getElementById('btn-ver-pauta');
+    const btnFaltasGlobal = document.getElementById('btn-ver-faltas-turma');
+    const lmsGrid = document.querySelector('.lms-action-grid');
+    
+    if (state.activeRole === 'professor') {
+        btnPauta.style.display = 'none';
+        btnFaltasGlobal.style.display = 'none';
+        lmsGrid.style.display = 'flex'; // Vê lançamento notas e sumários
+    } else if (state.activeRole === 'diretor_turma') {
+        btnPauta.style.display = 'block';
+        btnFaltasGlobal.style.display = 'block';
+        lmsGrid.style.display = 'flex'; // O DT também lança
+    } else {
+        // Coordenador e Orientador PAP (Se vierem a este ecrã)
+        btnPauta.style.display = 'block';
+        btnFaltasGlobal.style.display = 'block';
+        lmsGrid.style.display = 'none'; // Não lançam notas por aqui
+    }
+
     try {
         const qAlunos = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turmaId), where("papel", "==", "aluno")));
         state.alunosTurmaRAM = []; qAlunos.forEach(d => state.alunosTurmaRAM.push({ id: d.id, ...d.data() })); state.alunosTurmaRAM.sort((a,b) => a.nome.localeCompare(b.nome));
@@ -97,7 +118,7 @@ export async function analisarEAtualizarTurma(turmaId) {
 }
 
 export async function renderizarPautaTurma() {
-    const isDT = (state.myRoles.includes('diretor_turma') && state.selectedTurma === state.minhaTurmaDT);
+    const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
     const cont = document.getElementById('tabela-pauta-conteudo'); cont.innerHTML = '<tr><td colspan="5" class="center text-muted">A ler notas...</td></tr>';
     document.getElementById('modal-pauta-turma').style.display = 'flex';
     
@@ -132,7 +153,7 @@ export async function renderizarPautaTurma() {
 }
 
 export async function renderizarFaltasTurma() {
-    const isDT = (state.myRoles.includes('diretor_turma') && state.selectedTurma === state.minhaTurmaDT);
+    const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
     const cont = document.getElementById('tabela-faltas-conteudo'); cont.innerHTML = '<tr><td colspan="5" class="center text-muted">A ler faltas...</td></tr>';
     document.getElementById('modal-faltas-turma').style.display = 'flex';
     
@@ -184,7 +205,8 @@ export async function abrirPerfil360Aluno(alunoId) {
     state.alunoSelecionadoId = alunoId; const al = state.alunosTurmaRAM.find(a => a.id === alunoId); if (!al) return;
     document.getElementById('p-aluno-nome').innerText = nomeCurto(al.nome); document.getElementById('p-aluno-foto').src = al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=333&color=fff`; document.getElementById('p-aluno-academia').innerText = al.academia ? ACADEMIAS_INFO[al.academia].nome : 'Sem Academia';
 
-    const isDT = (state.myRoles.includes('diretor_turma') && state.selectedTurma === state.minhaTurmaDT);
+    // AQUI USAMOS O ACTIVEROLE PARA A AVALIAÇÃO DO ALUNO
+    const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
     document.getElementById('perfil-aluno-title-estat').innerText = isDT ? 'Estatísticas Globais' : 'Estatísticas na Tua Disciplina';
     const togDiv = document.getElementById('dt-graph-toggles'); if(isDT) togDiv.style.display = 'flex'; else togDiv.style.display = 'none';
 
@@ -206,8 +228,17 @@ export async function abrirPerfil360Aluno(alunoId) {
 
 export async function carregarTarefasProf() {
     const isPRHFTab = document.getElementById('tab-tarefas-prhf').classList.contains('active');
+    
+    // Mostra as tab do passaporte apenas a quem interessa baseando na capa
+    const canSeePassaporteTab = (state.activeRole === 'diretor_turma' || state.activeRole === 'orientador_pap' || state.activeRole === 'coordenador');
+    document.getElementById('tab-tarefas-passaporte').style.display = canSeePassaporteTab ? 'inline-block' : 'none';
+    if (!canSeePassaporteTab && !isPRHFTab) {
+        // Se a pessoa trocou para professor e estava no passaporte, volta ao PRHF
+        document.getElementById('tab-tarefas-prhf').click(); return;
+    }
+
     if (isPRHFTab) {
-        const isDT = (state.myRoles.includes('diretor_turma') && state.selectedTurma === state.minhaTurmaDT);
+        const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
         if(isDT) { document.getElementById('btn-radar-conflitos').style.display = 'block'; document.getElementById('prhf-dt-toggles').style.display = 'flex'; } else { document.getElementById('btn-radar-conflitos').style.display = 'none'; document.getElementById('prhf-dt-toggles').style.display = 'none'; }
 
         const container = document.getElementById('lista-prhfs-professor'); container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A procurar PRHFs...</p>';
@@ -280,16 +311,16 @@ export async function carregarTarefasProf() {
                 let fctHtml = ''; 
                 if (showFCT) {
                     if (al.fct && al.fct.horasRealizadas > 0) { 
-                        if (al.fct.validadoDT) { fctHtml = `<span style="color:var(--success-green); font-size:0.8rem;"><i class="fa-solid fa-check-double"></i> ${al.fct.horasRealizadas}h Validadas</span>`; } else { let btnValidar = state.myRoles.includes('coordenador') || state.myRoles.includes('diretor_turma') ? `<button class="primary-btn small-btn btn-validar-fct" data-id="${al.id}" style="width:auto; padding:4px 10px;">Validar</button>` : `<span style="font-size:0.75rem; color:var(--text-muted);">A aguardar validação.</span>`; fctHtml = `<div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:var(--warning-yellow); font-size:0.8rem;">${al.fct.horasRealizadas}h declaradas</span> ${btnValidar}</div>`; } 
+                        if (al.fct.validadoDT) { fctHtml = `<span style="color:var(--success-green); font-size:0.8rem;"><i class="fa-solid fa-check-double"></i> ${al.fct.horasRealizadas}h Validadas</span>`; } else { let btnValidar = state.activeRole === 'coordenador' || state.activeRole === 'diretor_turma' ? `<button class="primary-btn small-btn btn-validar-fct" data-id="${al.id}" style="width:auto; padding:4px 10px;">Validar</button>` : `<span style="font-size:0.75rem; color:var(--text-muted);">A aguardar validação.</span>`; fctHtml = `<div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:var(--warning-yellow); font-size:0.8rem;">${al.fct.horasRealizadas}h declaradas</span> ${btnValidar}</div>`; } 
                     } else { fctHtml = `<span style="color:var(--text-muted); font-size:0.8rem;">Sem registos FCT.</span>`; }
                 }
 
                 let papHtml = ''; 
                 if (showPAP) {
                     if (al.papFicheiroEnviado && al.papFicheiroBase64) { 
-                        if (state.myRoles.includes('orientador_pap') || state.myRoles.includes('diretor_turma') || state.myRoles.includes('coordenador')) { 
+                        if (state.activeRole === 'orientador_pap' || state.activeRole === 'diretor_turma' || state.activeRole === 'coordenador') { 
                             papHtml = `<span style="color:white; font-size:0.85rem; display:block; margin-bottom:5px;">Tema: ${al.pap?.tema || 'Desconhecido'}</span><a href="${al.papFicheiroBase64}" download="PAP_${al.nome.replace(/\s+/g, '_')}" class="secondary-btn small-btn" style="color:#0099ff; border-color:#0099ff; display:inline-block; text-align:center; margin-bottom:5px;"><i class="fa-solid fa-download"></i> Baixar Relatório Final</a>`; 
-                            if (state.myRoles.includes('orientador_pap')) {
+                            if (state.activeRole === 'orientador_pap') {
                                 if (!al.pap.relatorioAprovado) { papHtml += `<button class="primary-btn small-btn btn-aprovar-relatorio" data-id="${al.id}" style="width:100%; background:var(--success-green); margin-top:5px;"><i class="fa-solid fa-check"></i> Aprovar Relatório</button>`; } else { papHtml += `<span style="color:var(--success-green); font-size:0.8rem; display:block; margin-top:5px;"><i class="fa-solid fa-check-double"></i> Apto para Apresentação Final</span>`; }
                             }
                         } else { papHtml = `<span style="color:var(--success-green); font-size:0.8rem;"><i class="fa-solid fa-check"></i> Relatório submetido</span>`; } 
@@ -297,7 +328,7 @@ export async function carregarTarefasProf() {
                     else if (al.pap && al.pap.tema) { 
                         let statusTag = al.pap.temaAprovado ? `<span style="color:var(--warning-yellow);">Em Desenvolvimento</span>` : `<span style="color:#00d2ff;">A Aguardar Aprovação</span>`;
                         papHtml = `<span style="color:var(--text-light); font-size:0.8rem;">Tema: <strong style="color:white;">${al.pap.tema}</strong><br>${statusTag}</span>`; 
-                        if (state.myRoles.includes('orientador_pap') && !al.pap.temaAprovado) { papHtml += `<div style="display:flex; gap:10px; margin-top:10px;"><button class="primary-btn small-btn btn-aprovar-tema" data-id="${al.id}" style="flex:1; background:var(--success-green);"><i class="fa-solid fa-check"></i> Aceitar</button><button class="secondary-btn small-btn btn-rejeitar-tema" data-id="${al.id}" style="flex:1; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-xmark"></i> Rejeitar</button></div>`; }
+                        if (state.activeRole === 'orientador_pap' && !al.pap.temaAprovado) { papHtml += `<div style="display:flex; gap:10px; margin-top:10px;"><button class="primary-btn small-btn btn-aprovar-tema" data-id="${al.id}" style="flex:1; background:var(--success-green);"><i class="fa-solid fa-check"></i> Aceitar</button><button class="secondary-btn small-btn btn-rejeitar-tema" data-id="${al.id}" style="flex:1; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-xmark"></i> Rejeitar</button></div>`; }
                     } else { papHtml = `<span style="color:var(--text-muted); font-size:0.8rem;">Por iniciar.</span>`; }
                 }
 
