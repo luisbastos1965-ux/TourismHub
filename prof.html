@@ -37,19 +37,37 @@
 </head>
 <body>
     <div id="app-content">
-        <!-- HEADER -->
-        <header id="header-prof" class="app-header">
-            <div class="user-profile" style="display: flex; align-items: center; gap: 12px; height: 100%;">
+        <!-- HEADER COM CONTEXT SWITCHING -->
+        <header id="header-prof" class="app-header" style="position: relative;">
+            <div id="btn-toggle-perfis" class="user-profile" style="display: flex; align-items: center; gap: 12px; height: 100%; cursor: pointer;">
                 <div class="profile-avatar" id="header-avatar-circle" style="width: 38px; height: 38px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 0; flex-shrink: 0;">
                     <i class="fa-solid fa-user-tie" style="color: white; font-size: 1rem;"></i>
                 </div>
                 <div>
                     <span id="header-user-name-prof" style="margin: 0; font-weight: bold; display: block; line-height: 1.2;">A carregar...</span>
-                    <span style="font-size: 0.7rem; color: var(--text-muted);">Professor</span>
+                    <span id="badge-perfil-ativo" style="font-size: 0.65rem; color: white; background-color: var(--text-muted); padding: 2px 8px; border-radius: 12px; font-weight: bold; text-transform: uppercase;">Professor</span>
                 </div>
+                <i class="fa-solid fa-chevron-down" style="color: var(--text-muted); font-size: 0.8rem; margin-left: 5px;"></i>
             </div>
+
+            <div id="dropdown-perfis" style="display: none; position: absolute; top: 60px; left: 15px; width: 220px; background: #222; border: 1px solid #444; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 5000; overflow: hidden;">
+                <div style="padding: 10px 15px; background: #1a1a1a; border-bottom: 1px solid #333;">
+                    <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: bold;">As Tuas Capas</span>
+                </div>
+                
+                <div id="lista-capas-dropdown" style="display: flex; flex-direction: column;">
+                    <!-- Preenchido via Javascript -->
+                </div>
+                
+                <div style="padding: 10px 15px; background: #1a1a1a; border-bottom: 1px solid #333; border-top: 1px solid #333;">
+                    <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: bold;">Sistema</span>
+                </div>
+                <button id="btn-definicoes-conta" style="width: 100%; text-align: left; padding: 12px 15px; background: transparent; border: none; color: white; cursor: pointer; border-bottom: 1px solid #333;"><i class="fa-solid fa-gear" style="margin-right: 8px; color: var(--text-muted);"></i> Definições de Conta</button>
+                <button id="btn-logout-dropdown" style="width: 100%; text-align: left; padding: 12px 15px; background: transparent; border: none; color: var(--danger-red); cursor: pointer;"><i class="fa-solid fa-right-from-bracket" style="margin-right: 8px;"></i> Terminar Sessão</button>
+            </div>
+            
             <div style="display: flex; align-items: center; gap: 15px;">
-                <button id="btn-logout-prof" class="logout-btn" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button>
+                <!-- O botão de logout antigo saltou para a gaveta, o topo fica limpo -->
             </div>
         </header>
 
@@ -219,9 +237,7 @@
                 </div>
             </div>
 
-            <!-- ============================================== -->
-            <!-- MODAIS DE AÇÃO / ROLES                         -->
-            <!-- ============================================== -->
+            <!-- MODAIS DE AÇÃO / ROLES -->
             <div id="modal-radar-conflitos" class="modal-overlay" style="z-index: 2000;">
                 <div class="action-sheet" style="max-width: 500px; max-height: 85vh; padding: 20px; display: flex; flex-direction: column;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
