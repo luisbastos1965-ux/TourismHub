@@ -17,14 +17,12 @@ export function iniciarCarrossel() {
 }
 
 export async function carregarRadarProfessor() {
-    // 1. Identificar todos os blocos do Professor Base no HTML
     const cardAssistente = document.getElementById('assistente-global-texto')?.closest('.card');
     const divCarrossel = document.getElementById('stats-carousel-container')?.parentNode;
     const cardModulos = document.getElementById('dashboard-modulos-container')?.closest('.card');
     const cardHorario = document.getElementById('dashboard-horario-container')?.closest('.card');
     const cardEventos = document.getElementById('radar-agenda-container')?.closest('.card');
     
-    // 2. Preparar o contentor dinâmico para a PAP no topo do Dashboard
     const papContainerId = 'dyn-pap-dashboard';
     let papCont = document.getElementById(papContainerId);
     if (!papCont) {
@@ -34,18 +32,15 @@ export async function carregarRadarProfessor() {
     }
 
     // =========================================================
-    // MODO: ORIENTADOR PAP (Esconde a base, mostra a Montra PAP)
+    // MODO: ORIENTADOR PAP
     // =========================================================
     if (state.activeRole === 'orientador_pap') {
-        
-        // Esconde imediatamente o "ruído" do professor base
         if(cardAssistente) cardAssistente.style.display = 'none';
         if(divCarrossel) divCarrossel.style.display = 'none';
         if(cardModulos) cardModulos.style.display = 'none';
         if(cardHorario) cardHorario.style.display = 'none';
         if(cardEventos) cardEventos.style.display = 'none';
         
-        // Constrói e mostra a Montra Exclusiva PAP
         papCont.style.display = 'block';
         papCont.innerHTML = `
             <div class="card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(0, 0, 0, 0.3)); border: 1px solid var(--success-green); margin-bottom: 20px;">
@@ -64,7 +59,6 @@ export async function carregarRadarProfessor() {
                 const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
                 snap.forEach(d => {
                     const data = d.data();
-                    // Filtra apenas os alunos cujo orientador é este professor
                     if (data.pap && (data.pap.orientador === state.myUserName || data.pap.orientador === state.myUserId)) {
                         meusOrientandos.push(data);
                     }
@@ -83,7 +77,6 @@ export async function carregarRadarProfessor() {
                     if (al.pap && al.pap.relatorioAprovado) relatoriosAprovados++;
                 });
                 
-                // Assistente inteligente que avisa se há temas pendentes
                 document.getElementById('pap-assistente-texto').innerHTML = `Estás a orientar <strong>${meusOrientandos.length} alunos</strong>. ${temasAprovados === meusOrientandos.length ? 'Todos os teus alunos já têm o tema aprovado! 🎉' : `Atenção: Tens ${meusOrientandos.length - temasAprovados} aluno(s) a aguardar aprovação de tema.`}`;
                 
                 htmlPap = `
@@ -106,13 +99,81 @@ export async function carregarRadarProfessor() {
             document.getElementById('pap-assistente-texto').innerHTML = "Erro ao ler a base de dados.";
             document.getElementById('pap-dashboard-content').innerHTML = '<p class="text-danger center">Erro a ler PAPs.</p>';
         }
+        return; 
+    }
+
+    // =========================================================
+    // MODO: COORDENADOR
+    // =========================================================
+    if (state.activeRole === 'coordenador') {
+        if(cardAssistente) cardAssistente.style.display = 'none';
+        if(divCarrossel) divCarrossel.style.display = 'none';
+        if(cardModulos) cardModulos.style.display = 'none';
+        if(cardHorario) cardHorario.style.display = 'none';
+        if(cardEventos) cardEventos.style.display = 'none';
+
+        papCont.style.display = 'block';
+        papCont.innerHTML = `
+            <div class="card" style="background: linear-gradient(135deg, rgba(147, 51, 234, 0.15), rgba(0, 0, 0, 0.3)); border: 1px solid #9333ea; margin-bottom: 20px;">
+                <h3 style="font-size: 1.1rem; margin-bottom: 10px; color: #9333ea;"><i class="fa-solid fa-eye"></i> Visão Global do Curso</h3>
+                <div id="coord-assistente-texto" style="font-size: 0.95rem; color: white; line-height: 1.5;"><i class="fa-solid fa-spinner fa-spin"></i> A mapear turmas...</div>
+            </div>
+            
+            <h3 style="font-size: 1rem; color: var(--danger-red); margin-bottom: 10px; margin-top: 25px;"><i class="fa-solid fa-triangle-exclamation"></i> Top Alunos em Risco</h3>
+            <div id="coord-risco-content"><p class="text-muted center" style="font-size:0.85rem;"><i class="fa-solid fa-spinner fa-spin"></i> A calcular métricas...</p></div>
+        `;
         
-        // Termina a execução da função aqui. O código debaixo (do prof base) nunca é lido.
+        try {
+            let totalAlunosCurso = 0;
+            let alunosEmRiscoFull = [];
+
+            for (const t of state.turmasProfessor) {
+                const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
+                for(const docAl of snap.docs) {
+                    totalAlunosCurso++;
+                    let countPRHF = 0; let countFaltas = 0;
+                    const pSnap = await getDocs(collection(db, "utilizadores", docAl.id, "prhfs"));
+                    pSnap.forEach(p => { if (p.data().status !== 'concluida') countPRHF++; });
+                    const fSnap = await getDocs(collection(db, "utilizadores", docAl.id, "faltas"));
+                    fSnap.forEach(f => { if (!f.data().justificada) countFaltas += Number(f.data().horas || 0); });
+                    
+                    if (countPRHF >= 2 || countFaltas >= 10) {
+                        alunosEmRiscoFull.push({ id: docAl.id, nome: docAl.data().nome, turma: t, faltas: countFaltas, prhfs: countPRHF });
+                    }
+                }
+            }
+
+            document.getElementById('coord-assistente-texto').innerHTML = `O teu curso tem atualmente <strong>${totalAlunosCurso} alunos</strong> distribuídos por ${state.turmasProfessor.length} turmas.`;
+
+            alunosEmRiscoFull.sort((a,b) => (b.prhfs * 10 + b.faltas) - (a.prhfs * 10 + a.faltas));
+            
+            let htmlRisco = '';
+            if(alunosEmRiscoFull.length === 0) {
+                htmlRisco = '<div class="card" style="border: 1px dashed var(--success-green);"><p class="text-success center" style="margin:0;">Nenhum aluno em situação crítica.</p></div>';
+            } else {
+                alunosEmRiscoFull.slice(0,5).forEach(ar => {
+                    htmlRisco += `
+                    <div class="card aluno-list-item" data-id="${ar.id}" style="border-left: 4px solid var(--danger-red); margin-bottom:10px; cursor:pointer; padding:10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <strong style="color:white;">${nomeCurto(ar.nome)}</strong> <span style="font-size:0.75rem; color:var(--text-muted);">(${ar.turma})</span>
+                            </div>
+                            <div style="text-align:right;">
+                                <span style="font-size:0.75rem; color:var(--warning-yellow);">${ar.prhfs} PRHFs</span> | 
+                                <span style="font-size:0.75rem; color:var(--danger-red);">${ar.faltas}h Faltas</span>
+                            </div>
+                        </div>
+                    </div>`;
+                });
+            }
+            document.getElementById('coord-risco-content').innerHTML = htmlRisco;
+        } catch(e) { document.getElementById('coord-risco-content').innerHTML = '<p class="text-danger center">Erro a calcular risco.</p>'; }
+        
         return; 
     }
 
     // ============================================================
-    // MODO: PROFESSOR BASE / DT / COORDENADOR (Esconde Montra PAP)
+    // MODO: PROFESSOR BASE / DT (Esconde Montra PAP e Coord)
     // ============================================================
     papCont.style.display = 'none';
     if(cardAssistente) cardAssistente.style.display = 'block';
@@ -171,11 +232,9 @@ export async function analisarEAtualizarTurma(turmaId) {
     const listC = document.getElementById('lista-alunos-turma'); listC.innerHTML = '<p class="text-muted center">A ler dados dos alunos...</p>';
     document.getElementById('assistente-aula-texto').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A analisar a turma...';
     
-    // AQUI USAMOS O ACTIVEROLE
     const isDT = (state.activeRole === 'diretor_turma' && turmaId === state.minhaTurmaDT);
     if(isDT) { document.getElementById('badge-dt-turma').style.display = 'inline-block'; } else { document.getElementById('badge-dt-turma').style.display = 'none'; }
     
-    // ESCONDER FERRAMENTAS PESADAS SEGUNDO O CONTEXTO
     const btnPauta = document.getElementById('btn-ver-pauta');
     const btnFaltasGlobal = document.getElementById('btn-ver-faltas-turma');
     const lmsGrid = document.querySelector('.lms-action-grid');
@@ -183,16 +242,15 @@ export async function analisarEAtualizarTurma(turmaId) {
     if (state.activeRole === 'professor') {
         btnPauta.style.display = 'none';
         btnFaltasGlobal.style.display = 'none';
-        lmsGrid.style.display = 'flex'; // Vê lançamento notas e sumários
+        lmsGrid.style.display = 'flex';
     } else if (state.activeRole === 'diretor_turma') {
         btnPauta.style.display = 'block';
         btnFaltasGlobal.style.display = 'block';
-        lmsGrid.style.display = 'flex'; // O DT também lança
+        lmsGrid.style.display = 'flex';
     } else {
-        // Coordenador e Orientador PAP (Se vierem a este ecrã)
         btnPauta.style.display = 'block';
         btnFaltasGlobal.style.display = 'block';
-        lmsGrid.style.display = 'none'; // Não lançam notas por aqui
+        lmsGrid.style.display = 'none';
     }
 
     try {
@@ -311,7 +369,6 @@ export async function abrirPerfil360Aluno(alunoId) {
     state.alunoSelecionadoId = alunoId; const al = state.alunosTurmaRAM.find(a => a.id === alunoId); if (!al) return;
     document.getElementById('p-aluno-nome').innerText = nomeCurto(al.nome); document.getElementById('p-aluno-foto').src = al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=333&color=fff`; document.getElementById('p-aluno-academia').innerText = al.academia ? ACADEMIAS_INFO[al.academia].nome : 'Sem Academia';
 
-    // AQUI USAMOS O ACTIVEROLE PARA A AVALIAÇÃO DO ALUNO
     const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
     document.getElementById('perfil-aluno-title-estat').innerText = isDT ? 'Estatísticas Globais' : 'Estatísticas na Tua Disciplina';
     const togDiv = document.getElementById('dt-graph-toggles'); if(isDT) togDiv.style.display = 'flex'; else togDiv.style.display = 'none';
@@ -323,7 +380,26 @@ export async function abrirPerfil360Aluno(alunoId) {
         const pS = await getDocs(collection(db, "utilizadores", alunoId, "prhfs")); pS.forEach(p => { if(p.data().status !== 'concluida' && matVerificar.includes(p.data().disciplina)) pCount++; });
         const nS = await getDocs(collection(db, "utilizadores", alunoId, "notas")); nS.forEach(n => { if(matVerificar.includes(n.data().disciplina)) { state.notasAlunoRAM.push({ disciplina: n.data().disciplina, moduloReal: Number(n.data().modulo), valor: isNaN(n.data().nota) ? 0 : Number(n.data().nota) }); } });
 
-        if (isDT) { document.getElementById('area-obs-dt').style.display = 'block'; document.getElementById('btn-justificar-faltas').style.display = fCount > 0 ? 'block' : 'none'; const rS = await getDoc(doc(db, "utilizadores", alunoId, "reunioes", "1_avaliacao")); if (rS.exists() && rS.data().global) { document.getElementById('p-aluno-obs-dt').value = rS.data().global; } else { document.getElementById('p-aluno-obs-dt').value = ''; } } else { document.getElementById('area-obs-dt').style.display = 'none'; document.getElementById('btn-justificar-faltas').style.display = 'none'; }
+        if (isDT) { 
+            document.getElementById('area-obs-dt').style.display = 'block'; 
+            document.getElementById('btn-justificar-faltas').style.display = fCount > 0 ? 'block' : 'none'; 
+            const rS = await getDoc(doc(db, "utilizadores", alunoId, "reunioes", "1_avaliacao")); 
+            if (rS.exists() && rS.data().global) { document.getElementById('p-aluno-obs-dt').value = rS.data().global; } else { document.getElementById('p-aluno-obs-dt').value = ''; } 
+        } else { 
+            document.getElementById('area-obs-dt').style.display = 'none'; 
+            document.getElementById('btn-justificar-faltas').style.display = 'none'; 
+        }
+
+        // --- BLINDAGEM DO COORDENADOR ---
+        const blocoPosNeg = document.getElementById('btn-dar-positiva')?.closest('div');
+        if (state.activeRole === 'coordenador') {
+            document.getElementById('area-obs-dt').style.display = 'none';
+            document.getElementById('btn-justificar-faltas').style.display = 'none';
+            if(blocoPosNeg) blocoPosNeg.style.display = 'none';
+        } else {
+            if(blocoPosNeg) blocoPosNeg.style.display = 'flex';
+        }
+
     } catch (e) {}
 
     document.getElementById('p-aluno-faltas').innerText = fCount; document.getElementById('p-aluno-prhfs').innerText = pCount; document.getElementById('p-aluno-notas').innerText = state.notasAlunoRAM.length;
@@ -335,11 +411,9 @@ export async function abrirPerfil360Aluno(alunoId) {
 export async function carregarTarefasProf() {
     const isPRHFTab = document.getElementById('tab-tarefas-prhf').classList.contains('active');
     
-    // Mostra as tab do passaporte apenas a quem interessa baseando na capa
     const canSeePassaporteTab = (state.activeRole === 'diretor_turma' || state.activeRole === 'orientador_pap' || state.activeRole === 'coordenador');
     document.getElementById('tab-tarefas-passaporte').style.display = canSeePassaporteTab ? 'inline-block' : 'none';
     if (!canSeePassaporteTab && !isPRHFTab) {
-        // Se a pessoa trocou para professor e estava no passaporte, volta ao PRHF
         document.getElementById('tab-tarefas-prhf').click(); return;
     }
 
@@ -453,7 +527,6 @@ export async function carregarForunsProf() {
     cont.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A ler canais...</p>';
     if(state.turmasProfessor.length === 0) { cont.innerHTML = '<p class="text-muted center">Não tens turmas.</p>'; return; }
 
-    // === VISTA FÓRUM: ORIENTADOR PAP ===
     if (state.activeRole === 'orientador_pap') {
         let html = '<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Rede de Orientação</h3>';
         html += `<div class="canal-card" data-turma="Global" data-disc="Orientadores" data-nome="Equipa de Orientadores"><div class="canal-icon" style="color:var(--success-green); border-color:var(--success-green);"><i class="fa-solid fa-users-viewfinder"></i></div><div class="canal-info" style="flex:1;"><h4>Equipa de Orientadores</h4><p>Chat fechado de coordenação</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
@@ -475,10 +548,8 @@ export async function carregarForunsProf() {
             
             if (meusOrientandos.length > 0) {
                 temAlunos = true;
-                // Grupo Geral para enviar recados a todos os orientandos de uma vez
                 html += `<div class="canal-card" data-turma="Global" data-disc="Avisos_Orientandos_${state.myUserId}" data-nome="Avisos (Todos os Orientandos)"><div class="canal-icon" style="color:#0099ff; border-color:#0099ff;"><i class="fa-solid fa-bullhorn"></i></div><div class="canal-info" style="flex:1;"><h4>Avisos Gerais</h4><p>Mensagem para os teus alunos</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
                 
-                // Chats Individuais
                 meusOrientandos.forEach(al => {
                     html += `<div class="canal-card" data-turma="${al.turma}" data-disc="PAP_${al.id}" data-nome="PAP - ${nomeCurto(al.nome)}"><div class="canal-icon" style="color:var(--warning-yellow); border-color:var(--warning-yellow); padding:0; overflow:hidden;"><img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=333&color=fff`}" style="width:100%;height:100%;object-fit:cover;"></div><div class="canal-info" style="flex:1;"><h4>${nomeCurto(al.nome)}</h4><p>Apoio Individual</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
                 });
@@ -486,13 +557,10 @@ export async function carregarForunsProf() {
         } catch(e) {}
         
         if (!temAlunos) html += '<p class="text-muted center" style="font-size:0.85rem;">Não tens orientandos atribuídos neste momento.</p>';
-        
         cont.innerHTML = `<div class="forum-canais-grid">${html}</div>`;
         return; 
     }
-    // === FIM VISTA PAP ===
 
-    // === VISTA FÓRUM: PROFESSOR BASE / DT / COORDENADOR ===
     let html = '';
     html += '<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">A Minha Disciplina</h3>';
     state.turmasProfessor.forEach(t => { state.disciplinasProfessor.forEach(d => { html += `<div class="canal-card" data-turma="${t}" data-disc="${d}" data-nome="Apoio a ${d}"><div class="canal-icon" style="color:#00d2ff; border-color:#00d2ff;"><i class="fa-solid fa-book-open"></i></div><div class="canal-info" style="flex:1;"><h4>Apoio a ${d}</h4><p>Turma ${t}</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`; }); });
