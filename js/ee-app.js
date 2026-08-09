@@ -1,15 +1,8 @@
 import { auth, db } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, collection, getDocs, query, addDoc, onSnapshot, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { doc, getDoc, collection, getDocs, query, addDoc, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 let myUserId = ""; let myUserName = ""; let educandosArray = []; let educandoAtualId = ""; let turmaAtual = "";
-
-// Apenas usado para cálculos matemáticos globais e ordenação visual
-const matrizCursoMap = {
-    "Sociocultural": ["PORT", "ING", "AI", "EF", "TIC"],
-    "Científica": ["GEO", "HCA", "MAT", "FQ", "BG", "MAC"],
-    "Técnica": ["CF", "TIAT", "TCAT", "OTET"] 
-};
 
 onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -113,54 +106,35 @@ async function carregarDadosDoFilhoSelecionado() {
 }
 
 /* ==========================================
-   HELPER: OBTER DISCIPLINAS REAIS DA TURMA E DO ALUNO
+   HELPER: OBTER DISCIPLINAS REAIS DA TURMA
 ========================================== */
-// Ignora Blocos não Letivos e garante que as disciplinas com notas lançadas nunca desaparecem
 async function obterDisciplinasDaTurma() {
-    const dSet = new Set();
-    const ignorar = ['ALM', 'VISITA', 'FCT', 'PAP', 'PRHF', 'ALMOÇO', 'LIVRE', 'REUNIÃO', 'ESTUDO', 'TESTE', 'AVALIAÇÃO'];
     try {
-        // 1. O que está no Horário Oficial
         const docSnap = await getDoc(doc(db, "turmas", turmaAtual));
+        
+        // Se a base de dados já tiver as disciplinas ordenadas na turma, usamos logo isso!
+        if(docSnap.exists() && docSnap.data().disciplinas && Array.isArray(docSnap.data().disciplinas)) {
+            return docSnap.data().disciplinas;
+        }
+        
+        // Se não houver, criamos nós a lista lendo as notas e horário do aluno (ignorando Almoços)
+        const dSet = new Set();
+        const ignorar = ['ALM', 'VISITA', 'FCT', 'PAP', 'PRHF', 'ALMOÇO', 'LIVRE', 'REUNIÃO', 'ESTUDO', 'TESTE', 'AVALIAÇÃO'];
+        
         if(docSnap.exists() && docSnap.data().horario) {
             Object.values(docSnap.data().horario).forEach(v => {
                 if(v && typeof v === 'string' && !ignorar.includes(v.toUpperCase())) dSet.add(v);
             });
         }
         
-        // 2. O que o aluno já tem nas notas (Para o caso de o Horário ainda não existir)
         const notasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
         notasSnap.forEach(d => {
             if (d.data().disciplina && !ignorar.includes(d.data().disciplina.toUpperCase())) { dSet.add(d.data().disciplina); }
         });
 
-        // 3. Faltas
-        const faltasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
-        faltasSnap.forEach(d => {
-            if (d.data().disciplina && !ignorar.includes(d.data().disciplina.toUpperCase())) { dSet.add(d.data().disciplina); }
-        });
-
-        // 4. PRHFs
-        const prhfSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "prhfs"));
-        prhfSnap.forEach(d => {
-            if (d.data().disciplina && !ignorar.includes(d.data().disciplina.toUpperCase())) { dSet.add(d.data().disciplina); }
-        });
-    } catch(e){}
-
-    // Extrai e limpa vazios
-    let arrDisciplinas = Array.from(dSet).filter(d => d && d.trim() !== '');
-
-    // Ordenação Oficial da Matriz da Escola
-    const ordemOficial = [];
-    Object.values(matrizCursoMap).forEach(arr => ordemOficial.push(...arr));
-    
-    return arrDisciplinas.sort((a, b) => {
-        let indexA = ordemOficial.indexOf(a);
-        let indexB = ordemOficial.indexOf(b);
-        if (indexA === -1) indexA = 999;
-        if (indexB === -1) indexB = 999;
-        return indexA - indexB;
-    });
+        // Devolve limpo e ordenado alfabeticamente
+        return Array.from(dSet).filter(d => d && d.trim() !== '').sort();
+    } catch(e){ return []; }
 }
 
 /* ==========================================
@@ -303,16 +277,23 @@ async function carregarResumoDashboard() {
         const notasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
         notasSnap.forEach(d => {
             const val = d.data().nota;
+            const disc = d.data().disciplina;
             if(val !== 'REP' && !isNaN(val)) {
                 const vNum = Number(val); sumG += vNum; countG++;
-                if(matrizCursoMap["Sociocultural"].includes(d.data().disciplina)) { sumS += vNum; countS++; }
-                else if(matrizCursoMap["Científica"].includes(d.data().disciplina)) { sumC += vNum; countC++; }
+                
+                // Algoritmo de identificação de componentes dinâmico
+                const isSocio = ["PORT", "ING", "AI", "EF", "TIC", "CP", "FIL", "PSI", "EDV"].includes(disc);
+                const isCient = ["GEO", "HCA", "MAT", "FQ", "BG", "MAC", "ECON", "HIST"].includes(disc);
+                
+                if (d.data().componente === "Sociocultural" || isSocio) { sumS += vNum; countS++; }
+                else if (d.data().componente === "Científica" || isCient) { sumC += vNum; countC++; }
                 else { sumT += vNum; countT++; } 
             }
         });
         const mG = countG > 0 ? (sumG/countG).toFixed(1) : '-';
         document.getElementById('resumo-media').innerText = mG;
         document.getElementById('resumo-media').style.color = (mG !== '-' && mG < 10) ? 'var(--danger-red)' : 'var(--primary-green)';
+        
         document.getElementById('resumo-med-socio').innerText = countS > 0 ? (sumS/countS).toFixed(1) : '-';
         document.getElementById('resumo-med-cient').innerText = countC > 0 ? (sumC/countC).toFixed(1) : '-';
         document.getElementById('resumo-med-tec').innerText = countT > 0 ? (sumT/countT).toFixed(1) : '-';
@@ -427,8 +408,13 @@ async function carregarNotasEE() {
         let disciplinasDoAluno = {};
         notasDb.forEach(d => { const n = d.data(); if(!disciplinasDoAluno[n.disciplina]) disciplinasDoAluno[n.disciplina] = []; disciplinasDoAluno[n.disciplina].push(n); });
         
-        const ordemDisciplinas = await obterDisciplinasDaTurma();
+        let ordemDisciplinas = await obterDisciplinasDaTurma();
         
+        if(ordemDisciplinas.length === 0) {
+            // Se o horário estiver vazio, força a mostrar pelo menos as notas que ele já tem!
+            ordemDisciplinas = Object.keys(disciplinasDoAluno).sort();
+        }
+
         if(ordemDisciplinas.length === 0) {
             cadernetaContent.innerHTML = '<p class="text-muted center">Ainda não existem disciplinas associadas. Aguarde lançamento de horário ou avaliações.</p>'; return;
         }
