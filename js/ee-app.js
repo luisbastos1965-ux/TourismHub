@@ -5,7 +5,7 @@ import { doc, getDoc, collection, getDocs, query, addDoc, onSnapshot, orderBy, w
 let myUserId = ""; let myUserName = ""; let educandosArray = []; let educandoAtualId = ""; let turmaAtual = "";
 
 // ==========================================
-// A MATRIZ DE REFERÊNCIA OFICIAL (DADOS EXTRAÍDOS)
+// A MATRIZ DE REFERÊNCIA OFICIAL
 // ==========================================
 const matrizAmbos = {
     "Sociocultural": {
@@ -30,13 +30,13 @@ const matrizAntigoTecnica = {
 };
 
 const matrizNovoTecnica = {
-    "AET": { "1": 20, "UC00038": 20, "2": 20, "UC03611": 20, "3": 40, "UC03623": 40, "4": 40, "UC03612": 40, "5": 20, "UC03613": 20, "6": 40, "UC03614": 40, "7": 20, "UC00056": 20, "8": 40, "UC03631": 40, "9": 20, "UC00063": 20 },
-    "OGOT": { "1": 20, "UC03629": 20, "2": 40, "UC03619": 40, "3": 40, "UC03621": 40, "4": 20, "UC00055": 20, "5": 20, "UC03630": 20, "6": 20, "UC03616": 20, "7": 40, "UC03617": 40, "8": 20, "UC03618": 20, "9": 40, "UC03620": 40, "10": 40, "UC03628": 40, "11": 20, "UC03632": 20 },
-    "CMET": { "1": 30, "UC00034": 30, "2": 30, "UC00033": 30, "3": 20, "UC00593": 20, "4": 40, "UC03622": 40, "5": 40, "UC03623": 40, "6": 30, "UC00031": 30, "7": 30, "UC00032": 30, "8": 20, "UC00433": 20, "9": 20, "UC03624": 20, "10": 20, "UC03627": 20 },
-    "LNTT": { "1": 50, "UC00044": 50, "2": 50, "UC00071": 50, "3": 40, "UC03615": 40, "4": 20, "UC03625": 20 }
+    "AET": { "UC00038": 20, "UC03611": 20, "UC03623": 40, "UC03612": 40, "UC03613": 20, "UC03614": 40, "UC00056": 20, "UC03631": 40, "UC00063": 20 },
+    "OGOT": { "UC03629": 20, "UC03619": 40, "UC03621": 40, "UC00055": 20, "UC03630": 20, "UC03616": 20, "UC03617": 40, "UC03618": 20, "UC03620": 40, "UC03628": 40, "UC03632": 20 },
+    "CMET": { "UC00034": 30, "UC00033": 30, "UC00593": 20, "UC03622": 40, "UC03623": 40, "UC00031": 30, "UC00032": 30, "UC00433": 20, "UC03624": 20, "UC03627": 20 },
+    "LNTT": { "UC00044": 50, "UC00071": 50, "UC03615": 40, "UC03625": 20 }
 };
 
-// O Detetive que escolhe a matriz consoante o ano do aluno
+// Detetive do Ano Letivo
 function getMatriz() {
     const anoMatch = turmaAtual.match(/\d+/);
     const ano = anoMatch ? parseInt(anoMatch[0]) : 10;
@@ -55,39 +55,37 @@ function getMatrizMap() {
     };
 }
 
+// O que aparece na Pauta Global (Tudo do Curso consoante o modelo)
 function obterDisciplinasDaMatriz() {
     const map = getMatrizMap();
     return [...map["Sociocultural"], ...map["Científica"], ...map["Técnica"]];
 }
 
-async function obterDisciplinasDaTurma() {
-    const dSet = new Set();
-    const ignorar = ['ALM', 'VISITA', 'FCT', 'PAP', 'PRHF', 'ALMOÇO', 'LIVRE', 'REUNIÃO', 'ESTUDO', 'TESTE', 'AVALIAÇÃO'];
+// O que aparece nas vistas do Ano Atual (Omitir as que já terminaram)
+function obterDisciplinasDoAno() {
+    const anoMatch = turmaAtual.match(/\d+/);
+    const ano = anoMatch ? parseInt(anoMatch[0]) : 10;
     
-    try {
-        const docSnap = await getDoc(doc(db, "turmas", turmaAtual));
-        if(docSnap.exists() && docSnap.data().horario) {
-            Object.values(docSnap.data().horario).forEach(v => {
-                if(v && typeof v === 'string' && !ignorar.includes(v.toUpperCase())) dSet.add(v);
-            });
-        }
-        
-        const notasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
-        notasSnap.forEach(d => {
-            if (d.data().disciplina && !ignorar.includes(d.data().disciplina.toUpperCase())) { dSet.add(d.data().disciplina); }
-        });
-    } catch(e){}
-
-    let arrDisciplinas = Array.from(dSet).filter(d => d && d.trim() !== '');
-    const ordemOficial = obterDisciplinasDaMatriz(); 
+    const base = {
+        10: ["PORT", "ING", "AI", "EF", "TIC", "GEO", "HCA", "MAT"],
+        11: ["PORT", "ING", "AI", "EF", "GEO", "HCA"],
+        12: ["PORT", "ING", "EF", "GEO", "HCA"]
+    };
+    const tecAntigo = {
+        10: ["CF", "TIAT", "TCAT", "OTET"],
+        11: ["CF", "TIAT", "TCAT", "OTET"],
+        12: ["TIAT", "OTET"]
+    };
+    const tecNovo = {
+        10: ["AET", "OGOT", "CMET", "LNTT"],
+        11: ["AET", "OGOT", "CMET", "LNTT"],
+        12: ["AET", "OGOT", "CMET"]
+    };
     
-    if (arrDisciplinas.length === 0) { return ordemOficial; }
-
-    return arrDisciplinas.sort((a, b) => {
-        let indexA = ordemOficial.indexOf(a); let indexB = ordemOficial.indexOf(b);
-        if (indexA === -1) indexA = 999; if (indexB === -1) indexB = 999;
-        return indexA - indexB;
-    });
+    let arr = [...(base[ano] || base[10])];
+    if (ano >= 11) arr = [...arr, ...(tecAntigo[ano] || tecAntigo[11])];
+    else arr = [...arr, ...(tecNovo[ano] || tecNovo[10])];
+    return arr;
 }
 
 // ==========================================
@@ -360,8 +358,8 @@ const filtroContainer = document.getElementById('filtro-caderneta-container');
 const filtroDisc = document.getElementById('filtro-caderneta-disc');
 let currentCadernetaTab = tabTimeline;
 
-async function preencherFiltrosDisciplinas() {
-    const disciplinas = await obterDisciplinasDaTurma();
+function preencherFiltrosDisciplinas() {
+    const disciplinas = obterDisciplinasDoAno();
     let opt = '<option value="">Todas as Disciplinas</option>';
     disciplinas.forEach(d => opt += `<option value="${d}">${d}</option>`);
     filtroDisc.innerHTML = opt;
@@ -410,10 +408,7 @@ async function carregarNotasEE() {
         let disciplinasDoAluno = {};
         notasDb.forEach(d => { const n = d.data(); if(!disciplinasDoAluno[n.disciplina]) disciplinasDoAluno[n.disciplina] = []; disciplinasDoAluno[n.disciplina].push(n); });
         
-        let ordemDisciplinas = await obterDisciplinasDaTurma();
-        if(ordemDisciplinas.length === 0) {
-            cadernetaContent.innerHTML = '<p class="text-muted center">Ainda não existem disciplinas associadas. Aguarde lançamento de horário ou avaliações.</p>'; return;
-        }
+        const ordemDisciplinas = obterDisciplinasDoAno();
 
         let html = `<button id="btn-pauta-global" class="primary-btn" style="margin-bottom: 20px; background-color: transparent; border: 1px solid var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-table-list"></i> Pauta Global (3 Anos)</button>`;
         
@@ -423,7 +418,8 @@ async function carregarNotasEE() {
                 disciplinasDoAluno[disc].forEach(n => {
                     if(n.nota !== 'REP' && !isNaN(n.nota)) { sum += Number(n.nota); c++; }
                     const cor = (n.nota === 'REP' || Number(n.nota) < 10) ? 'var(--danger-red)' : 'var(--success-green)';
-                    modsHtml += `<div class="modulo-row"><span style="color:var(--text-light);">Módulo ${n.modulo}</span><span style="font-weight:bold; color:${cor};">${n.nota}</span></div>`;
+                    const modLabel = n.modulo.toString().startsWith('UC') ? n.modulo : `Módulo ${n.modulo}`;
+                    modsHtml += `<div class="modulo-row"><span style="color:var(--text-light);">${modLabel}</span><span style="font-weight:bold; color:${cor};">${n.nota}</span></div>`;
                 });
                 const med = c > 0 ? (sum/c).toFixed(1) : '-';
                 const medCor = (med !== '-' && med < 10) ? 'var(--danger-red)' : 'var(--text-light)';
@@ -447,8 +443,7 @@ async function carregarNotasEE() {
             const container = document.getElementById('pauta-global-content'); 
             
             try { 
-                const mapNotas = {}; 
-                notasDb.forEach(d => { const dt = d.data(); mapNotas[`${dt.disciplina}_${dt.modulo}`] = dt.nota; }); 
+                const mapNotas = {}; notasDb.forEach(d => { const dt = d.data(); mapNotas[`${dt.disciplina}_${dt.modulo}`] = dt.nota; }); 
                 
                 const matriz = getMatriz();
                 let pHtml = ''; 
@@ -457,13 +452,15 @@ async function carregarNotasEE() {
                     for (const [nomeDisc, modulos] of Object.entries(disciplinas)) { 
                         pHtml += `<div class="pauta-global-disc"><div class="pauta-global-disc-title">${nomeDisc}</div><div class="pauta-global-notas">`; 
                         
-                        const modKeys = Object.keys(modulos).sort((a,b) => parseInt(a) - parseInt(b));
+                        const isNumeric = Object.keys(modulos).every(k => !isNaN(k));
+                        const modKeys = isNumeric ? Object.keys(modulos).sort((a,b) => parseInt(a) - parseInt(b)) : Object.keys(modulos);
                         
                         for(const mod of modKeys) { 
                             const nota = mapNotas[`${nomeDisc}_${mod}`] || 'SN'; let cor = "sn"; 
                             if(nota !== 'SN' && nota !== 'REP' && nota >= 10) cor = "positiva"; 
                             else if(nota === 'REP' || nota < 10) cor = "negativa"; 
-                            pHtml += `<div class="pg-nota-item"><span>${mod}</span><span class="pg-nota-val ${cor}">${nota}</span></div>`; 
+                            const modLabel = mod.toString().startsWith('UC') ? mod : `M${mod}`;
+                            pHtml += `<div class="pg-nota-item"><span>${modLabel}</span><span class="pg-nota-val ${cor}">${nota}</span></div>`; 
                         } 
                         pHtml += `</div></div>`; 
                     } pHtml += `</div>`; 
@@ -493,7 +490,7 @@ async function carregarFaltasEE() {
         if(Object.keys(faltasPorDisc).length === 0) { cadernetaContent.innerHTML = '<p class="text-muted center">Sem faltas injustificadas para mostrar.</p>'; return; }
         
         let html = '';
-        const ordemDisciplinas = await obterDisciplinasDaTurma();
+        const ordemDisciplinas = obterDisciplinasDoAno();
         const matriz = getMatriz();
         
         ordemDisciplinas.forEach(disc => {
@@ -505,10 +502,9 @@ async function carregarFaltasEE() {
                     faltasPorDisc[disc][mod].forEach(f => sumFaltasMod += Number(f.horas||0));
                     totalFaltasDisc += sumFaltasMod;
                     
-                    // Risco 10%
                     let limiteHoras = 0;
                     for (const comp of Object.values(matriz)) { 
-                        if(comp[disc] && comp[disc][mod]) { limiteHoras = comp[disc][mod] * 0.1; break; } 
+                        if(comp[disc] && comp[disc][mod]) { limiteHoras = Math.round(comp[disc][mod] * 0.1); break; } 
                     }
                     
                     let corBarra = 'var(--success-green)'; let txtRisco = 'Regular'; let perc = 0;
@@ -518,11 +514,13 @@ async function carregarFaltasEE() {
                         else if(perc >= 75) { corBarra = 'var(--warning-yellow)'; txtRisco = 'Atenção'; }
                     }
 
+                    const modLabel = mod.toString().startsWith('UC') ? mod : `Módulo ${mod}`;
+
                     discHtml += `
                     <div style="background:rgba(0,0,0,0.2); padding:12px; border-radius:8px; border:1px solid #333; margin-bottom:10px;">
                         <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                            <strong style="color:var(--text-light);">Módulo ${mod}</strong>
-                            <span style="font-size:0.8rem; font-weight:bold; color:${corBarra};">${sumFaltasMod}h / ${limiteHoras > 0 ? limiteHoras.toFixed(1)+'h' : '?'}</span>
+                            <strong style="color:var(--text-light);">${modLabel}</strong>
+                            <span style="font-size:0.8rem; font-weight:bold; color:${corBarra};">${sumFaltasMod}h / ${limiteHoras > 0 ? limiteHoras+'h' : '?'}</span>
                         </div>
                         <div class="progress-bar-bg" style="margin-top:0; margin-bottom:5px; height:6px;"><div class="progress-bar-fill" style="width: ${perc}%; background-color:${corBarra};"></div></div>
                         <div style="text-align:right; font-size:0.75rem; color:${corBarra};">${txtRisco}</div>
@@ -535,6 +533,7 @@ async function carregarFaltasEE() {
                          </div><div class="disciplina-modules">${discHtml}</div>`;
             }
         });
+        
         cadernetaContent.innerHTML = html;
     } catch(e) {}
 }
@@ -596,7 +595,7 @@ async function carregarReunioesEE(reuniaoSelecionada = '1_avaliacao') {
         const docSnap = await getDoc(doc(db, "utilizadores", educandoAtualId, "reunioes", reuniaoSelecionada));
         let dadosReuniao = docSnap.exists() ? docSnap.data() : {};
         
-        const ordemDisciplinas = await obterDisciplinasDaTurma();
+        const ordemDisciplinas = obterDisciplinasDoAno();
         let contentHtml = '<div style="display:flex; flex-direction:column; gap:10px;">';
         
         if (ordemDisciplinas.length === 0) {
