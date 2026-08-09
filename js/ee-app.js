@@ -1,8 +1,15 @@
 import { auth, db } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, collection, getDocs, query, addDoc, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { doc, getDoc, collection, getDocs, query, addDoc, onSnapshot, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 let myUserId = ""; let myUserName = ""; let educandosArray = []; let educandoAtualId = ""; let turmaAtual = "";
+
+// A MATRIZ FONTE DA VERDADE (Substitui nomes e horas aqui se necessário!)
+const matrizCurso = {
+    "Sociocultural": { "PORT": {"M1": 27, "M2": 24, "M3": 27}, "ING": {"M1": 24, "M2": 24, "M3": 24}, "AI": {"M1": 30, "M2": 30}, "EF": {"M1": 20, "M2": 20, "M3": 20, "M4": 20, "M5": 20}, "TIC": {"M1": 24, "M2": 24, "M3": 27, "M4": 24} },
+    "Científica": { "GEO": {"M1": 27, "M2": 24}, "HCA": {"M1": 24, "M2": 24, "M3": 27}, "MAT": {"M1": 30, "M2": 30, "M3": 30} },
+    "Técnica": { "CF": {"M1": 30, "M2": 30, "M3": 30}, "TIAT": {"M1": 25, "M2": 25, "M3": 25, "M4": 25}, "TCAT": {"M1": 25, "M2": 25, "M3": 25, "M4": 25}, "OTET": {"M1": 25, "M2": 25, "M3": 25, "M4": 25} }
+};
 
 onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -14,15 +21,10 @@ onAuthStateChanged(auth, async (user) => {
                 myUserName = dados.nome || "Encarregado";
                 
                 let arr = [];
-                if (dados.educandos && Array.isArray(dados.educandos)) {
-                    arr = dados.educandos;
-                } else if (dados.educandoId && Array.isArray(dados.educandoId)) {
-                    arr = dados.educandoId;
-                } else if (dados.educandoId && typeof dados.educandoId === 'string') {
-                    arr = [dados.educandoId];
-                } else if (dados.educando) {
-                    arr = [dados.educando];
-                }
+                if (dados.educandos && Array.isArray(dados.educandos)) { arr = dados.educandos; } 
+                else if (dados.educandoId && Array.isArray(dados.educandoId)) { arr = dados.educandoId; } 
+                else if (dados.educandoId && typeof dados.educandoId === 'string') { arr = [dados.educandoId]; } 
+                else if (dados.educando) { arr = [dados.educando]; }
                 
                 educandosArray = arr;
 
@@ -33,43 +35,28 @@ onAuthStateChanged(auth, async (user) => {
                     document.getElementById('ee-dashboard').innerHTML = '<p class="text-muted center" style="margin-top:50px;">Sem educandos associados na base de dados.</p>';
                 }
             } else window.location.href = "index.html"; 
-        } catch (e) {
-            console.error("Erro no Auth:", e);
-        }
+        } catch (e) {}
     } else window.location.href = "index.html"; 
 });
 
 async function construirSeletorEducandos() {
-    const selector = document.getElementById('header-ee-student-selector'); 
-    selector.innerHTML = '';
-    
+    const selector = document.getElementById('header-ee-student-selector'); selector.innerHTML = '';
     for (let id of educandosArray) {
         if(!id) continue;
         try {
             const snap = await getDoc(doc(db, "utilizadores", id));
             if (snap.exists()) {
                 const data = snap.data();
-                const nomeAluno = data.nome ? data.nome.split(' ')[0] : "Aluno";
-                const turmaAluno = data.turma || "S/ Turma";
-                
                 const opt = document.createElement('option'); 
-                opt.value = id;
-                opt.text = `${nomeAluno} (${turmaAluno})`;
+                opt.value = id; opt.text = `${data.nome ? data.nome.split(' ')[0] : "Aluno"} (${data.turma || "S/ Turma"})`;
                 selector.appendChild(opt);
             }
         } catch(e) {}
     }
-    
     if(selector.options.length > 0) {
-        educandoAtualId = selector.value; 
-        carregarDadosDoFilhoSelecionado();
-        selector.onchange = (e) => { 
-            educandoAtualId = e.target.value; 
-            carregarDadosDoFilhoSelecionado(); 
-        };
-    } else {
-        selector.innerHTML = '<option value="">Alunos não encontrados</option>';
-    }
+        educandoAtualId = selector.value; carregarDadosDoFilhoSelecionado();
+        selector.onchange = (e) => { educandoAtualId = e.target.value; carregarDadosDoFilhoSelecionado(); };
+    } else selector.innerHTML = '<option value="">Alunos não encontrados</option>';
 }
 
 document.getElementById('btn-logout-ee')?.addEventListener('click', () => { signOut(auth).then(() => window.location.href = "index.html"); });
@@ -82,15 +69,10 @@ async function carregarDadosDoFilhoSelecionado() {
             turmaAtual = docSnap.data().turma; 
             carregarResumoDashboard(); 
             
-            // Lógica de isolamento 10º Ano (Percurso Profissional)
             const anoMatch = turmaAtual.match(/\d+/);
             const ano = anoMatch ? parseInt(anoMatch[0]) : 0;
-            if (ano < 11) {
-                document.getElementById('card-percurso-prof').style.display = 'none';
-            } else {
-                document.getElementById('card-percurso-prof').style.display = 'block';
-                carregarPercursoProfissional(docSnap.data());
-            }
+            if (ano < 11) document.getElementById('card-percurso-prof').style.display = 'none';
+            else { document.getElementById('card-percurso-prof').style.display = 'block'; carregarPercursoProfissional(docSnap.data()); }
 
             preencherFiltrosDisciplinas();
             
@@ -102,39 +84,18 @@ async function carregarDadosDoFilhoSelecionado() {
                 if(abaAtiva === 'view-ee-horario') carregarHorarioEE();
             }
         }
-    } catch(e) { console.error("Erro ao carregar dados do aluno:", e); }
+    } catch(e) {}
 }
 
 /* ==========================================
-   HELPER: OBTER DISCIPLINAS REAIS DA TURMA
+   OBTER DISCIPLINAS (Lê diretamente da Matriz para não faltar nenhuma)
 ========================================== */
-async function obterDisciplinasDaTurma() {
-    try {
-        const docSnap = await getDoc(doc(db, "turmas", turmaAtual));
-        
-        // Se a base de dados já tiver as disciplinas ordenadas na turma, usamos logo isso!
-        if(docSnap.exists() && docSnap.data().disciplinas && Array.isArray(docSnap.data().disciplinas)) {
-            return docSnap.data().disciplinas;
-        }
-        
-        // Se não houver, criamos nós a lista lendo as notas e horário do aluno (ignorando Almoços)
-        const dSet = new Set();
-        const ignorar = ['ALM', 'VISITA', 'FCT', 'PAP', 'PRHF', 'ALMOÇO', 'LIVRE', 'REUNIÃO', 'ESTUDO', 'TESTE', 'AVALIAÇÃO'];
-        
-        if(docSnap.exists() && docSnap.data().horario) {
-            Object.values(docSnap.data().horario).forEach(v => {
-                if(v && typeof v === 'string' && !ignorar.includes(v.toUpperCase())) dSet.add(v);
-            });
-        }
-        
-        const notasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
-        notasSnap.forEach(d => {
-            if (d.data().disciplina && !ignorar.includes(d.data().disciplina.toUpperCase())) { dSet.add(d.data().disciplina); }
-        });
-
-        // Devolve limpo e ordenado alfabeticamente
-        return Array.from(dSet).filter(d => d && d.trim() !== '').sort();
-    } catch(e){ return []; }
+function obterDisciplinasDaMatriz() {
+    let arrayDisc = [];
+    Object.values(matrizCurso).forEach(comp => {
+        Object.keys(comp).forEach(d => arrayDisc.push(d));
+    });
+    return arrayDisc;
 }
 
 /* ==========================================
@@ -162,12 +123,8 @@ function carregarPercursoProfissional(alunoData) {
     
     if(!cardResumo) return;
 
-    miniFct.style.display = 'none';
-    miniPap.style.display = 'none';
-    btnPap.style.display = 'none';
-
-    let hasFct = false; let hasPap = false;
-    let riscoGeral = null;
+    miniFct.style.display = 'none'; miniPap.style.display = 'none'; btnPap.style.display = 'none';
+    let hasFct = false; let hasPap = false; let riscoGeral = null;
 
     if (alunoData.fct) {
         hasFct = true; miniFct.style.display = 'block';
@@ -184,9 +141,7 @@ function carregarPercursoProfissional(alunoData) {
         document.getElementById('fct-falta').innerText = ht !== '-' ? (ht - hr) : '-';
         
         const riscoF = getRiscoBadge(f.estadoRisco);
-        document.getElementById('fct-badge-risco').innerText = riscoF.txt;
-        document.getElementById('fct-card-risco').style.borderLeftColor = riscoF.cor;
-        
+        document.getElementById('fct-badge-risco').innerText = riscoF.txt; document.getElementById('fct-card-risco').style.borderLeftColor = riscoF.cor;
         riscoGeral = f.estadoRisco || 'branco';
 
         let docsHtml = '';
@@ -210,8 +165,7 @@ function carregarPercursoProfissional(alunoData) {
         document.getElementById('pap-obs-txt').innerText = p.notasOrientador || 'Sem observações registadas.';
         
         const riscoP = getRiscoBadge(p.estadoRisco);
-        document.getElementById('pap-badge-risco').innerText = riscoP.txt;
-        document.getElementById('pap-card-risco').style.borderLeftColor = riscoP.cor;
+        document.getElementById('pap-badge-risco').innerText = riscoP.txt; document.getElementById('pap-card-risco').style.borderLeftColor = riscoP.cor;
         
         if (riscoGeral !== 'vermelho') { 
             if (p.estadoRisco === 'vermelho') riscoGeral = 'vermelho';
@@ -225,10 +179,7 @@ function carregarPercursoProfissional(alunoData) {
         for(let key in fNames) {
             let st = (p.fases && p.fases[key] !== undefined) ? p.fases[key] : null;
             let statusVal = null; let prazoVal = "";
-            if (st !== null && typeof st === 'object') {
-                statusVal = st.status; prazoVal = st.prazo || "";
-            } else { statusVal = st; }
-
+            if (st !== null && typeof st === 'object') { statusVal = st.status; prazoVal = st.prazo || ""; } else { statusVal = st; }
             let ic = getUniformCircle(statusVal);
             let prazoHtml = prazoVal ? `<br><span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;"><i class="fa-regular fa-calendar"></i> Até: ${prazoVal}</span>` : '';
             fasesHtml += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; padding-bottom:8px; margin-bottom:5px;"><div><strong style="color:var(--text-light); font-size:0.9rem;">${fNames[key]}</strong>${prazoHtml}</div> <span style="font-size:1.1rem;">${ic}</span></div>`;
@@ -238,28 +189,14 @@ function carregarPercursoProfissional(alunoData) {
 
     if(hasFct || hasPap) {
         cardResumo.style.display = 'block';
-        const rg = getRiscoBadge(riscoGeral || 'branco');
-        const b = document.getElementById('badge-risco-geral');
-        
-        let bgColor = rg.cor === 'var(--text-muted)' ? 'rgba(255,255,255,0.05)' : 
-                      rg.cor === 'var(--success-green)' ? 'rgba(40,167,69,0.1)' : 
-                      rg.cor === 'var(--warning-yellow)' ? 'rgba(255,204,0,0.1)' : 'rgba(255,77,77,0.1)';
-                      
-        b.innerText = rg.txt; 
-        b.style.color = rg.cor;
-        b.style.background = bgColor;
-        cardResumo.style.borderLeftColor = rg.cor;
+        const rg = getRiscoBadge(riscoGeral || 'branco'); const b = document.getElementById('badge-risco-geral');
+        let bgColor = rg.cor === 'var(--text-muted)' ? 'rgba(255,255,255,0.05)' : rg.cor === 'var(--success-green)' ? 'rgba(40,167,69,0.1)' : rg.cor === 'var(--warning-yellow)' ? 'rgba(255,204,0,0.1)' : 'rgba(255,77,77,0.1)';
+        b.innerText = rg.txt; b.style.color = rg.cor; b.style.background = bgColor; cardResumo.style.borderLeftColor = rg.cor;
     }
 }
 
-document.getElementById('card-percurso-prof')?.addEventListener('click', () => { 
-    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-    esconderTodasAsVistas(); document.getElementById('view-ee-profissional').style.display = 'block'; 
-});
-document.getElementById('btn-voltar-prof')?.addEventListener('click', () => { 
-    esconderTodasAsVistas(); document.getElementById('ee-dashboard').style.display = 'block'; 
-    document.querySelector('.nav-item[data-target="ee-dashboard"]').classList.add('active');
-});
+document.getElementById('card-percurso-prof')?.addEventListener('click', () => { document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active')); esconderTodasAsVistas(); document.getElementById('view-ee-profissional').style.display = 'block'; });
+document.getElementById('btn-voltar-prof')?.addEventListener('click', () => { esconderTodasAsVistas(); document.getElementById('ee-dashboard').style.display = 'block'; document.querySelector('.nav-item[data-target="ee-dashboard"]').classList.add('active'); });
 
 const btnTabFct = document.getElementById('btn-tab-fct'); const btnTabPap = document.getElementById('btn-tab-pap');
 const contentFct = document.getElementById('content-prof-fct'); const contentPap = document.getElementById('content-prof-pap');
@@ -267,7 +204,7 @@ btnTabFct?.addEventListener('click', () => { btnTabFct.classList.add('active'); 
 btnTabPap?.addEventListener('click', () => { btnTabPap.classList.add('active'); btnTabFct.classList.remove('active'); contentPap.style.display = 'block'; contentFct.style.display = 'none'; });
 
 // ==========================================
-// RESTANTE LÓGICA
+// DASHBOARD
 // ==========================================
 async function carregarResumoDashboard() {
     let sumG = 0, countG = 0, sumS = 0, countS = 0, sumC = 0, countC = 0, sumT = 0, countT = 0;
@@ -276,24 +213,22 @@ async function carregarResumoDashboard() {
     try {
         const notasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
         notasSnap.forEach(d => {
-            const val = d.data().nota;
-            const disc = d.data().disciplina;
+            const val = d.data().nota; const disc = d.data().disciplina;
             if(val !== 'REP' && !isNaN(val)) {
                 const vNum = Number(val); sumG += vNum; countG++;
                 
-                // Algoritmo de identificação de componentes dinâmico
-                const isSocio = ["PORT", "ING", "AI", "EF", "TIC", "CP", "FIL", "PSI", "EDV"].includes(disc);
-                const isCient = ["GEO", "HCA", "MAT", "FQ", "BG", "MAC", "ECON", "HIST"].includes(disc);
+                let belongsToSocio = false; let belongsToCient = false;
+                if(matrizCurso["Sociocultural"] && matrizCurso["Sociocultural"][disc]) belongsToSocio = true;
+                if(matrizCurso["Científica"] && matrizCurso["Científica"][disc]) belongsToCient = true;
                 
-                if (d.data().componente === "Sociocultural" || isSocio) { sumS += vNum; countS++; }
-                else if (d.data().componente === "Científica" || isCient) { sumC += vNum; countC++; }
+                if (belongsToSocio) { sumS += vNum; countS++; }
+                else if (belongsToCient) { sumC += vNum; countC++; }
                 else { sumT += vNum; countT++; } 
             }
         });
         const mG = countG > 0 ? (sumG/countG).toFixed(1) : '-';
         document.getElementById('resumo-media').innerText = mG;
         document.getElementById('resumo-media').style.color = (mG !== '-' && mG < 10) ? 'var(--danger-red)' : 'var(--primary-green)';
-        
         document.getElementById('resumo-med-socio').innerText = countS > 0 ? (sumS/countS).toFixed(1) : '-';
         document.getElementById('resumo-med-cient').innerText = countC > 0 ? (sumC/countC).toFixed(1) : '-';
         document.getElementById('resumo-med-tec').innerText = countT > 0 ? (sumT/countT).toFixed(1) : '-';
@@ -343,9 +278,8 @@ navItems.forEach(item => {
 document.getElementById('btn-quick-mensagem')?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); esconderTodasAsVistas(); document.getElementById('view-ee-chat').style.display = 'flex'; iniciarChatEE(); });
 document.getElementById('btn-quick-justificar')?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); esconderTodasAsVistas(); document.getElementById('view-ee-justificar').style.display = 'block'; carregarAtestadosEE(); });
 document.querySelectorAll('#btn-voltar-chat-ee, #btn-voltar-justificar, #btn-voltar-notificacoes').forEach(btn => { btn?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); document.querySelector('.nav-item[data-target="ee-dashboard"]').classList.add('active'); esconderTodasAsVistas(); document.getElementById('ee-dashboard').style.display = 'block'; }); });
-document.getElementById('btn-open-notificacoes')?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); esconderTodasAsVistas(); document.getElementById('view-ee-notificacoes').style.display = 'block'; document.getElementById('ee-notificacoes-container').innerHTML = '<p class="text-muted center">Alertas futuros aparecerão aqui.</p>'; });
 
-// 4. CADERNETA E TIMELINE
+// 4. CADERNETA 
 const tabTimeline = document.getElementById('tab-ee-timeline'); 
 const tabNotas = document.getElementById('tab-ee-notas'); 
 const tabFaltas = document.getElementById('tab-ee-faltas'); 
@@ -357,8 +291,8 @@ const filtroContainer = document.getElementById('filtro-caderneta-container');
 const filtroDisc = document.getElementById('filtro-caderneta-disc');
 let currentCadernetaTab = tabTimeline;
 
-async function preencherFiltrosDisciplinas() {
-    const disciplinas = await obterDisciplinasDaTurma();
+function preencherFiltrosDisciplinas() {
+    const disciplinas = obterDisciplinasDaMatriz();
     let opt = '<option value="">Todas as Disciplinas</option>';
     disciplinas.forEach(d => opt += `<option value="${d}">${d}</option>`);
     filtroDisc.innerHTML = opt;
@@ -366,8 +300,7 @@ async function preencherFiltrosDisciplinas() {
 filtroDisc.addEventListener('change', () => ativarTabCadernetaAtual());
 function ativarTabCadernetaAtual() { if(currentCadernetaTab) currentCadernetaTab.click(); }
 function switchTabConfig(tabClicada, tabsParaDesativar, showFilter) { 
-    currentCadernetaTab = tabClicada; 
-    tabClicada.classList.add('active'); 
+    currentCadernetaTab = tabClicada; tabClicada.classList.add('active'); 
     tabsParaDesativar.forEach(t => t.classList.remove('active')); 
     filtroContainer.style.display = showFilter ? 'block' : 'none'; 
     cadernetaContent.innerHTML = '<p class="text-muted center">A carregar...</p>'; 
@@ -408,18 +341,10 @@ async function carregarNotasEE() {
         let disciplinasDoAluno = {};
         notasDb.forEach(d => { const n = d.data(); if(!disciplinasDoAluno[n.disciplina]) disciplinasDoAluno[n.disciplina] = []; disciplinasDoAluno[n.disciplina].push(n); });
         
-        let ordemDisciplinas = await obterDisciplinasDaTurma();
+        const ordemDisciplinas = obterDisciplinasDaMatriz();
+
+        let html = `<button id="btn-pauta-global" class="primary-btn" style="margin-bottom: 20px; background-color: transparent; border: 1px solid var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-table-list"></i> Pauta Global (3 Anos)</button>`;
         
-        if(ordemDisciplinas.length === 0) {
-            // Se o horário estiver vazio, força a mostrar pelo menos as notas que ele já tem!
-            ordemDisciplinas = Object.keys(disciplinasDoAluno).sort();
-        }
-
-        if(ordemDisciplinas.length === 0) {
-            cadernetaContent.innerHTML = '<p class="text-muted center">Ainda não existem disciplinas associadas. Aguarde lançamento de horário ou avaliações.</p>'; return;
-        }
-
-        let html = '';
         ordemDisciplinas.forEach(disc => {
             if(disciplinasDoAluno[disc] && disciplinasDoAluno[disc].length > 0) {
                 let sum = 0; let c = 0; let modsHtml = '';
@@ -443,6 +368,30 @@ async function carregarNotasEE() {
             }
         });
         cadernetaContent.innerHTML = html;
+        
+        document.getElementById('btn-pauta-global')?.addEventListener('click', async () => { 
+            document.getElementById('modal-pauta-global').style.display = 'flex'; 
+            const container = document.getElementById('pauta-global-content'); container.innerHTML = '<p class="text-muted" style="text-align:center;">A compilar notas...</p>'; 
+            try { 
+                const mapNotas = {}; notasDb.forEach(d => { const dt = d.data(); mapNotas[`${dt.disciplina}_${dt.modulo}`] = dt.nota; }); 
+                let pHtml = ''; 
+                for (const [nomeComponente, disciplinas] of Object.entries(matrizCurso)) { 
+                    pHtml += `<div class="pauta-global-componente"><div class="pauta-global-header">${nomeComponente}</div>`; 
+                    for (const [nomeDisc, modulos] of Object.entries(disciplinas)) { 
+                        pHtml += `<div class="pauta-global-disc"><div class="pauta-global-disc-title">${nomeDisc}</div><div class="pauta-global-notas">`; 
+                        for(const mod of Object.keys(modulos)) { 
+                            const nota = mapNotas[`${nomeDisc}_${mod}`] || 'SN'; let cor = "sn"; 
+                            if(nota !== 'SN' && nota !== 'REP' && nota >= 10) cor = "positiva"; 
+                            else if(nota === 'REP' || nota < 10) cor = "negativa"; 
+                            pHtml += `<div class="pg-nota-item"><span>${mod}</span><span class="pg-nota-val ${cor}">${nota}</span></div>`; 
+                        } 
+                        pHtml += `</div></div>`; 
+                    } pHtml += `</div>`; 
+                } container.innerHTML = pHtml; 
+            } catch(err) { container.innerHTML = '<p class="text-danger center">Erro ao carregar a pauta.</p>'; } 
+        });
+        document.getElementById('btn-close-pauta')?.addEventListener('click', () => document.getElementById('modal-pauta-global').style.display = 'none');
+
     } catch(e) {}
 }
 
@@ -450,21 +399,64 @@ async function carregarFaltasEE() {
     try {
         const fDisc = filtroDisc.value;
         const faltasDb = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
-        let faltasArr = []; faltasDb.forEach(d => { if(!fDisc || d.data().disciplina === fDisc) faltasArr.push(d.data()); }); 
-        if(faltasArr.length === 0) { cadernetaContent.innerHTML = '<p class="text-muted center">Sem faltas registadas.</p>'; return; }
-        faltasArr.sort((a,b) => b.dataInicio.localeCompare(a.dataInicio)); 
+        let faltasPorDisc = {};
         
-        let html = ''; let currentDate = ''; const mesArr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-        faltasArr.forEach(f => {
-            if(f.dataInicio !== currentDate) {
-                currentDate = f.dataInicio; const dp = currentDate.split('-');
-                const dateStr = dp.length===3 ? `${dp[2]} de ${mesArr[parseInt(dp[1])-1]}` : currentDate;
-                html += `<div class="falta-date-divider" style="margin-top: 15px;">${dateStr}</div>`;
+        faltasDb.forEach(d => {
+            const f = d.data();
+            if(!f.justificada && (!fDisc || f.disciplina === fDisc)) {
+                if(!faltasPorDisc[f.disciplina]) faltasPorDisc[f.disciplina] = {};
+                if(!faltasPorDisc[f.disciplina][f.modulo]) faltasPorDisc[f.disciplina][f.modulo] = [];
+                faltasPorDisc[f.disciplina][f.modulo].push(f);
             }
-            const stColor = f.justificada ? 'var(--success-green)' : 'var(--danger-red)';
-            const stTxt = f.justificada ? 'Justificada' : (f.comprovativoEnviado ? 'Em Análise' : 'Injustificada');
-            html += `<div class="card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;"><div><strong style="color:var(--text-light);">${f.disciplina}</strong> <span style="color:var(--text-light);">(${f.horas}h)</span></div><span style="font-size:0.8rem; font-weight:bold; color:${stColor}; padding:5px 10px; background:rgba(255,255,255,0.05); border-radius:12px;">${stTxt}</span></div>`;
         });
+
+        if(Object.keys(faltasPorDisc).length === 0) { cadernetaContent.innerHTML = '<p class="text-muted center">Sem faltas injustificadas para mostrar.</p>'; return; }
+        
+        let html = '';
+        const ordemDisciplinas = obterDisciplinasDaMatriz();
+        
+        ordemDisciplinas.forEach(disc => {
+            if(faltasPorDisc[disc]) {
+                let discHtml = '';
+                let totalFaltasDisc = 0;
+                
+                for(let mod of Object.keys(faltasPorDisc[disc]).sort()) {
+                    let sumFaltasMod = 0;
+                    faltasPorDisc[disc][mod].forEach(f => sumFaltasMod += Number(f.horas||0));
+                    totalFaltasDisc += sumFaltasMod;
+                    
+                    // Risco 10%
+                    let limiteHoras = 0;
+                    for (const comp of Object.values(matrizCurso)) { if(comp[disc] && comp[disc][mod]) limiteHoras = comp[disc][mod] * 0.1; }
+                    
+                    let corBarra = 'var(--success-green)';
+                    let txtRisco = 'Regular';
+                    let perc = 0;
+                    
+                    if(limiteHoras > 0) {
+                        perc = (sumFaltasMod / limiteHoras) * 100;
+                        if(perc >= 100) { corBarra = 'var(--danger-red)'; txtRisco = '⚠️ Limite Excedido'; perc = 100; }
+                        else if(perc >= 75) { corBarra = 'var(--warning-yellow)'; txtRisco = 'Atenção'; }
+                    }
+
+                    discHtml += `
+                    <div style="background:rgba(0,0,0,0.2); padding:12px; border-radius:8px; border:1px solid #333; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                            <strong style="color:var(--text-light);">Módulo ${mod}</strong>
+                            <span style="font-size:0.8rem; font-weight:bold; color:${corBarra};">${sumFaltasMod}h / ${limiteHoras > 0 ? limiteHoras.toFixed(1)+'h' : '?'}</span>
+                        </div>
+                        <div class="progress-bar-bg" style="margin-top:0; margin-bottom:5px; height:6px;"><div class="progress-bar-fill" style="width: ${perc}%; background-color:${corBarra};"></div></div>
+                        <div style="text-align:right; font-size:0.75rem; color:${corBarra};">${txtRisco}</div>
+                    </div>`;
+                }
+
+                html += `<div class="disciplina-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'">
+                            <span class="disciplina-title" style="color:var(--text-light);">${disc}</span>
+                            <span><span class="disciplina-media" style="color:var(--danger-red);">${totalFaltasDisc}h</span> <i class="fa-solid fa-chevron-down" style="font-size:0.8rem; color:var(--text-muted); margin-left:5px;"></i></span>
+                         </div><div class="disciplina-modules">${discHtml}</div>`;
+            }
+        });
+        
         cadernetaContent.innerHTML = html;
     } catch(e) {}
 }
@@ -506,10 +498,8 @@ async function carregarComportamentoEE() {
 
 async function carregarReunioesEE(reuniaoSelecionada = '1_avaliacao') {
     const reunioesMenu = [
-        {id: '1_intercalar', label: '1ª Intercalar'},
-        {id: '1_avaliacao', label: '1ª Avaliação'},
-        {id: '2_intercalar', label: '2ª Intercalar'},
-        {id: '2_avaliacao', label: '2ª Avaliação'},
+        {id: '1_intercalar', label: '1ª Intercalar'}, {id: '1_avaliacao', label: '1ª Avaliação'},
+        {id: '2_intercalar', label: '2ª Intercalar'}, {id: '2_avaliacao', label: '2ª Avaliação'},
         {id: '3_avaliacao', label: '3ª Avaliação'}
     ];
     
@@ -522,41 +512,25 @@ async function carregarReunioesEE(reuniaoSelecionada = '1_avaliacao') {
     html += '</div><div id="reuniao-content-area"><p class="text-muted center">A carregar dados...</p></div>';
     
     cadernetaContent.innerHTML = html;
-    document.querySelectorAll('.btn-select-reuniao').forEach(btn => {
-        btn.addEventListener('click', (e) => { carregarReunioesEE(e.currentTarget.getAttribute('data-id')); });
-    });
+    document.querySelectorAll('.btn-select-reuniao').forEach(btn => { btn.addEventListener('click', (e) => { carregarReunioesEE(e.currentTarget.getAttribute('data-id')); }); });
 
     try {
         const docSnap = await getDoc(doc(db, "utilizadores", educandoAtualId, "reunioes", reuniaoSelecionada));
         let dadosReuniao = docSnap.exists() ? docSnap.data() : {};
         
-        const ordemDisciplinas = await obterDisciplinasDaTurma();
+        const ordemDisciplinas = obterDisciplinasDaMatriz();
         let contentHtml = '<div style="display:flex; flex-direction:column; gap:10px;">';
         
-        if (ordemDisciplinas.length === 0) {
-            contentHtml += '<p class="text-muted center">Ainda não existem disciplinas associadas.</p>';
-        } else {
-            ordemDisciplinas.forEach(disc => {
-                const comentario = dadosReuniao.disciplinas && dadosReuniao.disciplinas[disc] ? dadosReuniao.disciplinas[disc] : '<span style="color:var(--text-muted);">Sem comentário (SN)</span>';
-                contentHtml += `
-                <div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;">
-                    <h4 style="margin-bottom:8px; color:var(--text-light); font-size:1rem;">${disc}</h4>
-                    <p style="color:var(--text-light); font-size:0.9rem; line-height:1.4; margin:0;">${comentario}</p>
-                </div>`;
-            });
-        }
+        ordemDisciplinas.forEach(disc => {
+            const comentario = dadosReuniao.disciplinas && dadosReuniao.disciplinas[disc] ? dadosReuniao.disciplinas[disc] : '<span style="color:var(--text-muted);">Sem comentário (SN)</span>';
+            contentHtml += `<div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;"><h4 style="margin-bottom:8px; color:var(--text-light); font-size:1rem;">${disc}</h4><p style="color:var(--text-light); font-size:0.9rem; line-height:1.4; margin:0;">${comentario}</p></div>`;
+        });
         
         const global = dadosReuniao.global || '<span style="color:var(--text-muted);">Sem observações globais registadas (SN).</span>';
-        contentHtml += `
-        <div class="card" style="margin-top:15px; border:1px solid var(--warning-yellow); background:rgba(255,204,0,0.05); padding:15px;">
-            <h3 style="color:var(--warning-yellow); margin-bottom:10px; font-size:1.1rem;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3>
-            <p style="color:var(--text-light); font-size:0.95rem; line-height:1.5; margin:0;">${global}</p>
-        </div></div>`;
+        contentHtml += `<div class="card" style="margin-top:15px; border:1px solid var(--warning-yellow); background:rgba(255,204,0,0.05); padding:15px;"><h3 style="color:var(--warning-yellow); margin-bottom:10px; font-size:1.1rem;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3><p style="color:var(--text-light); font-size:0.95rem; line-height:1.5; margin:0;">${global}</p></div></div>`;
         
         document.getElementById('reuniao-content-area').innerHTML = contentHtml;
-    } catch(e) {
-        document.getElementById('reuniao-content-area').innerHTML = '<p class="text-danger center">Erro ao carregar a reunião.</p>';
-    }
+    } catch(e) { document.getElementById('reuniao-content-area').innerHTML = '<p class="text-danger center">Erro ao carregar a reunião.</p>'; }
 }
 
 // 5. AGENDA E HORÁRIO
@@ -565,14 +539,10 @@ document.getElementById('filtro-agenda-trabalhos')?.addEventListener('change', c
 document.getElementById('filtro-agenda-outros')?.addEventListener('change', carregarAgendaEE);
 
 async function carregarAgendaEE() {
-    const subContainer = document.getElementById('ee-agenda-content');
-    subContainer.innerHTML = '<p class="text-muted center">A sincronizar agenda...</p>';
+    const subContainer = document.getElementById('ee-agenda-content'); subContainer.innerHTML = '<p class="text-muted center">A sincronizar agenda...</p>';
     if(!turmaAtual) return;
 
-    const mostraT = document.getElementById('filtro-agenda-testes').checked;
-    const mostraTr = document.getElementById('filtro-agenda-trabalhos').checked;
-    const mostraO = document.getElementById('filtro-agenda-outros').checked;
-
+    const mostraT = document.getElementById('filtro-agenda-testes').checked; const mostraTr = document.getElementById('filtro-agenda-trabalhos').checked; const mostraO = document.getElementById('filtro-agenda-outros').checked;
     try {
         const evDb = await getDocs(collection(db, "turmas", turmaAtual, "eventos"));
         if(evDb.empty) { subContainer.innerHTML = '<p class="text-muted center">Sem eventos na escola.</p>'; return; }
@@ -584,7 +554,6 @@ async function carregarAgendaEE() {
             else if(e.tipo === 'trabalho' || e.tipo === 'entrega') { if(mostraTr) { bgC = '#00d2ff'; txtT = 'Entrega'; evs.push({...e, cor: bgC, txt: txtT}); } } 
             else { if(mostraO) evs.push({...e, cor: bgC, txt: txtT}); }
         });
-        
         if(evs.length === 0) { subContainer.innerHTML = '<p class="text-muted center">Nenhum evento com os filtros atuais.</p>'; return; }
         
         const hoje = new Date().toISOString().split('T')[0];
@@ -593,10 +562,7 @@ async function carregarAgendaEE() {
         const mesArr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
         let html = '';
 
-        const renderEv = (ev) => {
-            const dp = ev.data.split('-'); const mes = mesArr[parseInt(dp[1])-1];
-            return `<div class="calendar-event-card" style="border-left-color:${ev.cor}; margin-bottom:10px;"><div class="calendar-date-box"><span class="day">${dp[2]}</span><span class="month" style="color:${ev.cor};">${mes}</span></div><div class="calendar-info"><h4 style="margin:0; color:var(--text-light);">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt||'evento').toUpperCase()}</span></div></div>`;
-        };
+        const renderEv = (ev) => { const dp = ev.data.split('-'); const mes = mesArr[parseInt(dp[1])-1]; return `<div class="calendar-event-card" style="border-left-color:${ev.cor}; margin-bottom:10px;"><div class="calendar-date-box"><span class="day">${dp[2]}</span><span class="month" style="color:${ev.cor};">${mes}</span></div><div class="calendar-info"><h4 style="margin:0; color:var(--text-light);">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt||'evento').toUpperCase()}</span></div></div>`; };
 
         if(futuros.length > 0) { futuros.forEach(e => html += renderEv(e)); } else { html += '<p class="text-muted center">Sem eventos futuros.</p>'; }
         if(passados.length > 0) { html += '<div class="calendar-divider" style="margin-top:20px;"><span>Passados</span></div>'; passados.forEach(e => html += renderEv(e)); }
@@ -604,10 +570,7 @@ async function carregarAgendaEE() {
     } catch(e) {}
 }
 
-let eeHorarioModo = 'dia'; 
-let eeHorarioDiaOffset = 0;
-let eeHorarioSemanaOffset = 0;
-
+let eeHorarioModo = 'dia'; let eeHorarioDiaOffset = 0; let eeHorarioSemanaOffset = 0;
 document.getElementById('btn-horario-dia')?.addEventListener('click', (e) => { eeHorarioModo = 'dia'; e.currentTarget.classList.add('active'); document.getElementById('btn-horario-grelha').classList.remove('active'); carregarHorarioEE(); });
 document.getElementById('btn-horario-grelha')?.addEventListener('click', (e) => { eeHorarioModo = 'grelha'; e.currentTarget.classList.add('active'); document.getElementById('btn-horario-dia').classList.remove('active'); carregarHorarioEE(); });
 document.getElementById('btn-ee-prev-horario')?.addEventListener('click', () => { if(eeHorarioModo === 'dia') eeHorarioDiaOffset--; else eeHorarioSemanaOffset--; carregarHorarioEE(); });
@@ -624,8 +587,7 @@ const getCorEspecial = (dsc) => {
 };
 
 async function carregarHorarioEE() {
-    const subContainer = document.getElementById('ee-horario-content');
-    subContainer.innerHTML = '<p class="text-muted center">A gerar horário...</p>';
+    const subContainer = document.getElementById('ee-horario-content'); subContainer.innerHTML = '<p class="text-muted center">A gerar horário...</p>';
     if(!turmaAtual) return;
 
     try {
@@ -634,19 +596,9 @@ async function carregarHorarioEE() {
         
         let profsCache = {};
         const pSnap = await getDocs(query(collection(db, "utilizadores"), where("papel", "==", "professor"), where("turmas", "array-contains", turmaAtual)));
-        pSnap.forEach(d => {
-            const profData = d.data();
-            if (profData.disciplinas) {
-                profData.disciplinas.forEach(dsc => {
-                    profsCache[dsc] = profData.nome ? profData.nome.split(' ')[0] : 'Desconhecido';
-                });
-            }
-        });
+        pSnap.forEach(d => { const profData = d.data(); if (profData.disciplinas) { profData.disciplinas.forEach(dsc => { profsCache[dsc] = profData.nome ? profData.nome.split(' ')[0] : 'Desconhecido'; }); } });
 
-        const blocosKeys = ['1', '2', '3', '4', '1300', '5', '6', '7'];
-        const blocosTempo = { '1': '08:30', '2': '09:35', '3': '10:50', '4': '11:55', '1300': '13:00', '5': '14:05', '6': '15:15', '7': '16:20' };
-        const diasMap = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-        const fDt = (dt) => `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;
+        const blocosKeys = ['1', '2', '3', '4', '1300', '5', '6', '7']; const blocosTempo = { '1': '08:30', '2': '09:35', '3': '10:50', '4': '11:55', '1300': '13:00', '5': '14:05', '6': '15:15', '7': '16:20' }; const diasMap = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']; const fDt = (dt) => `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;
 
         if (eeHorarioModo === 'dia') {
             let targetDate = new Date(); targetDate.setDate(targetDate.getDate() + eeHorarioDiaOffset);
@@ -658,33 +610,26 @@ async function carregarHorarioEE() {
             blocosKeys.forEach(bId => {
                 const disc = hb[`${dataStr}_${bId}`];
                 if(disc) {
-                    const sty = getCorEspecial(disc);
-                    const profNome = profsCache[disc] ? `Prof. ${profsCache[disc]}` : 'Prof. A Atribuir';
+                    const sty = getCorEspecial(disc); const profNome = profsCache[disc] ? `Prof. ${profsCache[disc]}` : 'Prof. A Atribuir';
                     html += `<div class="horario-list-item" style="border-left-color:${sty.c}; background-color:${sty.bg};"><div class="horario-time-col">${blocosTempo[bId]}</div><div class="horario-disc-col"><div class="horario-disc-name">${disc}</div><div class="horario-prof">${profNome}</div></div></div>`;
                     temAulasDia = true;
                 }
             });
             subContainer.innerHTML = temAulasDia ? html : '<p class="text-muted center" style="margin-top:30px;">Sem aulas agendadas para este dia.</p>';
         } else {
-            let dtT = new Date(); dtT.setDate(dtT.getDate() + (eeHorarioSemanaOffset * 7));
-            dtT.setDate(dtT.getDate() - (dtT.getDay() === 0 ? 6 : dtT.getDay() - 1));
+            let dtT = new Date(); dtT.setDate(dtT.getDate() + (eeHorarioSemanaOffset * 7)); dtT.setDate(dtT.getDate() - (dtT.getDay() === 0 ? 6 : dtT.getDay() - 1));
             let dEnd = new Date(dtT); dEnd.setDate(dEnd.getDate() + 4);
             document.getElementById('ee-horario-display').innerText = `${fDt(dtT)} a ${fDt(dEnd)}`;
 
-            let html = '<div class="horario-grid"><div class="horario-header"></div>';
-            let dtIter = new Date(dtT);
+            let html = '<div class="horario-grid"><div class="horario-header"></div>'; let dtIter = new Date(dtT);
             ['SEG','TER','QUA','QUI','SEX'].forEach(d => { html += `<div class="horario-header">${d}<span>${fDt(dtIter)}</span></div>`; dtIter.setDate(dtIter.getDate()+1); });
             
             blocosKeys.forEach(bId => {
-                html += `<div class="horario-time">${blocosTempo[bId]}</div>`;
-                dtIter = new Date(dtT);
+                html += `<div class="horario-time">${blocosTempo[bId]}</div>`; dtIter = new Date(dtT);
                 for(let i=0; i<5; i++) {
-                    const dStr = `${dtIter.getFullYear()}-${String(dtIter.getMonth()+1).padStart(2,'0')}-${String(dtIter.getDate()).padStart(2,'0')}`;
-                    const disc = hb[`${dStr}_${bId}`];
-                    if(disc) {
-                        const sty = getCorEspecial(disc);
-                        html += `<div class="horario-slot" style="padding:2px; border: 1px solid ${sty.c}; background-color: ${sty.bg}; color: var(--text-light);"><strong>${disc}</strong></div>`;
-                    } else html += `<div class="horario-slot"></div>`;
+                    const dStr = `${dtIter.getFullYear()}-${String(dtIter.getMonth()+1).padStart(2,'0')}-${String(dtIter.getDate()).padStart(2,'0')}`; const disc = hb[`${dStr}_${bId}`];
+                    if(disc) { const sty = getCorEspecial(disc); html += `<div class="horario-slot" style="padding:2px; border: 1px solid ${sty.c}; background-color: ${sty.bg}; color: var(--text-light);"><strong>${disc}</strong></div>`; } 
+                    else html += `<div class="horario-slot"></div>`;
                     dtIter.setDate(dtIter.getDate()+1);
                 }
             });
@@ -696,15 +641,11 @@ async function carregarHorarioEE() {
 // 6. CHAT E JUSTIFICAÇÕES 
 let chatUnsubscribeEE = null;
 function iniciarChatEE() {
-    const chatContainer = document.getElementById('ee-chat-messages-container');
-    if(!educandoAtualId) return;
-    if(chatUnsubscribeEE) chatUnsubscribeEE();
+    const chatContainer = document.getElementById('ee-chat-messages-container'); if(!educandoAtualId) return; if(chatUnsubscribeEE) chatUnsubscribeEE();
     chatUnsubscribeEE = onSnapshot(query(collection(db, "utilizadores", educandoAtualId, "chat_dt"), orderBy("timestamp")), (snapshot) => {
         let html = '';
         snapshot.forEach(doc => {
-            const msg = doc.data(); const isMe = msg.remetente === myUserName || msg.autor === 'ee';
-            const classe = isMe ? 'admin' : 'student'; 
-            const autorLabel = isMe ? 'Tu' : (msg.autor === 'dt' ? 'Diretor de Turma' : msg.remetente);
+            const msg = doc.data(); const isMe = msg.remetente === myUserName || msg.autor === 'ee'; const classe = isMe ? 'admin' : 'student'; const autorLabel = isMe ? 'Tu' : (msg.autor === 'dt' ? 'Diretor de Turma' : msg.remetente);
             html += `<div class="chat-bubble ${classe}"><strong style="color:var(--text-light);">${autorLabel}</strong><br>${msg.texto}<span class="chat-meta">${new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span></div>`;
         });
         if(html === '') html = '<p class="text-muted center" style="margin-top:40px;"><i class="fa-solid fa-comments" style="font-size:3rem; opacity:0.2; display:block; margin-bottom:15px;"></i>Inicie aqui a comunicação.</p>';
@@ -715,10 +656,8 @@ document.getElementById('btn-ee-send-msg')?.addEventListener('click', async () =
 
 let atestadoBase64 = "";
 document.getElementById('ee-upload-atestado')?.addEventListener('change', (e) => {
-    const file = e.target.files[0]; if(!file) return;
-    if(file.size > 2097152) { alert("Ficheiro demasiado grande! Máx 2MB."); return; } 
-    document.getElementById('ee-atestado-file-name').innerText = "Ficheiro: " + file.name;
-    document.getElementById('btn-ee-enviar-atestado').style.display = 'block';
+    const file = e.target.files[0]; if(!file) return; if(file.size > 2097152) { alert("Ficheiro demasiado grande! Máx 2MB."); return; } 
+    document.getElementById('ee-atestado-file-name').innerText = "Ficheiro: " + file.name; document.getElementById('btn-ee-enviar-atestado').style.display = 'block';
     const reader = new FileReader(); reader.onload = (ev) => { atestadoBase64 = ev.target.result; }; reader.readAsDataURL(file);
 });
 document.getElementById('btn-ee-enviar-atestado')?.addEventListener('click', async (e) => {
