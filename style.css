@@ -364,7 +364,7 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 [data-theme="light"] {
     --bg-dark: #f0f2f5;
     --bg-card: #ffffff;
-    --text-light: #111827; 
+    --text-light: #1a1a1a; 
     --text-muted: #6b7280;
 }
 
@@ -374,12 +374,13 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 [data-theme="light"] .input-padrao {
     background-color: #ffffff;
     border: 1px solid #d1d5db;
-    color: #111827;
+    color: #1a1a1a;
 }
 
 [data-theme="light"] .card, 
 [data-theme="light"] .login-box,
-[data-theme="light"] .action-sheet {
+[data-theme="light"] .action-sheet,
+[data-theme="light"] .calendar-event-card {
     border-color: #e5e7eb;
     box-shadow: 0 4px 20px rgba(0,0,0,0.05);
 }
@@ -395,10 +396,29 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
     border-bottom: 1px solid #e5e7eb;
 }
 
-[data-theme="light"] .styled-table th {
-    background-color: rgba(0, 204, 136, 0.1);
+[data-theme="light"] .styled-table th { background-color: rgba(0, 204, 136, 0.1); }
+[data-theme="light"] .styled-table td { border-bottom: 1px solid #e5e7eb; }
+
+/* Forçar a inversão das cores engessadas a branco */
+[data-theme="light"] .ee-summary-value,
+[data-theme="light"] .sub-media-value,
+[data-theme="light"] .disciplina-title,
+[data-theme="light"] .horario-disc-name,
+[data-theme="light"] .calendar-date-box .day,
+[data-theme="light"] .calendar-info h4,
+[data-theme="light"] .chat-bubble.student,
+[data-theme="light"] .chat-bubble.admin,
+[data-theme="light"] .file-name-display,
+[data-theme="light"] strong {
+    color: var(--text-light) !important;
 }
 
-[data-theme="light"] .styled-table td {
-    border-bottom: 1px solid #e5e7eb;
-}
+/* O fundo dos botões verdes deve manter o texto branco! */
+[data-theme="light"] .primary-btn { color: #ffffff !important; }
+[data-theme="light"] .primary-btn * { color: #ffffff !important; }
+
+/* As Setas e Elementos do Horário */
+[data-theme="light"] .week-nav-bar button i { color: var(--text-light); }
+[data-theme="light"] .horario-header { background: #e5e7eb; color: var(--text-light); border-color: #d1d5db; }
+[data-theme="light"] .horario-header span { color: var(--text-muted); }
+[data-theme="light"] .horario-slot.filled { background: rgba(0, 204, 136, 0.1); color: var(--text-light) !important; border: 1px solid var(--primary-green); }
