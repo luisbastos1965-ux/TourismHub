@@ -357,3 +357,48 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .horario-slot { background: var(--bg-card); border: 1px solid #333; border-radius: 4px; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: 0.75rem; padding: 2px; transition: 0.2s; cursor: pointer; position: relative;}
 .horario-slot.filled { background: rgba(0, 204, 136, 0.1); border-color: var(--primary-green); color: white; }
 .horario-slot.special { background: rgba(184, 43, 242, 0.15); border-color: #b82bf2; color: white; }
+
+/* =========================================
+   SISTEMA DE TEMA CLARO (LIGHT MODE)
+========================================= */
+[data-theme="light"] {
+    --bg-dark: #f0f2f5;
+    --bg-card: #ffffff;
+    --text-light: #111827; 
+    --text-muted: #6b7280;
+}
+
+[data-theme="light"] input, 
+[data-theme="light"] select, 
+[data-theme="light"] textarea,
+[data-theme="light"] .input-padrao {
+    background-color: #ffffff;
+    border: 1px solid #d1d5db;
+    color: #111827;
+}
+
+[data-theme="light"] .card, 
+[data-theme="light"] .login-box,
+[data-theme="light"] .action-sheet {
+    border-color: #e5e7eb;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+
+[data-theme="light"] .bottom-nav {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-top: 1px solid #e5e7eb;
+    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .app-header {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+[data-theme="light"] .styled-table th {
+    background-color: rgba(0, 204, 136, 0.1);
+}
+
+[data-theme="light"] .styled-table td {
+    border-bottom: 1px solid #e5e7eb;
+}
