@@ -7,6 +7,11 @@
     <link rel="icon" type="image/png" href="logo_tur.png">
     <link rel="stylesheet" href="style.css?v=10">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        // MEMÓRIA DO TEMA: Carrega o tema imediatamente para evitar cintilação
+        const currentTheme = localStorage.getItem('turmapro_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+    </script>
 </head>
 <body>
     <div id="app-content">
@@ -61,7 +66,7 @@
                     </div>
                 </div>
 
-                <!-- NOVO: RESUMO PERCURSO PROFISSIONAL (FCT / PAP) -->
+                <!-- RESUMO PERCURSO PROFISSIONAL (FCT / PAP) -->
                 <div class="card" id="card-percurso-prof" style="display:none; border-left: 4px solid var(--text-muted); cursor: pointer; transition: 0.2s;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                         <h3 style="font-size: 1.1rem; color: #0099ff; margin:0;"><i class="fa-solid fa-briefcase"></i> Percurso Profissional</h3>
@@ -76,12 +81,13 @@
                     <div style="text-align:center; margin-top:12px; font-size:0.75rem; color:var(--text-muted);"><i class="fa-solid fa-hand-pointer"></i> Tocar para ver detalhes da FCT e PAP</div>
                 </div>
 
+                <!-- Botões de Ação Rápida Otimizados (Sem Ícones) -->
                 <div style="display: flex; gap: 10px; margin-top: 15px;">
                     <button class="primary-btn" id="btn-quick-justificar" style="background-color: var(--success-green); flex: 1; padding: 18px 10px;">
-                        <i class="fa-solid fa-file-medical"></i><br><span style="font-size:0.8rem; font-weight:normal; margin-top:5px;">Justificar Falta</span>
+                        <span style="font-size:1rem; font-weight:bold; color:white;">Justificar Falta</span>
                     </button>
                     <button class="primary-btn" id="btn-quick-mensagem" style="background-color: var(--warning-yellow); color: black; flex: 1; padding: 18px 10px;">
-                        <i class="fa-solid fa-envelope"></i><br><span style="font-size:0.8rem; font-weight:normal; margin-top:5px;">Falar com DT</span>
+                        <span style="font-size:1rem; font-weight:bold;">Falar com DT</span>
                     </button>
                 </div>
             </div>
@@ -161,12 +167,9 @@
                 </div>
             </div>
 
-            <!-- RESTANTES VISTAS (Inalteradas) -->
-            <!-- 2. CADERNETA E LINHA TEMPORAL -->
             <!-- 2. CADERNETA E LINHA TEMPORAL -->
             <div id="view-ee-caderneta" style="display: none;">
                 <div class="class-header"><h2 class="section-title">Caderneta do Aluno</h2></div>
-                <!-- Nova Grelha 2x3 -->
                 <div class="falta-tabs" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; justify-content:center; margin-bottom: 20px;">
                     <button class="falta-tab-btn active" id="tab-ee-timeline">Linha Temporal</button>
                     <button class="falta-tab-btn" id="tab-ee-notas">Notas</button>
