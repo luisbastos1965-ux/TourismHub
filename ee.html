@@ -160,16 +160,17 @@
                 </div>
             </div>
 
-            <!-- 2. CADERNETA E LINHA TEMPORAL -->
+            <!-- 2. CADERNETA (Sem título para poupar espaço) -->
             <div id="view-ee-caderneta" style="display: none;">
                 <div class="falta-tabs" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; justify-content:center; margin-bottom: 20px;">
                     <button class="falta-tab-btn active" id="tab-ee-timeline">Linha Temporal</button>
                     <button class="falta-tab-btn" id="tab-ee-notas">Notas</button>
-                    <button class="falta-tab-btn" id="tab-ee-faltas">Faltas</button>
+                    <button class="falta-tab-btn" id="tab-ee-faltas">Faltas e Risco</button>
                     <button class="falta-tab-btn" id="tab-ee-prhfs">PRHFs</button>
                     <button class="falta-tab-btn" id="tab-ee-comportamento">Comportamento</button>
                     <button class="falta-tab-btn" id="tab-ee-reunioes">Reuniões</button>
                 </div>
+                
                 <div id="filtro-caderneta-container" style="display:none; margin-bottom: 15px;">
                     <select id="filtro-caderneta-disc" style="margin:0; background-color: var(--bg-dark); border-radius: 8px;"><option value="">Todas as Disciplinas</option></select>
                 </div>
@@ -200,7 +201,7 @@
                 <div id="ee-horario-content" style="margin-top:15px; overflow-x: auto;"></div>
             </div>
 
-            <!-- CHAT, JUSTIFICAR, NOTIFICAÇÕES -->
+            <!-- CHAT E JUSTIFICAR -->
             <div id="view-ee-chat" style="display: none; flex-direction: column; height: 75vh;">
                 <div class="class-header" style="margin-bottom: 10px;"><button id="btn-voltar-chat-ee" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Início</button></div>
                 <div class="forum-messages" id="ee-chat-messages-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:15px; background: var(--bg-card); border-radius: 12px 12px 0 0; border: 1px solid #333; border-bottom: none;"></div>
@@ -240,6 +241,17 @@
             <a href="#" class="nav-item" data-target="view-ee-agenda"><i class="fa-regular fa-calendar-check"></i><span>Agenda</span></a>
             <a href="#" class="nav-item" data-target="view-ee-horario"><i class="fa-solid fa-clock"></i><span>Horário</span></a>
         </nav>
+    </div>
+
+    <!-- MODAL PAUTA GLOBAL -->
+    <div id="modal-pauta-global" class="modal-overlay">
+        <div class="action-sheet" style="max-width: 600px; width: 95%; max-height: 85vh; overflow-y: auto; padding: 20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                <h2 style="color: var(--primary-green); font-size:1.3rem; margin:0;"><i class="fa-solid fa-table-list"></i> Pauta Global</h2>
+                <button id="btn-close-pauta" style="background:none; border:none; color:var(--text-muted); font-size:1.5rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="pauta-global-content"><p class="text-muted" style="text-align:center;">A compilar notas...</p></div>
+        </div>
     </div>
 
     <script type="module" src="./js/ee-app.js?v=13"></script>
