@@ -4,13 +4,95 @@ import { doc, getDoc, collection, getDocs, query, addDoc, onSnapshot, orderBy, w
 
 let myUserId = ""; let myUserName = ""; let educandosArray = []; let educandoAtualId = ""; let turmaAtual = "";
 
-// A MATRIZ FONTE DA VERDADE (Substitui nomes e horas aqui se necessário!)
-const matrizCurso = {
-    "Sociocultural": { "PORT": {"M1": 27, "M2": 24, "M3": 27}, "ING": {"M1": 24, "M2": 24, "M3": 24}, "AI": {"M1": 30, "M2": 30}, "EF": {"M1": 20, "M2": 20, "M3": 20, "M4": 20, "M5": 20}, "TIC": {"M1": 24, "M2": 24, "M3": 27, "M4": 24} },
-    "Científica": { "GEO": {"M1": 27, "M2": 24}, "HCA": {"M1": 24, "M2": 24, "M3": 27}, "MAT": {"M1": 30, "M2": 30, "M3": 30} },
-    "Técnica": { "CF": {"M1": 30, "M2": 30, "M3": 30}, "TIAT": {"M1": 25, "M2": 25, "M3": 25, "M4": 25}, "TCAT": {"M1": 25, "M2": 25, "M3": 25, "M4": 25}, "OTET": {"M1": 25, "M2": 25, "M3": 25, "M4": 25} }
+// ==========================================
+// A MATRIZ DE REFERÊNCIA OFICIAL (DADOS EXTRAÍDOS)
+// ==========================================
+const matrizAmbos = {
+    "Sociocultural": {
+        "PORT": {"1": 33, "2": 34, "3": 33, "4": 33, "5": 34, "6": 33, "7": 40, "8": 40, "9": 40},
+        "ING": {"1": 27, "2": 24, "3": 24, "4": 24, "5": 24, "6": 24, "7": 24, "8": 24, "9": 24},
+        "AI": {"1": 36, "2": 36, "3": 36, "4": 36, "5": 37, "6": 39},
+        "EF": {"1": 10, "2": 8, "3": 10, "4": 10, "5": 10, "6": 12, "7": 6, "8": 12, "9": 8, "10": 10, "11": 12, "12": 8, "13": 6, "14": 10, "15": 6, "16": 2},
+        "TIC": {"1": 25, "2": 25, "3": 25, "4": 25}
+    },
+    "Científica": {
+        "GEO": {"1": 33, "2": 33, "3": 30, "4": 26, "5": 21, "6": 21, "7": 21, "8": 15},
+        "HCA": {"1": 20, "2": 18, "3": 18, "4": 18, "5": 24, "6": 18, "7": 18, "8": 24, "9": 21, "10": 21},
+        "MAT": {"1": 33, "2": 27, "3": 20, "4": 20}
+    }
 };
 
+const matrizAntigoTecnica = {
+    "CF": {"1": 24, "2": 21, "3": 21, "4": 21, "5": 21, "6": 21, "7": 9, "8": 15, "9": 15},
+    "TIAT": {"1": 27, "2": 24, "3": 24, "4": 24, "5": 33, "6": 30, "7": 30, "8": 30, "9": 36, "10": 30, "11": 33, "12": 30, "13": 24},
+    "TCAT": {"1": 33, "2": 33, "3": 30, "4": 33, "5": 36, "6": 36, "7": 24},
+    "OTET": {"1": 24, "2": 24, "3": 33, "4": 30, "5": 24, "6": 24, "7": 36, "8": 27, "9": 33, "10": 30, "11": 30, "12": 17}
+};
+
+const matrizNovoTecnica = {
+    "AET": { "1": 20, "UC00038": 20, "2": 20, "UC03611": 20, "3": 40, "UC03623": 40, "4": 40, "UC03612": 40, "5": 20, "UC03613": 20, "6": 40, "UC03614": 40, "7": 20, "UC00056": 20, "8": 40, "UC03631": 40, "9": 20, "UC00063": 20 },
+    "OGOT": { "1": 20, "UC03629": 20, "2": 40, "UC03619": 40, "3": 40, "UC03621": 40, "4": 20, "UC00055": 20, "5": 20, "UC03630": 20, "6": 20, "UC03616": 20, "7": 40, "UC03617": 40, "8": 20, "UC03618": 20, "9": 40, "UC03620": 40, "10": 40, "UC03628": 40, "11": 20, "UC03632": 20 },
+    "CMET": { "1": 30, "UC00034": 30, "2": 30, "UC00033": 30, "3": 20, "UC00593": 20, "4": 40, "UC03622": 40, "5": 40, "UC03623": 40, "6": 30, "UC00031": 30, "7": 30, "UC00032": 30, "8": 20, "UC00433": 20, "9": 20, "UC03624": 20, "10": 20, "UC03627": 20 },
+    "LNTT": { "1": 50, "UC00044": 50, "2": 50, "UC00071": 50, "3": 40, "UC03615": 40, "4": 20, "UC03625": 20 }
+};
+
+// O Detetive que escolhe a matriz consoante o ano do aluno
+function getMatriz() {
+    const anoMatch = turmaAtual.match(/\d+/);
+    const ano = anoMatch ? parseInt(anoMatch[0]) : 10;
+    let m = JSON.parse(JSON.stringify(matrizAmbos));
+    m["Técnica"] = (ano >= 11) ? matrizAntigoTecnica : matrizNovoTecnica;
+    return m;
+}
+
+function getMatrizMap() {
+    const anoMatch = turmaAtual.match(/\d+/);
+    const ano = anoMatch ? parseInt(anoMatch[0]) : 10;
+    return {
+        "Sociocultural": Object.keys(matrizAmbos["Sociocultural"]),
+        "Científica": Object.keys(matrizAmbos["Científica"]),
+        "Técnica": (ano >= 11) ? Object.keys(matrizAntigoTecnica) : Object.keys(matrizNovoTecnica)
+    };
+}
+
+function obterDisciplinasDaMatriz() {
+    const map = getMatrizMap();
+    return [...map["Sociocultural"], ...map["Científica"], ...map["Técnica"]];
+}
+
+async function obterDisciplinasDaTurma() {
+    const dSet = new Set();
+    const ignorar = ['ALM', 'VISITA', 'FCT', 'PAP', 'PRHF', 'ALMOÇO', 'LIVRE', 'REUNIÃO', 'ESTUDO', 'TESTE', 'AVALIAÇÃO'];
+    
+    try {
+        const docSnap = await getDoc(doc(db, "turmas", turmaAtual));
+        if(docSnap.exists() && docSnap.data().horario) {
+            Object.values(docSnap.data().horario).forEach(v => {
+                if(v && typeof v === 'string' && !ignorar.includes(v.toUpperCase())) dSet.add(v);
+            });
+        }
+        
+        const notasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
+        notasSnap.forEach(d => {
+            if (d.data().disciplina && !ignorar.includes(d.data().disciplina.toUpperCase())) { dSet.add(d.data().disciplina); }
+        });
+    } catch(e){}
+
+    let arrDisciplinas = Array.from(dSet).filter(d => d && d.trim() !== '');
+    const ordemOficial = obterDisciplinasDaMatriz(); 
+    
+    if (arrDisciplinas.length === 0) { return ordemOficial; }
+
+    return arrDisciplinas.sort((a, b) => {
+        let indexA = ordemOficial.indexOf(a); let indexB = ordemOficial.indexOf(b);
+        if (indexA === -1) indexA = 999; if (indexB === -1) indexB = 999;
+        return indexA - indexB;
+    });
+}
+
+// ==========================================
+// ARRANQUE E NAVEGAÇÃO BÁSICA
+// ==========================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         myUserId = user.email.split('@')[0];
@@ -35,7 +117,7 @@ onAuthStateChanged(auth, async (user) => {
                     document.getElementById('ee-dashboard').innerHTML = '<p class="text-muted center" style="margin-top:50px;">Sem educandos associados na base de dados.</p>';
                 }
             } else window.location.href = "index.html"; 
-        } catch (e) {}
+        } catch (e) { console.error("Erro no Auth:", e); }
     } else window.location.href = "index.html"; 
 });
 
@@ -88,17 +170,6 @@ async function carregarDadosDoFilhoSelecionado() {
 }
 
 /* ==========================================
-   OBTER DISCIPLINAS (Lê diretamente da Matriz para não faltar nenhuma)
-========================================== */
-function obterDisciplinasDaMatriz() {
-    let arrayDisc = [];
-    Object.values(matrizCurso).forEach(comp => {
-        Object.keys(comp).forEach(d => arrayDisc.push(d));
-    });
-    return arrayDisc;
-}
-
-/* ==========================================
    PERCURSO PROFISSIONAL (FCT & PAP) 
 ========================================== */
 function getUniformCircle(status) {
@@ -120,7 +191,6 @@ function carregarPercursoProfissional(alunoData) {
     const miniFct = document.getElementById('resumo-mini-fct');
     const miniPap = document.getElementById('resumo-mini-pap');
     const btnPap = document.getElementById('btn-tab-pap');
-    
     if(!cardResumo) return;
 
     miniFct.style.display = 'none'; miniPap.style.display = 'none'; btnPap.style.display = 'none';
@@ -212,23 +282,21 @@ async function carregarResumoDashboard() {
 
     try {
         const notasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
+        const map = getMatrizMap();
+        
         notasSnap.forEach(d => {
             const val = d.data().nota; const disc = d.data().disciplina;
             if(val !== 'REP' && !isNaN(val)) {
                 const vNum = Number(val); sumG += vNum; countG++;
-                
-                let belongsToSocio = false; let belongsToCient = false;
-                if(matrizCurso["Sociocultural"] && matrizCurso["Sociocultural"][disc]) belongsToSocio = true;
-                if(matrizCurso["Científica"] && matrizCurso["Científica"][disc]) belongsToCient = true;
-                
-                if (belongsToSocio) { sumS += vNum; countS++; }
-                else if (belongsToCient) { sumC += vNum; countC++; }
+                if (map["Sociocultural"].includes(disc)) { sumS += vNum; countS++; }
+                else if (map["Científica"].includes(disc)) { sumC += vNum; countC++; }
                 else { sumT += vNum; countT++; } 
             }
         });
         const mG = countG > 0 ? (sumG/countG).toFixed(1) : '-';
         document.getElementById('resumo-media').innerText = mG;
         document.getElementById('resumo-media').style.color = (mG !== '-' && mG < 10) ? 'var(--danger-red)' : 'var(--primary-green)';
+        
         document.getElementById('resumo-med-socio').innerText = countS > 0 ? (sumS/countS).toFixed(1) : '-';
         document.getElementById('resumo-med-cient').innerText = countC > 0 ? (sumC/countC).toFixed(1) : '-';
         document.getElementById('resumo-med-tec').innerText = countT > 0 ? (sumT/countT).toFixed(1) : '-';
@@ -278,6 +346,7 @@ navItems.forEach(item => {
 document.getElementById('btn-quick-mensagem')?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); esconderTodasAsVistas(); document.getElementById('view-ee-chat').style.display = 'flex'; iniciarChatEE(); });
 document.getElementById('btn-quick-justificar')?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); esconderTodasAsVistas(); document.getElementById('view-ee-justificar').style.display = 'block'; carregarAtestadosEE(); });
 document.querySelectorAll('#btn-voltar-chat-ee, #btn-voltar-justificar, #btn-voltar-notificacoes').forEach(btn => { btn?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); document.querySelector('.nav-item[data-target="ee-dashboard"]').classList.add('active'); esconderTodasAsVistas(); document.getElementById('ee-dashboard').style.display = 'block'; }); });
+document.getElementById('btn-open-notificacoes')?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); esconderTodasAsVistas(); document.getElementById('view-ee-notificacoes').style.display = 'block'; document.getElementById('ee-notificacoes-container').innerHTML = '<p class="text-muted center">Alertas futuros aparecerão aqui.</p>'; });
 
 // 4. CADERNETA 
 const tabTimeline = document.getElementById('tab-ee-timeline'); 
@@ -291,8 +360,8 @@ const filtroContainer = document.getElementById('filtro-caderneta-container');
 const filtroDisc = document.getElementById('filtro-caderneta-disc');
 let currentCadernetaTab = tabTimeline;
 
-function preencherFiltrosDisciplinas() {
-    const disciplinas = obterDisciplinasDaMatriz();
+async function preencherFiltrosDisciplinas() {
+    const disciplinas = await obterDisciplinasDaTurma();
     let opt = '<option value="">Todas as Disciplinas</option>';
     disciplinas.forEach(d => opt += `<option value="${d}">${d}</option>`);
     filtroDisc.innerHTML = opt;
@@ -303,7 +372,7 @@ function switchTabConfig(tabClicada, tabsParaDesativar, showFilter) {
     currentCadernetaTab = tabClicada; tabClicada.classList.add('active'); 
     tabsParaDesativar.forEach(t => t.classList.remove('active')); 
     filtroContainer.style.display = showFilter ? 'block' : 'none'; 
-    cadernetaContent.innerHTML = '<p class="text-muted center">A carregar...</p>'; 
+    cadernetaContent.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; 
 }
 
 tabTimeline?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabNotas, tabFaltas, tabPrhfs, tabComportamento, tabReunioes], false); carregarTimelineEE(); });
@@ -341,7 +410,10 @@ async function carregarNotasEE() {
         let disciplinasDoAluno = {};
         notasDb.forEach(d => { const n = d.data(); if(!disciplinasDoAluno[n.disciplina]) disciplinasDoAluno[n.disciplina] = []; disciplinasDoAluno[n.disciplina].push(n); });
         
-        const ordemDisciplinas = obterDisciplinasDaMatriz();
+        let ordemDisciplinas = await obterDisciplinasDaTurma();
+        if(ordemDisciplinas.length === 0) {
+            cadernetaContent.innerHTML = '<p class="text-muted center">Ainda não existem disciplinas associadas. Aguarde lançamento de horário ou avaliações.</p>'; return;
+        }
 
         let html = `<button id="btn-pauta-global" class="primary-btn" style="margin-bottom: 20px; background-color: transparent; border: 1px solid var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-table-list"></i> Pauta Global (3 Anos)</button>`;
         
@@ -369,17 +441,25 @@ async function carregarNotasEE() {
         });
         cadernetaContent.innerHTML = html;
         
+        // Pauta Global Interativa
         document.getElementById('btn-pauta-global')?.addEventListener('click', async () => { 
             document.getElementById('modal-pauta-global').style.display = 'flex'; 
-            const container = document.getElementById('pauta-global-content'); container.innerHTML = '<p class="text-muted" style="text-align:center;">A compilar notas...</p>'; 
+            const container = document.getElementById('pauta-global-content'); 
+            
             try { 
-                const mapNotas = {}; notasDb.forEach(d => { const dt = d.data(); mapNotas[`${dt.disciplina}_${dt.modulo}`] = dt.nota; }); 
+                const mapNotas = {}; 
+                notasDb.forEach(d => { const dt = d.data(); mapNotas[`${dt.disciplina}_${dt.modulo}`] = dt.nota; }); 
+                
+                const matriz = getMatriz();
                 let pHtml = ''; 
-                for (const [nomeComponente, disciplinas] of Object.entries(matrizCurso)) { 
+                for (const [nomeComponente, disciplinas] of Object.entries(matriz)) { 
                     pHtml += `<div class="pauta-global-componente"><div class="pauta-global-header">${nomeComponente}</div>`; 
                     for (const [nomeDisc, modulos] of Object.entries(disciplinas)) { 
                         pHtml += `<div class="pauta-global-disc"><div class="pauta-global-disc-title">${nomeDisc}</div><div class="pauta-global-notas">`; 
-                        for(const mod of Object.keys(modulos)) { 
+                        
+                        const modKeys = Object.keys(modulos).sort((a,b) => parseInt(a) - parseInt(b));
+                        
+                        for(const mod of modKeys) { 
                             const nota = mapNotas[`${nomeDisc}_${mod}`] || 'SN'; let cor = "sn"; 
                             if(nota !== 'SN' && nota !== 'REP' && nota >= 10) cor = "positiva"; 
                             else if(nota === 'REP' || nota < 10) cor = "negativa"; 
@@ -388,7 +468,7 @@ async function carregarNotasEE() {
                         pHtml += `</div></div>`; 
                     } pHtml += `</div>`; 
                 } container.innerHTML = pHtml; 
-            } catch(err) { container.innerHTML = '<p class="text-danger center">Erro ao carregar a pauta.</p>'; } 
+            } catch(err) { container.innerHTML = '<p class="text-danger center">Erro ao compilar pauta.</p>'; } 
         });
         document.getElementById('btn-close-pauta')?.addEventListener('click', () => document.getElementById('modal-pauta-global').style.display = 'none');
 
@@ -413,12 +493,12 @@ async function carregarFaltasEE() {
         if(Object.keys(faltasPorDisc).length === 0) { cadernetaContent.innerHTML = '<p class="text-muted center">Sem faltas injustificadas para mostrar.</p>'; return; }
         
         let html = '';
-        const ordemDisciplinas = obterDisciplinasDaMatriz();
+        const ordemDisciplinas = await obterDisciplinasDaTurma();
+        const matriz = getMatriz();
         
         ordemDisciplinas.forEach(disc => {
             if(faltasPorDisc[disc]) {
-                let discHtml = '';
-                let totalFaltasDisc = 0;
+                let discHtml = ''; let totalFaltasDisc = 0;
                 
                 for(let mod of Object.keys(faltasPorDisc[disc]).sort()) {
                     let sumFaltasMod = 0;
@@ -427,12 +507,11 @@ async function carregarFaltasEE() {
                     
                     // Risco 10%
                     let limiteHoras = 0;
-                    for (const comp of Object.values(matrizCurso)) { if(comp[disc] && comp[disc][mod]) limiteHoras = comp[disc][mod] * 0.1; }
+                    for (const comp of Object.values(matriz)) { 
+                        if(comp[disc] && comp[disc][mod]) { limiteHoras = comp[disc][mod] * 0.1; break; } 
+                    }
                     
-                    let corBarra = 'var(--success-green)';
-                    let txtRisco = 'Regular';
-                    let perc = 0;
-                    
+                    let corBarra = 'var(--success-green)'; let txtRisco = 'Regular'; let perc = 0;
                     if(limiteHoras > 0) {
                         perc = (sumFaltasMod / limiteHoras) * 100;
                         if(perc >= 100) { corBarra = 'var(--danger-red)'; txtRisco = '⚠️ Limite Excedido'; perc = 100; }
@@ -456,7 +535,6 @@ async function carregarFaltasEE() {
                          </div><div class="disciplina-modules">${discHtml}</div>`;
             }
         });
-        
         cadernetaContent.innerHTML = html;
     } catch(e) {}
 }
@@ -518,13 +596,17 @@ async function carregarReunioesEE(reuniaoSelecionada = '1_avaliacao') {
         const docSnap = await getDoc(doc(db, "utilizadores", educandoAtualId, "reunioes", reuniaoSelecionada));
         let dadosReuniao = docSnap.exists() ? docSnap.data() : {};
         
-        const ordemDisciplinas = obterDisciplinasDaMatriz();
+        const ordemDisciplinas = await obterDisciplinasDaTurma();
         let contentHtml = '<div style="display:flex; flex-direction:column; gap:10px;">';
         
-        ordemDisciplinas.forEach(disc => {
-            const comentario = dadosReuniao.disciplinas && dadosReuniao.disciplinas[disc] ? dadosReuniao.disciplinas[disc] : '<span style="color:var(--text-muted);">Sem comentário (SN)</span>';
-            contentHtml += `<div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;"><h4 style="margin-bottom:8px; color:var(--text-light); font-size:1rem;">${disc}</h4><p style="color:var(--text-light); font-size:0.9rem; line-height:1.4; margin:0;">${comentario}</p></div>`;
-        });
+        if (ordemDisciplinas.length === 0) {
+            contentHtml += '<p class="text-muted center">Ainda não existem disciplinas associadas.</p>';
+        } else {
+            ordemDisciplinas.forEach(disc => {
+                const comentario = dadosReuniao.disciplinas && dadosReuniao.disciplinas[disc] ? dadosReuniao.disciplinas[disc] : '<span style="color:var(--text-muted);">Sem comentário (SN)</span>';
+                contentHtml += `<div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;"><h4 style="margin-bottom:8px; color:var(--text-light); font-size:1rem;">${disc}</h4><p style="color:var(--text-light); font-size:0.9rem; line-height:1.4; margin:0;">${comentario}</p></div>`;
+            });
+        }
         
         const global = dadosReuniao.global || '<span style="color:var(--text-muted);">Sem observações globais registadas (SN).</span>';
         contentHtml += `<div class="card" style="margin-top:15px; border:1px solid var(--warning-yellow); background:rgba(255,204,0,0.05); padding:15px;"><h3 style="color:var(--warning-yellow); margin-bottom:10px; font-size:1.1rem;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3><p style="color:var(--text-light); font-size:0.95rem; line-height:1.5; margin:0;">${global}</p></div></div>`;
