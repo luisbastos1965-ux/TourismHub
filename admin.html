@@ -18,21 +18,55 @@
             </div>
         </header>
 
-        <main class="app-content">
-            <!-- DASHBOARD: TODAS AS TURMAS E BACKOFFICE -->
+        <main class="app-content" style="padding-bottom: 80px;">
+            <!-- DASHBOARD: INÍCIO (MODO DEUS) -->
             <div id="admin-dashboard">
-                <div class="dashboard-header"><h2>Gestão Global</h2></div>
+                <div class="dashboard-header"><h2>Centro de Comando</h2></div>
                 
-                <!-- NOVO: BOTÃO DE BACKOFFICE -->
-                <button id="btn-admin-novo-user" class="primary-btn" style="margin-bottom: 25px; background-color: var(--primary-green); color: var(--bg-dark);">
+                <button id="btn-admin-novo-user" class="primary-btn" style="margin-bottom: 25px; background-color: var(--primary-green); color: var(--bg-dark); width: 100%;">
                     <i class="fa-solid fa-user-plus"></i> Criar Novo Perfil de Utilizador
                 </button>
 
+                <!-- Atestados Pendentes (Global) -->
+                <div class="card" style="border-left: 4px solid var(--warning-yellow); margin-bottom: 20px;">
+                    <h3 style="font-size: 1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-file-medical" style="color:var(--warning-yellow);"></i> Atestados Pendentes</h3>
+                    <div id="lista-justificacoes-pendentes-global">
+                        <p class="text-muted center">A ler base de dados...</p>
+                    </div>
+                </div>
+
+                <!-- Alunos em Risco (Global) -->
+                <div class="card" style="background: linear-gradient(135deg, rgba(255, 77, 77, 0.15), rgba(0, 0, 0, 0.3)); border: 1px solid var(--danger-red); margin-bottom: 20px;">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 10px; color: var(--danger-red);"><i class="fa-solid fa-triangle-exclamation"></i> Top Alunos em Risco (Escola)</h3>
+                    <div id="admin-risco-content"><p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A cruzar métricas...</p></div>
+                </div>
+            </div>
+
+            <!-- VISTA: GESTÃO DE TURMAS -->
+            <div id="view-admin-turmas" style="display: none;">
+                <div class="dashboard-header"><h2>Gestão de Turmas</h2></div>
                 <div class="turmas-grid-large">
                     <button class="turma-card-large" data-turma="10T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>10T</h3></div></button>
                     <button class="turma-card-large" data-turma="11T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>11T</h3></div></button>
                     <button class="turma-card-large" data-turma="12T"><div class="tc-icon"><i class="fa-solid fa-users"></i></div><div class="tc-info"><h3>12T</h3></div></button>
-                    <button class="turma-card-large" data-turma="TUR" style="border-left-color: var(--text-muted);"><div class="tc-icon" style="color: var(--text-muted);"><i class="fa-solid fa-globe"></i></div><div class="tc-info"><h3 style="color: var(--text-muted);">TUR</h3><p style="font-size: 0.85rem; color: #777;">Visão Global</p></div></button>
+                    <button class="turma-card-large" data-turma="TUR" style="border-left-color: var(--text-muted);"><div class="tc-icon" style="color: var(--text-muted);"><i class="fa-solid fa-globe"></i></div><div class="tc-info"><h3 style="color: var(--text-muted);">TUR</h3><p style="font-size: 0.85rem; color: #777;">Toda a Escola</p></div></button>
+                </div>
+            </div>
+
+            <!-- VISTA: PROJETOS FCT/PAP (GLOBAL) -->
+            <div id="view-coord-projetos" style="display: none;">
+                <div class="card" style="background: linear-gradient(135deg, rgba(147, 51, 234, 0.15), rgba(0, 0, 0, 0.3)); border: 1px solid #9333ea; margin-bottom: 20px;">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 5px; color: #9333ea;"><i class="fa-solid fa-briefcase"></i> FCT e PAP (Modo Edição)</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-light);">Monitoriza e altera o estado de qualquer projeto em curso.</p>
+                </div>
+
+                <div class="falta-tabs" style="margin-bottom: 15px;">
+                    <button class="falta-tab-btn active" id="tab-coord-fct" style="border-color: #9333ea;">Estágios (FCT)</button>
+                    <button class="falta-tab-btn" id="tab-coord-pap" style="border-color: #9333ea;">Projetos Finais (PAP)</button>
+                </div>
+
+                <div id="lista-coord-projetos-dinamico" style="display: flex; flex-direction: column; gap: 10px;">
+                    <p class="text-muted center">A carregar o ponto de situação...</p>
                 </div>
             </div>
 
@@ -59,13 +93,13 @@
                 <div class="students-list-container"><p class="text-muted">A carregar...</p></div>
             </div>
 
-            <!-- PERFIL DO ALUNO -->
+            <!-- PERFIL DO ALUNO 360 -->
             <div id="student-detail-view" style="display: none;">
                 <div class="class-header">
                     <button id="btn-voltar-lista" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
                     <!-- NOVO: BOTÃO DE EDITAR ALUNO (TRANSIÇÃO DE ANO) -->
                     <button id="btn-admin-editar-aluno" class="secondary-btn small-btn" style="border-color: var(--warning-yellow); color: var(--warning-yellow); margin-left: auto;">
-                        <i class="fa-solid fa-pen"></i> Editar Turma
+                        <i class="fa-solid fa-pen"></i> Editar Ficha
                     </button>
                 </div>
                 
@@ -97,7 +131,27 @@
             <div id="view-informacoes" style="display: none;"><div class="class-header"><button id="btn-voltar-hub-info" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Perfil</button><h2 class="section-title">Informações</h2></div><div class="card"><h3 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-user"></i> Aluno</h3><div id="info-aluno-display"><div class="data-display-group"><span class="data-label">Idade</span><span class="data-value" id="display-aluno-idade">-</span></div><div class="data-display-group"><span class="data-label">Telemóvel</span><span class="data-value clickable-contact" data-type="tel" id="display-aluno-tel">-</span></div><div class="data-display-group"><span class="data-label">Email</span><span class="data-value clickable-contact" data-type="email" id="display-aluno-email">-</span></div><div class="data-display-group"><span class="data-label">Morada</span><span class="data-value" id="display-aluno-morada">-</span></div></div></div><div class="card"><h3 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-user-tie"></i> Encarregado de Educação</h3><div id="info-ee-display"><div class="data-display-group"><span class="data-label">Nome</span><span class="data-value" id="display-ee-nome">-</span></div><div class="data-display-group"><span class="data-label">Filiação</span><span class="data-value" id="display-ee-filiacao">-</span></div><div class="data-display-group"><span class="data-label">Telemóvel</span><span class="data-value clickable-contact" data-type="tel" id="display-ee-tel">-</span></div><div class="data-display-group"><span class="data-label">Email</span><span class="data-value clickable-contact" data-type="email" id="display-ee-email">-</span></div></div></div></div>
             <div id="view-class-calendario" style="display: none;"><div class="class-header"><button id="btn-voltar-cal-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-cal-turma">Calendário</h2></div><div style="display:flex; gap:10px; margin-bottom: 20px;"><button id="btn-abrir-modal-evento" class="primary-btn" style="flex:1;"><i class="fa-solid fa-plus"></i> Novo Evento</button><button id="btn-refresh-calendario" class="secondary-btn" style="width:auto; padding:12px 20px;"><i class="fa-solid fa-rotate-right"></i></button></div><div id="lista-calendario-container"><p class="text-muted">A carregar...</p></div></div>
             <div id="view-class-horario" style="display: none;"><div class="class-header"><button id="btn-voltar-horario-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-horario-turma">Horário</h2></div><div class="week-nav-bar"><button id="btn-prev-week"><i class="fa-solid fa-chevron-left"></i></button><span id="week-display">A carregar semana...</span><button id="btn-next-week"><i class="fa-solid fa-chevron-right"></i></button></div><div class="card" style="padding: 10px;"><div class="horario-grid" id="grid-horario-turma"><div></div><div class="horario-header">SEG <span id="h-seg-dt">--/--</span></div><div class="horario-header">TER <span id="h-ter-dt">--/--</span></div><div class="horario-header">QUA <span id="h-qua-dt">--/--</span></div><div class="horario-header">QUI <span id="h-qui-dt">--/--</span></div><div class="horario-header">SEX <span id="h-sex-dt">--/--</span></div><div class="horario-time">08:30<br>09:30</div><div class="horario-slot" data-dia="seg" data-hora="1"></div><div class="horario-slot" data-dia="ter" data-hora="1"></div><div class="horario-slot" data-dia="qua" data-hora="1"></div><div class="horario-slot" data-dia="qui" data-hora="1"></div><div class="horario-slot" data-dia="sex" data-hora="1"></div></div></div></div>
-            <div id="view-class-forum" style="display: none;"><div class="class-header"><button id="btn-voltar-forum-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-forum-turma">Fóruns da Turma</h2></div><div id="forum-channel-list"><button id="btn-novo-forum" class="primary-btn" style="margin-bottom: 15px;"><i class="fa-solid fa-plus"></i> Criar Novo Canal</button><div class="forum-canais-grid" id="lista-canais-forum"><p class="text-muted" style="text-align:center;">A carregar canais...</p></div></div><div id="forum-chat-view" style="display:none; flex-direction:column; height:75vh; background:var(--bg-card); border-radius:12px; border:1px solid #333; overflow:hidden;"><div style="background:#222; padding:15px; display:flex; align-items:center; gap:10px; border-bottom:1px solid #333;"><button id="btn-voltar-canais" class="secondary-btn small-btn" style="padding:5px 10px; width:auto; border:none;"><i class="fa-solid fa-arrow-left"></i></button><h3 id="chat-active-title" style="color:var(--primary-green); font-size:1.1rem; margin:0; flex:1;">...</h3></div><div class="forum-messages" id="chat-messages-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:15px;"></div><div class="forum-input-area" style="background:#1a1a1a; padding:10px; border-top:1px solid #333; display:flex; gap:8px; align-items:center;"><input type="text" id="input-forum-msg" placeholder="Escreve aqui..." style="margin:0; flex:1; border-radius:20px; padding:10px 15px;"><button id="btn-send-msg" class="forum-send-btn" style="width:40px; height:40px;"><i class="fa-solid fa-paper-plane"></i></button></div></div></div>
+            
+            <!-- VISTA: FÓRUNS GLOBAIS -->
+            <div id="view-class-forum" style="display: none;">
+                <div class="class-header"><h2 class="section-title" id="title-forum-turma">Fóruns da Escola</h2></div>
+                <div id="forum-channel-list">
+                    <button id="btn-novo-forum" class="primary-btn" style="margin-bottom: 15px;"><i class="fa-solid fa-plus"></i> Criar Novo Canal</button>
+                    <div class="forum-canais-grid" id="lista-canais-forum"><p class="text-muted" style="text-align:center;">A carregar canais...</p></div>
+                </div>
+                <div id="forum-chat-view" style="display:none; flex-direction:column; height:75vh; background:var(--bg-card); border-radius:12px; border:1px solid #333; overflow:hidden;">
+                    <div style="background:#222; padding:15px; display:flex; align-items:center; gap:10px; border-bottom:1px solid #333;">
+                        <button id="btn-voltar-canais" class="secondary-btn small-btn" style="padding:5px 10px; width:auto; border:none;"><i class="fa-solid fa-arrow-left"></i></button>
+                        <h3 id="chat-active-title" style="color:var(--primary-green); font-size:1.1rem; margin:0; flex:1;">...</h3>
+                    </div>
+                    <div class="forum-messages" id="chat-messages-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:15px;"></div>
+                    <div class="forum-input-area" style="background:#1a1a1a; padding:10px; border-top:1px solid #333; display:flex; gap:8px; align-items:center;">
+                        <input type="text" id="input-forum-msg" placeholder="Escreve aqui..." style="margin:0; flex:1; border-radius:20px; padding:10px 15px;">
+                        <button id="btn-send-msg" class="forum-send-btn" style="width:40px; height:40px;"><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+
             <div id="view-class-estatisticas" style="display: none;"><div class="class-header"><button id="btn-voltar-stats-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title" id="title-stats-turma">Estatísticas Reais</h2></div><h3 style="margin-bottom: 15px; color: var(--primary-green); font-size: 1rem;"><i class="fa-solid fa-chart-pie"></i> Visão Global</h3><div class="stats-grid"><div class="stat-card"><i class="fa-solid fa-graduation-cap"></i><div class="stat-value" id="stat-media-turma">...</div><div class="stat-label">Média Global</div></div><div class="stat-card"><i class="fa-solid fa-user-clock"></i><div class="stat-value" id="stat-faltas-totais" style="color:var(--danger-red);">...</div><div class="stat-label">Faltas Totais (h)</div></div></div></div>
             <div id="view-validar-justificacoes" style="display: none;"><div class="class-header"><button id="btn-voltar-justificacoes-hub" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Turma</button><h2 class="section-title">Validar Justificações</h2></div><div id="lista-justificacoes-pendentes"><p class="text-muted" style="text-align:center; margin-top:20px;">A procurar atestados...</p></div></div>
             <div id="view-sumarios" style="display: none;">
@@ -145,6 +199,14 @@
             </div>
             
         </main>
+
+        <!-- BARRA DE NAVEGAÇÃO INFERIOR ADMIN -->
+        <nav class="bottom-nav" id="main-bottom-nav">
+            <a href="#" class="nav-item active" data-target="admin-dashboard"><i class="fa-solid fa-house"></i><span>Início</span></a>
+            <a href="#" class="nav-item" data-target="view-admin-turmas"><i class="fa-solid fa-users"></i><span>Turmas</span></a>
+            <a href="#" class="nav-item" data-target="view-coord-projetos"><i class="fa-solid fa-briefcase"></i><span>Projetos</span></a>
+            <a href="#" class="nav-item" data-target="view-class-forum"><i class="fa-regular fa-comments"></i><span>Fóruns</span></a>
+        </nav>
     </div>
 
     <!-- MODAIS GLOBAIS ADMIN (Atestado, Chat EE, FCT/PAP, Eventos, Horário, Fórum) -->
