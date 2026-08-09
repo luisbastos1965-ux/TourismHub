@@ -3,7 +3,7 @@ import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/
 import { doc, getDoc, collection, getDocs, query, addDoc, onSnapshot, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 let myUserId = ""; let myUserName = ""; let educandosArray = []; let educandoAtualId = ""; let turmaAtual = "";
-let chartMediaEE = null; // Variável para o gráfico
+let chartMediaEE = null;
 
 // ==========================================
 // A MATRIZ DE REFERÊNCIA OFICIAL
@@ -47,7 +47,6 @@ function getEmptyState(mensagem, icone = "fa-folder-open") {
             </div>`;
 }
 
-// Detetive do Ano Letivo
 function getMatriz() {
     const anoMatch = turmaAtual.match(/\d+/);
     const ano = anoMatch ? parseInt(anoMatch[0]) : 10;
@@ -124,7 +123,7 @@ onAuthStateChanged(auth, async (user) => {
                     document.getElementById('ee-dashboard').innerHTML = getEmptyState('Sem educandos associados na base de dados.', 'fa-user-group');
                 }
             } else window.location.href = "index.html"; 
-        } catch (e) { console.error("Erro no Auth:", e); }
+        } catch (e) {}
     } else window.location.href = "index.html"; 
 });
 
@@ -176,9 +175,6 @@ async function carregarDadosDoFilhoSelecionado() {
     } catch(e) {}
 }
 
-/* ==========================================
-   PERCURSO PROFISSIONAL (FCT & PAP) 
-========================================== */
 function getUniformCircle(status) {
     if(status === true || status === 'verde') return '🟢';
     if(status === false || status === 'vermelho') return '🔴';
@@ -308,7 +304,6 @@ async function carregarResumoDashboard() {
         document.getElementById('resumo-med-cient').innerText = countC > 0 ? (sumC/countC).toFixed(1) : '-';
         document.getElementById('resumo-med-tec').innerText = countT > 0 ? (sumT/countT).toFixed(1) : '-';
 
-        // Gráfico Doughnut (Novidade Visual)
         const ctx = document.getElementById('eeChartMedia');
         if(ctx) {
             if(chartMediaEE) chartMediaEE.destroy();
@@ -316,34 +311,18 @@ async function carregarResumoDashboard() {
             const valC = countC > 0 ? sumC/countC : 0;
             const valT = countT > 0 ? sumT/countT : 0;
             
-            // Se ainda não houver notas, faz um gráfico cinzento vazio
             if(valS === 0 && valC === 0 && valT === 0) {
                 chartMediaEE = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: { labels: ['Sem Notas'], datasets: [{ data: [1], backgroundColor: ['#374151'], borderWidth: 0 }] },
+                    type: 'doughnut', data: { labels: ['Sem Notas'], datasets: [{ data: [1], backgroundColor: ['#374151'], borderWidth: 0 }] },
                     options: { cutout: '75%', plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false }
                 });
             } else {
                 chartMediaEE = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Sócio.', 'Científica', 'Técnica'],
-                        datasets: [{
-                            data: [valS, valC, valT],
-                            backgroundColor: ['#8b5cf6', '#00d2ff', '#10b981'],
-                            borderWidth: 0,
-                            hoverOffset: 4
-                        }]
-                    },
-                    options: {
-                        cutout: '75%',
-                        plugins: { legend: { display: false } },
-                        maintainAspectRatio: false
-                    }
+                    type: 'doughnut', data: { labels: ['Sócio.', 'Científica', 'Técnica'], datasets: [{ data: [valS, valC, valT], backgroundColor: ['#8b5cf6', '#00d2ff', '#10b981'], borderWidth: 0, hoverOffset: 4 }] },
+                    options: { cutout: '75%', plugins: { legend: { display: false } }, maintainAspectRatio: false }
                 });
             }
         }
-
     } catch(e) {}
 
     try {
@@ -485,24 +464,18 @@ async function carregarNotasEE() {
         });
         cadernetaContent.innerHTML = html;
         
-        // Pauta Global Interativa
         document.getElementById('btn-pauta-global')?.addEventListener('click', async () => { 
             document.getElementById('modal-pauta-global').style.display = 'flex'; 
             const container = document.getElementById('pauta-global-content'); 
-            
             try { 
                 const mapNotas = {}; notasDb.forEach(d => { const dt = d.data(); mapNotas[`${dt.disciplina}_${dt.modulo}`] = dt.nota; }); 
-                
-                const matriz = getMatriz();
-                let pHtml = ''; 
+                const matriz = getMatriz(); let pHtml = ''; 
                 for (const [nomeComponente, disciplinas] of Object.entries(matriz)) { 
                     pHtml += `<div class="pauta-global-componente"><div class="pauta-global-header">${nomeComponente}</div>`; 
                     for (const [nomeDisc, modulos] of Object.entries(disciplinas)) { 
                         pHtml += `<div class="pauta-global-disc"><div class="pauta-global-disc-title">${nomeDisc}</div><div class="pauta-global-notas">`; 
-                        
                         const isNumeric = Object.keys(modulos).every(k => !isNaN(k));
                         const modKeys = isNumeric ? Object.keys(modulos).sort((a,b) => parseInt(a) - parseInt(b)) : Object.keys(modulos);
-                        
                         for(const mod of modKeys) { 
                             const nota = mapNotas[`${nomeDisc}_${mod}`] || 'SN'; let cor = "sn"; 
                             if(nota !== 'SN' && nota !== 'REP' && nota >= 10) cor = "positiva"; 
@@ -551,15 +524,35 @@ async function carregarFaltasEE() {
                     totalFaltasDisc += sumFaltasMod;
                     
                     let limiteHoras = 0;
+                    let totalHorasMod = 0;
                     for (const comp of Object.values(matriz)) { 
-                        if(comp[disc] && comp[disc][mod]) { limiteHoras = Math.round(comp[disc][mod] * 0.1); break; } 
+                        if(comp[disc] && comp[disc][mod]) { 
+                            totalHorasMod = comp[disc][mod];
+                            limiteHoras = Math.round(totalHorasMod * 0.1); 
+                            break; 
+                        } 
                     }
                     
-                    let corBarra = 'var(--success-green)'; let txtRisco = 'Regular'; let perc = 0;
-                    if(limiteHoras > 0) {
-                        perc = (sumFaltasMod / limiteHoras) * 100;
-                        if(perc >= 100) { corBarra = 'var(--danger-red)'; txtRisco = '⚠️ Limite Excedido'; perc = 100; }
-                        else if(perc >= 75) { corBarra = 'var(--warning-yellow)'; txtRisco = 'Atenção'; }
+                    let corBarra = 'var(--success-green)'; 
+                    let txtRisco = 'Regular'; 
+                    let perc = 0;
+                    
+                    if(totalHorasMod > 0) {
+                        perc = (sumFaltasMod / totalHorasMod) * 100;
+                        if(perc > 100) perc = 100;
+
+                        if(sumFaltasMod > limiteHoras) { 
+                            corBarra = 'var(--danger-red)'; 
+                            txtRisco = '⚠️ Abaixo de 90% (Reprovado)'; 
+                        }
+                        else if(sumFaltasMod === limiteHoras) { 
+                            corBarra = 'var(--warning-yellow)'; 
+                            txtRisco = 'Atenção (No limite dos 90%)'; 
+                        }
+                        else {
+                            corBarra = 'var(--success-green)';
+                            txtRisco = 'Regular (Acima de 90%)';
+                        }
                     }
 
                     const modLabel = mod.toString().startsWith('UC') ? mod : `Módulo ${mod}`;
@@ -568,7 +561,7 @@ async function carregarFaltasEE() {
                     <div style="background:rgba(0,0,0,0.2); padding:12px; border-radius:8px; border:1px solid #333; margin-bottom:10px;">
                         <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
                             <strong style="color:var(--text-light);">${modLabel}</strong>
-                            <span style="font-size:0.8rem; font-weight:bold; color:${corBarra};">${sumFaltasMod}h / ${limiteHoras > 0 ? limiteHoras+'h' : '?'}</span>
+                            <span style="font-size:0.8rem; font-weight:bold; color:${corBarra};">${sumFaltasMod}h / ${limiteHoras > 0 ? limiteHoras+'h (Limite)' : '?'}</span>
                         </div>
                         <div class="progress-bar-bg" style="margin-top:0; margin-bottom:5px; height:6px;"><div class="progress-bar-fill" style="width: ${perc}%; background-color:${corBarra};"></div></div>
                         <div style="text-align:right; font-size:0.75rem; color:${corBarra};">${txtRisco}</div>
@@ -621,7 +614,7 @@ async function carregarComportamentoEE() {
     } catch(e) {}
 }
 
-async function carregarReunioesEE(reuniaoSelecionada = '1_avaliacao') {
+async function carregarReunioesEE(reuniaoSelecionada = '1_intercalar') {
     const reunioesMenu = [
         {id: '1_intercalar', label: '1ª Intercalar'}, {id: '1_avaliacao', label: '1ª Avaliação'},
         {id: '2_intercalar', label: '2ª Intercalar'}, {id: '2_avaliacao', label: '2ª Avaliação'},
