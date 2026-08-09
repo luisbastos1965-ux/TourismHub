@@ -1,9 +1,10 @@
 import { auth, db } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, collection, getDocs, query, addDoc, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { doc, getDoc, collection, getDocs, query, addDoc, onSnapshot, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 let myUserId = ""; let myUserName = ""; let educandosArray = []; let educandoAtualId = ""; let turmaAtual = "";
 
+// Apenas usado para cálculos matemáticos globais no painel
 const matrizCursoMap = {
     "Sociocultural": ["PORT", "ING", "AI", "EF", "TIC"],
     "Científica": ["GEO", "HCA", "MAT", "FQ", "BG", "MAC"],
@@ -63,9 +64,7 @@ async function construirSeletorEducandos() {
                 opt.text = `${nomeAluno} (${turmaAluno})`;
                 selector.appendChild(opt);
             }
-        } catch(e) {
-            console.error("Erro ao procurar aluno:", id, e);
-        }
+        } catch(e) {}
     }
     
     if(selector.options.length > 0) {
@@ -89,7 +88,17 @@ async function carregarDadosDoFilhoSelecionado() {
         if (docSnap.exists()) {
             turmaAtual = docSnap.data().turma; 
             carregarResumoDashboard(); 
-            carregarPercursoProfissional(docSnap.data());
+            
+            // Lógica de isolamento 10º Ano (Percurso Profissional)
+            const anoMatch = turmaAtual.match(/\d+/);
+            const ano = anoMatch ? parseInt(anoMatch[0]) : 0;
+            if (ano < 11) {
+                document.getElementById('card-percurso-prof').style.display = 'none';
+            } else {
+                document.getElementById('card-percurso-prof').style.display = 'block';
+                carregarPercursoProfissional(docSnap.data());
+            }
+
             preencherFiltrosDisciplinas();
             
             const abaAtivaEl = document.querySelector('.bottom-nav .nav-item.active');
@@ -106,18 +115,32 @@ async function carregarDadosDoFilhoSelecionado() {
 }
 
 /* ==========================================
+   HELPER: OBTER DISCIPLINAS REAIS DA TURMA
+========================================== */
+// Vai ler o horário da turma à BD e devolve apenas as disciplinas que o aluno realmente tem
+async function obterDisciplinasDaTurma() {
+    const dSet = new Set();
+    try {
+        const docSnap = await getDoc(doc(db, "turmas", turmaAtual));
+        if(docSnap.exists() && docSnap.data().horario) {
+            Object.values(docSnap.data().horario).forEach(v => {
+                if(v && v!=='ALM' && v!=='Visita' && v!=='FCT' && v!=='PAP' && v!=='PRHF') dSet.add(v);
+            });
+        }
+    } catch(e){}
+    return Array.from(dSet).sort();
+}
+
+/* ==========================================
    PERCURSO PROFISSIONAL (FCT & PAP) 
 ========================================== */
-
-// Uniformização visual de bolas de estado (🟢 🔴 🟡 ⚪)
 function getUniformCircle(status) {
     if(status === true || status === 'verde') return '🟢';
     if(status === false || status === 'vermelho') return '🔴';
     if(status === 'amarelo') return '🟡';
-    return '⚪'; // Vazio / Pendente
+    return '⚪'; 
 }
 
-// Emblema principal de estado
 function getRiscoBadge(status) {
     if(status === 'verde') return { cor: 'var(--success-green)', txt: '🟢 Normal' };
     if(status === 'amarelo') return { cor: 'var(--warning-yellow)', txt: '🟡 Atenção' };
@@ -133,7 +156,6 @@ function carregarPercursoProfissional(alunoData) {
     
     if(!cardResumo) return;
 
-    cardResumo.style.display = 'none';
     miniFct.style.display = 'none';
     miniPap.style.display = 'none';
     btnPap.style.display = 'none';
@@ -141,18 +163,14 @@ function carregarPercursoProfissional(alunoData) {
     let hasFct = false; let hasPap = false;
     let riscoGeral = null;
 
-    // FCT PROCESSAMENTO (Sem dados fictícios)
     if (alunoData.fct) {
         hasFct = true; miniFct.style.display = 'block';
         const f = alunoData.fct;
-        
         const hr = f.horasRealizadas !== undefined ? Number(f.horasRealizadas) : 0; 
-        const ht = f.horasTotal !== undefined ? Number(f.horasTotal) : '-'; // Se não houver, mostra '-'
+        const ht = f.horasTotal !== undefined ? Number(f.horasTotal) : '-'; 
         const perc = (ht !== '-' && ht > 0) ? Math.round((hr/ht)*100) : 0;
         
         document.getElementById('txt-mini-fct').innerText = ht !== '-' ? `${hr}/${ht} h (${perc}%)` : `${hr} h registadas`;
-        
-        // Vista Detalhada
         document.getElementById('fct-horas-txt').innerText = ht !== '-' ? `${hr} / ${ht} h` : `${hr} h`;
         document.getElementById('fct-perc-txt').innerText = ht !== '-' ? `${perc}%` : '';
         document.getElementById('fct-progresso').style.width = ht !== '-' ? `${perc}%` : '0%';
@@ -175,13 +193,11 @@ function carregarPercursoProfissional(alunoData) {
         document.getElementById('fct-docs-lista').innerHTML = docsHtml;
     }
 
-    // PAP PROCESSAMENTO (Sem dados fictícios, com suporte a datas)
     if (alunoData.pap) {
         hasPap = true; miniPap.style.display = 'block'; btnPap.style.display = 'block';
         const p = alunoData.pap;
         
         document.getElementById('txt-mini-pap').innerText = p.faseAtual || 'A aguardar fase...';
-        
         document.getElementById('pap-tema').innerText = p.tema || 'A aguardar definição de tema...';
         document.getElementById('pap-orientador').innerText = p.orientador || 'Não definido';
         document.getElementById('pap-data').innerText = p.dataDefesa || 'Não definida';
@@ -191,7 +207,7 @@ function carregarPercursoProfissional(alunoData) {
         document.getElementById('pap-badge-risco').innerText = riscoP.txt;
         document.getElementById('pap-card-risco').style.borderLeftColor = riscoP.cor;
         
-        if (riscoGeral !== 'vermelho') { // Vermelho sobrepõe-se sempre
+        if (riscoGeral !== 'vermelho') { 
             if (p.estadoRisco === 'vermelho') riscoGeral = 'vermelho';
             else if (p.estadoRisco === 'amarelo') riscoGeral = 'amarelo';
             else if (!riscoGeral) riscoGeral = p.estadoRisco;
@@ -202,32 +218,23 @@ function carregarPercursoProfissional(alunoData) {
         
         for(let key in fNames) {
             let st = (p.fases && p.fases[key] !== undefined) ? p.fases[key] : null;
-            let statusVal = null;
-            let prazoVal = "";
-            
-            // Lógica para detetar se é apenas uma cor/booleano ou se traz uma "data-limite"
+            let statusVal = null; let prazoVal = "";
             if (st !== null && typeof st === 'object') {
-                statusVal = st.status;
-                prazoVal = st.prazo || "";
-            } else {
-                statusVal = st;
-            }
+                statusVal = st.status; prazoVal = st.prazo || "";
+            } else { statusVal = st; }
 
             let ic = getUniformCircle(statusVal);
             let prazoHtml = prazoVal ? `<br><span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;"><i class="fa-regular fa-calendar"></i> Até: ${prazoVal}</span>` : '';
-
             fasesHtml += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; padding-bottom:8px; margin-bottom:5px;"><div><strong style="color:var(--text-light); font-size:0.9rem;">${fNames[key]}</strong>${prazoHtml}</div> <span style="font-size:1.1rem;">${ic}</span></div>`;
         }
         document.getElementById('pap-fases-lista').innerHTML = fasesHtml;
     }
 
-    // Cor do Cartão Principal
     if(hasFct || hasPap) {
         cardResumo.style.display = 'block';
         const rg = getRiscoBadge(riscoGeral || 'branco');
         const b = document.getElementById('badge-risco-geral');
         
-        // Ajuste visual para o badge principal
         let bgColor = rg.cor === 'var(--text-muted)' ? 'rgba(255,255,255,0.05)' : 
                       rg.cor === 'var(--success-green)' ? 'rgba(40,167,69,0.1)' : 
                       rg.cor === 'var(--warning-yellow)' ? 'rgba(255,204,0,0.1)' : 'rgba(255,77,77,0.1)';
@@ -239,7 +246,6 @@ function carregarPercursoProfissional(alunoData) {
     }
 }
 
-// Navegação FCT/PAP
 document.getElementById('card-percurso-prof')?.addEventListener('click', () => { 
     document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
     esconderTodasAsVistas(); document.getElementById('view-ee-profissional').style.display = 'block'; 
@@ -332,15 +338,16 @@ const tabNotas = document.getElementById('tab-ee-notas');
 const tabFaltas = document.getElementById('tab-ee-faltas'); 
 const tabPrhfs = document.getElementById('tab-ee-prhfs'); 
 const tabComportamento = document.getElementById('tab-ee-comportamento'); 
-const tabReunioes = document.getElementById('tab-ee-reunioes'); // NOVO
+const tabReunioes = document.getElementById('tab-ee-reunioes');
 const cadernetaContent = document.getElementById('ee-caderneta-content'); 
 const filtroContainer = document.getElementById('filtro-caderneta-container'); 
 const filtroDisc = document.getElementById('filtro-caderneta-disc');
 let currentCadernetaTab = tabTimeline;
 
-function preencherFiltrosDisciplinas() {
+async function preencherFiltrosDisciplinas() {
+    const disciplinas = await obterDisciplinasDaTurma();
     let opt = '<option value="">Todas as Disciplinas</option>';
-    Object.values(matrizCursoMap).forEach(arr => { arr.forEach(d => opt += `<option value="${d}">${d}</option>`); });
+    disciplinas.forEach(d => opt += `<option value="${d}">${d}</option>`);
     filtroDisc.innerHTML = opt;
 }
 filtroDisc.addEventListener('change', () => ativarTabCadernetaAtual());
@@ -385,16 +392,19 @@ async function carregarTimelineEE() {
 async function carregarNotasEE() {
     try {
         const notasDb = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
-        let disciplinas = {};
-        notasDb.forEach(d => { const n = d.data(); if(!disciplinas[n.disciplina]) disciplinas[n.disciplina] = []; disciplinas[n.disciplina].push(n); });
+        let disciplinasDoAluno = {};
+        notasDb.forEach(d => { const n = d.data(); if(!disciplinasDoAluno[n.disciplina]) disciplinasDoAluno[n.disciplina] = []; disciplinasDoAluno[n.disciplina].push(n); });
         
-        const ordemDisciplinas = ['PORT', 'ING', 'AI', 'EF', 'TIC', 'GEO', 'HCA', 'MAT', 'CF', 'TIAT', 'TCAT', 'OTET'];
+        const ordemDisciplinas = await obterDisciplinasDaTurma();
+        if(ordemDisciplinas.length === 0) {
+            cadernetaContent.innerHTML = '<p class="text-muted center">Turma sem horário associado.</p>'; return;
+        }
+
         let html = '';
-        
         ordemDisciplinas.forEach(disc => {
-            if(disciplinas[disc] && disciplinas[disc].length > 0) {
+            if(disciplinasDoAluno[disc] && disciplinasDoAluno[disc].length > 0) {
                 let sum = 0; let c = 0; let modsHtml = '';
-                disciplinas[disc].forEach(n => {
+                disciplinasDoAluno[disc].forEach(n => {
                     if(n.nota !== 'REP' && !isNaN(n.nota)) { sum += Number(n.nota); c++; }
                     const cor = (n.nota === 'REP' || Number(n.nota) < 10) ? 'var(--danger-red)' : 'var(--success-green)';
                     modsHtml += `<div class="modulo-row"><span>Módulo ${n.modulo}</span><span style="font-weight:bold; color:${cor};">${n.nota}</span></div>`;
@@ -493,18 +503,15 @@ async function carregarReunioesEE(reuniaoSelecionada = '1_avaliacao') {
     html += '</div><div id="reuniao-content-area"><p class="text-muted center">A carregar dados...</p></div>';
     
     cadernetaContent.innerHTML = html;
-
     document.querySelectorAll('.btn-select-reuniao').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            carregarReunioesEE(e.currentTarget.getAttribute('data-id'));
-        });
+        btn.addEventListener('click', (e) => { carregarReunioesEE(e.currentTarget.getAttribute('data-id')); });
     });
 
     try {
         const docSnap = await getDoc(doc(db, "utilizadores", educandoAtualId, "reunioes", reuniaoSelecionada));
         let dadosReuniao = docSnap.exists() ? docSnap.data() : {};
         
-        const ordemDisciplinas = ['PORT', 'ING', 'AI', 'EF', 'TIC', 'GEO', 'HCA', 'MAT', 'CF', 'TIAT', 'TCAT', 'OTET'];
+        const ordemDisciplinas = await obterDisciplinasDaTurma();
         let contentHtml = '<div style="display:flex; flex-direction:column; gap:10px;">';
         
         ordemDisciplinas.forEach(disc => {
@@ -602,6 +609,18 @@ async function carregarHorarioEE() {
         const docSnap = await getDoc(doc(db, "turmas", turmaAtual));
         let hb = {}; if(docSnap.exists() && docSnap.data().horario) hb = docSnap.data().horario;
         
+        // Cérebro: Procurar o nome real dos professores da turma
+        let profsCache = {};
+        const pSnap = await getDocs(query(collection(db, "utilizadores"), where("papel", "==", "professor"), where("turmas", "array-contains", turmaAtual)));
+        pSnap.forEach(d => {
+            const profData = d.data();
+            if (profData.disciplinas) {
+                profData.disciplinas.forEach(dsc => {
+                    profsCache[dsc] = profData.nome ? profData.nome.split(' ')[0] : 'Desconhecido';
+                });
+            }
+        });
+
         const blocosKeys = ['1', '2', '3', '4', '1300', '5', '6', '7'];
         const blocosTempo = { '1': '08:30', '2': '09:35', '3': '10:50', '4': '11:55', '1300': '13:00', '5': '14:05', '6': '15:15', '7': '16:20' };
         const diasMap = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
@@ -618,7 +637,8 @@ async function carregarHorarioEE() {
                 const disc = hb[`${dataStr}_${bId}`];
                 if(disc) {
                     const sty = getCorEspecial(disc);
-                    html += `<div class="horario-list-item" style="border-left-color:${sty.c}; background-color:${sty.bg};"><div class="horario-time-col">${blocosTempo[bId]}</div><div class="horario-disc-col"><div class="horario-disc-name">${disc}</div><div class="horario-prof">Prof. A Atribuir</div></div></div>`;
+                    const profNome = profsCache[disc] ? `Prof. ${profsCache[disc]}` : 'Prof. A Atribuir'; // Nomes Dinâmicos
+                    html += `<div class="horario-list-item" style="border-left-color:${sty.c}; background-color:${sty.bg};"><div class="horario-time-col">${blocosTempo[bId]}</div><div class="horario-disc-col"><div class="horario-disc-name">${disc}</div><div class="horario-prof">${profNome}</div></div></div>`;
                     temAulasDia = true;
                 }
             });
