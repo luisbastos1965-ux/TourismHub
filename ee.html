@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Turma PRO - Família</title>
     <link rel="icon" type="image/png" href="logo_tur.png">
-    <link rel="stylesheet" href="style.css?v=10">
+    <link rel="stylesheet" href="style.css?v=11">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
-        // MEMÓRIA DO TEMA: Carrega o tema imediatamente para evitar cintilação
         const currentTheme = localStorage.getItem('turmapro_theme') || 'dark';
         document.documentElement.setAttribute('data-theme', currentTheme);
     </script>
@@ -81,13 +80,13 @@
                     <div style="text-align:center; margin-top:12px; font-size:0.75rem; color:var(--text-muted);"><i class="fa-solid fa-hand-pointer"></i> Tocar para ver detalhes da FCT e PAP</div>
                 </div>
 
-                <!-- Botões de Ação Rápida Otimizados (Sem Ícones) -->
+                <!-- Botões de Ação Rápida Otimizados -->
                 <div style="display: flex; gap: 10px; margin-top: 15px;">
                     <button class="primary-btn" id="btn-quick-justificar" style="background-color: var(--success-green); flex: 1; padding: 18px 10px;">
                         <span style="font-size:1rem; font-weight:bold; color:white;">Justificar Falta</span>
                     </button>
-                    <button class="primary-btn" id="btn-quick-mensagem" style="background-color: var(--warning-yellow); color: black; flex: 1; padding: 18px 10px;">
-                        <span style="font-size:1rem; font-weight:bold;">Falar com DT</span>
+                    <button class="primary-btn" id="btn-quick-mensagem" style="background-color: var(--warning-yellow); flex: 1; padding: 18px 10px;">
+                        <span style="font-size:1rem; font-weight:bold; color:black;">Falar com DT</span>
                     </button>
                 </div>
             </div>
@@ -101,11 +100,10 @@
                     <button class="falta-tab-btn" id="btn-tab-pap" style="display:none;">PAP (Projeto Final)</button>
                 </div>
 
-                <!-- CONTEÚDO FCT -->
                 <div id="content-prof-fct" style="display:block;">
                     <div class="card" style="border-left: 4px solid var(--text-muted);" id="fct-card-risco">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <h3 style="margin:0; font-size:1.1rem;">Estado Geral</h3>
+                            <h3 style="margin:0; font-size:1.1rem; color:var(--text-light);">Estado Geral</h3>
                             <span id="fct-badge-risco" style="font-size: 1rem;">⚪ Pendente</span>
                         </div>
                     </div>
@@ -118,24 +116,21 @@
                         </div>
                         <div class="progress-bar-bg"><div class="progress-bar-fill" id="fct-progresso" style="width: 0%;"></div></div>
                         <div style="display:flex; justify-content:space-between; margin-top:15px; font-size:0.85rem; color:var(--text-muted); border-top:1px dashed #333; padding-top:10px;">
-                            <div>Previstas: <strong style="color:white;" id="fct-prev">0</strong></div>
+                            <div>Previstas: <strong style="color:var(--text-light);" id="fct-prev">0</strong></div>
                             <div>Em Falta: <strong style="color:var(--warning-yellow);" id="fct-falta">0</strong></div>
                         </div>
                     </div>
 
                     <div class="card">
                         <h3 style="margin-bottom:15px; font-size:1rem; color:var(--text-light);"><i class="fa-solid fa-file-signature"></i> Documentação</h3>
-                        <div id="fct-docs-lista" style="display:flex; flex-direction:column; gap:10px; font-size:0.9rem;">
-                            <!-- Preenchido via JS -->
-                        </div>
+                        <div id="fct-docs-lista" style="display:flex; flex-direction:column; gap:10px; font-size:0.9rem;"></div>
                     </div>
                 </div>
 
-                <!-- CONTEÚDO PAP -->
                 <div id="content-prof-pap" style="display:none;">
                     <div class="card" style="border-left: 4px solid var(--text-muted);" id="pap-card-risco">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <h3 style="margin:0; font-size:1.1rem;">Estado do Projeto</h3>
+                            <h3 style="margin:0; font-size:1.1rem; color:var(--text-light);">Estado do Projeto</h3>
                             <span id="pap-badge-risco" style="font-size: 1rem;">⚪ Pendente</span>
                         </div>
                     </div>
@@ -144,18 +139,16 @@
                         <span style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Tema da PAP</span>
                         <h3 style="margin:5px 0 15px 0; font-size:1.2rem; color:var(--primary-green); line-height:1.3;" id="pap-tema">A carregar...</h3>
                         <div style="display:flex; justify-content:space-between; font-size:0.85rem; border-top:1px dashed #333; padding-top:10px; margin-bottom:5px;">
-                            <span style="color:var(--text-muted);">Orientador:</span> <strong style="color:white;" id="pap-orientador">-</strong>
+                            <span style="color:var(--text-muted);">Orientador:</span> <strong style="color:var(--text-light);" id="pap-orientador">-</strong>
                         </div>
                         <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
-                            <span style="color:var(--text-muted);">Data de Defesa:</span> <strong style="color:white;" id="pap-data">-</strong>
+                            <span style="color:var(--text-muted);">Data de Defesa:</span> <strong style="color:var(--text-light);" id="pap-data">-</strong>
                         </div>
                     </div>
 
                     <div class="card">
                         <h3 style="margin-bottom:15px; font-size:1rem; color:var(--text-light);"><i class="fa-solid fa-bars-progress"></i> Fases do Projeto</h3>
-                        <div id="pap-fases-lista" style="display:flex; flex-direction:column; gap:10px; font-size:0.9rem;">
-                            <!-- Preenchido via JS -->
-                        </div>
+                        <div id="pap-fases-lista" style="display:flex; flex-direction:column; gap:10px; font-size:0.9rem;"></div>
                     </div>
 
                     <div class="card" id="pap-obs-container">
@@ -221,12 +214,12 @@
             <div id="view-ee-justificar" style="display: none;">
                 <div class="class-header" style="margin-bottom: 15px;"><button id="btn-voltar-justificar" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Início</button></div>
                 <div class="card" style="margin-bottom: 20px;">
-                    <h3 style="margin-bottom: 15px; font-size: 1rem;"><i class="fa-solid fa-cloud-arrow-up"></i> Enviar Comprovativo</h3>
+                    <h3 style="margin-bottom: 15px; font-size: 1rem; color: var(--text-light);"><i class="fa-solid fa-cloud-arrow-up"></i> Enviar Comprovativo</h3>
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Tire foto do atestado para justificar ausências.</p>
                     <div style="background:var(--bg-dark); padding:20px; border-radius:8px; border:1px dashed #555; text-align:center; margin-bottom:15px;">
                         <label for="ee-upload-atestado" class="secondary-btn" style="margin:0 auto; width:fit-content; border-color: var(--success-green); color: var(--success-green); cursor: pointer;"><i class="fa-solid fa-camera"></i> Anexar Foto / PDF</label>
                         <input type="file" id="ee-upload-atestado" style="display:none;" accept="image/*,.pdf">
-                        <span id="ee-atestado-file-name" class="file-name-display" style="display:block; margin-top:10px; font-size:0.85rem; color:white;"></span>
+                        <span id="ee-atestado-file-name" class="file-name-display" style="display:block; margin-top:10px; font-size:0.85rem; color:var(--text-light);"></span>
                     </div>
                     <textarea id="ee-atestado-obs" class="input-field" placeholder="Observações" style="min-height: 80px; margin-bottom: 15px;"></textarea>
                     <button id="btn-ee-enviar-atestado" class="primary-btn" style="width:100%; background-color: var(--success-green); display:none;"><i class="fa-solid fa-paper-plane"></i> Enviar Atestado</button>
@@ -237,7 +230,7 @@
 
             <div id="view-ee-notificacoes" style="display: none;">
                 <div class="class-header" style="margin-bottom: 15px;"><button id="btn-voltar-notificacoes" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
-                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-bell"></i> Central de Alertas</h2>
+                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: var(--text-light);"><i class="fa-solid fa-bell"></i> Central de Alertas</h2>
                 <div id="ee-notificacoes-container"></div>
             </div>
         </main>
@@ -250,6 +243,6 @@
         </nav>
     </div>
 
-    <script type="module" src="./js/ee-app.js?v=11"></script>
+    <script type="module" src="./js/ee-app.js?v=12"></script>
 </body>
 </html>
