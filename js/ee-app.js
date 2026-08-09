@@ -4,13 +4,6 @@ import { doc, getDoc, collection, getDocs, query, addDoc, onSnapshot, orderBy, w
 
 let myUserId = ""; let myUserName = ""; let educandosArray = []; let educandoAtualId = ""; let turmaAtual = "";
 
-// Apenas usado para cálculos matemáticos globais no painel
-const matrizCursoMap = {
-    "Sociocultural": ["PORT", "ING", "AI", "EF", "TIC"],
-    "Científica": ["GEO", "HCA", "MAT", "FQ", "BG", "MAC"],
-    "Técnica": ["CF", "TIAT", "TCAT", "OTET"] 
-};
-
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         myUserId = user.email.split('@')[0];
@@ -109,24 +102,32 @@ async function carregarDadosDoFilhoSelecionado() {
                 if(abaAtiva === 'view-ee-horario') carregarHorarioEE();
             }
         }
-    } catch(e) {
-        console.error("Erro ao carregar dados do aluno:", e);
-    }
+    } catch(e) { console.error("Erro ao carregar dados do aluno:", e); }
 }
 
 /* ==========================================
-   HELPER: OBTER DISCIPLINAS REAIS DA TURMA
+   HELPER: OBTER DISCIPLINAS REAIS DA TURMA E DO ALUNO
 ========================================== */
-// Vai ler o horário da turma à BD e devolve apenas as disciplinas que o aluno realmente tem
+// Ignora Blocos não Letivos e garante que as disciplinas com notas lançadas nunca desaparecem
 async function obterDisciplinasDaTurma() {
     const dSet = new Set();
+    const ignorar = ['ALM', 'VISITA', 'FCT', 'PAP', 'PRHF', 'ALMOÇO', 'LIVRE', 'REUNIÃO', 'ESTUDO'];
     try {
+        // 1. O que está no Horário Oficial
         const docSnap = await getDoc(doc(db, "turmas", turmaAtual));
         if(docSnap.exists() && docSnap.data().horario) {
             Object.values(docSnap.data().horario).forEach(v => {
-                if(v && v!=='ALM' && v!=='Visita' && v!=='FCT' && v!=='PAP' && v!=='PRHF') dSet.add(v);
+                if(v && !ignorar.includes(v.toUpperCase())) dSet.add(v);
             });
         }
+        
+        // 2. O que o aluno já tem nas notas (Fallback de Segurança)
+        const notasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
+        notasSnap.forEach(d => {
+            if (d.data().disciplina && !ignorar.includes(d.data().disciplina.toUpperCase())) {
+                dSet.add(d.data().disciplina);
+            }
+        });
     } catch(e){}
     return Array.from(dSet).sort();
 }
@@ -264,8 +265,7 @@ btnTabPap?.addEventListener('click', () => { btnTabPap.classList.add('active'); 
 // RESTANTE LÓGICA
 // ==========================================
 async function carregarResumoDashboard() {
-    let sumG = 0, countG = 0, sumS = 0, countS = 0, sumC = 0, countC = 0, sumT = 0, countT = 0;
-    let faltasTotais = 0; let nOcorrencias = 0; let nPrhf = 0;
+    let sumG = 0, countG = 0, faltasTotais = 0, nOcorrencias = 0, nPrhf = 0;
 
     try {
         const notasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
@@ -273,17 +273,15 @@ async function carregarResumoDashboard() {
             const val = d.data().nota;
             if(val !== 'REP' && !isNaN(val)) {
                 const vNum = Number(val); sumG += vNum; countG++;
-                if(matrizCursoMap["Sociocultural"].includes(d.data().disciplina)) { sumS += vNum; countS++; }
-                else if(matrizCursoMap["Científica"].includes(d.data().disciplina)) { sumC += vNum; countC++; }
-                else { sumT += vNum; countT++; } 
             }
         });
         const mG = countG > 0 ? (sumG/countG).toFixed(1) : '-';
         document.getElementById('resumo-media').innerText = mG;
         document.getElementById('resumo-media').style.color = (mG !== '-' && mG < 10) ? 'var(--danger-red)' : 'var(--primary-green)';
-        document.getElementById('resumo-med-socio').innerText = countS > 0 ? (sumS/countS).toFixed(1) : '-';
-        document.getElementById('resumo-med-cient').innerText = countC > 0 ? (sumC/countC).toFixed(1) : '-';
-        document.getElementById('resumo-med-tec').innerText = countT > 0 ? (sumT/countT).toFixed(1) : '-';
+        // Removido o cálculo Sócio/Científica/Técnica do Dashboard pelo modelo novo
+        document.getElementById('resumo-med-socio').innerText = "-";
+        document.getElementById('resumo-med-cient').innerText = "-";
+        document.getElementById('resumo-med-tec').innerText = "-";
     } catch(e) {}
 
     try {
@@ -307,7 +305,7 @@ async function carregarResumoDashboard() {
         if(futuros.length > 0) {
             futuros.sort((a,b) => a.data.localeCompare(b.data));
             const dp = futuros[0].data.split('-');
-            document.getElementById('resumo-proximo-evento').innerHTML = `<strong>${dp[2]}/${dp[1]}</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">${futuros[0].titulo}</span>`;
+            document.getElementById('resumo-proximo-evento').innerHTML = `<strong style="color:var(--text-light);">${dp[2]}/${dp[1]}</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">${futuros[0].titulo}</span>`;
         } else document.getElementById('resumo-proximo-evento').innerText = "Agenda limpa";
     } catch(e) {}
 }
@@ -376,7 +374,7 @@ async function carregarTimelineEE() {
         const faltasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
         faltasSnap.forEach(d => { const f = d.data(); eventos.push({ time: new Date(f.criadoEm || f.dataInicio).getTime(), icon: '<i class="fa-solid fa-user-xmark"></i>', cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Falta a ${f.disciplina} (${f.horas}h)`, desc: f.justificada ? `Justificada` : `Falta registada.` }); });
         const ocSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "ocorrencias"));
-        ocSnap.forEach(d => { const o = d.data(); eventos.push({ time: o.timestamp, icon: o.tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>', cor: o.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Registo Disciplinar`, desc: `<strong>${o.titulo}</strong><br><span style="font-size:0.8rem; color:#aaa;">${o.descricao || ''}</span>` }); });
+        ocSnap.forEach(d => { const o = d.data(); eventos.push({ time: o.timestamp, icon: o.tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>', cor: o.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Registo Disciplinar`, desc: `<strong style="color:var(--text-light);">${o.titulo}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">${o.descricao || ''}</span>` }); });
         const prhfSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "prhfs"));
         prhfSnap.forEach(d => { const p = d.data(); eventos.push({ time: new Date(p.dataRegisto || Date.now()).getTime(), icon: '<i class="fa-solid fa-book-medical"></i>', cor: 'var(--warning-yellow)', titulo: `Plano de Recuperação Criado`, desc: `${p.disciplina} (Mod. ${p.modulo})` }); });
         
@@ -384,7 +382,7 @@ async function carregarTimelineEE() {
         if(eventos.length === 0) { cadernetaContent.innerHTML = '<p class="text-muted center" style="margin-top:40px;">Sem registos.</p>'; return; }
         
         let html = '<div class="timeline">';
-        eventos.forEach(ev => { html += `<div class="timeline-item"><div class="timeline-icon" style="color: ${ev.cor}; border-color: ${ev.cor};">${ev.icon}</div><div class="timeline-content" style="border-left: 3px solid ${ev.cor};"><span class="timeline-date">${new Date(ev.time).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}</span><strong style="color:white; display:block; margin-bottom:5px;">${ev.titulo}</strong><p style="font-size:0.85rem; color:var(--text-light); margin:0;">${ev.desc}</p></div></div>`; });
+        eventos.forEach(ev => { html += `<div class="timeline-item"><div class="timeline-icon" style="color: ${ev.cor}; border-color: ${ev.cor};">${ev.icon}</div><div class="timeline-content" style="border-left: 3px solid ${ev.cor};"><span class="timeline-date">${new Date(ev.time).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}</span><strong style="color:var(--text-light); display:block; margin-bottom:5px;">${ev.titulo}</strong><p style="font-size:0.85rem; color:var(--text-light); margin:0;">${ev.desc}</p></div></div>`; });
         cadernetaContent.innerHTML = html + '</div>';
     } catch(e) {}
 }
@@ -410,7 +408,7 @@ async function carregarNotasEE() {
                     modsHtml += `<div class="modulo-row"><span>Módulo ${n.modulo}</span><span style="font-weight:bold; color:${cor};">${n.nota}</span></div>`;
                 });
                 const med = c > 0 ? (sum/c).toFixed(1) : '-';
-                const medCor = (med !== '-' && med < 10) ? 'var(--danger-red)' : 'white';
+                const medCor = (med !== '-' && med < 10) ? 'var(--danger-red)' : 'var(--text-light)';
                 
                 html += `<div class="disciplina-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'">
                             <span class="disciplina-title">${disc}</span>
@@ -444,7 +442,7 @@ async function carregarFaltasEE() {
             }
             const stColor = f.justificada ? 'var(--success-green)' : 'var(--danger-red)';
             const stTxt = f.justificada ? 'Justificada' : (f.comprovativoEnviado ? 'Em Análise' : 'Injustificada');
-            html += `<div class="card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;"><div><strong>${f.disciplina}</strong> (${f.horas}h)</div><span style="font-size:0.8rem; font-weight:bold; color:${stColor}; padding:5px 10px; background:rgba(255,255,255,0.05); border-radius:12px;">${stTxt}</span></div>`;
+            html += `<div class="card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;"><div><strong style="color:var(--text-light);">${f.disciplina}</strong> (${f.horas}h)</div><span style="font-size:0.8rem; font-weight:bold; color:${stColor}; padding:5px 10px; background:rgba(255,255,255,0.05); border-radius:12px;">${stTxt}</span></div>`;
         });
         cadernetaContent.innerHTML = html;
     } catch(e) {}
@@ -463,7 +461,7 @@ async function carregarPrhfsEE() {
             const isUrgente = p.moduloTerminado === true || p.moduloTerminado === "true"; 
             const cor = isUrgente ? 'var(--danger-red)' : 'var(--warning-yellow)';
             const txtSt = isUrgente ? 'URGENTE (Mód. Terminado)' : 'EM CURSO';
-            html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${cor};"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong>${p.disciplina} (Mod. ${p.modulo})</strong><span style="color:${cor}; font-size:0.75rem; font-weight:bold;">${txtSt}</span></div><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">${p.descricao}</p><div style="font-size:0.8rem;">Data Limite: <strong style="color:${cor};">${p.prazo}</strong> | Presenciais: <strong>${p.horasPresenciais||0}h</strong></div></div>`;
+            html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${cor};"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="color:var(--text-light);">${p.disciplina} (Mod. ${p.modulo})</strong><span style="color:${cor}; font-size:0.75rem; font-weight:bold;">${txtSt}</span></div><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">${p.descricao}</p><div style="font-size:0.8rem;">Data Limite: <strong style="color:${cor};">${p.prazo}</strong> | Presenciais: <strong>${p.horasPresenciais||0}h</strong></div></div>`;
         });
         cadernetaContent.innerHTML = html;
     } catch(e) {}
@@ -479,7 +477,7 @@ async function carregarComportamentoEE() {
         let html = '';
         regs.forEach(r => {
             const cor = r.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)';
-            html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${cor};"><div style="display:flex; align-items:center; gap:8px; color:${cor}; margin-bottom:5px;"><i class="fa-solid fa-circle-exclamation"></i> <strong>${r.titulo}</strong></div><span style="font-size:0.75rem; color:var(--text-muted);">Data: ${r.data} | Prof. ${r.autor}</span>${r.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px; background:rgba(0,0,0,0.2); padding:8px; border-radius:6px;">${r.descricao}</p>` : ''}</div>`;
+            html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${cor};"><div style="display:flex; align-items:center; gap:8px; color:${cor}; margin-bottom:5px;"><i class="fa-solid fa-circle-exclamation"></i> <strong style="color:var(--text-light);">${r.titulo}</strong></div><span style="font-size:0.75rem; color:var(--text-muted);">Data: ${r.data} | Prof. ${r.autor}</span>${r.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px; background:rgba(0,0,0,0.2); padding:8px; border-radius:6px;">${r.descricao}</p>` : ''}</div>`;
         });
         cadernetaContent.innerHTML = html;
     } catch(e) {}
@@ -518,7 +516,7 @@ async function carregarReunioesEE(reuniaoSelecionada = '1_avaliacao') {
             const comentario = dadosReuniao.disciplinas && dadosReuniao.disciplinas[disc] ? dadosReuniao.disciplinas[disc] : '<span style="color:var(--text-muted);">Sem comentário (SN)</span>';
             contentHtml += `
             <div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;">
-                <h4 style="margin-bottom:8px; color:white; font-size:1rem;">${disc}</h4>
+                <h4 style="margin-bottom:8px; color:var(--text-light); font-size:1rem;">${disc}</h4>
                 <p style="color:var(--text-light); font-size:0.9rem; line-height:1.4; margin:0;">${comentario}</p>
             </div>`;
         });
@@ -527,7 +525,7 @@ async function carregarReunioesEE(reuniaoSelecionada = '1_avaliacao') {
         contentHtml += `
         <div class="card" style="margin-top:15px; border:1px solid var(--warning-yellow); background:rgba(255,204,0,0.05); padding:15px;">
             <h3 style="color:var(--warning-yellow); margin-bottom:10px; font-size:1.1rem;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3>
-            <p style="color:white; font-size:0.95rem; line-height:1.5; margin:0;">${global}</p>
+            <p style="color:var(--text-light); font-size:0.95rem; line-height:1.5; margin:0;">${global}</p>
         </div></div>`;
         
         document.getElementById('reuniao-content-area').innerHTML = contentHtml;
@@ -572,7 +570,7 @@ async function carregarAgendaEE() {
 
         const renderEv = (ev) => {
             const dp = ev.data.split('-'); const mes = mesArr[parseInt(dp[1])-1];
-            return `<div class="calendar-event-card" style="border-left-color:${ev.cor}; margin-bottom:10px;"><div class="calendar-date-box"><span class="day">${dp[2]}</span><span class="month" style="color:${ev.cor};">${mes}</span></div><div class="calendar-info"><h4 style="margin:0; color:white;">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt||'evento').toUpperCase()}</span></div></div>`;
+            return `<div class="calendar-event-card" style="border-left-color:${ev.cor}; margin-bottom:10px;"><div class="calendar-date-box"><span class="day">${dp[2]}</span><span class="month" style="color:${ev.cor};">${mes}</span></div><div class="calendar-info"><h4 style="margin:0; color:var(--text-light);">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt||'evento').toUpperCase()}</span></div></div>`;
         };
 
         if(futuros.length > 0) { futuros.forEach(e => html += renderEv(e)); } else { html += '<p class="text-muted center">Sem eventos futuros.</p>'; }
@@ -609,7 +607,6 @@ async function carregarHorarioEE() {
         const docSnap = await getDoc(doc(db, "turmas", turmaAtual));
         let hb = {}; if(docSnap.exists() && docSnap.data().horario) hb = docSnap.data().horario;
         
-        // Cérebro: Procurar o nome real dos professores da turma
         let profsCache = {};
         const pSnap = await getDocs(query(collection(db, "utilizadores"), where("papel", "==", "professor"), where("turmas", "array-contains", turmaAtual)));
         pSnap.forEach(d => {
@@ -637,7 +634,7 @@ async function carregarHorarioEE() {
                 const disc = hb[`${dataStr}_${bId}`];
                 if(disc) {
                     const sty = getCorEspecial(disc);
-                    const profNome = profsCache[disc] ? `Prof. ${profsCache[disc]}` : 'Prof. A Atribuir'; // Nomes Dinâmicos
+                    const profNome = profsCache[disc] ? `Prof. ${profsCache[disc]}` : 'Prof. A Atribuir';
                     html += `<div class="horario-list-item" style="border-left-color:${sty.c}; background-color:${sty.bg};"><div class="horario-time-col">${blocosTempo[bId]}</div><div class="horario-disc-col"><div class="horario-disc-name">${disc}</div><div class="horario-prof">${profNome}</div></div></div>`;
                     temAulasDia = true;
                 }
@@ -661,7 +658,7 @@ async function carregarHorarioEE() {
                     const disc = hb[`${dStr}_${bId}`];
                     if(disc) {
                         const sty = getCorEspecial(disc);
-                        html += `<div class="horario-slot" style="padding:2px; border: 1px solid ${sty.c}; background-color: ${sty.bg}; color: white;"><strong>${disc}</strong></div>`;
+                        html += `<div class="horario-slot" style="padding:2px; border: 1px solid ${sty.c}; background-color: ${sty.bg}; color: var(--text-light);"><strong>${disc}</strong></div>`;
                     } else html += `<div class="horario-slot"></div>`;
                     dtIter.setDate(dtIter.getDate()+1);
                 }
@@ -683,7 +680,7 @@ function iniciarChatEE() {
             const msg = doc.data(); const isMe = msg.remetente === myUserName || msg.autor === 'ee';
             const classe = isMe ? 'admin' : 'student'; 
             const autorLabel = isMe ? 'Tu' : (msg.autor === 'dt' ? 'Diretor de Turma' : msg.remetente);
-            html += `<div class="chat-bubble ${classe}"><strong>${autorLabel}</strong><br>${msg.texto}<span class="chat-meta">${new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span></div>`;
+            html += `<div class="chat-bubble ${classe}"><strong style="color:var(--text-light);">${autorLabel}</strong><br>${msg.texto}<span class="chat-meta">${new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span></div>`;
         });
         if(html === '') html = '<p class="text-muted center" style="margin-top:40px;"><i class="fa-solid fa-comments" style="font-size:3rem; opacity:0.2; display:block; margin-bottom:15px;"></i>Inicie aqui a comunicação.</p>';
         chatContainer.innerHTML = html; chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -721,7 +718,7 @@ async function carregarAtestadosEE() {
             let corStatus = 'var(--warning-yellow)'; let txtStatus = 'Em análise'; let iconStatus = '<i class="fa-regular fa-clock"></i>';
             if(a.status === 'aprovado' || a.status === 'aceite') { corStatus = 'var(--success-green)'; txtStatus = 'Aceite'; iconStatus = '<i class="fa-solid fa-check-circle"></i>'; }
             if(a.status === 'rejeitado' || a.status === 'recusada') { corStatus = 'var(--danger-red)'; txtStatus = 'Recusada'; iconStatus = '<i class="fa-solid fa-xmark-circle"></i>'; }
-            html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${corStatus}; display:flex; justify-content:space-between; align-items:center;"><div><strong>Enviado a ${new Date(a.dataEnvio).toLocaleDateString('pt-PT')}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${a.observacoes || 'Sem observações'}</span></div><div style="text-align: right;"><span style="font-size:0.8rem; font-weight:bold; color:${corStatus}; padding:6px 12px; background:rgba(255,255,255,0.05); border-radius:20px; display:inline-block;">${iconStatus} ${txtStatus}</span></div></div>`;
+            html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${corStatus}; display:flex; justify-content:space-between; align-items:center;"><div><strong style="color:var(--text-light);">Enviado a ${new Date(a.dataEnvio).toLocaleDateString('pt-PT')}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${a.observacoes || 'Sem observações'}</span></div><div style="text-align: right;"><span style="font-size:0.8rem; font-weight:bold; color:${corStatus}; padding:6px 12px; background:rgba(255,255,255,0.05); border-radius:20px; display:inline-block;">${iconStatus} ${txtStatus}</span></div></div>`;
         });
         container.innerHTML = html;
     } catch(e) {}
