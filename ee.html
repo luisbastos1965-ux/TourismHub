@@ -7,6 +7,8 @@
     <link rel="icon" type="image/png" href="logo_tur.png">
     <link rel="stylesheet" href="style.css?v=11">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Adicionado o Chart.js para os gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         const currentTheme = localStorage.getItem('turmapro_theme') || 'dark';
         document.documentElement.setAttribute('data-theme', currentTheme);
@@ -14,6 +16,7 @@
 </head>
 <body>
     <div id="app-content">
+        <!-- HEADER ESTÁTICO -->
         <header id="header-ee" class="app-header">
             <div class="user-profile" style="flex: 1; min-width: 0;">
                 <select id="header-ee-student-selector" class="ee-student-selector">
@@ -30,17 +33,24 @@
         </header>
 
         <main class="app-content">
+            
+            <!-- 1. DASHBOARD PRINCIPAL -->
             <div id="ee-dashboard">
                 <div class="ee-summary-grid">
-                    <div class="ee-summary-card ee-card-extended">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                            <div><i class="fa-solid fa-graduation-cap"></i><div class="ee-summary-label">Média Global Atual</div></div>
-                            <div class="ee-summary-value" id="resumo-media" style="color: var(--primary-green);">...</div>
+                    
+                    <!-- CARTÃO DA MÉDIA COM GRÁFICO (NOVO) -->
+                    <div class="ee-summary-card ee-card-extended" style="display: flex; flex-direction: row; align-items: center; gap: 20px;">
+                        <div style="flex: 1;">
+                            <div><i class="fa-solid fa-chart-pie" style="font-size: 1.2rem;"></i><div class="ee-summary-label">Média Global</div></div>
+                            <div class="ee-summary-value" id="resumo-media" style="color: var(--primary-green); font-size: 2.5rem;">...</div>
+                            <div style="display:flex; flex-direction:column; gap: 5px; margin-top: 10px;">
+                                <div style="display:flex; align-items:center; gap:5px; font-size:0.75rem; color:var(--text-muted);"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#8b5cf6;"></span> Sócio. <strong style="color:var(--text-light); margin-left:auto;" id="resumo-med-socio">-</strong></div>
+                                <div style="display:flex; align-items:center; gap:5px; font-size:0.75rem; color:var(--text-muted);"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#00d2ff;"></span> Científica <strong style="color:var(--text-light); margin-left:auto;" id="resumo-med-cient">-</strong></div>
+                                <div style="display:flex; align-items:center; gap:5px; font-size:0.75rem; color:var(--text-muted);"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981;"></span> Técnica <strong style="color:var(--text-light); margin-left:auto;" id="resumo-med-tec">-</strong></div>
+                            </div>
                         </div>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-top: 15px; border-top: 1px dashed #444; padding-top: 15px;">
-                            <div class="sub-media-box"><span class="sub-media-label">Sócio.</span><span class="sub-media-value" id="resumo-med-socio">-</span></div>
-                            <div class="sub-media-box"><span class="sub-media-label">Científica</span><span class="sub-media-value" id="resumo-med-cient">-</span></div>
-                            <div class="sub-media-box"><span class="sub-media-label">Técnica</span><span class="sub-media-value" id="resumo-med-tec">-</span></div>
+                        <div style="width: 110px; height: 110px; position: relative;">
+                            <canvas id="eeChartMedia"></canvas>
                         </div>
                     </div>
 
@@ -62,6 +72,7 @@
                     </div>
                 </div>
 
+                <!-- RESUMO PERCURSO PROFISSIONAL (FCT / PAP) -->
                 <div class="card" id="card-percurso-prof" style="display:none; border-left: 4px solid var(--text-muted); cursor: pointer; transition: 0.2s;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                         <h3 style="font-size: 1.1rem; color: #0099ff; margin:0;"><i class="fa-solid fa-briefcase"></i> Percurso Profissional</h3>
@@ -73,9 +84,10 @@
                     <div id="resumo-mini-pap" style="display:none; font-size:0.9rem; color:var(--text-light);">
                         <strong>PAP:</strong> <span id="txt-mini-pap">A carregar...</span>
                     </div>
-                    <div style="text-align:center; margin-top:12px; font-size:0.75rem; color:var(--text-muted);"><i class="fa-solid fa-hand-pointer"></i> Tocar para ver detalhes da FCT e PAP</div>
+                    <div style="text-align:center; margin-top:12px; font-size:0.75rem; color:var(--text-muted);"><i class="fa-solid fa-hand-pointer"></i> Tocar para ver detalhes</div>
                 </div>
 
+                <!-- Botões de Ação Rápida Otimizados -->
                 <div style="display: flex; gap: 10px; margin-top: 15px;">
                     <button class="primary-btn" id="btn-quick-justificar" style="background-color: var(--success-green); flex: 1; padding: 18px 10px;">
                         <span style="font-size:1rem; font-weight:bold; color:white;">Justificar Falta</span>
@@ -86,8 +98,10 @@
                 </div>
             </div>
 
+            <!-- VISTA DETALHADA: FCT & PAP -->
             <div id="view-ee-profissional" style="display: none;">
                 <div class="class-header" style="margin-bottom: 15px;"><button id="btn-voltar-prof" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Início</button></div>
+                
                 <div class="falta-tabs" style="margin-bottom: 15px;">
                     <button class="falta-tab-btn active" id="btn-tab-fct">FCT (Estágio)</button>
                     <button class="falta-tab-btn" id="btn-tab-pap" style="display:none;">PAP (Projeto Final)</button>
@@ -100,6 +114,7 @@
                             <span id="fct-badge-risco" style="font-size: 1rem;">⚪ Pendente</span>
                         </div>
                     </div>
+
                     <div class="card">
                         <h3 style="margin-bottom:15px; font-size:1rem; color:var(--text-light);"><i class="fa-solid fa-clock"></i> Horas Realizadas</h3>
                         <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:5px;">
@@ -112,6 +127,7 @@
                             <div>Em Falta: <strong style="color:var(--warning-yellow);" id="fct-falta">0</strong></div>
                         </div>
                     </div>
+
                     <div class="card">
                         <h3 style="margin-bottom:15px; font-size:1rem; color:var(--text-light);"><i class="fa-solid fa-file-signature"></i> Documentação</h3>
                         <div id="fct-docs-lista" style="display:flex; flex-direction:column; gap:10px; font-size:0.9rem;"></div>
@@ -125,6 +141,7 @@
                             <span id="pap-badge-risco" style="font-size: 1rem;">⚪ Pendente</span>
                         </div>
                     </div>
+
                     <div class="card">
                         <span style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Tema da PAP</span>
                         <h3 style="margin:5px 0 15px 0; font-size:1.2rem; color:var(--primary-green); line-height:1.3;" id="pap-tema">A carregar...</h3>
@@ -135,13 +152,17 @@
                             <span style="color:var(--text-muted);">Data de Defesa:</span> <strong style="color:var(--text-light);" id="pap-data">-</strong>
                         </div>
                     </div>
+
                     <div class="card">
                         <h3 style="margin-bottom:15px; font-size:1rem; color:var(--text-light);"><i class="fa-solid fa-bars-progress"></i> Fases do Projeto</h3>
                         <div id="pap-fases-lista" style="display:flex; flex-direction:column; gap:10px; font-size:0.9rem;"></div>
                     </div>
+
                     <div class="card" id="pap-obs-container">
                         <h3 style="margin-bottom:10px; font-size:1rem; color:var(--text-light);"><i class="fa-solid fa-comment-dots"></i> Observações do Orientador</h3>
-                        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border-left: 3px solid var(--primary-green); font-size:0.9rem; line-height:1.4;" id="pap-obs-txt">Sem observações recentes.</div>
+                        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border-left: 3px solid var(--primary-green); font-size:0.9rem; line-height:1.4;" id="pap-obs-txt">
+                            Sem observações recentes.
+                        </div>
                     </div>
                 </div>
             </div>
@@ -163,6 +184,7 @@
                 <div id="ee-caderneta-content"></div>
             </div>
 
+            <!-- AGENDA -->
             <div id="view-ee-agenda" style="display: none;">
                 <div class="agenda-filters">
                     <label class="agenda-filter-label"><input type="checkbox" id="filtro-agenda-testes" checked> <span style="color:#ffaa00;">●</span> Testes/Av.</label>
@@ -172,6 +194,7 @@
                 <div id="ee-agenda-content"></div>
             </div>
 
+            <!-- HORÁRIO -->
             <div id="view-ee-horario" style="display: none;">
                 <div class="falta-tabs" style="margin-bottom: 15px;">
                     <button class="falta-tab-btn active" id="btn-horario-dia">Vista Diária</button>
@@ -185,6 +208,7 @@
                 <div id="ee-horario-content" style="margin-top:15px; overflow-x: auto;"></div>
             </div>
 
+            <!-- CHAT E JUSTIFICAR -->
             <div id="view-ee-chat" style="display: none; flex-direction: column; height: 75vh;">
                 <div class="class-header" style="margin-bottom: 10px;"><button id="btn-voltar-chat-ee" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Início</button></div>
                 <div class="forum-messages" id="ee-chat-messages-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:15px; background: var(--bg-card); border-radius: 12px 12px 0 0; border: 1px solid #333; border-bottom: none;"></div>
@@ -237,6 +261,6 @@
         </div>
     </div>
 
-    <script type="module" src="./js/ee-app.js?v=15"></script>
+    <script type="module" src="./js/ee-app.js?v=17"></script>
 </body>
 </html>
