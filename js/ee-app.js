@@ -4,6 +4,13 @@ import { doc, getDoc, collection, getDocs, query, addDoc, onSnapshot, orderBy, w
 
 let myUserId = ""; let myUserName = ""; let educandosArray = []; let educandoAtualId = ""; let turmaAtual = "";
 
+// Apenas usado para cálculos matemáticos globais e ordenação visual
+const matrizCursoMap = {
+    "Sociocultural": ["PORT", "ING", "AI", "EF", "TIC"],
+    "Científica": ["GEO", "HCA", "MAT", "FQ", "BG", "MAC"],
+    "Técnica": ["CF", "TIAT", "TCAT", "OTET"] 
+};
+
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         myUserId = user.email.split('@')[0];
@@ -111,25 +118,49 @@ async function carregarDadosDoFilhoSelecionado() {
 // Ignora Blocos não Letivos e garante que as disciplinas com notas lançadas nunca desaparecem
 async function obterDisciplinasDaTurma() {
     const dSet = new Set();
-    const ignorar = ['ALM', 'VISITA', 'FCT', 'PAP', 'PRHF', 'ALMOÇO', 'LIVRE', 'REUNIÃO', 'ESTUDO'];
+    const ignorar = ['ALM', 'VISITA', 'FCT', 'PAP', 'PRHF', 'ALMOÇO', 'LIVRE', 'REUNIÃO', 'ESTUDO', 'TESTE', 'AVALIAÇÃO'];
     try {
         // 1. O que está no Horário Oficial
         const docSnap = await getDoc(doc(db, "turmas", turmaAtual));
         if(docSnap.exists() && docSnap.data().horario) {
             Object.values(docSnap.data().horario).forEach(v => {
-                if(v && !ignorar.includes(v.toUpperCase())) dSet.add(v);
+                if(v && typeof v === 'string' && !ignorar.includes(v.toUpperCase())) dSet.add(v);
             });
         }
         
-        // 2. O que o aluno já tem nas notas (Fallback de Segurança)
+        // 2. O que o aluno já tem nas notas (Para o caso de o Horário ainda não existir)
         const notasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
         notasSnap.forEach(d => {
-            if (d.data().disciplina && !ignorar.includes(d.data().disciplina.toUpperCase())) {
-                dSet.add(d.data().disciplina);
-            }
+            if (d.data().disciplina && !ignorar.includes(d.data().disciplina.toUpperCase())) { dSet.add(d.data().disciplina); }
+        });
+
+        // 3. Faltas
+        const faltasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
+        faltasSnap.forEach(d => {
+            if (d.data().disciplina && !ignorar.includes(d.data().disciplina.toUpperCase())) { dSet.add(d.data().disciplina); }
+        });
+
+        // 4. PRHFs
+        const prhfSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "prhfs"));
+        prhfSnap.forEach(d => {
+            if (d.data().disciplina && !ignorar.includes(d.data().disciplina.toUpperCase())) { dSet.add(d.data().disciplina); }
         });
     } catch(e){}
-    return Array.from(dSet).sort();
+
+    // Extrai e limpa vazios
+    let arrDisciplinas = Array.from(dSet).filter(d => d && d.trim() !== '');
+
+    // Ordenação Oficial da Matriz da Escola
+    const ordemOficial = [];
+    Object.values(matrizCursoMap).forEach(arr => ordemOficial.push(...arr));
+    
+    return arrDisciplinas.sort((a, b) => {
+        let indexA = ordemOficial.indexOf(a);
+        let indexB = ordemOficial.indexOf(b);
+        if (indexA === -1) indexA = 999;
+        if (indexB === -1) indexB = 999;
+        return indexA - indexB;
+    });
 }
 
 /* ==========================================
@@ -265,7 +296,8 @@ btnTabPap?.addEventListener('click', () => { btnTabPap.classList.add('active'); 
 // RESTANTE LÓGICA
 // ==========================================
 async function carregarResumoDashboard() {
-    let sumG = 0, countG = 0, faltasTotais = 0, nOcorrencias = 0, nPrhf = 0;
+    let sumG = 0, countG = 0, sumS = 0, countS = 0, sumC = 0, countC = 0, sumT = 0, countT = 0;
+    let faltasTotais = 0; let nOcorrencias = 0; let nPrhf = 0;
 
     try {
         const notasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
@@ -273,15 +305,17 @@ async function carregarResumoDashboard() {
             const val = d.data().nota;
             if(val !== 'REP' && !isNaN(val)) {
                 const vNum = Number(val); sumG += vNum; countG++;
+                if(matrizCursoMap["Sociocultural"].includes(d.data().disciplina)) { sumS += vNum; countS++; }
+                else if(matrizCursoMap["Científica"].includes(d.data().disciplina)) { sumC += vNum; countC++; }
+                else { sumT += vNum; countT++; } 
             }
         });
         const mG = countG > 0 ? (sumG/countG).toFixed(1) : '-';
         document.getElementById('resumo-media').innerText = mG;
         document.getElementById('resumo-media').style.color = (mG !== '-' && mG < 10) ? 'var(--danger-red)' : 'var(--primary-green)';
-        // Removido o cálculo Sócio/Científica/Técnica do Dashboard pelo modelo novo
-        document.getElementById('resumo-med-socio').innerText = "-";
-        document.getElementById('resumo-med-cient').innerText = "-";
-        document.getElementById('resumo-med-tec').innerText = "-";
+        document.getElementById('resumo-med-socio').innerText = countS > 0 ? (sumS/countS).toFixed(1) : '-';
+        document.getElementById('resumo-med-cient').innerText = countC > 0 ? (sumC/countC).toFixed(1) : '-';
+        document.getElementById('resumo-med-tec').innerText = countT > 0 ? (sumT/countT).toFixed(1) : '-';
     } catch(e) {}
 
     try {
@@ -370,7 +404,7 @@ async function carregarTimelineEE() {
     try {
         let eventos = [];
         const notasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
-        notasSnap.forEach(d => { const n = d.data(); eventos.push({ time: new Date(n.data).getTime(), icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação', desc: `${n.disciplina} (Mod. ${n.modulo}): <strong>${n.nota}</strong>` }); });
+        notasSnap.forEach(d => { const n = d.data(); eventos.push({ time: new Date(n.data).getTime(), icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação', desc: `${n.disciplina} (Mod. ${n.modulo}): <strong style="color:var(--text-light);">${n.nota}</strong>` }); });
         const faltasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
         faltasSnap.forEach(d => { const f = d.data(); eventos.push({ time: new Date(f.criadoEm || f.dataInicio).getTime(), icon: '<i class="fa-solid fa-user-xmark"></i>', cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Falta a ${f.disciplina} (${f.horas}h)`, desc: f.justificada ? `Justificada` : `Falta registada.` }); });
         const ocSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "ocorrencias"));
@@ -394,8 +428,9 @@ async function carregarNotasEE() {
         notasDb.forEach(d => { const n = d.data(); if(!disciplinasDoAluno[n.disciplina]) disciplinasDoAluno[n.disciplina] = []; disciplinasDoAluno[n.disciplina].push(n); });
         
         const ordemDisciplinas = await obterDisciplinasDaTurma();
+        
         if(ordemDisciplinas.length === 0) {
-            cadernetaContent.innerHTML = '<p class="text-muted center">Turma sem horário associado.</p>'; return;
+            cadernetaContent.innerHTML = '<p class="text-muted center">Ainda não existem disciplinas associadas. Aguarde lançamento de horário ou avaliações.</p>'; return;
         }
 
         let html = '';
@@ -405,14 +440,14 @@ async function carregarNotasEE() {
                 disciplinasDoAluno[disc].forEach(n => {
                     if(n.nota !== 'REP' && !isNaN(n.nota)) { sum += Number(n.nota); c++; }
                     const cor = (n.nota === 'REP' || Number(n.nota) < 10) ? 'var(--danger-red)' : 'var(--success-green)';
-                    modsHtml += `<div class="modulo-row"><span>Módulo ${n.modulo}</span><span style="font-weight:bold; color:${cor};">${n.nota}</span></div>`;
+                    modsHtml += `<div class="modulo-row"><span style="color:var(--text-light);">Módulo ${n.modulo}</span><span style="font-weight:bold; color:${cor};">${n.nota}</span></div>`;
                 });
                 const med = c > 0 ? (sum/c).toFixed(1) : '-';
                 const medCor = (med !== '-' && med < 10) ? 'var(--danger-red)' : 'var(--text-light)';
                 
                 html += `<div class="disciplina-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'">
-                            <span class="disciplina-title">${disc}</span>
-                            <span><span style="font-size:0.75rem; color:var(--text-muted); margin-right:8px;">Média:</span><span class="disciplina-media" style="color:${medCor};">${med}</span> <i class="fa-solid fa-chevron-down" style="font-size:0.8rem; margin-left:5px;"></i></span>
+                            <span class="disciplina-title" style="color:var(--text-light);">${disc}</span>
+                            <span><span style="font-size:0.75rem; color:var(--text-muted); margin-right:8px;">Média:</span><span class="disciplina-media" style="color:${medCor};">${med}</span> <i class="fa-solid fa-chevron-down" style="font-size:0.8rem; color:var(--text-muted); margin-left:5px;"></i></span>
                          </div><div class="disciplina-modules">${modsHtml}</div>`;
             } else {
                 html += `<div class="disciplina-header" style="cursor:default;">
@@ -442,7 +477,7 @@ async function carregarFaltasEE() {
             }
             const stColor = f.justificada ? 'var(--success-green)' : 'var(--danger-red)';
             const stTxt = f.justificada ? 'Justificada' : (f.comprovativoEnviado ? 'Em Análise' : 'Injustificada');
-            html += `<div class="card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;"><div><strong style="color:var(--text-light);">${f.disciplina}</strong> (${f.horas}h)</div><span style="font-size:0.8rem; font-weight:bold; color:${stColor}; padding:5px 10px; background:rgba(255,255,255,0.05); border-radius:12px;">${stTxt}</span></div>`;
+            html += `<div class="card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;"><div><strong style="color:var(--text-light);">${f.disciplina}</strong> <span style="color:var(--text-light);">(${f.horas}h)</span></div><span style="font-size:0.8rem; font-weight:bold; color:${stColor}; padding:5px 10px; background:rgba(255,255,255,0.05); border-radius:12px;">${stTxt}</span></div>`;
         });
         cadernetaContent.innerHTML = html;
     } catch(e) {}
@@ -461,7 +496,7 @@ async function carregarPrhfsEE() {
             const isUrgente = p.moduloTerminado === true || p.moduloTerminado === "true"; 
             const cor = isUrgente ? 'var(--danger-red)' : 'var(--warning-yellow)';
             const txtSt = isUrgente ? 'URGENTE (Mód. Terminado)' : 'EM CURSO';
-            html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${cor};"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="color:var(--text-light);">${p.disciplina} (Mod. ${p.modulo})</strong><span style="color:${cor}; font-size:0.75rem; font-weight:bold;">${txtSt}</span></div><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">${p.descricao}</p><div style="font-size:0.8rem;">Data Limite: <strong style="color:${cor};">${p.prazo}</strong> | Presenciais: <strong>${p.horasPresenciais||0}h</strong></div></div>`;
+            html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${cor};"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="color:var(--text-light);">${p.disciplina} (Mod. ${p.modulo})</strong><span style="color:${cor}; font-size:0.75rem; font-weight:bold;">${txtSt}</span></div><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">${p.descricao}</p><div style="font-size:0.8rem; color:var(--text-light);">Data Limite: <strong style="color:${cor};">${p.prazo}</strong> | Presenciais: <strong style="color:var(--text-light);">${p.horasPresenciais||0}h</strong></div></div>`;
         });
         cadernetaContent.innerHTML = html;
     } catch(e) {}
@@ -512,14 +547,18 @@ async function carregarReunioesEE(reuniaoSelecionada = '1_avaliacao') {
         const ordemDisciplinas = await obterDisciplinasDaTurma();
         let contentHtml = '<div style="display:flex; flex-direction:column; gap:10px;">';
         
-        ordemDisciplinas.forEach(disc => {
-            const comentario = dadosReuniao.disciplinas && dadosReuniao.disciplinas[disc] ? dadosReuniao.disciplinas[disc] : '<span style="color:var(--text-muted);">Sem comentário (SN)</span>';
-            contentHtml += `
-            <div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;">
-                <h4 style="margin-bottom:8px; color:var(--text-light); font-size:1rem;">${disc}</h4>
-                <p style="color:var(--text-light); font-size:0.9rem; line-height:1.4; margin:0;">${comentario}</p>
-            </div>`;
-        });
+        if (ordemDisciplinas.length === 0) {
+            contentHtml += '<p class="text-muted center">Ainda não existem disciplinas associadas.</p>';
+        } else {
+            ordemDisciplinas.forEach(disc => {
+                const comentario = dadosReuniao.disciplinas && dadosReuniao.disciplinas[disc] ? dadosReuniao.disciplinas[disc] : '<span style="color:var(--text-muted);">Sem comentário (SN)</span>';
+                contentHtml += `
+                <div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;">
+                    <h4 style="margin-bottom:8px; color:var(--text-light); font-size:1rem;">${disc}</h4>
+                    <p style="color:var(--text-light); font-size:0.9rem; line-height:1.4; margin:0;">${comentario}</p>
+                </div>`;
+            });
+        }
         
         const global = dadosReuniao.global || '<span style="color:var(--text-muted);">Sem observações globais registadas (SN).</span>';
         contentHtml += `
