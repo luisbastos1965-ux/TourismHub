@@ -1,8 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
 /* =========================================
-   VARIÁVEIS DE COR E ESTILOS GERAIS
+   VARIÁVEIS DE COR (SaaS MATURO E PRO)
 ========================================= */
-:root { --primary-green: #00cc88; --primary-hover: #00a66e; --bg-dark: #121212; --bg-card: #1e1e1e; --text-light: #ffffff; --text-muted: #a0a0a0; --danger-red: #ff4d4d; --success-green: #28a745; --warning-yellow: #ffcc00; }
-* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+:root { 
+    --primary-green: #10b981; 
+    --primary-hover: #059669; 
+    --bg-dark: #0f1115;       
+    --bg-card: #181b21;       
+    --text-light: #f3f4f6;    
+    --text-muted: #9ca3af;    
+    --danger-red: #ef4444;    
+    --success-green: #10b981; 
+    --warning-yellow: #f59e0b;
+    --accent-purple: #8b5cf6;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
 body { background-color: var(--bg-dark); color: var(--text-light); height: 100vh; display: flex; flex-direction: column; overflow: hidden; overscroll-behavior-y: contain; }
 
 /* 1. NATIVO: Prevenir Seleção de Texto e "Caixa Azul" Globalmente */
