@@ -2,8 +2,6 @@ import { auth, db, messaging, VAPID_KEY, getToken, onMessage } from "./firebase.
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, collection, updateDoc, getDocs, query, addDoc, onSnapshot, orderBy, setDoc, enableIndexedDbPersistence, deleteDoc, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-const ordemDisciplinasGlobal = ['PORT', 'ING', 'AI', 'EF', 'TIC', 'GEO', 'HCA', 'MAT', 'CF', 'TIAT', 'TCAT', 'OTET'];
-
 try { await enableIndexedDbPersistence(db); console.log("Offline OK!"); } catch (e) {}
 
 let myUserId = "", myUserName = "", minhaTurma = "", myAcademia = "";
@@ -14,7 +12,43 @@ window.timelineFilterCat = 'all'; window.notifFilterCat = 'all';
 let ahModo = 'dia', ahDOff = 0, ahSOff = 0;
 
 // ==========================================
-// 1. INICIALIZAÇÃO E ACADEMIAS (TURISMO)
+// 1. A MATRIZ DE REFERÊNCIA OFICIAL (Mesma do EE)
+// ==========================================
+const matrizAmbos = {
+    "Sociocultural": { "PORT": {"1": 33}, "ING": {"1": 27}, "AI": {"1": 36}, "EF": {"1": 10}, "TIC": {"1": 25} },
+    "Científica": { "GEO": {"1": 33}, "HCA": {"1": 20}, "MAT": {"1": 33} }
+};
+const matrizAntigoTecnica = { "CF": {"1": 24}, "TIAT": {"1": 27}, "TCAT": {"1": 33}, "OTET": {"1": 24} };
+const matrizNovoTecnica = { "AET": { "UC00038": 20 }, "OGOT": { "UC03629": 20 }, "CMET": { "UC00034": 30 }, "LNTT": { "UC00044": 50 } };
+
+function obterDisciplinasDoAno() {
+    const anoMatch = minhaTurma.match(/\d+/);
+    const ano = anoMatch ? parseInt(anoMatch[0]) : 10;
+    
+    const base = {
+        10: ["PORT", "ING", "AI", "EF", "TIC", "GEO", "HCA", "MAT"],
+        11: ["PORT", "ING", "AI", "EF", "GEO", "HCA"],
+        12: ["PORT", "ING", "EF", "GEO", "HCA"]
+    };
+    const tecAntigo = {
+        10: ["CF", "TIAT", "TCAT", "OTET"],
+        11: ["CF", "TIAT", "TCAT", "OTET"],
+        12: ["TIAT", "OTET"]
+    };
+    const tecNovo = {
+        10: ["AET", "OGOT", "CMET", "LNTT"],
+        11: ["AET", "OGOT", "CMET", "LNTT"],
+        12: ["AET", "OGOT", "CMET"]
+    };
+    
+    let arr = [...(base[ano] || base[10])];
+    if (ano >= 11) arr = [...arr, ...(tecAntigo[ano] || tecAntigo[11])];
+    else arr = [...arr, ...(tecNovo[ano] || tecNovo[10])];
+    return arr;
+}
+
+// ==========================================
+// 2. INICIALIZAÇÃO E ACADEMIAS (TURISMO)
 // ==========================================
 const ACADEMIAS_INFO = {
     'estrategas': { nome: 'Academia dos Estrategas', cor: '#10b981', icon: 'fa-chess-knight', desc: 'Mestres do planeamento. Manténs a calma sob pressão, organizas a equipa e garantes que toda a logística de uma viagem funciona na perfeição.' },
@@ -65,6 +99,13 @@ const perguntasQuiz = [
 let pAtual = 0;
 let quizScores = { estrategas: 0, embaixadores: 0, exploradores: 0, visionarios: 0 };
 
+function getEmptyState(mensagem, icone = "fa-folder-open") {
+    return `<div style="text-align:center; padding: 40px 20px; opacity: 0.5;">
+                <i class="fa-solid ${icone}" style="font-size: 3.5rem; margin-bottom: 15px; color: var(--text-muted);"></i>
+                <p style="font-size: 0.95rem; color: var(--text-muted);">${mensagem}</p>
+            </div>`;
+}
+
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         myUserId = user.email.split('@')[0];
@@ -82,7 +123,7 @@ onAuthStateChanged(auth, async (user) => {
                 } else { document.getElementById('perfil-avatar-img').src = `https://ui-avatars.com/api/?name=${myUserName}&background=00cc88&color=fff&size=100`; }
 
                 const objSelect = document.getElementById('obj-disciplina');
-                if(objSelect) objSelect.innerHTML = ordemDisciplinasGlobal.map(dc => `<option value="${dc}">${dc}</option>`).join('');
+                if(objSelect) objSelect.innerHTML = obterDisciplinasDoAno().map(dc => `<option value="${dc}">${dc}</option>`).join('');
 
                 const turmaAno = parseInt(minhaTurma.match(/\d+/)?.[0]) || d.ano || 10;
                 const btnPassaporte = document.getElementById('btn-abrir-passaporte');
@@ -132,10 +173,7 @@ function renderizarPergunta() {
     document.getElementById('quiz-progress-bar').style.width = `${((pAtual + 1) / perguntasQuiz.length) * 100}%`;
     document.getElementById('quiz-q-title').innerText = qData.q;
     
-    const optContainer = document.getElementById('quiz-q-options');
-    optContainer.innerHTML = '';
-    
-    // Baralhar opções para não influenciar
+    const optContainer = document.getElementById('quiz-q-options'); optContainer.innerHTML = '';
     const shuffled = [...qData.opcoes].sort(() => Math.random() - 0.5);
 
     shuffled.forEach(opt => {
@@ -147,11 +185,7 @@ function renderizarPergunta() {
         btn.addEventListener('mouseover', () => btn.style.borderColor = 'var(--primary-green)');
         btn.addEventListener('mouseout', () => btn.style.borderColor = '#333');
         
-        btn.addEventListener('click', () => {
-            quizScores[opt.academia]++;
-            pAtual++;
-            renderizarPergunta();
-        });
+        btn.addEventListener('click', () => { quizScores[opt.academia]++; pAtual++; renderizarPergunta(); });
         optContainer.appendChild(btn);
     });
 }
@@ -161,55 +195,40 @@ async function finalizarQuiz() {
     document.getElementById('quiz-step-loading').style.display = 'block';
 
     let winningHouse = Object.keys(quizScores).reduce((a, b) => quizScores[a] > quizScores[b] ? a : b); 
-    if(quizScores[winningHouse] === 0) winningHouse = 'estrategas'; // Fallback segurança
-    
-    myAcademia = winningHouse; 
-    const ac = ACADEMIAS_INFO[winningHouse]; 
+    if(quizScores[winningHouse] === 0) winningHouse = 'estrategas'; 
+    myAcademia = winningHouse; const ac = ACADEMIAS_INFO[winningHouse]; 
     
     try { await updateDoc(doc(db, "utilizadores", myUserId), { academia: winningHouse }); } catch(e) {} 
     
     setTimeout(() => {
-        document.getElementById('quiz-step-loading').style.display = 'none';
-        document.getElementById('quiz-step-result').style.display = 'block'; 
+        document.getElementById('quiz-step-loading').style.display = 'none'; document.getElementById('quiz-step-result').style.display = 'block'; 
         document.getElementById('quiz-result-icon').innerHTML = `<i class="fa-solid ${ac.icon}" style="color: ${ac.cor}; text-shadow: 0 0 30px ${ac.cor};"></i>`; 
-        document.getElementById('quiz-result-title').innerText = ac.nome; 
-        document.getElementById('quiz-result-title').style.color = ac.cor; 
+        document.getElementById('quiz-result-title').innerText = ac.nome; document.getElementById('quiz-result-title').style.color = ac.cor; 
         document.getElementById('quiz-result-desc').innerText = ac.desc; 
-        document.getElementById('btn-finish-quiz').style.backgroundColor = ac.cor;
-        document.getElementById('btn-finish-quiz').style.color = "#000";
-    }, 2000); // 2 segundos de suspense
+        document.getElementById('btn-finish-quiz').style.backgroundColor = ac.cor; document.getElementById('btn-finish-quiz').style.color = "#000";
+    }, 2000);
 }
 
-document.getElementById('btn-finish-quiz')?.addEventListener('click', () => { 
-    document.getElementById('modal-academia-quiz').style.display = 'none'; 
-    aplicarTemaAcademia(myAcademia); 
-});
+document.getElementById('btn-finish-quiz')?.addEventListener('click', () => { document.getElementById('modal-academia-quiz').style.display = 'none'; aplicarTemaAcademia(myAcademia); });
 
 function aplicarTemaAcademia(idHouse) { 
     const ac = ACADEMIAS_INFO[idHouse]; if(!ac) return; 
     document.documentElement.style.setProperty('--primary-green', ac.cor); 
     
-    const rankElem = document.getElementById('aluno-rank-title'); 
-    const rankCentral = document.getElementById('perfil-titulo-central'); 
+    const rankElem = document.getElementById('aluno-rank-title'); const rankCentral = document.getElementById('perfil-titulo-central'); 
     
     if(rankElem) rankElem.innerText = `${ac.nome.replace('Academia dos ','')}`; 
-    if(rankCentral) {
-        rankCentral.innerHTML = `<i class="fa-solid ${ac.icon}"></i> ${ac.nome}`;
-        rankCentral.style.color = ac.cor;
-    }
+    if(rankCentral) { rankCentral.innerHTML = `<i class="fa-solid ${ac.icon}"></i> ${ac.nome}`; rankCentral.style.color = ac.cor; }
     
-    const avatarImg = document.getElementById('perfil-avatar-img');
-    if (avatarImg) avatarImg.style.borderColor = ac.cor;
+    const avatarImg = document.getElementById('perfil-avatar-img'); if (avatarImg) avatarImg.style.borderColor = ac.cor;
 }
 
-
 // ==========================================
-// 2. NAVEGAÇÃO E DELEGAÇÃO DE EVENTOS
+// 3. NAVEGAÇÃO E DELEGAÇÃO DE EVENTOS
 // ==========================================
 function esconderTodasAsVistas() { document.querySelectorAll('.app-content > div').forEach(v => v.style.display = 'none'); }
 
 document.body.addEventListener('click', async (e) => {
-    // NAVEGAÇÃO
     const nav = e.target.closest('.nav-item');
     if(nav) {
         e.preventDefault(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); nav.classList.add('active');
@@ -221,27 +240,23 @@ document.body.addEventListener('click', async (e) => {
         if(tId === 'view-aluno-forum') carregarForuns();
     }
     
-    // BOTÕES RÁPIDOS
     if(e.target.closest('#btn-open-materiais')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-materiais').style.display = 'block'; carregarMateriaisAluno(); }
     if(e.target.closest('#btn-abrir-passaporte')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-passaporte').style.display = 'block'; }
     if(e.target.closest('#btn-open-notificacoes')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-notificacoes').style.display = 'block'; carregarNotificacoesAluno(); }
     if(e.target.closest('#btn-voltar-notificacoes') || e.target.closest('#btn-voltar-materiais') || e.target.closest('#btn-voltar-passaporte')) { document.querySelector('.nav-item[data-target="student-dashboard"]').click(); }
 
-    // TABS DA CADERNETA
-    if(e.target.closest('#tab-aluno-timeline')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='flex'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarTimelineAluno(); }
-    if(e.target.closest('#tab-aluno-notas')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarNotasAluno(); }
-    if(e.target.closest('#tab-aluno-faltas')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarFaltasAluno(); }
-    if(e.target.closest('#tab-aluno-prhfs')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarPrhfsAluno(); }
-    if(e.target.closest('#tab-aluno-comportamento')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarComportamentoAluno(); }
-    if(e.target.closest('#tab-aluno-observacoes')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center">A carregar...</p>'; carregarObservacoesAluno(); }
+    if(e.target.closest('#tab-aluno-timeline')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='flex'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarTimelineAluno(); }
+    if(e.target.closest('#tab-aluno-notas')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarNotasAluno(); }
+    if(e.target.closest('#tab-aluno-faltas')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarFaltasAluno(); }
+    if(e.target.closest('#tab-aluno-prhfs')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarPrhfsAluno(); }
+    if(e.target.closest('#tab-aluno-comportamento')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarComportamentoAluno(); }
+    if(e.target.closest('#tab-aluno-observacoes')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarObservacoesAluno(); }
 
-    // FILTROS CHIPS
     const tChip = e.target.closest('#timeline-filtros .filter-chip');
     if(tChip) { document.querySelectorAll('#timeline-filtros .filter-chip').forEach(c => c.classList.remove('active')); tChip.classList.add('active'); window.timelineFilterCat = tChip.getAttribute('data-cat'); carregarTimelineAluno(); }
     const nChip = e.target.closest('#notificacoes-filtros .filter-chip');
     if(nChip) { document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(c => c.classList.remove('active')); nChip.classList.add('active'); window.notifFilterCat = nChip.getAttribute('data-cat'); carregarNotificacoesAluno(); }
 
-    // AGENDA TABS E BOTOES
     if(e.target.closest('#tab-aluno-eventos')) { document.getElementById('tab-aluno-eventos').classList.add('active'); document.getElementById('tab-aluno-horario').classList.remove('active'); document.getElementById('aluno-agenda-filtros').style.display = 'flex'; document.getElementById('aluno-horario-container').style.display = 'none'; carregarAgendaAlunoLista(); }
     if(e.target.closest('#tab-aluno-horario')) { document.getElementById('tab-aluno-horario').classList.add('active'); document.getElementById('tab-aluno-eventos').classList.remove('active'); document.getElementById('aluno-agenda-filtros').style.display = 'none'; document.getElementById('aluno-horario-container').style.display = 'block'; carregarHorarioAluno(); }
     if(e.target.closest('#btn-aluno-horario-dia')) { ahModo = 'dia'; document.getElementById('btn-aluno-horario-dia').classList.add('active'); document.getElementById('btn-aluno-horario-grelha').classList.remove('active'); carregarHorarioAluno(); }
@@ -249,7 +264,6 @@ document.body.addEventListener('click', async (e) => {
     if(e.target.closest('#btn-aluno-prev-horario')) { if(ahModo === 'dia') ahDOff--; else ahSOff--; carregarHorarioAluno(); }
     if(e.target.closest('#btn-aluno-next-horario')) { if(ahModo === 'dia') ahDOff++; else ahSOff++; carregarHorarioAluno(); }
 
-    // FÓRUM E CHAT AÇÕES
     if(e.target.closest('#btn-create-chat-aluno')) {
         document.getElementById('modal-criar-forum').style.display = 'flex'; 
         const cCont = document.getElementById('lista-colegas-forum'); cCont.innerHTML = '<p class="text-muted center">A procurar colegas...</p>';
@@ -267,11 +281,7 @@ document.body.addEventListener('click', async (e) => {
         try { await addDoc(collection(db, "turmas", minhaTurma, "foruns"), { nome: nome, tipo: 'permanente', isDefault: false, membros: mbr, criadoPor: myUserName }); document.getElementById('modal-criar-forum').style.display = 'none'; document.getElementById('input-nome-novo-forum').value = ''; btnConf.innerHTML = 'Criar Grupo'; btnConf.disabled = false; carregarForuns(); } catch(err) { btnConf.innerHTML = 'Erro!'; setTimeout(() => { btnConf.innerHTML = 'Criar Grupo'; btnConf.disabled = false; }, 2000); }
     }
     
-    // Apagar Chat Modal
-    if(e.target.closest('.btn-delete-chat')) {
-        e.stopPropagation(); pendingDeleteChatId = e.target.closest('.btn-delete-chat').getAttribute('data-id');
-        document.getElementById('modal-confirm-delete-chat').style.display = 'flex';
-    }
+    if(e.target.closest('.btn-delete-chat')) { e.stopPropagation(); pendingDeleteChatId = e.target.closest('.btn-delete-chat').getAttribute('data-id'); document.getElementById('modal-confirm-delete-chat').style.display = 'flex'; }
     if(e.target.closest('#btn-cancel-delete-chat')) { document.getElementById('modal-confirm-delete-chat').style.display = 'none'; pendingDeleteChatId = null; }
     if(e.target.closest('#btn-confirm-delete-chat')) {
         if(pendingDeleteChatId) {
@@ -293,17 +303,14 @@ document.body.addEventListener('click', async (e) => {
         try { await addDoc(collection(db, "turmas", minhaTurma, "foruns", alunoForumAtivoId, "mensagens"), { remetente: myUserName, texto: t, timestamp: Date.now() }); inp.value = ''; } catch(err) {} 
     }
     
-    // METAS Pessoais
     if(e.target.closest('#btn-add-objetivo')) {
-        const tipo = document.getElementById('obj-tipo').value;
-        let data = { tipo: tipo, concluido: false, timestamp: Date.now() };
+        const tipo = document.getElementById('obj-tipo').value; let data = { tipo: tipo, concluido: false, timestamp: Date.now() };
         if(tipo === 'nota') {
             data.disciplina = document.getElementById('obj-disciplina').value; data.modulo = document.getElementById('obj-modulo').value; data.notaAlvo = document.getElementById('obj-nota-alvo').value;
             if(!data.disciplina || !data.modulo || !data.notaAlvo) return alert("Preenche todos os campos.");
-            data.desc = `Tirar ${data.notaAlvo} no Mod. ${data.modulo} a ${data.disciplina}`;
+            data.desc = `Tirar ${data.notaAlvo} a ${data.disciplina} no Mod. ${data.modulo}`;
         } else if (tipo === 'prhf') { 
-            const pSnap = await getDocs(collection(db, "utilizadores", myUserId, "prhfs"));
-            let c = 0; pSnap.forEach(p => { if(p.data().status === 'concluida') c++; });
+            const pSnap = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); let c = 0; pSnap.forEach(p => { if(p.data().status === 'concluida') c++; });
             data.targetCount = c + 1; data.desc = `Concluir +1 Plano de Recuperação (PRHF)`;
         } else if (tipo === 'reconhecimento') {
             const rSnap = await getDocs(query(collection(db, "utilizadores", myUserId, "ocorrencias"), where("tipo", "==", "positiva")));
@@ -312,11 +319,7 @@ document.body.addEventListener('click', async (e) => {
         try { await addDoc(collection(db, "utilizadores", myUserId, "objetivos"), data); document.getElementById('obj-nota-alvo').value = ''; carregarObjetivosPessoais(); } catch(err) {}
     }
 
-    // Apagar Objetivo Modal
-    if(e.target.closest('.btn-delete-objetivo')) {
-        e.stopPropagation(); pendingDeleteObjetivoId = e.target.closest('.btn-delete-objetivo').getAttribute('data-id');
-        document.getElementById('modal-confirm-delete-objetivo').style.display = 'flex';
-    }
+    if(e.target.closest('.btn-delete-objetivo')) { e.stopPropagation(); pendingDeleteObjetivoId = e.target.closest('.btn-delete-objetivo').getAttribute('data-id'); document.getElementById('modal-confirm-delete-objetivo').style.display = 'flex'; }
     if(e.target.closest('#btn-cancel-delete-objetivo')) { document.getElementById('modal-confirm-delete-objetivo').style.display = 'none'; pendingDeleteObjetivoId = null; }
     if(e.target.closest('#btn-confirm-delete-objetivo')) {
         if(pendingDeleteObjetivoId) {
@@ -333,7 +336,7 @@ document.addEventListener('change', async (e) => {
 });
 
 // ==========================================
-// 3. DASHBOARD ADAPTATIVO MÁGICO E EXAMES
+// 4. DASHBOARD ADAPTATIVO MÁGICO
 // ==========================================
 async function construirHomeAdaptativa() {
     const alertCont = document.getElementById('hero-alert-section'); const emoCont = document.getElementById('hero-emotional-section');
@@ -353,7 +356,7 @@ async function construirHomeAdaptativa() {
 
         let alertHtml = ''; 
         if(tFaltas>0 || pAtivos>0 || mRep>0) {
-            alertHtml += `<div class="card" style="background:linear-gradient(135deg,#ef4444,#b91c1c); color:white; border:none; border-radius:16px; margin-bottom:20px;"><h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-triangle-exclamation"></i> Ação Necessária</h3><p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens pendências urgentes que prejudicam a tua avaliação.</p><ul style="margin-bottom:20px; padding-left:20px; font-size:1.1rem; font-weight:bold; line-height:1.6;">${tFaltas>0?`<li>${tFaltas} Falta(s)</li>`:''}${mRep>0?`<li>${mRep} Módulo(s) Reprovado(s)</li>`:''}${pAtivos>0?`<li>${pAtivos} PRHF(s) pendentes (${pHoras}h presenciais)</li>`:''}</ul><button class="primary-btn" style="background:white; color:#b91c1c; font-size:1.1rem; padding:15px;" onclick="document.querySelector('.nav-item[data-target=\\'view-aluno-caderneta\\']').click()">Abrir Caderneta e Resolver</button></div>`;
+            alertHtml += `<div class="card" style="background:linear-gradient(135deg,#ef4444,#b91c1c); color:white; border:none; border-radius:16px; margin-bottom:20px;"><h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-triangle-exclamation"></i> Ação Necessária</h3><p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens pendências urgentes que prejudicam a tua avaliação.</p><ul style="margin-bottom:20px; padding-left:20px; font-size:1.1rem; font-weight:bold; line-height:1.6;">${tFaltas>0?`<li>${tFaltas} Falta(s) injustificada(s)</li>`:''}${mRep>0?`<li>${mRep} Módulo(s) Reprovado(s)</li>`:''}${pAtivos>0?`<li>${pAtivos} PRHF(s) pendentes (${pHoras}h presenciais)</li>`:''}</ul><button class="primary-btn" style="background:white; color:#b91c1c; font-size:1.1rem; padding:15px;" onclick="document.querySelector('.nav-item[data-target=\\'view-aluno-caderneta\\']').click()">Abrir Caderneta e Resolver</button></div>`;
         } else if(evs.length>0) {
             const ev = evs[0]; const dF = ev.data.split('-').reverse().join('/');
             alertHtml += `<div class="card" style="background:linear-gradient(135deg,#f59e0b,#d97706); color:white; border:none; border-radius:16px; margin-bottom:20px;"><h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-calendar-exclamation"></i> Prepara-te</h3><p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens <strong>${ev.titulo}</strong> no dia ${dF}. Recomendamos que vejas os teus materiais!</p><button class="primary-btn" style="background:white; color:#d97706; width:100%; font-size:1.1rem; padding:15px;" onclick="document.getElementById('btn-open-materiais').click()"><i class="fa-solid fa-book-open"></i> Abrir Materiais</button></div>`;
@@ -392,17 +395,6 @@ async function verificarEpocaExames() {
         if(tSnap.data().epocaExames.dataFim) { const df = Math.ceil((new Date(tSnap.data().epocaExames.dataFim) - new Date()) / (1000 * 60 * 60 * 24)); document.getElementById('exam-countdown').innerText = df > 0 ? `Faltam ${df} dias` : "Já terminou"; }
     }
 }
-
-document.getElementById('aluno-search-input')?.addEventListener('input', async (e) => {
-    const termo = e.target.value.toLowerCase().trim(); const box = document.getElementById('aluno-search-results');
-    if(termo.length < 2) { box.style.display = 'none'; return; } box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">A procurar...</p>'; box.style.display = 'block';
-    try {
-        let resArr = []; 
-        if (minhaTurma) { const sDb = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); sDb.forEach(d => { if(d.data().titulo?.toLowerCase().includes(termo) || d.data().disciplina?.toLowerCase().includes(termo)) resArr.push({ t: `Materiais - ${d.data().disciplina}`, txt: d.data().titulo, id: 'btn-open-materiais' }); }); }
-        if(resArr.length === 0) box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">Sem resultados.</p>'; else { let h = ''; resArr.forEach(r => h += `<div style="padding:8px; border-bottom:1px solid #333; cursor:pointer;" onclick="document.getElementById('${r.id}').click(); document.getElementById('aluno-search-results').style.display='none'; document.getElementById('aluno-search-input').value='';"><span style="font-size:0.7rem; color:var(--primary-green); text-transform:uppercase;">${r.t}</span><div style="font-size:0.9rem; color:var(--text-light); margin-top:3px;">${r.txt}</div></div>`); box.innerHTML = h; }
-    } catch(err) { box.innerHTML = '<p class="text-danger" style="margin:0;">Erro.</p>'; }
-});
-document.addEventListener('click', (e) => { if (!e.target.closest('#aluno-search-input') && !e.target.closest('#aluno-search-results')) { const el = document.getElementById('aluno-search-results'); if(el) el.style.display = 'none'; } });
 
 // ==========================================
 // 5. PERFIL: GAMIFICAÇÃO E ESTATÍSTICAS
@@ -458,12 +450,14 @@ async function carregarObjetivosPessoais() {
             }
             if(achieved) { await updateDoc(doc(db, "utilizadores", myUserId, "objetivos", obj.id), { concluido: true }); obj.concluido = true; objGanhouXP = true; }
             const cColor = obj.concluido ? 'var(--success-green)' : '#444'; const txtDec = obj.concluido ? 'line-through' : 'none'; const txtColor = obj.concluido ? 'var(--text-muted)' : 'var(--text-light)';
-            html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left: 3px solid ${cColor};"><div style="display:flex; align-items:center; gap:12px; flex:1;"><div style="width:24px; height:24px; border-radius:50%; border:2px solid ${cColor}; background:${obj.concluido ? cColor : 'transparent'}; display:flex; align-items:center; justify-content:center;">${obj.concluido ? '<i class="fa-solid fa-check" style="color:var(--bg-dark); font-size:0.75rem;"></i>' : ''}</div><span style="text-decoration:${txtDec}; color:${txtColor}; font-size:0.95rem; flex:1;">${obj.desc}</span></div><i class="fa-solid fa-trash btn-delete-objetivo" data-id="${obj.id}" style="color:var(--danger-red); cursor:pointer; font-size:0.9rem; padding: 5px;"></i></div>`;
+            html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left: 3px solid ${cColor};"><div style="display:flex; align-items:center; gap:12px; flex:1;"><div onclick="window.toggleObjetivo('${obj.id}', ${!obj.concluido})" style="width:24px; height:24px; border-radius:50%; border:2px solid ${cColor}; background:${obj.concluido ? cColor : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer;">${obj.concluido ? '<i class="fa-solid fa-check" style="color:var(--bg-dark); font-size:0.75rem;"></i>' : ''}</div><span style="text-decoration:${txtDec}; color:${txtColor}; font-size:0.95rem; flex:1;">${obj.desc}</span></div><i class="fa-solid fa-trash btn-delete-objetivo" data-id="${obj.id}" style="color:var(--danger-red); cursor:pointer; font-size:0.9rem; padding: 5px;"></i></div>`;
         }
         if(objGanhouXP) { await updateDoc(doc(db, "utilizadores", myUserId), { xp: uXp + 50 }); carregarGamificacao({xp: uXp+50}); alert("🎉 Parabéns! Uma Meta foi concluída automaticamente! +50 XP"); }
         cont.innerHTML = html === '' ? '<p class="text-muted center" style="font-size:0.85rem;">Não tens metas ativas. Começa a desafiar-te!</p>' : html;
     } catch(e) {}
 }
+
+window.toggleObjetivo = async (id, status) => { try { await updateDoc(doc(db, "utilizadores", myUserId, "objetivos", id), { concluido: status }); if(status) { const snap = await getDoc(doc(db, "utilizadores", myUserId)); let xp = snap.exists() && snap.data().xp ? snap.data().xp : 0; await updateDoc(doc(db, "utilizadores", myUserId), { xp: xp + 50 }); carregarGamificacao({xp: xp+50}); } carregarObjetivosPessoais(); } catch(e) {} };
 
 function renderizarGraficoNotas() {
     const ctx = document.getElementById('chart-notas-aluno'); if(!ctx) return;
@@ -474,87 +468,247 @@ function renderizarGraficoNotas() {
             const md=(mapN[dc].s/mapN[dc].c).toFixed(1); dt.push(md); bg.push(md>=10?'#10b981':'#ef4444');
         });
         if(chartInstance) chartInstance.destroy();
+        if(l.length === 0) { l = ['Sem Notas']; dt = [0]; bg = ['#333']; }
         chartInstance = new Chart(ctx, { type:'bar', data:{labels:l, datasets:[{label:'Média', data:dt, backgroundColor:bg, borderRadius:6}]}, options:{responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true, max:20}, x:{grid:{display:false}}}, plugins:{legend:{display:false}}} });
     });
 }
 
-document.getElementById('btn-view-mood-history')?.addEventListener('click', carregarHistoricoHumor);
-async function carregarHistoricoHumor() {
-    const c = document.getElementById('mood-history-container'); c.innerHTML = '<p class="text-muted center">A atualizar...</p>';
-    try {
-        const s = await getDocs(collection(db, "utilizadores", myUserId, "humor")); let arr = []; s.forEach(d => arr.push(d.data())); arr.sort((a,b) => b.timestamp - a.timestamp);
-        let h = '<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:10px;">'; arr.forEach(hh=>{ h+=`<div style="text-align:center;background:rgba(0,0,0,0.3);padding:10px;border-radius:8px;min-width:60px;"><div style="font-size:1.8rem;">${hh.humor}</div><div style="font-size:0.7rem;color:var(--text-muted);margin-top:5px;">${hh.dataIso.split('-').reverse().slice(0,2).join('/')}</div></div>`;});
-        c.innerHTML = arr.length === 0 ? '<p class="text-muted center" style="margin:0;">Sem registos.</p>' : h+'</div>';
-    } catch(e){}
-}
-
-document.getElementById('upload-avatar')?.addEventListener('change', async (e) => {
-    const file = e.target.files[0]; if(!file) return;
-    try {
-        const compressedFile = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 500, useWebWorker: true }); const reader = new FileReader();
-        reader.onload = async (ev) => { const base64 = ev.target.result; document.getElementById('perfil-avatar-img').src = base64; document.getElementById('header-avatar-circle').innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`; await updateDoc(doc(db, "utilizadores", myUserId), { fotoPerfil: base64 }); }; reader.readAsDataURL(compressedFile);
-    } catch(err) {}
-});
-
 // ==========================================
 // 6. CADERNETA E COMUNICAÇÃO
 // ==========================================
-// (O resto da caderneta de notas, faltas, etc., vai manter o código simplificado para não enviar o ficheiro todo igual ao de cima. No aluno mantivemos a mesma filosofia de simplicidade.)
+async function obterEventosLinhaTemporal() {
+    let ev = [];
+    const nS = await getDocs(collection(db, "utilizadores", myUserId, "notas")); nS.forEach(d => { const n = d.data(); ev.push({ time: new Date(n.data).getTime(), cat: 'notas', icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação', desc: `${n.disciplina} (Mod. ${n.modulo}): <strong style="color:var(--text-light);">${n.nota}</strong>` }); });
+    const fS = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); fS.forEach(d => { const f = d.data(); ev.push({ time: new Date(f.criadoEm || f.dataInicio).getTime(), cat: 'faltas', icon: '<i class="fa-solid fa-user-xmark"></i>', cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Falta a ${f.disciplina} (${f.horas}h)`, desc: f.justificada ? `Justificada` : `Falta registada.` }); });
+    const oS = await getDocs(collection(db, "utilizadores", myUserId, "ocorrencias")); oS.forEach(d => { const o = d.data(); ev.push({ time: o.timestamp, cat: 'comportamento', icon: o.tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>', cor: o.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Registo Disciplinar`, desc: `<strong style="color:var(--text-light);">${o.titulo}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">${o.descricao || ''}</span>` }); });
+    const pS = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); pS.forEach(d => { const p = d.data(); ev.push({ time: new Date(p.dataRegisto || Date.now()).getTime(), cat: 'prhfs', icon: '<i class="fa-solid fa-book-medical"></i>', cor: 'var(--warning-yellow)', titulo: `Plano de Recuperação Criado`, desc: `${p.disciplina} (Mod. ${p.modulo})` }); });
+    ev.sort((a,b) => b.time - a.time); return ev;
+}
 
-// Como este é o ecrã de Aluno, mantemos o envio de PRHFs limpo
+async function carregarTimelineAluno() {
+    const cCont = document.getElementById('aluno-caderneta-content');
+    try {
+        let eventos = await obterEventosLinhaTemporal();
+        if(window.timelineFilterCat !== 'all') { eventos = eventos.filter(e => e.cat === window.timelineFilterCat); }
+        if(eventos.length === 0) { cCont.innerHTML = getEmptyState('O teu histórico está limpo.', 'fa-clock-rotate-left'); return; }
+        
+        let html = '<div class="timeline">';
+        eventos.forEach(ev => { html += `<div class="timeline-item"><div class="timeline-icon" style="color: ${ev.cor}; border-color: ${ev.cor};">${ev.icon}</div><div class="timeline-content" style="border-left: 3px solid ${ev.cor};"><span class="timeline-date">${new Date(ev.time).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}</span><strong style="color:var(--text-light); display:block; margin-bottom:5px;">${ev.titulo}</strong><p style="font-size:0.85rem; color:var(--text-light); margin:0;">${ev.desc}</p></div></div>`; });
+        cCont.innerHTML = html + '</div>';
+    } catch(e) {}
+}
+
+async function carregarNotificacoesAluno() {
+    const cont = document.getElementById('aluno-notificacoes-container'); cont.innerHTML = '<p class="text-muted center">A ler alertas...</p>';
+    try {
+        let evs = await obterEventosLinhaTemporal();
+        evs = evs.map(e => { let c='escola'; if(e.cat==='faltas'&&e.cor==='var(--danger-red)') c='importante'; if(e.cat==='gamificacao') c='gamificacao'; return {...e, nCat: c}; });
+        if(window.notifFilterCat !== 'all') evs = evs.filter(e => e.nCat === window.notifFilterCat);
+        const rec = evs.slice(0, 15);
+        if(rec.length === 0) { cont.innerHTML = getEmptyState('Sem alertas nesta categoria.', 'fa-bell-slash'); return; }
+        
+        let h = ''; rec.forEach(ev => { h += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${ev.cor}; display:flex; align-items:flex-start; gap: 15px; padding: 15px;"><div style="font-size: 1.5rem; color: ${ev.cor};">${ev.icon}</div><div><strong style="color:var(--text-light); font-size:1rem; display:block; margin-bottom:3px;">${ev.titulo}</strong><span style="font-size:0.85rem; color:var(--text-light);">${ev.desc}</span><div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px;">${new Date(ev.time).toLocaleString('pt-PT')}</div></div></div>`; }); cont.innerHTML = h; 
+        if(window.notifFilterCat === 'all') document.getElementById('badge-notificacoes').style.display = 'none';
+    } catch(e) {}
+}
+
+async function carregarNotasAluno() {
+    try {
+        const notasDb = await getDocs(collection(db, "utilizadores", myUserId, "notas"));
+        let disciplinasDoAluno = {}; notasDb.forEach(d => { const n = d.data(); if(!disciplinasDoAluno[n.disciplina]) disciplinasDoAluno[n.disciplina] = []; disciplinasDoAluno[n.disciplina].push(n); });
+        
+        let ordemDisciplinas = obterDisciplinasDoAno();
+        if(ordemDisciplinas.length === 0) { cadernetaContent.innerHTML = getEmptyState('Ainda não tens disciplinas ativas.', 'fa-book'); return; }
+
+        let html = '';
+        ordemDisciplinas.forEach(disc => {
+            if(disciplinasDoAluno[disc] && disciplinasDoAluno[disc].length > 0) {
+                let sum = 0; let c = 0; let modsHtml = '';
+                disciplinasDoAluno[disc].forEach(n => {
+                    if(n.nota !== 'REP' && !isNaN(n.nota)) { sum += Number(n.nota); c++; }
+                    const cor = (n.nota === 'REP' || Number(n.nota) < 10) ? 'var(--danger-red)' : 'var(--success-green)';
+                    const modLabel = n.modulo.toString().startsWith('UC') ? n.modulo : `Módulo ${n.modulo}`;
+                    modsHtml += `<div class="modulo-row"><span style="color:var(--text-light);">${modLabel}</span><span style="font-weight:bold; color:${cor};">${n.nota}</span></div>`;
+                });
+                const med = c > 0 ? (sum/c).toFixed(1) : '-'; const medCor = (med !== '-' && med < 10) ? 'var(--danger-red)' : 'var(--text-light)';
+                html += `<div class="disciplina-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'"><span class="disciplina-title" style="color:var(--text-light);">${disc}</span><span><span style="font-size:0.75rem; color:var(--text-muted); margin-right:8px;">Média:</span><span class="disciplina-media" style="color:${medCor};">${med}</span> <i class="fa-solid fa-chevron-down" style="font-size:0.8rem; color:var(--text-muted); margin-left:5px;"></i></span></div><div class="disciplina-modules">${modsHtml}</div>`;
+            } else {
+                html += `<div class="disciplina-header" style="cursor:default;"><span class="disciplina-title" style="color:var(--text-muted);">${disc}</span><span><span class="disciplina-media" style="color:var(--text-muted); font-size:0.9rem;">SN</span></span></div>`;
+            }
+        });
+        document.getElementById('aluno-caderneta-content').innerHTML = html;
+    } catch(e) {}
+}
+
+async function carregarFaltasAluno() {
+    try {
+        const fDisc = document.getElementById('filtro-caderneta-disc')?.value;
+        const faltasDb = await getDocs(collection(db, "utilizadores", myUserId, "faltas"));
+        let faltasPorDisc = {};
+        faltasDb.forEach(d => { const f = d.data(); if(!f.justificada && (!fDisc || f.disciplina === fDisc)) { if(!faltasPorDisc[f.disciplina]) faltasPorDisc[f.disciplina] = {}; if(!faltasPorDisc[f.disciplina][f.modulo]) faltasPorDisc[f.disciplina][f.modulo] = []; faltasPorDisc[f.disciplina][f.modulo].push(f); } });
+
+        if(Object.keys(faltasPorDisc).length === 0) { document.getElementById('aluno-caderneta-content').innerHTML = getEmptyState('Sem faltas injustificadas. Excelente!', 'fa-face-smile'); return; }
+        
+        let html = ''; const ordemDisciplinas = obterDisciplinasDoAno(); const matriz = getMatriz();
+        
+        ordemDisciplinas.forEach(disc => {
+            if(faltasPorDisc[disc]) {
+                let discHtml = ''; let totalFaltasDisc = 0;
+                for(let mod of Object.keys(faltasPorDisc[disc]).sort()) {
+                    let sumFaltasMod = 0; faltasPorDisc[disc][mod].forEach(f => sumFaltasMod += Number(f.horas||0)); totalFaltasDisc += sumFaltasMod;
+                    
+                    let limiteHoras = 0; let totalHorasMod = 0;
+                    for (const comp of Object.values(matriz)) { if(comp[disc] && comp[disc][mod]) { totalHorasMod = comp[disc][mod]; limiteHoras = Math.round(totalHorasMod * 0.1); break; } }
+                    
+                    let corBarra = 'var(--success-green)'; let txtRisco = 'Regular'; let perc = 0;
+                    if(totalHorasMod > 0) {
+                        perc = (sumFaltasMod / totalHorasMod) * 100; if(perc > 100) perc = 100;
+                        if(sumFaltasMod > limiteHoras) { corBarra = 'var(--danger-red)'; txtRisco = '⚠️ Abaixo de 90%'; }
+                        else if(sumFaltasMod === limiteHoras) { corBarra = 'var(--warning-yellow)'; txtRisco = 'Atenção (No limite)'; }
+                        else { corBarra = 'var(--success-green)'; txtRisco = 'Regular'; }
+                    }
+
+                    const modLabel = mod.toString().startsWith('UC') ? mod : `Módulo ${mod}`;
+                    discHtml += `<div style="background:rgba(0,0,0,0.2); padding:12px; border-radius:8px; border:1px solid #333; margin-bottom:10px;"><div style="display:flex; justify-content:space-between; margin-bottom:8px;"><strong style="color:var(--text-light);">${modLabel}</strong><span style="font-size:0.8rem; font-weight:bold; color:${corBarra};">${sumFaltasMod}h / ${limiteHoras > 0 ? limiteHoras+'h' : '?'}</span></div><div class="progress-bar-bg" style="margin-top:0; margin-bottom:5px; height:6px;"><div class="progress-bar-fill" style="width: ${perc}%; background-color:${corBarra};"></div></div><div style="text-align:right; font-size:0.75rem; color:${corBarra};">${txtRisco}</div></div>`;
+                }
+                html += `<div class="disciplina-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'"><span class="disciplina-title" style="color:var(--text-light);">${disc}</span><span><span class="disciplina-media" style="color:var(--danger-red);">${totalFaltasDisc}h</span> <i class="fa-solid fa-chevron-down" style="font-size:0.8rem; color:var(--text-muted); margin-left:5px;"></i></span></div><div class="disciplina-modules">${discHtml}</div>`;
+            }
+        });
+        document.getElementById('aluno-caderneta-content').innerHTML = html;
+    } catch(e) {}
+}
+
+async function carregarPrhfsAluno() {
+    try {
+        const fDisc = document.getElementById('filtro-caderneta-disc')?.value;
+        const prhfsDb = await getDocs(collection(db, "utilizadores", myUserId, "prhfs"));
+        let prhfsArr = []; prhfsDb.forEach(d => { const p = d.data(); if(!fDisc || p.disciplina === fDisc) prhfsArr.push({id: d.id, ...p}); });
+        if(prhfsArr.length === 0) { document.getElementById('aluno-caderneta-content').innerHTML = getEmptyState('Não tens Planos de Recuperação.', 'fa-book-medical'); return; }
+        
+        prhfsArr.sort((a,b) => new Date(a.prazo) - new Date(b.prazo));
+        let pendentes = prhfsArr.filter(p => p.status !== 'concluida'); let concluidos = prhfsArr.filter(p => p.status === 'concluida');
+        
+        let html = ''; 
+        const renderP = (p) => {
+            const isUrgente = p.moduloTerminado === true || p.moduloTerminado === "true"; 
+            const cor = isUrgente ? 'var(--danger-red)' : 'var(--warning-yellow)'; 
+            const txtSt = p.status === 'concluida' ? 'CONCLUÍDO' : (isUrgente ? 'URGENTE' : 'EM CURSO'); 
+            const corFinal = p.status === 'concluida' ? 'var(--success-green)' : cor; 
+            const hPres = Number(p.horasPresenciais || 0); const hAut = Number(p.horasTotais || 50) - hPres;
+            
+            const b64Var = p.ficheiroBase64 || p.anexoBase64; 
+            const aHtml = b64Var ? `<a href="${b64Var}" download="PRHF_${p.disciplina}_M${p.modulo}" class="secondary-btn small-btn" style="margin-bottom:10px; color:var(--primary-green); border-color:var(--primary-green); display:block; text-align:center;"><i class="fa-solid fa-download"></i> Descarregar Ficha</a>` : '';
+            const fpHtml = p.feedbackProfessor ? `<div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:10px; font-size:0.85rem;"><strong style="color:var(--primary-green);">Prof. ${p.professor || ''}:</strong> ${p.feedbackProfessor}</div>` : '';
+            const propHtml = p.propostaAluno ? `<div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:15px; font-size:0.85rem;"><strong style="color:var(--warning-yellow);">A tua Proposta:</strong> ${p.propostaAluno} <br><span style="color:${p.propostaLidaDT ? 'var(--success-green)' : 'var(--text-muted)'}; font-size:0.75rem;"><i class="fa-solid ${p.propostaLidaDT ? 'fa-check-double' : 'fa-clock'}"></i> ${p.propostaLidaDT ? 'Validada pelo Prof.' : 'A aguardar validação'}</span></div>` : '';
+            
+            let btn = ''; if(p.status !== 'concluida' && hPres > 0) { btn = `<button class="primary-btn small-btn" style="width:100%; background-color:${corFinal}; color:${corFinal === 'var(--warning-yellow)' ? 'black' : 'white'};" onclick="window.abrirAcaoPrhf('${p.id}', '${p.disciplina}', '${p.modulo}', '${p.prazo}')"><i class="fa-regular fa-calendar"></i> Sugerir Horário</button>`; }
+            
+            return `<div class="card" style="margin-bottom:15px; border-left: 4px solid ${corFinal};"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="font-size: 1.1rem; color:var(--text-light);">${p.disciplina} (Mod. ${p.modulo})</strong><span style="color:${corFinal}; font-size:0.75rem; font-weight:bold;">${txtSt}</span></div><p style="font-size:0.85rem; color:var(--text-light); margin-bottom:10px;">${p.descricao}</p>${aHtml} ${fpHtml} ${propHtml}<div style="font-size:0.8rem; margin-bottom: 15px; border-top:1px dashed #333; padding-top:10px; color:var(--text-light);">Data Limite: <strong style="color:${corFinal};">${p.prazo.split('-').reverse().join('/')}</strong><br>Horas Presenciais: <strong>${hPres}h</strong></div>${btn}</div>`;
+        };
+        
+        pendentes.forEach(p => html += renderP(p)); 
+        if(concluidos.length > 0) { html += `<div class="falta-date-divider" style="margin-top:20px;"><span>Concluídos</span></div>`; concluidos.forEach(p => html += renderP(p)); } 
+        document.getElementById('aluno-caderneta-content').innerHTML = html;
+    } catch(e) { }
+}
+
 window.abrirAcaoPrhf = (id, disc, mod, prazo) => {
-    esconderTodasAsVistas(); 
+    esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById('view-aluno-acao-prhf').style.display = 'block'; 
     document.getElementById('prhf-acao-titulo').innerText = `${disc} (Mod. ${mod})`; 
     document.getElementById('prhf-acao-prazo').innerText = prazo.split('-').reverse().join('/');
     
-    document.getElementById('btn-voltar-acao-prhf').onclick = () => { 
-        esconderTodasAsVistas(); 
-        document.getElementById('view-aluno-caderneta').style.display = 'block'; 
-        // document.getElementById('tab-aluno-prhfs').click();
-    };
+    document.getElementById('btn-voltar-acao-prhf').onclick = () => { document.querySelector('.nav-item[data-target="view-aluno-caderneta"]').click(); };
     
     document.getElementById('btn-enviar-proposta-prhf').onclick = async (e) => {
-        const d = document.getElementById('aluno-prhf-proposta-data').value; 
-        const hi = document.getElementById('aluno-prhf-proposta-hora-inicio').value; 
-        const hf = document.getElementById('aluno-prhf-proposta-hora-fim').value;
-        
-        if(!d || !hi || !hf) { alert("Preenche a data e as horas da tua sugestão!"); return; }
-        
+        const d = document.getElementById('aluno-prhf-proposta-data').value; const hi = document.getElementById('aluno-prhf-proposta-hora-inicio').value; const hf = document.getElementById('aluno-prhf-proposta-hora-fim').value;
+        if(!d || !hi || !hf) { alert("Preenche a data e horas!"); return; }
         const btn = e.currentTarget; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
-        
         try { 
-            await updateDoc(doc(db, "utilizadores", myUserId, "prhfs", id), { 
-                propostaAluno: `O aluno propõe: ${d.split('-').reverse().join('/')} das ${hi} às ${hf}`, 
-                propostaLidaDT: false 
-            }); 
-            btn.innerHTML = '<i class="fa-solid fa-check"></i> Enviado ao Professor'; 
-            btn.style.backgroundColor = 'var(--success-green)'; 
-            
-            setTimeout(() => { 
-                document.getElementById('btn-voltar-acao-prhf').click(); 
-                btn.innerHTML = 'Enviar Proposta'; 
-                btn.disabled = false; 
-                btn.style.backgroundColor = 'var(--primary-green)';
-            }, 1500); 
-            
-        } catch(err) { 
-            btn.innerHTML = "Erro de Ligação"; setTimeout(() => { btn.disabled = false; }, 1500); 
-        }
+            await updateDoc(doc(db, "utilizadores", myUserId, "prhfs", id), { propostaAluno: `O aluno propõe: ${d.split('-').reverse().join('/')} das ${hi} às ${hf}`, propostaLidaDT: false }); 
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Enviado'; btn.style.backgroundColor = 'var(--success-green)'; 
+            setTimeout(() => { document.getElementById('btn-voltar-acao-prhf').click(); btn.innerHTML = 'Enviar Proposta'; btn.disabled = false; btn.style.backgroundColor = 'var(--primary-green)';}, 1500); 
+        } catch(err) { btn.innerHTML = "Erro"; setTimeout(() => { btn.disabled = false; }, 1500); }
     };
 };
 
-// ==========================================
-// OUTRAS INICIALIZAÇÕES DE PASSAPORTE
-// ==========================================
-function carregarDadosPassaporte(dados) {
-    if(dados.fct) { document.getElementById('aluno-fct-horas').innerText = `${dados.fct.horasRealizadas||0} / ${dados.fct.horasTotal||0}h`; document.getElementById('aluno-fct-progress').style.width = `${((dados.fct.horasRealizadas||0)/(dados.fct.horasTotal||1))*100}%`; document.getElementById('input-fct-horas').value = dados.fct.horasRealizadas||'';}
-    if(dados.pap) { document.getElementById('input-pap-tema').value = dados.pap.tema || ''; }
-    if (dados.papFicheiroEnviado) document.getElementById('aluno-pap-file-name').innerText = "Ficheiro submetido.";
+async function carregarComportamentoAluno() {
+    try {
+        const fDisc = document.getElementById('filtro-caderneta-disc')?.value;
+        const res = await getDocs(query(collection(db, "utilizadores", myUserId, "ocorrencias")));
+        let regs = []; res.forEach(d => { if(!fDisc || d.data().disciplina === fDisc) regs.push(d.data()); }); 
+        if(regs.length === 0) { document.getElementById('aluno-caderneta-content').innerHTML = getEmptyState('Sem registos disciplinares.', 'fa-scale-balanced'); return; }
+        regs.sort((a,b) => b.data.localeCompare(a.data)); 
+        let html = '';
+        regs.forEach(r => {
+            const cor = r.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)';
+            html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${cor};"><div style="display:flex; align-items:center; gap:8px; color:${cor}; margin-bottom:5px;"><i class="fa-solid fa-circle-exclamation"></i> <strong style="color:var(--text-light);">${r.titulo}</strong></div><span style="font-size:0.75rem; color:var(--text-muted);">Data: ${r.data} | Prof. ${r.autor}</span>${r.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px; background:rgba(0,0,0,0.2); padding:8px; border-radius:6px;">${r.descricao}</p>` : ''}</div>`;
+        });
+        document.getElementById('aluno-caderneta-content').innerHTML = html;
+    } catch(e) {}
 }
-document.getElementById('btn-save-fct')?.addEventListener('click', async (e) => { const v = document.getElementById('input-fct-horas').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "fct.horasRealizadas": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
-document.getElementById('btn-save-pap-tema')?.addEventListener('click', async (e) => { const v = document.getElementById('input-pap-tema').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "pap.tema": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-save"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
-document.getElementById('btn-enviar-pap')?.addEventListener('click', async (e) => { if(!fPB64) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { const snap = await getDoc(doc(db, "utilizadores", myUserId)); let axp = snap.exists()&&snap.data().xp?snap.data().xp:0; await updateDoc(doc(db, "utilizadores", myUserId), { papFicheiroEnviado:true, papFicheiroBase64:fPB64, xp:axp+200 }); b.style.backgroundColor="var(--success-green)"; b.innerHTML='<i class="fa-solid fa-check"></i> Submetido'; setTimeout(() => { b.style.display='none'; b.disabled=false; document.getElementById('aluno-pap-file-name').style.color="var(--success-green)"; }, 2000); } catch(err){} });
+
+async function carregarObservacoesAluno(rSel = '1_intercalar') {
+    const cCont = document.getElementById('aluno-caderneta-content');
+    const rM = [{id: '1_intercalar', label: '1ª Intercalar'}, {id: '1_avaliacao', label: '1ª Avaliação'}, {id: '2_intercalar', label: '2ª Intercalar'}, {id: '2_avaliacao', label: '2ª Avaliação'}, {id: '3_avaliacao', label: '3ª Avaliação'}];
+    let html = '<div style="display:flex; overflow-x:auto; gap:10px; margin-bottom:20px; padding-bottom:10px; scrollbar-width: none;">'; rM.forEach(r => { const bg = r.id === rSel ? 'var(--primary-green)' : 'var(--bg-dark)'; const color = r.id === rSel ? 'var(--bg-dark)' : 'var(--text-muted)'; html += `<button class="btn-select-reuniao" data-id="${r.id}" style="background:${bg}; color:${color}; border:1px solid #333; padding:8px 15px; border-radius:20px; cursor:pointer; font-weight:bold; white-space:nowrap; transition:0.2s; flex-shrink:0;">${r.label}</button>`; }); html += '</div><div id="reuniao-content-area"><p class="text-muted center">A carregar dados...</p></div>'; cCont.innerHTML = html;
+    document.querySelectorAll('.btn-select-reuniao').forEach(btn => { btn.addEventListener('click', (e) => { carregarObservacoesAluno(e.currentTarget.getAttribute('data-id')); }); });
+
+    try {
+        const dS = await getDoc(doc(db, "utilizadores", myUserId, "reunioes", rSel)); let dR = dS.exists() ? dS.data() : {}; let cH = '<div style="display:flex; flex-direction:column; gap:10px;">';
+        const ordemDisciplinas = obterDisciplinasDoAno();
+        if(ordemDisciplinas.length === 0) { cH += '<p class="text-muted center">Ainda não tens disciplinas associadas.</p>'; }
+        else {
+            ordemDisciplinas.forEach(disc => { const cm = dR.disciplinas && dR.disciplinas[disc] ? dR.disciplinas[disc] : '<span style="color:var(--text-muted);">Sem comentário</span>'; cH += `<div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;"><h4 style="margin-bottom:8px; color:white; font-size:1rem;">${disc}</h4><p style="color:var(--text-light); font-size:0.9rem; line-height:1.4; margin:0;">${cm}</p></div>`; });
+        }
+        const gl = dR.global || '<span style="color:var(--text-muted);">Sem observações globais.</span>'; cH += `<div class="card" style="margin-top:15px; border:1px solid var(--warning-yellow); background:rgba(255,204,0,0.05); padding:15px;"><h3 style="color:var(--warning-yellow); margin-bottom:10px; font-size:1.1rem;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3><p style="color:white; font-size:0.95rem; line-height:1.5; margin:0;">${gl}</p></div></div>`;
+        document.getElementById('reuniao-content-area').innerHTML = cH;
+    } catch(e) {}
+}
+
+async function carregarForuns() {
+    const cont = document.getElementById('aluno-forum-channel-list'); cont.innerHTML = '<p class="text-muted center">A configurar fóruns...</p>'; if(!minhaTurma) return;
+    let html = `<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apoio & Turma</h3><div class="canal-card" data-id="turma_global" data-nome="Turma ${minhaTurma}" style="margin-bottom: 15px;"><div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-users"></i></div><div class="canal-info"><h4>Turma ${minhaTurma}</h4><p>Canal Geral</p></div></div><div class="canal-card" data-id="dt_${myUserId}" data-nome="Chat DT"><div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div><div class="canal-info"><h4>Diretor de Turma</h4><p>Mensagem Privada</p></div></div><h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Disciplinas</h3><div style="display:flex; flex-wrap:wrap; gap:10px;">`;
+    const ordemDisciplinas = obterDisciplinasDoAno();
+    ordemDisciplinas.forEach(disc => { html += `<div class="canal-card" data-id="disc_${disc}" data-nome="Fórum ${disc}" style="flex: 1 1 45%; padding: 10px;"><div class="canal-info" style="text-align:center;"><h4 style="margin:0; font-size:0.9rem; color:#00d2ff;"><i class="fa-solid fa-book-open"></i> ${disc}</h4></div></div>`; }); html += '</div>';
+    try {
+        const res = await getDocs(collection(db, "turmas", minhaTurma, "foruns")); let extrasHtml = '';
+        res.forEach(docSnap => { const f = docSnap.data(); if(f.membros && f.membros.includes(myUserId) && !f.isDefault) { extrasHtml += `<div class="canal-card" data-id="${docSnap.id}" data-nome="${f.nome}" style="position:relative;"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-comments"></i></div><div class="canal-info"><h4>${f.nome}</h4><p>Grupo de Trabalho</p></div><i class="fa-solid fa-trash btn-delete-chat" data-id="${docSnap.id}" style="color:var(--danger-red); position:absolute; right:15px; font-size:1.1rem; cursor:pointer;"></i></div>`; } });
+        if (extrasHtml !== '') html += `<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Grupos de Trabalho</h3>` + extrasHtml;
+    } catch(e) {}
+    cont.innerHTML = html;
+}
+
+// ----------------------------------------------------
+// MATERIAIS / SUMÁRIOS COM DOWNLOAD BASE64
+// ----------------------------------------------------
+async function carregarMateriaisAluno() {
+    const c = document.getElementById('aluno-lista-materiais-container'); c.innerHTML = '<p class="text-muted center">A carregar materiais...</p>'; if(!minhaTurma) return;
+    try {
+        const r = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); 
+        if(r.empty) { c.innerHTML = getEmptyState('Nenhum material publicado.', 'fa-book-open'); return; }
+        
+        let sum = []; let dU = new Set(); r.forEach(d => { const dt = d.data(); sum.push({id: d.id, ...dt}); dU.add(dt.disciplina); });
+        
+        const fS = document.getElementById('aluno-filtro-materiais-disc'); 
+        if (fS.options.length <= 1) { let oH = '<option value="">Todas as Disciplinas</option>'; Array.from(dU).sort().forEach(dc => oH += `<option value="${dc}">${dc}</option>`); fS.innerHTML = oH; }
+        
+        const fA = fS.value; if(fA) sum = sum.filter(s => s.disciplina === fA); 
+        sum.sort((a,b) => b.timestamp - a.timestamp || b.data.localeCompare(a.data)); 
+        
+        if(sum.length === 0) { c.innerHTML = getEmptyState('Sem materiais para esta disciplina.', 'fa-filter'); return; }
+        
+        let html = ''; 
+        sum.forEach(s => { 
+            const ficheiro = s.ficheiroBase64 || s.anexoBase64;
+            const nomeFicheiro = s.anexoNome || 'Material_Anexo';
+            const aB = ficheiro ? `<a href="${ficheiro}" download="${nomeFicheiro}" class="primary-btn small-btn" style="display:block; margin-top:15px; width:100%; text-align:center; padding:10px 12px; background-color:#0099ff; color:white;"><i class="fa-solid fa-download"></i> Baixar Anexo</a>` : ''; 
+            html += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #0099ff;"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">${s.data} | ${s.disciplina} | Prof. ${s.professor || ''}</span><h4 style="margin:5px 0; color:var(--text-light);">${s.titulo}</h4>${s.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px;">${s.descricao}</p>` : ''}</div></div>${aB}</div>`; 
+        }); 
+        c.innerHTML = html;
+    } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao carregar os dados.</p>'; }
+}
+document.getElementById('aluno-filtro-materiais-disc')?.addEventListener('change', carregarMateriaisAluno);
 
 async function pedirPermissaoNotificacoes() { try { const p = await Notification.requestPermission(); if(p==='granted') { const r = await navigator.serviceWorker.register('./firebase-messaging-sw.js'); const t = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: r }); if(t) await updateDoc(doc(db, "utilizadores", myUserId), { tokenNotificacao: t }); } } catch(e){} }
 if(typeof onMessage !== "undefined" && messaging) onMessage(messaging, p => alert(`NOVA NOTIFICAÇÃO:\n${p.notification.title}\n${p.notification.body}`));
