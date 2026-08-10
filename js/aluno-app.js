@@ -2,7 +2,6 @@ import { auth, db, messaging, VAPID_KEY, getToken, onMessage } from "./firebase.
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, collection, updateDoc, getDocs, query, addDoc, onSnapshot, orderBy, setDoc, enableIndexedDbPersistence, deleteDoc, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// Proteção máxima no Modo Offline
 try { enableIndexedDbPersistence(db).catch(function(){}); } catch(e){}
 
 let myUserId = "", myUserName = "", minhaTurma = "", myAcademia = "";
@@ -12,9 +11,6 @@ let fPB64 = "";
 window.timelineFilterCat = 'all'; window.notifFilterCat = 'all';
 let ahModo = 'dia', ahDOff = 0, ahSOff = 0;
 
-// ==========================================
-// FUNÇÕES DE SEGURANÇA PARA BOTÕES (Evita crashes)
-// ==========================================
 function bindClick(id, fn) { const el = document.getElementById(id); if(el) el.addEventListener('click', fn); }
 function bindChange(id, fn) { const el = document.getElementById(id); if(el) el.addEventListener('change', fn); }
 function bindInput(id, fn) { const el = document.getElementById(id); if(el) el.addEventListener('input', fn); }
@@ -141,8 +137,7 @@ onAuthStateChanged(auth, async (user) => {
                 const objSelect = document.getElementById('obj-disciplina');
                 if(objSelect) objSelect.innerHTML = obterDisciplinasDoAno().map(dc => `<option value="${dc}">${dc}</option>`).join('');
 
-                const matchAno = (minhaTurma || "").match(/\d+/);
-                const turmaAno = matchAno ? parseInt(matchAno[0]) : (d.ano || 10);
+                const turmaAno = parseInt((minhaTurma || "").match(/\d+/)?.[0]) || d.ano || 10;
                 const btnPassaporte = document.getElementById('btn-abrir-passaporte');
                 const secFct = document.getElementById('sec-aluno-fct');
                 const secPap = document.getElementById('sec-aluno-pap');
@@ -434,28 +429,43 @@ function carregarGamificacao(dados) {
 }
 
 async function carregarRankingTurma() {
-    const c = document.getElementById('ranking-turma-container'); if(!minhaTurma) { c.innerHTML = '<p class="text-muted center">Sem turma atribuída.</p>'; return; }
+    const c = document.getElementById('ranking-turma-container'); 
+    if(!minhaTurma) { c.innerHTML = '<p class="text-muted center">Sem turma atribuída.</p>'; return; }
     try {
-        const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", minhaTurma), where("papel", "==", "aluno")));
-        let alunos = []; snap.forEach(d => alunos.push({id: d.id, ...d.data()})); alunos.sort((a,b) => (b.xp || 0) - (a.xp || 0));
+        // Agora lê TODOS os alunos da escola (para a Guerra Global das Academias)
+        const snap = await getDocs(query(collection(db, "utilizadores"), where("papel", "==", "aluno")));
         
+        let alunosTurma = [];
         let academiasXP = { estrategas: 0, embaixadores: 0, exploradores: 0, visionarios: 0 };
-        alunos.forEach(al => { if(al.academia && academiasXP[al.academia] !== undefined) academiasXP[al.academia] += (al.xp || 0); });
         
-        let hAcad = `<div style="display:flex; justify-content:space-around; margin-bottom:20px; text-align:center; background:rgba(0,0,0,0.2); padding:15px; border-radius:12px;">`;
+        snap.forEach(d => {
+            const al = {id: d.id, ...d.data()};
+            if(al.academia && academiasXP[al.academia] !== undefined) {
+                academiasXP[al.academia] += (al.xp || 0);
+            }
+            if(al.turma === minhaTurma) {
+                alunosTurma.push(al);
+            }
+        });
+        
+        alunosTurma.sort((a,b) => (b.xp || 0) - (a.xp || 0));
+        
+        let hAcad = `<div style="display:flex; justify-content:space-around; margin-bottom:20px; text-align:center; background:rgba(0,0,0,0.2); padding:20px 10px 15px 10px; border-radius:12px; position:relative;">
+                        <div style="position:absolute; top:-10px; background:var(--bg-dark); padding:2px 12px; font-size:0.7rem; color:var(--text-muted); border:1px solid #333; border-radius:10px; font-weight:bold; letter-spacing:1px;">GLOBAL (ESCOLA)</div>`;
         const orderAcad = Object.keys(academiasXP).sort((a,b) => academiasXP[b] - academiasXP[a]);
         orderAcad.forEach((ac) => {
             const acData = ACADEMIAS_INFO[ac];
             hAcad += `<div><i class="fa-solid ${acData.icon}" style="font-size:2rem; color:${acData.cor}; margin-bottom:8px; display:block;"></i><strong style="color:var(--text-light); font-size:0.85rem;">${acData.nome.split(' ')[2]||acData.nome}</strong><br><span style="color:var(--warning-yellow); font-size:0.9rem; font-weight:bold;">${academiasXP[ac]} XP</span></div>`;
         });
-        hAcad += `</div><h4 style="color:var(--text-muted); font-size:0.85rem; text-transform:uppercase; margin-bottom:10px;">🏆 Top 10 Alunos</h4>`;
+        
+        hAcad += `</div><h4 style="color:var(--text-muted); font-size:0.85rem; text-transform:uppercase; margin-bottom:10px;">🏆 Top 10 (A Tua Turma)</h4>`;
         
         let hAl = '';
-        alunos.slice(0, 10).forEach((al, idx) => {
+        alunosTurma.slice(0, 10).forEach((al, idx) => {
             let cor = 'var(--text-muted)'; if(idx === 0) cor = '#f59e0b'; else if(idx === 1) cor = '#9ca3af'; else if(idx === 2) cor = '#d97706';
             hAl += `<div style="display:flex; align-items:center; gap:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left:3px solid ${cor};"><span style="font-weight:bold; font-size:1.2rem; color:${cor}; width:25px; text-align:center;">${idx+1}</span><img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=00cc88&color=fff`}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"><div style="flex:1;"><strong style="font-size:0.95rem; color:var(--text-light);">${al.nome.split(' ')[0]} ${al.nome.split(' ').pop()}</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">${al.academia ? ACADEMIAS_INFO[al.academia].nome : 'S/ Academia'}</span></div><span style="font-weight:bold; color:var(--primary-green); font-size:0.9rem;">${al.xp || 0} XP</span></div>`;
         });
-        c.innerHTML = hAcad + (hAl === '' ? '<p class="text-muted center">Ainda não há alunos com XP.</p>' : hAl);
+        c.innerHTML = hAcad + (hAl === '' ? '<p class="text-muted center">Ainda não há alunos com XP na tua turma.</p>' : hAl);
     } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao carregar ranking.</p>'; }
 }
 
