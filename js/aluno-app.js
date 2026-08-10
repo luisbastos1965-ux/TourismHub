@@ -2,7 +2,8 @@ import { auth, db, messaging, VAPID_KEY, getToken, onMessage } from "./firebase.
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, collection, updateDoc, getDocs, query, addDoc, onSnapshot, orderBy, setDoc, enableIndexedDbPersistence, deleteDoc, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-try { await enableIndexedDbPersistence(db); console.log("Offline OK!"); } catch (e) {}
+// Ativação do Modo Offline de forma segura (sem bloquear o resto do código)
+enableIndexedDbPersistence(db).catch(() => { console.log("Modo offline não suportado neste navegador."); });
 
 let myUserId = "", myUserName = "", minhaTurma = "", myAcademia = "";
 let chartInstance = null; let alunoForumAtivoId = null; let chatUnsubscribeAluno = null; let pendingDeleteChatId = null; let pendingDeleteObjetivoId = null;
@@ -22,7 +23,6 @@ const matrizAntigoTecnica = { "CF": {"1": 24}, "TIAT": {"1": 27}, "TCAT": {"1": 
 const matrizNovoTecnica = { "AET": { "UC00038": 20 }, "OGOT": { "UC03629": 20 }, "CMET": { "UC00034": 30 }, "LNTT": { "UC00044": 50 } };
 
 function obterDisciplinasDoAno() {
-    // Segurança: se a turma estiver vazia, assume 10º ano por defeito para não quebrar a app
     const anoMatch = (minhaTurma || "").match(/\d+/);
     const ano = anoMatch ? parseInt(anoMatch[0]) : 10;
     
@@ -115,7 +115,6 @@ onAuthStateChanged(auth, async (user) => {
             if (docSnap.exists() && docSnap.data().papel === 'aluno') {
                 const d = docSnap.data(); 
                 
-                // SEGURANÇA MÁXIMA: Garante que mesmo sem turma ou nome o código não quebra
                 myUserName = (d.nome || "Aluno").split(' ')[0]; 
                 minhaTurma = d.turma || ""; 
                 myAcademia = d.academia || null;
@@ -150,8 +149,9 @@ onAuthStateChanged(auth, async (user) => {
                 }
 
                 carregarDadosPassaporte(d); carregarGamificacao(d);
-                await construirHomeAdaptativa(); verificarEpocaExames();
+                construirHomeAdaptativa(); verificarEpocaExames();
 
+                // Lança o Inquérito caso ainda não tenha Academia
                 if (!myAcademia) iniciarQuizAcademias(); else aplicarTemaAcademia(myAcademia);
             } else window.location.href = "index.html";
         } catch (e) { console.error("Erro Auth", e); }
@@ -225,7 +225,6 @@ function aplicarTemaAcademia(idHouse) {
     document.documentElement.style.setProperty('--primary-green', ac.cor); 
     
     const rankElem = document.getElementById('aluno-rank-title'); const rankCentral = document.getElementById('perfil-titulo-central'); 
-    
     if(rankElem) rankElem.innerText = `${ac.nome.replace('Academia dos ','')}`; 
     if(rankCentral) { rankCentral.innerHTML = `<i class="fa-solid ${ac.icon}"></i> ${ac.nome}`; rankCentral.style.color = ac.cor; }
     
