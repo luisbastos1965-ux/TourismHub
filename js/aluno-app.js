@@ -2,8 +2,8 @@ import { auth, db, messaging, VAPID_KEY, getToken, onMessage } from "./firebase.
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, collection, updateDoc, getDocs, query, addDoc, onSnapshot, orderBy, setDoc, enableIndexedDbPersistence, deleteDoc, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// Ativação do Modo Offline de forma segura (sem bloquear o resto do código)
-enableIndexedDbPersistence(db).catch(() => { console.log("Modo offline não suportado neste navegador."); });
+// Proteção máxima no Modo Offline
+try { enableIndexedDbPersistence(db).catch(function(){}); } catch(e){}
 
 let myUserId = "", myUserName = "", minhaTurma = "", myAcademia = "";
 let chartInstance = null; let alunoForumAtivoId = null; let chatUnsubscribeAluno = null; let pendingDeleteChatId = null; let pendingDeleteObjetivoId = null;
@@ -11,6 +11,13 @@ let fPB64 = "";
 
 window.timelineFilterCat = 'all'; window.notifFilterCat = 'all';
 let ahModo = 'dia', ahDOff = 0, ahSOff = 0;
+
+// ==========================================
+// FUNÇÕES DE SEGURANÇA PARA BOTÕES (Evita crashes)
+// ==========================================
+function bindClick(id, fn) { const el = document.getElementById(id); if(el) el.addEventListener('click', fn); }
+function bindChange(id, fn) { const el = document.getElementById(id); if(el) el.addEventListener('change', fn); }
+function bindInput(id, fn) { const el = document.getElementById(id); if(el) el.addEventListener('input', fn); }
 
 // ==========================================
 // 1. A MATRIZ DE REFERÊNCIA OFICIAL
@@ -23,7 +30,8 @@ const matrizAntigoTecnica = { "CF": {"1": 24}, "TIAT": {"1": 27}, "TCAT": {"1": 
 const matrizNovoTecnica = { "AET": { "UC00038": 20 }, "OGOT": { "UC03629": 20 }, "CMET": { "UC00034": 30 }, "LNTT": { "UC00044": 50 } };
 
 function obterDisciplinasDoAno() {
-    const anoMatch = (minhaTurma || "").match(/\d+/);
+    const turmaStr = minhaTurma || "";
+    const anoMatch = turmaStr.match(/\d+/);
     const ano = anoMatch ? parseInt(anoMatch[0]) : 10;
     
     const base = {
@@ -133,7 +141,8 @@ onAuthStateChanged(auth, async (user) => {
                 const objSelect = document.getElementById('obj-disciplina');
                 if(objSelect) objSelect.innerHTML = obterDisciplinasDoAno().map(dc => `<option value="${dc}">${dc}</option>`).join('');
 
-                const turmaAno = parseInt((minhaTurma || "").match(/\d+/)?.[0]) || d.ano || 10;
+                const matchAno = (minhaTurma || "").match(/\d+/);
+                const turmaAno = matchAno ? parseInt(matchAno[0]) : (d.ano || 10);
                 const btnPassaporte = document.getElementById('btn-abrir-passaporte');
                 const secFct = document.getElementById('sec-aluno-fct');
                 const secPap = document.getElementById('sec-aluno-pap');
@@ -151,14 +160,13 @@ onAuthStateChanged(auth, async (user) => {
                 carregarDadosPassaporte(d); carregarGamificacao(d);
                 construirHomeAdaptativa(); verificarEpocaExames();
 
-                // Lança o Inquérito caso ainda não tenha Academia
                 if (!myAcademia) iniciarQuizAcademias(); else aplicarTemaAcademia(myAcademia);
             } else window.location.href = "index.html";
         } catch (e) { console.error("Erro Auth", e); }
     } else window.location.href = "index.html";
 });
 
-document.getElementById('btn-logout-aluno')?.addEventListener('click', () => signOut(auth));
+bindClick('btn-logout-aluno', () => signOut(auth));
 
 function iniciarQuizAcademias() { 
     document.getElementById('modal-academia-quiz').style.display = 'flex'; 
@@ -168,7 +176,7 @@ function iniciarQuizAcademias() {
     document.getElementById('quiz-step-loading').style.display = 'none';
 }
 
-document.getElementById('btn-start-quiz')?.addEventListener('click', () => {
+bindClick('btn-start-quiz', () => {
     document.getElementById('quiz-step-intro').style.display = 'none';
     document.getElementById('quiz-step-question').style.display = 'block';
     renderizarPergunta();
@@ -218,7 +226,7 @@ async function finalizarQuiz() {
     }, 2000);
 }
 
-document.getElementById('btn-finish-quiz')?.addEventListener('click', () => { document.getElementById('modal-academia-quiz').style.display = 'none'; aplicarTemaAcademia(myAcademia); });
+bindClick('btn-finish-quiz', () => { document.getElementById('modal-academia-quiz').style.display = 'none'; aplicarTemaAcademia(myAcademia); });
 
 function aplicarTemaAcademia(idHouse) { 
     const ac = ACADEMIAS_INFO[idHouse]; if(!ac) return; 
@@ -339,9 +347,8 @@ document.body.addEventListener('click', async (e) => {
     }
 });
 
-document.addEventListener('change', async (e) => {
-    if (e.target.id === 'obj-tipo') { const v = e.target.value; document.getElementById('obj-setup-nota').style.display = v === 'nota' ? 'flex' : 'none'; }
-    if (e.target.closest('.agenda-filter-label input')) { carregarAgendaAlunoLista(); }
+bindChange('obj-tipo', async (e) => {
+    const v = e.target.value; document.getElementById('obj-setup-nota').style.display = v === 'nota' ? 'flex' : 'none';
 });
 
 // ==========================================
@@ -399,18 +406,19 @@ async function construirHomeAdaptativa() {
 
 async function verificarEpocaExames() {
     if(!minhaTurma) return; const tSnap = await getDoc(doc(db, "turmas", minhaTurma));
-    if(tSnap.exists() && tSnap.data().epocaExames?.ativa) {
+    const tSnapData = tSnap.data();
+    if(tSnap.exists() && tSnapData.epocaExames && tSnapData.epocaExames.ativa) {
         document.getElementById('exam-mode-banner').style.display='block'; document.body.style.borderTop="5px solid #8b5cf6";
-        if(tSnap.data().epocaExames.dataFim) { const df = Math.ceil((new Date(tSnap.data().epocaExames.dataFim) - new Date()) / (1000 * 60 * 60 * 24)); document.getElementById('exam-countdown').innerText = df > 0 ? `Faltam ${df} dias` : "Já terminou"; }
+        if(tSnapData.epocaExames.dataFim) { const df = Math.ceil((new Date(tSnapData.epocaExames.dataFim) - new Date()) / (1000 * 60 * 60 * 24)); document.getElementById('exam-countdown').innerText = df > 0 ? `Faltam ${df} dias` : "Já terminou"; }
     }
 }
 
-document.getElementById('aluno-search-input')?.addEventListener('input', async (e) => {
+bindInput('aluno-search-input', async (e) => {
     const termo = e.target.value.toLowerCase().trim(); const box = document.getElementById('aluno-search-results');
     if(termo.length < 2) { box.style.display = 'none'; return; } box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">A procurar...</p>'; box.style.display = 'block';
     try {
         let resArr = []; 
-        if (minhaTurma) { const sDb = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); sDb.forEach(d => { if(d.data().titulo?.toLowerCase().includes(termo) || d.data().disciplina?.toLowerCase().includes(termo)) resArr.push({ t: `Materiais - ${d.data().disciplina}`, txt: d.data().titulo, id: 'btn-open-materiais' }); }); }
+        if (minhaTurma) { const sDb = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); sDb.forEach(d => { const tit = d.data().titulo || ""; const dsc = d.data().disciplina || ""; if(tit.toLowerCase().includes(termo) || dsc.toLowerCase().includes(termo)) resArr.push({ t: `Materiais - ${dsc}`, txt: tit, id: 'btn-open-materiais' }); }); }
         if(resArr.length === 0) box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">Sem resultados.</p>'; else { let h = ''; resArr.forEach(r => h += `<div style="padding:8px; border-bottom:1px solid #333; cursor:pointer;" onclick="document.getElementById('${r.id}').click(); document.getElementById('aluno-search-results').style.display='none'; document.getElementById('aluno-search-input').value='';"><span style="font-size:0.7rem; color:var(--primary-green); text-transform:uppercase;">${r.t}</span><div style="font-size:0.9rem; color:var(--text-light); margin-top:3px;">${r.txt}</div></div>`); box.innerHTML = h; }
     } catch(err) { box.innerHTML = '<p class="text-danger" style="margin:0;">Erro.</p>'; }
 });
@@ -493,7 +501,7 @@ function renderizarGraficoNotas() {
     });
 }
 
-document.getElementById('btn-view-mood-history')?.addEventListener('click', carregarHistoricoHumor);
+bindClick('btn-view-mood-history', carregarHistoricoHumor);
 async function carregarHistoricoHumor() {
     const c = document.getElementById('mood-history-container'); c.innerHTML = '<p class="text-muted center">A atualizar...</p>';
     try {
@@ -503,7 +511,7 @@ async function carregarHistoricoHumor() {
     } catch(e){}
 }
 
-document.getElementById('upload-avatar')?.addEventListener('change', async (e) => {
+bindChange('upload-avatar', async (e) => {
     const file = e.target.files[0]; if(!file) return;
     try {
         const compressedFile = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 500, useWebWorker: true }); const reader = new FileReader();
@@ -536,9 +544,9 @@ function carregarDadosPassaporte(dados) {
     if(dados.pap) { document.getElementById('input-pap-tema').value = dados.pap.tema || ''; }
     if (dados.papFicheiroEnviado) document.getElementById('aluno-pap-file-name').innerText = "Ficheiro submetido.";
 }
-document.getElementById('btn-save-fct')?.addEventListener('click', async (e) => { const v = document.getElementById('input-fct-horas').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "fct.horasRealizadas": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
-document.getElementById('btn-save-pap-tema')?.addEventListener('click', async (e) => { const v = document.getElementById('input-pap-tema').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "pap.tema": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-save"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
-document.getElementById('btn-enviar-pap')?.addEventListener('click', async (e) => { if(!fPB64) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { const snap = await getDoc(doc(db, "utilizadores", myUserId)); let axp = snap.exists()&&snap.data().xp?snap.data().xp:0; await updateDoc(doc(db, "utilizadores", myUserId), { papFicheiroEnviado:true, papFicheiroBase64:fPB64, xp:axp+200 }); b.style.backgroundColor="var(--success-green)"; b.innerHTML='<i class="fa-solid fa-check"></i> Submetido'; setTimeout(() => { b.style.display='none'; b.disabled=false; document.getElementById('aluno-pap-file-name').style.color="var(--success-green)"; }, 2000); } catch(err){} });
+bindClick('btn-save-fct', async (e) => { const v = document.getElementById('input-fct-horas').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "fct.horasRealizadas": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
+bindClick('btn-save-pap-tema', async (e) => { const v = document.getElementById('input-pap-tema').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "pap.tema": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-save"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
+bindClick('btn-enviar-pap', async (e) => { if(!fPB64) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { const snap = await getDoc(doc(db, "utilizadores", myUserId)); let axp = snap.exists()&&snap.data().xp?snap.data().xp:0; await updateDoc(doc(db, "utilizadores", myUserId), { papFicheiroEnviado:true, papFicheiroBase64:fPB64, xp:axp+200 }); b.style.backgroundColor="var(--success-green)"; b.innerHTML='<i class="fa-solid fa-check"></i> Submetido'; setTimeout(() => { b.style.display='none'; b.disabled=false; document.getElementById('aluno-pap-file-name').style.color="var(--success-green)"; }, 2000); } catch(err){} });
 
 async function pedirPermissaoNotificacoes() { try { const p = await Notification.requestPermission(); if(p==='granted') { const r = await navigator.serviceWorker.register('./firebase-messaging-sw.js'); const t = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: r }); if(t) await updateDoc(doc(db, "utilizadores", myUserId), { tokenNotificacao: t }); } } catch(e){} }
 if(typeof onMessage !== "undefined" && messaging) onMessage(messaging, p => alert(`NOVA NOTIFICAÇÃO:\n${p.notification.title}\n${p.notification.body}`));
@@ -610,10 +618,11 @@ async function carregarNotasAluno() {
 
 async function carregarFaltasAluno() {
     try {
-        const fDisc = document.getElementById('filtro-caderneta-disc')?.value;
+        const fDisc = document.getElementById('filtro-caderneta-disc');
+        const fDiscVal = fDisc ? fDisc.value : "";
         const faltasDb = await getDocs(collection(db, "utilizadores", myUserId, "faltas"));
         let faltasPorDisc = {};
-        faltasDb.forEach(d => { const f = d.data(); if(!f.justificada && (!fDisc || f.disciplina === fDisc)) { if(!faltasPorDisc[f.disciplina]) faltasPorDisc[f.disciplina] = {}; if(!faltasPorDisc[f.disciplina][f.modulo]) faltasPorDisc[f.disciplina][f.modulo] = []; faltasPorDisc[f.disciplina][f.modulo].push(f); } });
+        faltasDb.forEach(d => { const f = d.data(); if(!f.justificada && (!fDiscVal || f.disciplina === fDiscVal)) { if(!faltasPorDisc[f.disciplina]) faltasPorDisc[f.disciplina] = {}; if(!faltasPorDisc[f.disciplina][f.modulo]) faltasPorDisc[f.disciplina][f.modulo] = []; faltasPorDisc[f.disciplina][f.modulo].push(f); } });
 
         if(Object.keys(faltasPorDisc).length === 0) { document.getElementById('aluno-caderneta-content').innerHTML = getEmptyState('Sem faltas injustificadas. Excelente!', 'fa-face-smile'); return; }
         
@@ -648,9 +657,10 @@ async function carregarFaltasAluno() {
 
 async function carregarPrhfsAluno() {
     try {
-        const fDisc = document.getElementById('filtro-caderneta-disc')?.value;
+        const fDisc = document.getElementById('filtro-caderneta-disc');
+        const fDiscVal = fDisc ? fDisc.value : "";
         const prhfsDb = await getDocs(collection(db, "utilizadores", myUserId, "prhfs"));
-        let prhfsArr = []; prhfsDb.forEach(d => { const p = d.data(); if(!fDisc || p.disciplina === fDisc) prhfsArr.push({id: d.id, ...p}); });
+        let prhfsArr = []; prhfsDb.forEach(d => { const p = d.data(); if(!fDiscVal || p.disciplina === fDiscVal) prhfsArr.push({id: d.id, ...p}); });
         if(prhfsArr.length === 0) { document.getElementById('aluno-caderneta-content').innerHTML = getEmptyState('Não tens Planos de Recuperação.', 'fa-book-medical'); return; }
         
         prhfsArr.sort((a,b) => new Date(a.prazo) - new Date(b.prazo));
@@ -682,9 +692,10 @@ async function carregarPrhfsAluno() {
 
 async function carregarComportamentoAluno() {
     try {
-        const fDisc = document.getElementById('filtro-caderneta-disc')?.value;
+        const fDisc = document.getElementById('filtro-caderneta-disc');
+        const fDiscVal = fDisc ? fDisc.value : "";
         const res = await getDocs(query(collection(db, "utilizadores", myUserId, "ocorrencias")));
-        let regs = []; res.forEach(d => { if(!fDisc || d.data().disciplina === fDisc) regs.push(d.data()); }); 
+        let regs = []; res.forEach(d => { if(!fDiscVal || d.data().disciplina === fDiscVal) regs.push(d.data()); }); 
         if(regs.length === 0) { document.getElementById('aluno-caderneta-content').innerHTML = getEmptyState('Sem registos disciplinares.', 'fa-scale-balanced'); return; }
         regs.sort((a,b) => b.data.localeCompare(a.data)); 
         let html = '';
@@ -730,6 +741,16 @@ async function carregarForuns() {
 // ----------------------------------------------------
 // MATERIAIS / SUMÁRIOS
 // ----------------------------------------------------
+bindInput('aluno-search-input', async (e) => {
+    const termo = e.target.value.toLowerCase().trim(); const box = document.getElementById('aluno-search-results');
+    if(termo.length < 2) { box.style.display = 'none'; return; } box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">A procurar...</p>'; box.style.display = 'block';
+    try {
+        let resArr = []; 
+        if (minhaTurma) { const sDb = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); sDb.forEach(d => { const tit = d.data().titulo || ""; const dsc = d.data().disciplina || ""; if(tit.toLowerCase().includes(termo) || dsc.toLowerCase().includes(termo)) resArr.push({ t: `Materiais - ${dsc}`, txt: tit, id: 'btn-open-materiais' }); }); }
+        if(resArr.length === 0) box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">Sem resultados.</p>'; else { let h = ''; resArr.forEach(r => h += `<div style="padding:8px; border-bottom:1px solid #333; cursor:pointer;" onclick="document.getElementById('${r.id}').click(); document.getElementById('aluno-search-results').style.display='none'; document.getElementById('aluno-search-input').value='';"><span style="font-size:0.7rem; color:var(--primary-green); text-transform:uppercase;">${r.t}</span><div style="font-size:0.9rem; color:var(--text-light); margin-top:3px;">${r.txt}</div></div>`); box.innerHTML = h; }
+    } catch(err) { box.innerHTML = '<p class="text-danger" style="margin:0;">Erro.</p>'; }
+});
+
 async function carregarMateriaisAluno() {
     const c = document.getElementById('aluno-lista-materiais-container'); c.innerHTML = '<p class="text-muted center">A carregar materiais...</p>'; if(!minhaTurma) return;
     try {
@@ -739,10 +760,10 @@ async function carregarMateriaisAluno() {
         let sum = []; let dU = new Set(); r.forEach(d => { const dt = d.data(); sum.push({id: d.id, ...dt}); dU.add(dt.disciplina); });
         
         const fS = document.getElementById('aluno-filtro-materiais-disc'); 
-        if (fS.options.length <= 1) { let oH = '<option value="">Todas as Disciplinas</option>'; Array.from(dU).sort().forEach(dc => oH += `<option value="${dc}">${dc}</option>`); fS.innerHTML = oH; }
+        if (fS && fS.options.length <= 1) { let oH = '<option value="">Todas as Disciplinas</option>'; Array.from(dU).sort().forEach(dc => oH += `<option value="${dc}">${dc}</option>`); fS.innerHTML = oH; }
         
-        const fA = fS.value; if(fA) sum = sum.filter(s => s.disciplina === fA); 
-        sum.sort((a,b) => b.timestamp - a.timestamp || b.data.localeCompare(a.data)); 
+        const fA = fS ? fS.value : ""; if(fA) sum = sum.filter(s => s.disciplina === fA); 
+        sum.sort((a,b) => b.timestamp - a.timestamp || (b.data || "").localeCompare(a.data || "")); 
         
         if(sum.length === 0) { c.innerHTML = getEmptyState('Sem materiais para esta disciplina.', 'fa-filter'); return; }
         
@@ -756,8 +777,4 @@ async function carregarMateriaisAluno() {
         c.innerHTML = html;
     } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao carregar os dados.</p>'; }
 }
-document.getElementById('aluno-filtro-materiais-disc')?.addEventListener('change', carregarMateriaisAluno);
-
-async function pedirPermissaoNotificacoes() { try { const p = await Notification.requestPermission(); if(p==='granted') { const r = await navigator.serviceWorker.register('./firebase-messaging-sw.js'); const t = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: r }); if(t) await updateDoc(doc(db, "utilizadores", myUserId), { tokenNotificacao: t }); } } catch(e){} }
-if(typeof onMessage !== "undefined" && messaging) onMessage(messaging, p => alert(`NOVA NOTIFICAÇÃO:\n${p.notification.title}\n${p.notification.body}`));
-setTimeout(() => { if(myUserId) pedirPermissaoNotificacoes(); }, 4000);
+bindChange('aluno-filtro-materiais-disc', carregarMateriaisAluno);
