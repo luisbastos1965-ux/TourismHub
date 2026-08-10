@@ -12,7 +12,7 @@ window.timelineFilterCat = 'all'; window.notifFilterCat = 'all';
 let ahModo = 'dia', ahDOff = 0, ahSOff = 0;
 
 // ==========================================
-// 1. A MATRIZ DE REFERÊNCIA OFICIAL (Mesma do EE)
+// 1. A MATRIZ DE REFERÊNCIA OFICIAL
 // ==========================================
 const matrizAmbos = {
     "Sociocultural": { "PORT": {"1": 33}, "ING": {"1": 27}, "AI": {"1": 36}, "EF": {"1": 10}, "TIC": {"1": 25} },
@@ -22,7 +22,8 @@ const matrizAntigoTecnica = { "CF": {"1": 24}, "TIAT": {"1": 27}, "TCAT": {"1": 
 const matrizNovoTecnica = { "AET": { "UC00038": 20 }, "OGOT": { "UC03629": 20 }, "CMET": { "UC00034": 30 }, "LNTT": { "UC00044": 50 } };
 
 function obterDisciplinasDoAno() {
-    const anoMatch = minhaTurma.match(/\d+/);
+    // Segurança: se a turma estiver vazia, assume 10º ano por defeito para não quebrar a app
+    const anoMatch = (minhaTurma || "").match(/\d+/);
     const ano = anoMatch ? parseInt(anoMatch[0]) : 10;
     
     const base = {
@@ -112,20 +113,28 @@ onAuthStateChanged(auth, async (user) => {
         try {
             const docSnap = await getDoc(doc(db, "utilizadores", myUserId));
             if (docSnap.exists() && docSnap.data().papel === 'aluno') {
-                const d = docSnap.data(); myUserName = d.nome.split(' ')[0]; minhaTurma = d.turma; myAcademia = d.academia || null;
+                const d = docSnap.data(); 
+                
+                // SEGURANÇA MÁXIMA: Garante que mesmo sem turma ou nome o código não quebra
+                myUserName = (d.nome || "Aluno").split(' ')[0]; 
+                minhaTurma = d.turma || ""; 
+                myAcademia = d.academia || null;
                 
                 document.getElementById('header-user-name-aluno').innerText = myUserName;
                 document.getElementById('welcome-nome').innerText = myUserName;
                 document.getElementById('perfil-nome-central').innerText = d.nome || myUserName;
+                
                 if(d.fotoPerfil) {
                     document.getElementById('header-avatar-circle').innerHTML = `<img src="${d.fotoPerfil}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
                     document.getElementById('perfil-avatar-img').src = d.fotoPerfil;
-                } else { document.getElementById('perfil-avatar-img').src = `https://ui-avatars.com/api/?name=${myUserName}&background=00cc88&color=fff&size=100`; }
+                } else { 
+                    document.getElementById('perfil-avatar-img').src = `https://ui-avatars.com/api/?name=${myUserName}&background=00cc88&color=fff&size=100`; 
+                }
 
                 const objSelect = document.getElementById('obj-disciplina');
                 if(objSelect) objSelect.innerHTML = obterDisciplinasDoAno().map(dc => `<option value="${dc}">${dc}</option>`).join('');
 
-                const turmaAno = parseInt(minhaTurma.match(/\d+/)?.[0]) || d.ano || 10;
+                const turmaAno = parseInt((minhaTurma || "").match(/\d+/)?.[0]) || d.ano || 10;
                 const btnPassaporte = document.getElementById('btn-abrir-passaporte');
                 const secFct = document.getElementById('sec-aluno-fct');
                 const secPap = document.getElementById('sec-aluno-pap');
@@ -179,7 +188,7 @@ function renderizarPergunta() {
     shuffled.forEach(opt => {
         const btn = document.createElement('button');
         btn.className = 'secondary-btn';
-        btn.style.cssText = 'text-align: left; padding: 18px 20px; height: auto; font-size: 1rem; border-color: #333; justify-content: flex-start; transition: 0.3s; color: white;';
+        btn.style.cssText = 'text-align: left; padding: 18px 20px; height: auto; font-size: 1rem; border-color: #333; justify-content: flex-start; transition: 0.3s; color: var(--text-light);';
         btn.innerText = opt.text;
         
         btn.addEventListener('mouseover', () => btn.style.borderColor = 'var(--primary-green)');
@@ -222,6 +231,7 @@ function aplicarTemaAcademia(idHouse) {
     
     const avatarImg = document.getElementById('perfil-avatar-img'); if (avatarImg) avatarImg.style.borderColor = ac.cor;
 }
+
 
 // ==========================================
 // 3. NAVEGAÇÃO E DELEGAÇÃO DE EVENTOS
@@ -396,6 +406,17 @@ async function verificarEpocaExames() {
     }
 }
 
+document.getElementById('aluno-search-input')?.addEventListener('input', async (e) => {
+    const termo = e.target.value.toLowerCase().trim(); const box = document.getElementById('aluno-search-results');
+    if(termo.length < 2) { box.style.display = 'none'; return; } box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">A procurar...</p>'; box.style.display = 'block';
+    try {
+        let resArr = []; 
+        if (minhaTurma) { const sDb = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); sDb.forEach(d => { if(d.data().titulo?.toLowerCase().includes(termo) || d.data().disciplina?.toLowerCase().includes(termo)) resArr.push({ t: `Materiais - ${d.data().disciplina}`, txt: d.data().titulo, id: 'btn-open-materiais' }); }); }
+        if(resArr.length === 0) box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">Sem resultados.</p>'; else { let h = ''; resArr.forEach(r => h += `<div style="padding:8px; border-bottom:1px solid #333; cursor:pointer;" onclick="document.getElementById('${r.id}').click(); document.getElementById('aluno-search-results').style.display='none'; document.getElementById('aluno-search-input').value='';"><span style="font-size:0.7rem; color:var(--primary-green); text-transform:uppercase;">${r.t}</span><div style="font-size:0.9rem; color:var(--text-light); margin-top:3px;">${r.txt}</div></div>`); box.innerHTML = h; }
+    } catch(err) { box.innerHTML = '<p class="text-danger" style="margin:0;">Erro.</p>'; }
+});
+document.addEventListener('click', (e) => { if (!e.target.closest('#aluno-search-input') && !e.target.closest('#aluno-search-results')) { const el = document.getElementById('aluno-search-results'); if(el) el.style.display = 'none'; } });
+
 // ==========================================
 // 5. PERFIL: GAMIFICAÇÃO E ESTATÍSTICAS
 // ==========================================
@@ -473,9 +494,57 @@ function renderizarGraficoNotas() {
     });
 }
 
+document.getElementById('btn-view-mood-history')?.addEventListener('click', carregarHistoricoHumor);
+async function carregarHistoricoHumor() {
+    const c = document.getElementById('mood-history-container'); c.innerHTML = '<p class="text-muted center">A atualizar...</p>';
+    try {
+        const s = await getDocs(collection(db, "utilizadores", myUserId, "humor")); let arr = []; s.forEach(d => arr.push(d.data())); arr.sort((a,b) => b.timestamp - a.timestamp);
+        let h = '<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:10px;">'; arr.forEach(hh=>{ h+=`<div style="text-align:center;background:rgba(0,0,0,0.3);padding:10px;border-radius:8px;min-width:60px;"><div style="font-size:1.8rem;">${hh.humor}</div><div style="font-size:0.7rem;color:var(--text-muted);margin-top:5px;">${hh.dataIso.split('-').reverse().slice(0,2).join('/')}</div></div>`;});
+        c.innerHTML = arr.length === 0 ? '<p class="text-muted center" style="margin:0;">Sem registos.</p>' : h+'</div>';
+    } catch(e){}
+}
+
+document.getElementById('upload-avatar')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0]; if(!file) return;
+    try {
+        const compressedFile = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 500, useWebWorker: true }); const reader = new FileReader();
+        reader.onload = async (ev) => { const base64 = ev.target.result; document.getElementById('perfil-avatar-img').src = base64; document.getElementById('header-avatar-circle').innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`; await updateDoc(doc(db, "utilizadores", myUserId), { fotoPerfil: base64 }); }; reader.readAsDataURL(compressedFile);
+    } catch(err) {}
+});
+
 // ==========================================
 // 6. CADERNETA E COMUNICAÇÃO
 // ==========================================
+window.abrirAcaoPrhf = (id, disc, mod, prazo) => {
+    esconderTodasAsVistas(); document.getElementById('view-aluno-acao-prhf').style.display = 'block'; 
+    document.getElementById('prhf-acao-titulo').innerText = `${disc} (Mod. ${mod})`; 
+    document.getElementById('prhf-acao-prazo').innerText = prazo.split('-').reverse().join('/');
+    document.getElementById('btn-voltar-acao-prhf').onclick = () => { document.querySelector('.nav-item[data-target="view-aluno-caderneta"]').click(); };
+    document.getElementById('btn-enviar-proposta-prhf').onclick = async (e) => {
+        const d = document.getElementById('aluno-prhf-proposta-data').value; const hi = document.getElementById('aluno-prhf-proposta-hora-inicio').value; const hf = document.getElementById('aluno-prhf-proposta-hora-fim').value;
+        if(!d || !hi || !hf) { alert("Preenche a data e as horas da tua sugestão!"); return; }
+        const btn = e.currentTarget; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
+        try { 
+            await updateDoc(doc(db, "utilizadores", myUserId, "prhfs", id), { propostaAluno: `O aluno propõe: ${d.split('-').reverse().join('/')} das ${hi} às ${hf}`, propostaLidaDT: false }); 
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Enviado ao Professor'; btn.style.backgroundColor = 'var(--success-green)'; 
+            setTimeout(() => { document.getElementById('btn-voltar-acao-prhf').click(); btn.innerHTML = 'Enviar Proposta'; btn.disabled = false; btn.style.backgroundColor = 'var(--primary-green)'; }, 1500); 
+        } catch(err) { btn.innerHTML = "Erro de Ligação"; setTimeout(() => { btn.disabled = false; }, 1500); }
+    };
+};
+
+function carregarDadosPassaporte(dados) {
+    if(dados.fct) { document.getElementById('aluno-fct-horas').innerText = `${dados.fct.horasRealizadas||0} / ${dados.fct.horasTotal||0}h`; document.getElementById('aluno-fct-progress').style.width = `${((dados.fct.horasRealizadas||0)/(dados.fct.horasTotal||1))*100}%`; document.getElementById('input-fct-horas').value = dados.fct.horasRealizadas||'';}
+    if(dados.pap) { document.getElementById('input-pap-tema').value = dados.pap.tema || ''; }
+    if (dados.papFicheiroEnviado) document.getElementById('aluno-pap-file-name').innerText = "Ficheiro submetido.";
+}
+document.getElementById('btn-save-fct')?.addEventListener('click', async (e) => { const v = document.getElementById('input-fct-horas').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "fct.horasRealizadas": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
+document.getElementById('btn-save-pap-tema')?.addEventListener('click', async (e) => { const v = document.getElementById('input-pap-tema').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "pap.tema": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-save"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
+document.getElementById('btn-enviar-pap')?.addEventListener('click', async (e) => { if(!fPB64) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { const snap = await getDoc(doc(db, "utilizadores", myUserId)); let axp = snap.exists()&&snap.data().xp?snap.data().xp:0; await updateDoc(doc(db, "utilizadores", myUserId), { papFicheiroEnviado:true, papFicheiroBase64:fPB64, xp:axp+200 }); b.style.backgroundColor="var(--success-green)"; b.innerHTML='<i class="fa-solid fa-check"></i> Submetido'; setTimeout(() => { b.style.display='none'; b.disabled=false; document.getElementById('aluno-pap-file-name').style.color="var(--success-green)"; }, 2000); } catch(err){} });
+
+async function pedirPermissaoNotificacoes() { try { const p = await Notification.requestPermission(); if(p==='granted') { const r = await navigator.serviceWorker.register('./firebase-messaging-sw.js'); const t = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: r }); if(t) await updateDoc(doc(db, "utilizadores", myUserId), { tokenNotificacao: t }); } } catch(e){} }
+if(typeof onMessage !== "undefined" && messaging) onMessage(messaging, p => alert(`NOVA NOTIFICAÇÃO:\n${p.notification.title}\n${p.notification.body}`));
+setTimeout(() => { if(myUserId) pedirPermissaoNotificacoes(); }, 4000);
+
 async function obterEventosLinhaTemporal() {
     let ev = [];
     const nS = await getDocs(collection(db, "utilizadores", myUserId, "notas")); nS.forEach(d => { const n = d.data(); ev.push({ time: new Date(n.data).getTime(), cat: 'notas', icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação', desc: `${n.disciplina} (Mod. ${n.modulo}): <strong style="color:var(--text-light);">${n.nota}</strong>` }); });
@@ -518,7 +587,7 @@ async function carregarNotasAluno() {
         let disciplinasDoAluno = {}; notasDb.forEach(d => { const n = d.data(); if(!disciplinasDoAluno[n.disciplina]) disciplinasDoAluno[n.disciplina] = []; disciplinasDoAluno[n.disciplina].push(n); });
         
         let ordemDisciplinas = obterDisciplinasDoAno();
-        if(ordemDisciplinas.length === 0) { cadernetaContent.innerHTML = getEmptyState('Ainda não tens disciplinas ativas.', 'fa-book'); return; }
+        if(ordemDisciplinas.length === 0) { document.getElementById('aluno-caderneta-content').innerHTML = getEmptyState('Ainda não tens disciplinas ativas.', 'fa-book'); return; }
 
         let html = '';
         ordemDisciplinas.forEach(disc => {
@@ -609,28 +678,8 @@ async function carregarPrhfsAluno() {
         pendentes.forEach(p => html += renderP(p)); 
         if(concluidos.length > 0) { html += `<div class="falta-date-divider" style="margin-top:20px;"><span>Concluídos</span></div>`; concluidos.forEach(p => html += renderP(p)); } 
         document.getElementById('aluno-caderneta-content').innerHTML = html;
-    } catch(e) { }
+    } catch(e) {}
 }
-
-window.abrirAcaoPrhf = (id, disc, mod, prazo) => {
-    esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.getElementById('view-aluno-acao-prhf').style.display = 'block'; 
-    document.getElementById('prhf-acao-titulo').innerText = `${disc} (Mod. ${mod})`; 
-    document.getElementById('prhf-acao-prazo').innerText = prazo.split('-').reverse().join('/');
-    
-    document.getElementById('btn-voltar-acao-prhf').onclick = () => { document.querySelector('.nav-item[data-target="view-aluno-caderneta"]').click(); };
-    
-    document.getElementById('btn-enviar-proposta-prhf').onclick = async (e) => {
-        const d = document.getElementById('aluno-prhf-proposta-data').value; const hi = document.getElementById('aluno-prhf-proposta-hora-inicio').value; const hf = document.getElementById('aluno-prhf-proposta-hora-fim').value;
-        if(!d || !hi || !hf) { alert("Preenche a data e horas!"); return; }
-        const btn = e.currentTarget; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
-        try { 
-            await updateDoc(doc(db, "utilizadores", myUserId, "prhfs", id), { propostaAluno: `O aluno propõe: ${d.split('-').reverse().join('/')} das ${hi} às ${hf}`, propostaLidaDT: false }); 
-            btn.innerHTML = '<i class="fa-solid fa-check"></i> Enviado'; btn.style.backgroundColor = 'var(--success-green)'; 
-            setTimeout(() => { document.getElementById('btn-voltar-acao-prhf').click(); btn.innerHTML = 'Enviar Proposta'; btn.disabled = false; btn.style.backgroundColor = 'var(--primary-green)';}, 1500); 
-        } catch(err) { btn.innerHTML = "Erro"; setTimeout(() => { btn.disabled = false; }, 1500); }
-    };
-};
 
 async function carregarComportamentoAluno() {
     try {
@@ -659,9 +708,9 @@ async function carregarObservacoesAluno(rSel = '1_intercalar') {
         const ordemDisciplinas = obterDisciplinasDoAno();
         if(ordemDisciplinas.length === 0) { cH += '<p class="text-muted center">Ainda não tens disciplinas associadas.</p>'; }
         else {
-            ordemDisciplinas.forEach(disc => { const cm = dR.disciplinas && dR.disciplinas[disc] ? dR.disciplinas[disc] : '<span style="color:var(--text-muted);">Sem comentário</span>'; cH += `<div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;"><h4 style="margin-bottom:8px; color:white; font-size:1rem;">${disc}</h4><p style="color:var(--text-light); font-size:0.9rem; line-height:1.4; margin:0;">${cm}</p></div>`; });
+            ordemDisciplinas.forEach(disc => { const cm = dR.disciplinas && dR.disciplinas[disc] ? dR.disciplinas[disc] : '<span style="color:var(--text-muted);">Sem comentário</span>'; cH += `<div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;"><h4 style="margin-bottom:8px; color:var(--text-light); font-size:1rem;">${disc}</h4><p style="color:var(--text-light); font-size:0.9rem; line-height:1.4; margin:0;">${cm}</p></div>`; });
         }
-        const gl = dR.global || '<span style="color:var(--text-muted);">Sem observações globais.</span>'; cH += `<div class="card" style="margin-top:15px; border:1px solid var(--warning-yellow); background:rgba(255,204,0,0.05); padding:15px;"><h3 style="color:var(--warning-yellow); margin-bottom:10px; font-size:1.1rem;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3><p style="color:white; font-size:0.95rem; line-height:1.5; margin:0;">${gl}</p></div></div>`;
+        const gl = dR.global || '<span style="color:var(--text-muted);">Sem observações globais.</span>'; cH += `<div class="card" style="margin-top:15px; border:1px solid var(--warning-yellow); background:rgba(255,204,0,0.05); padding:15px;"><h3 style="color:var(--warning-yellow); margin-bottom:10px; font-size:1.1rem;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3><p style="color:var(--text-light); font-size:0.95rem; line-height:1.5; margin:0;">${gl}</p></div></div>`;
         document.getElementById('reuniao-content-area').innerHTML = cH;
     } catch(e) {}
 }
@@ -680,7 +729,7 @@ async function carregarForuns() {
 }
 
 // ----------------------------------------------------
-// MATERIAIS / SUMÁRIOS COM DOWNLOAD BASE64
+// MATERIAIS / SUMÁRIOS
 // ----------------------------------------------------
 async function carregarMateriaisAluno() {
     const c = document.getElementById('aluno-lista-materiais-container'); c.innerHTML = '<p class="text-muted center">A carregar materiais...</p>'; if(!minhaTurma) return;
