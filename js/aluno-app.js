@@ -11,98 +11,14 @@ let fPB64 = "";
 window.timelineFilterCat = 'all'; window.notifFilterCat = 'all';
 let ahModo = 'dia', ahDOff = 0, ahSOff = 0;
 
+// ==========================================
+// FUNÇÕES DE SEGURANÇA
+// ==========================================
 function bindClick(id, fn) { const el = document.getElementById(id); if(el) el.addEventListener('click', fn); }
 function bindChange(id, fn) { const el = document.getElementById(id); if(el) el.addEventListener('change', fn); }
 function bindInput(id, fn) { const el = document.getElementById(id); if(el) el.addEventListener('input', fn); }
-
-// ==========================================
-// 1. A MATRIZ DE REFERÊNCIA OFICIAL
-// ==========================================
-const matrizAmbos = {
-    "Sociocultural": { "PORT": {"1": 33}, "ING": {"1": 27}, "AI": {"1": 36}, "EF": {"1": 10}, "TIC": {"1": 25} },
-    "Científica": { "GEO": {"1": 33}, "HCA": {"1": 20}, "MAT": {"1": 33} }
-};
-const matrizAntigoTecnica = { "CF": {"1": 24}, "TIAT": {"1": 27}, "TCAT": {"1": 33}, "OTET": {"1": 24} };
-const matrizNovoTecnica = { "AET": { "UC00038": 20 }, "OGOT": { "UC03629": 20 }, "CMET": { "UC00034": 30 }, "LNTT": { "UC00044": 50 } };
-
-function obterDisciplinasDoAno() {
-    const turmaStr = minhaTurma || "";
-    const anoMatch = turmaStr.match(/\d+/);
-    const ano = anoMatch ? parseInt(anoMatch[0]) : 10;
-    
-    const base = {
-        10: ["PORT", "ING", "AI", "EF", "TIC", "GEO", "HCA", "MAT"],
-        11: ["PORT", "ING", "AI", "EF", "GEO", "HCA"],
-        12: ["PORT", "ING", "EF", "GEO", "HCA"]
-    };
-    const tecAntigo = {
-        10: ["CF", "TIAT", "TCAT", "OTET"],
-        11: ["CF", "TIAT", "TCAT", "OTET"],
-        12: ["TIAT", "OTET"]
-    };
-    const tecNovo = {
-        10: ["AET", "OGOT", "CMET", "LNTT"],
-        11: ["AET", "OGOT", "CMET", "LNTT"],
-        12: ["AET", "OGOT", "CMET"]
-    };
-    
-    let arr = [...(base[ano] || base[10])];
-    if (ano >= 11) arr = [...arr, ...(tecAntigo[ano] || tecAntigo[11])];
-    else arr = [...arr, ...(tecNovo[ano] || tecNovo[10])];
-    return arr;
-}
-
-// ==========================================
-// 2. INICIALIZAÇÃO E ACADEMIAS (TURISMO)
-// ==========================================
-const ACADEMIAS_INFO = {
-    'estrategas': { nome: 'Academia dos Estrategas', cor: '#10b981', icon: 'fa-chess-knight', desc: 'Mestres do planeamento. Manténs a calma sob pressão, organizas a equipa e garantes que toda a logística de uma viagem funciona na perfeição.' },
-    'embaixadores': { nome: 'Academia dos Embaixadores', cor: '#0ea5e9', icon: 'fa-handshake', desc: 'A alma da hospitalidade! És a primeira cara que os turistas veem, és resolutivo, empático e tens uma comunicação brilhante.' },
-    'exploradores': { nome: 'Academia dos Exploradores', cor: '#f97316', icon: 'fa-compass', desc: 'Os guias de ação! Gostas de estar no terreno, detestas o trabalho de escritório e não tens medo de liderar grupos em plena aventura.' },
-    'visionarios': { nome: 'Academia dos Visionários', cor: '#8b5cf6', icon: 'fa-lightbulb', desc: 'Os criativos do Turismo. Pensas "fora da caixa", desenhas experiências que não existem e dominas a promoção e o marketing.' }
-};
-
-const perguntasQuiz = [
-    {
-        q: "Um grupo de turistas acabou de chegar e o quarto ainda não está pronto. O que fazes?",
-        opcoes: [
-            { text: "Ofereço um café, converso com eles e faço com que se sintam em casa.", academia: "embaixadores" },
-            { text: "Reorganizo rapidamente o mapa de limpezas com o departamento.", academia: "estrategas" },
-            { text: "Sugiro e levo-os numa pequena visita aos jardins enquanto esperam.", academia: "exploradores" },
-            { text: "Surpreendo-os com uma 'Experiência de Boas-Vindas' que criei.", academia: "visionarios" }
-        ]
-    },
-    {
-        q: "Num trabalho de grupo da escola, qual costuma ser o teu papel?",
-        opcoes: [
-            { text: "Dividir tarefas e garantir que não falhamos os prazos.", academia: "estrategas" },
-            { text: "Apresentar o trabalho à turma, adoro comunicar.", academia: "embaixadores" },
-            { text: "Sair da sala para pesquisar e recolher materiais no terreno.", academia: "exploradores" },
-            { text: "Dar o toque final de design e juntar as ideias mais originais.", academia: "visionarios" }
-        ]
-    },
-    {
-        q: "Se pudesses escolher o teu ambiente de trabalho de sonho, seria...",
-        opcoes: [
-            { text: "Ao ar livre, a explorar trilhos ou cidades históricas.", academia: "exploradores" },
-            { text: "No escritório, a gerir dados, preços e rotas com precisão.", academia: "estrategas" },
-            { text: "Num lobby de um hotel de luxo, a falar com os clientes.", academia: "embaixadores" },
-            { text: "Num estúdio criativo, a desenhar novas campanhas turísticas.", academia: "visionarios" }
-        ]
-    },
-    {
-        q: "Quando tens um problema difícil para resolver, como reages?",
-        opcoes: [
-            { text: "Improviso rapidamente usando a imaginação.", academia: "visionarios" },
-            { text: "Mantenho a empatia e asseguro-me que ninguém está nervoso.", academia: "embaixadores" },
-            { text: "Analiso os factos friamente e tomo a decisão mais lógica.", academia: "estrategas" },
-            { text: "Sigo o meu instinto de aventura e tomo a iniciativa prática.", academia: "exploradores" }
-        ]
-    }
-];
-
-let pAtual = 0;
-let quizScores = { estrategas: 0, embaixadores: 0, exploradores: 0, visionarios: 0 };
+function safeAddClass(id, className) { const el = document.getElementById(id); if(el) el.classList.add(className); }
+function safeRemoveClass(id, className) { const el = document.getElementById(id); if(el) el.classList.remove(className); }
 
 function getEmptyState(mensagem, icone = "fa-folder-open") {
     return `<div style="text-align:center; padding: 40px 20px; opacity: 0.5;">
@@ -111,6 +27,61 @@ function getEmptyState(mensagem, icone = "fa-folder-open") {
             </div>`;
 }
 
+// ==========================================
+// NÍVEIS PROFISSIONAIS E BADGES
+// ==========================================
+function getNivelProInfo(xpTotal) {
+    const xp = xpTotal || 0;
+    if(xp < 500) return { nivel: 1, titulo: "Aprendiz", progresso: (xp/500)*100 };
+    if(xp < 1000) return { nivel: 2, titulo: "Iniciante", progresso: ((xp-500)/500)*100 };
+    if(xp < 2000) return { nivel: 3, titulo: "Prof. em Formação", progresso: ((xp-1000)/1000)*100 };
+    if(xp < 3500) return { nivel: 4, titulo: "Técnico Júnior", progresso: ((xp-2000)/1500)*100 };
+    if(xp < 6000) return { nivel: 5, titulo: "Técnico Excelência", progresso: ((xp-3500)/2500)*100 };
+    if(xp < 10000) return { nivel: 6, titulo: "Especialista", progresso: ((xp-6000)/4000)*100 };
+    return { nivel: 7, titulo: "Embaixador Turístico", progresso: 100 };
+}
+
+const BADGES_DEFS = [
+    { id: "b1", nome: "Primeiro Passo", icon: "fa-shoe-prints", reqXp: 100 },
+    { id: "b2", nome: "Comunicador", icon: "fa-microphone", reqCom: 100 },
+    { id: "b3", nome: "Mente Criativa", icon: "fa-lightbulb", reqCri: 100 },
+    { id: "b4", nome: "Líder Natural", icon: "fa-crown", reqLid: 100 },
+    { id: "b5", nome: "Mestre Estratega", icon: "fa-chess", reqOrg: 100 },
+    { id: "b6", nome: "Colega 5 Estrelas", icon: "fa-handshake-angle", reqXp: 1500 }
+];
+
+// ==========================================
+// A MATRIZ DE REFERÊNCIA OFICIAL
+// ==========================================
+function obterDisciplinasDoAno() {
+    const turmaStr = minhaTurma || ""; const anoMatch = turmaStr.match(/\d+/); const ano = anoMatch ? parseInt(anoMatch[0]) : 10;
+    const base = { 10: ["PORT", "ING", "AI", "EF", "TIC", "GEO", "HCA", "MAT"], 11: ["PORT", "ING", "AI", "EF", "GEO", "HCA"], 12: ["PORT", "ING", "EF", "GEO", "HCA"] };
+    const tecAntigo = { 10: ["CF", "TIAT", "TCAT", "OTET"], 11: ["CF", "TIAT", "TCAT", "OTET"], 12: ["TIAT", "OTET"] };
+    const tecNovo = { 10: ["AET", "OGOT", "CMET", "LNTT"], 11: ["AET", "OGOT", "CMET", "LNTT"], 12: ["AET", "OGOT", "CMET"] };
+    let arr = [...(base[ano] || base[10])];
+    if (ano >= 11) arr = [...arr, ...(tecAntigo[ano] || tecAntigo[11])]; else arr = [...arr, ...(tecNovo[ano] || tecNovo[10])];
+    return arr;
+}
+
+// ==========================================
+// ACADEMIAS (TURISMO) E QUIZ
+// ==========================================
+const ACADEMIAS_INFO = {
+    'estrategas': { nome: 'Academia dos Estrategas', cor: '#10b981', icon: 'fa-chess-knight', desc: 'Mestres do planeamento. Manténs a calma sob pressão.' },
+    'embaixadores': { nome: 'Academia dos Embaixadores', cor: '#0ea5e9', icon: 'fa-handshake', desc: 'A alma da hospitalidade! És a primeira cara que os turistas veem.' },
+    'exploradores': { nome: 'Academia dos Exploradores', cor: '#f97316', icon: 'fa-compass', desc: 'Os guias de ação! Gostas de estar no terreno, não tens medo de liderar.' },
+    'visionarios': { nome: 'Academia dos Visionários', cor: '#8b5cf6', icon: 'fa-lightbulb', desc: 'Os criativos do Turismo. Pensas "fora da caixa".' }
+};
+
+const perguntasQuiz = [
+    { q: "Um grupo de turistas acabou de chegar e o quarto ainda não está pronto. O que fazes?", opcoes: [ { text: "Ofereço um café e faço com que se sintam em casa.", academia: "embaixadores" }, { text: "Reorganizo rapidamente o mapa de limpezas.", academia: "estrategas" }, { text: "Levo-os numa pequena visita aos jardins.", academia: "exploradores" }, { text: "Surpreendo-os com uma 'Experiência de Boas-Vindas'.", academia: "visionarios" } ] },
+    { q: "Num trabalho de grupo, qual costuma ser o teu papel?", opcoes: [ { text: "Dividir tarefas e garantir prazos.", academia: "estrategas" }, { text: "Apresentar o trabalho à turma.", academia: "embaixadores" }, { text: "Recolher materiais no terreno.", academia: "exploradores" }, { text: "Dar o toque final de design e ideias.", academia: "visionarios" } ] },
+    { q: "Se pudesses escolher o teu ambiente de trabalho de sonho, seria...", opcoes: [ { text: "Ao ar livre, a explorar trilhos.", academia: "exploradores" }, { text: "No escritório, a gerir dados e rotas.", academia: "estrategas" }, { text: "Num lobby de um hotel de luxo.", academia: "embaixadores" }, { text: "Num estúdio criativo.", academia: "visionarios" } ] },
+    { q: "Quando tens um problema difícil para resolver, como reages?", opcoes: [ { text: "Improviso usando a imaginação.", academia: "visionarios" }, { text: "Mantenho a empatia para ninguém ficar nervoso.", academia: "embaixadores" }, { text: "Analiso os factos friamente.", academia: "estrategas" }, { text: "Sigo o instinto e tomo a iniciativa.", academia: "exploradores" } ] }
+];
+
+let pAtual = 0; let quizScores = { estrategas: 0, embaixadores: 0, exploradores: 0, visionarios: 0 };
+
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         myUserId = user.email.split('@')[0];
@@ -118,10 +89,7 @@ onAuthStateChanged(auth, async (user) => {
             const docSnap = await getDoc(doc(db, "utilizadores", myUserId));
             if (docSnap.exists() && docSnap.data().papel === 'aluno') {
                 const d = docSnap.data(); 
-                
-                myUserName = (d.nome || "Aluno").split(' ')[0]; 
-                minhaTurma = d.turma || ""; 
-                myAcademia = d.academia || null;
+                myUserName = (d.nome || "Aluno").split(' ')[0]; minhaTurma = d.turma || ""; myAcademia = d.academia || null;
                 
                 document.getElementById('header-user-name-aluno').innerText = myUserName;
                 document.getElementById('welcome-nome').innerText = myUserName;
@@ -130,34 +98,30 @@ onAuthStateChanged(auth, async (user) => {
                 if(d.fotoPerfil) {
                     document.getElementById('header-avatar-circle').innerHTML = `<img src="${d.fotoPerfil}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
                     document.getElementById('perfil-avatar-img').src = d.fotoPerfil;
-                } else { 
-                    document.getElementById('perfil-avatar-img').src = `https://ui-avatars.com/api/?name=${myUserName}&background=00cc88&color=fff&size=100`; 
-                }
+                } else { document.getElementById('perfil-avatar-img').src = `https://ui-avatars.com/api/?name=${myUserName}&background=00cc88&color=fff&size=100`; }
 
                 const objSelect = document.getElementById('obj-disciplina');
                 if(objSelect) objSelect.innerHTML = obterDisciplinasDoAno().map(dc => `<option value="${dc}">${dc}</option>`).join('');
 
                 const turmaAno = parseInt((minhaTurma || "").match(/\d+/)?.[0]) || d.ano || 10;
                 const btnPassaporte = document.getElementById('btn-abrir-passaporte');
-                const secFct = document.getElementById('sec-aluno-fct');
-                const secPap = document.getElementById('sec-aluno-pap');
+                const secFct = document.getElementById('sec-aluno-fct'); const secPap = document.getElementById('sec-aluno-pap');
                 
-                if (turmaAno === 10) {
-                    btnPassaporte.style.display = 'none';
-                } else if (turmaAno === 11) {
-                    btnPassaporte.style.display = 'flex'; document.getElementById('btn-passaporte-texto').innerText = 'FCT (Estágio)';
+                if (turmaAno === 10) { if(btnPassaporte) btnPassaporte.style.display = 'none'; } 
+                else if (turmaAno === 11) {
+                    if(btnPassaporte) { btnPassaporte.style.display = 'flex'; document.getElementById('btn-passaporte-texto').innerText = 'FCT (Estágio)'; }
                     if(secFct) secFct.style.display = 'block'; if(secPap) secPap.style.display = 'none';
                 } else {
-                    btnPassaporte.style.display = 'flex'; document.getElementById('btn-passaporte-texto').innerText = 'Estágio / PAP';
+                    if(btnPassaporte) { btnPassaporte.style.display = 'flex'; document.getElementById('btn-passaporte-texto').innerText = 'Estágio / PAP'; }
                     if(secFct) secFct.style.display = 'block'; if(secPap) secPap.style.display = 'block';
                 }
 
-                carregarDadosPassaporte(d); carregarGamificacao(d);
-                construirHomeAdaptativa(); verificarEpocaExames();
+                carregarGamificacao(d); carregarPassaporteEBadges(d); carregarMissoes();
+                carregarDadosPassaporte(d); construirHomeAdaptativa(); verificarEpocaExames();
 
                 if (!myAcademia) iniciarQuizAcademias(); else aplicarTemaAcademia(myAcademia);
             } else window.location.href = "index.html";
-        } catch (e) { console.error("Erro Auth", e); }
+        } catch (e) {}
     } else window.location.href = "index.html";
 });
 
@@ -165,58 +129,37 @@ bindClick('btn-logout-aluno', () => signOut(auth));
 
 function iniciarQuizAcademias() { 
     document.getElementById('modal-academia-quiz').style.display = 'flex'; 
-    document.getElementById('quiz-step-intro').style.display = 'block';
-    document.getElementById('quiz-step-question').style.display = 'none';
-    document.getElementById('quiz-step-result').style.display = 'none';
-    document.getElementById('quiz-step-loading').style.display = 'none';
+    document.getElementById('quiz-step-intro').style.display = 'block'; document.getElementById('quiz-step-question').style.display = 'none'; document.getElementById('quiz-step-result').style.display = 'none'; document.getElementById('quiz-step-loading').style.display = 'none';
 }
 
-bindClick('btn-start-quiz', () => {
-    document.getElementById('quiz-step-intro').style.display = 'none';
-    document.getElementById('quiz-step-question').style.display = 'block';
-    renderizarPergunta();
-});
+bindClick('btn-start-quiz', () => { document.getElementById('quiz-step-intro').style.display = 'none'; document.getElementById('quiz-step-question').style.display = 'block'; renderizarPergunta(); });
 
 function renderizarPergunta() {
     if(pAtual >= perguntasQuiz.length) { finalizarQuiz(); return; }
-    
     const qData = perguntasQuiz[pAtual];
     document.getElementById('quiz-progress-text').innerText = `Pergunta ${pAtual + 1} de ${perguntasQuiz.length}`;
     document.getElementById('quiz-progress-bar').style.width = `${((pAtual + 1) / perguntasQuiz.length) * 100}%`;
     document.getElementById('quiz-q-title').innerText = qData.q;
-    
     const optContainer = document.getElementById('quiz-q-options'); optContainer.innerHTML = '';
     const shuffled = [...qData.opcoes].sort(() => Math.random() - 0.5);
-
     shuffled.forEach(opt => {
-        const btn = document.createElement('button');
-        btn.className = 'secondary-btn';
-        btn.style.cssText = 'text-align: left; padding: 18px 20px; height: auto; font-size: 1rem; border-color: #333; justify-content: flex-start; transition: 0.3s; color: var(--text-light);';
-        btn.innerText = opt.text;
-        
-        btn.addEventListener('mouseover', () => btn.style.borderColor = 'var(--primary-green)');
-        btn.addEventListener('mouseout', () => btn.style.borderColor = '#333');
-        
+        const btn = document.createElement('button'); btn.className = 'secondary-btn'; btn.style.cssText = 'text-align: left; padding: 18px 20px; height: auto; font-size: 1rem; border-color: #333; justify-content: flex-start; transition: 0.3s; color: var(--text-light);'; btn.innerText = opt.text;
+        btn.addEventListener('mouseover', () => btn.style.borderColor = 'var(--primary-green)'); btn.addEventListener('mouseout', () => btn.style.borderColor = '#333');
         btn.addEventListener('click', () => { quizScores[opt.academia]++; pAtual++; renderizarPergunta(); });
         optContainer.appendChild(btn);
     });
 }
 
 async function finalizarQuiz() { 
-    document.getElementById('quiz-step-question').style.display = 'none';
-    document.getElementById('quiz-step-loading').style.display = 'block';
-
+    document.getElementById('quiz-step-question').style.display = 'none'; document.getElementById('quiz-step-loading').style.display = 'block';
     let winningHouse = Object.keys(quizScores).reduce((a, b) => quizScores[a] > quizScores[b] ? a : b); 
     if(quizScores[winningHouse] === 0) winningHouse = 'estrategas'; 
     myAcademia = winningHouse; const ac = ACADEMIAS_INFO[winningHouse]; 
-    
     try { await updateDoc(doc(db, "utilizadores", myUserId), { academia: winningHouse }); } catch(e) {} 
-    
     setTimeout(() => {
         document.getElementById('quiz-step-loading').style.display = 'none'; document.getElementById('quiz-step-result').style.display = 'block'; 
         document.getElementById('quiz-result-icon').innerHTML = `<i class="fa-solid ${ac.icon}" style="color: ${ac.cor}; text-shadow: 0 0 30px ${ac.cor};"></i>`; 
-        document.getElementById('quiz-result-title').innerText = ac.nome; document.getElementById('quiz-result-title').style.color = ac.cor; 
-        document.getElementById('quiz-result-desc').innerText = ac.desc; 
+        document.getElementById('quiz-result-title').innerText = ac.nome; document.getElementById('quiz-result-title').style.color = ac.cor; document.getElementById('quiz-result-desc').innerText = ac.desc; 
         document.getElementById('btn-finish-quiz').style.backgroundColor = ac.cor; document.getElementById('btn-finish-quiz').style.color = "#000";
     }, 2000);
 }
@@ -226,17 +169,17 @@ bindClick('btn-finish-quiz', () => { document.getElementById('modal-academia-qui
 function aplicarTemaAcademia(idHouse) { 
     const ac = ACADEMIAS_INFO[idHouse]; if(!ac) return; 
     document.documentElement.style.setProperty('--primary-green', ac.cor); 
-    
     const rankElem = document.getElementById('aluno-rank-title'); const rankCentral = document.getElementById('perfil-titulo-central'); 
-    if(rankElem) rankElem.innerText = `${ac.nome.replace('Academia dos ','')}`; 
-    if(rankCentral) { rankCentral.innerHTML = `<i class="fa-solid ${ac.icon}"></i> ${ac.nome}`; rankCentral.style.color = ac.cor; }
     
+    // Agora o rank mostra a Academia E O Nível Profissional
+    if(rankElem) { const profInfo = getNivelProInfo(parseInt(document.getElementById('aluno-xp-atual').innerText)); rankElem.innerText = `${ac.nome.replace('Academia dos ','')} • ${profInfo.titulo}`; }
+    if(rankCentral) { rankCentral.innerHTML = `<i class="fa-solid ${ac.icon}"></i> ${ac.nome}`; rankCentral.style.color = ac.cor; }
     const avatarImg = document.getElementById('perfil-avatar-img'); if (avatarImg) avatarImg.style.borderColor = ac.cor;
 }
 
 
 // ==========================================
-// 3. NAVEGAÇÃO E DELEGAÇÃO DE EVENTOS
+// 3. NAVEGAÇÃO
 // ==========================================
 function esconderTodasAsVistas() { document.querySelectorAll('.app-content > div').forEach(v => v.style.display = 'none'); }
 
@@ -245,23 +188,26 @@ document.body.addEventListener('click', async (e) => {
     if(nav) {
         e.preventDefault(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); nav.classList.add('active');
         esconderTodasAsVistas(); const tId = nav.getAttribute('data-target'); 
-        document.getElementById(tId).style.display = (tId === 'view-aluno-forum') ? 'flex' : 'block';
-        if(tId === 'view-aluno-perfil') { carregarRankingTurma(); carregarObjetivosPessoais(); setTimeout(renderizarGraficoNotas, 150); }
-        if(tId === 'view-aluno-caderneta') document.getElementById('tab-aluno-timeline').click();
-        if(tId === 'view-aluno-agenda') document.getElementById('tab-aluno-eventos').click();
+        const tgt = document.getElementById(tId); if(tgt) tgt.style.display = (tId === 'view-aluno-forum') ? 'flex' : 'block';
+        if(tId === 'view-aluno-perfil') { carregarRankingTurma(); carregarObjetivosPessoais(); }
+        if(tId === 'view-aluno-caderneta') { const el = document.getElementById('tab-aluno-timeline'); if(el) el.click(); }
+        if(tId === 'view-aluno-agenda') { const el = document.getElementById('tab-aluno-eventos'); if(el) el.click(); }
         if(tId === 'view-aluno-forum') carregarForuns();
     }
     
-    if(e.target.closest('#btn-open-materiais')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-materiais').style.display = 'block'; carregarMateriaisAluno(); }
-    if(e.target.closest('#btn-abrir-passaporte')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-passaporte').style.display = 'block'; }
-    if(e.target.closest('#btn-open-notificacoes')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('view-aluno-notificacoes').style.display = 'block'; carregarNotificacoesAluno(); }
-    if(e.target.closest('#btn-voltar-notificacoes') || e.target.closest('#btn-voltar-materiais') || e.target.closest('#btn-voltar-passaporte')) { document.querySelector('.nav-item[data-target="student-dashboard"]').click(); }
+    if(e.target.closest('#btn-open-materiais')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); const el = document.getElementById('view-aluno-materiais'); if(el) el.style.display = 'block'; carregarMateriaisAluno(); }
+    if(e.target.closest('#btn-abrir-passaporte')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); const el = document.getElementById('view-aluno-passaporte'); if(el) el.style.display = 'block'; }
+    if(e.target.closest('#btn-open-notificacoes')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); const el = document.getElementById('view-aluno-notificacoes'); if(el) el.style.display = 'block'; carregarNotificacoesAluno(); }
+    if(e.target.closest('#btn-voltar-notificacoes') || e.target.closest('#btn-voltar-materiais') || e.target.closest('#btn-voltar-passaporte')) { const el = document.querySelector('.nav-item[data-target="student-dashboard"]'); if(el) el.click(); }
 
     if(e.target.closest('#tab-aluno-timeline')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='flex'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarTimelineAluno(); }
     if(e.target.closest('#tab-aluno-notas')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarNotasAluno(); }
     if(e.target.closest('#tab-aluno-faltas')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarFaltasAluno(); }
     if(e.target.closest('#tab-aluno-prhfs')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarPrhfsAluno(); }
-    if(e.target.closest('#tab-aluno-comportamento')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarComportamentoAluno(); }
+    
+    // O CLIQUE NO NOVO TAB EVOLUÇÃO
+    if(e.target.closest('#tab-aluno-evolucao')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar evolução...</p>'; carregarEvolucaoAluno(); }
+    
     if(e.target.closest('#tab-aluno-observacoes')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarObservacoesAluno(); }
 
     const tChip = e.target.closest('#timeline-filtros .filter-chip');
@@ -277,8 +223,7 @@ document.body.addEventListener('click', async (e) => {
     if(e.target.closest('#btn-aluno-next-horario')) { if(ahModo === 'dia') ahDOff++; else ahSOff++; carregarHorarioAluno(); }
 
     if(e.target.closest('#btn-create-chat-aluno')) {
-        document.getElementById('modal-criar-forum').style.display = 'flex'; 
-        const cCont = document.getElementById('lista-colegas-forum'); cCont.innerHTML = '<p class="text-muted center">A procurar colegas...</p>';
+        document.getElementById('modal-criar-forum').style.display = 'flex'; const cCont = document.getElementById('lista-colegas-forum'); cCont.innerHTML = '<p class="text-muted center">A procurar colegas...</p>';
         try {
             const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", minhaTurma))); let cH = ''; 
             cS.forEach(d => { if(d.data().papel === 'aluno' && d.id !== myUserId) { cH += `<label style="display:flex; align-items:center; gap:10px; color:white; font-size:0.9rem; padding:8px 0; cursor:pointer;"><input type="checkbox" class="colegas-check" value="${d.id}" style="width:18px;height:18px;accent-color:var(--primary-green);"> ${d.data().nome}</label>`; } });
@@ -342,13 +287,38 @@ document.body.addEventListener('click', async (e) => {
     }
 });
 
-bindChange('obj-tipo', async (e) => {
-    const v = e.target.value; document.getElementById('obj-setup-nota').style.display = v === 'nota' ? 'flex' : 'none';
-});
+bindChange('obj-tipo', async (e) => { const v = e.target.value; document.getElementById('obj-setup-nota').style.display = v === 'nota' ? 'flex' : 'none'; });
 
 // ==========================================
-// 4. DASHBOARD ADAPTATIVO MÁGICO
+// 4. MÚLTIPLAS FUNCIONALIDADES - HOME E MISSÕES
 // ==========================================
+function carregarMissoes() {
+    const cont = document.getElementById('missoes-container');
+    if(!cont) return;
+    
+    // Missões Falsas Temporárias para gerar o efeito de gamificação no arranque
+    const missoesFalsas = [
+        { title: "Atendimento Impossível", desc: "Apresenta uma solução profissional para um turista sem reserva.", xp: 100, tag: "Embaixadores", cor: "#0ea5e9" },
+        { title: "Operação Turismo", desc: "Organiza uma atividade desde o planeamento até à execução.", xp: 150, tag: "Estrategas", cor: "#10b981" }
+    ];
+
+    let html = '';
+    missoesFalsas.forEach(m => {
+        html += `<div class="card" style="border-left: 4px solid ${m.cor}; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="flex:1;">
+                        <span style="font-size:0.7rem; color:${m.cor}; font-weight:bold; text-transform:uppercase; border:1px solid ${m.cor}; padding:2px 6px; border-radius:12px;">Missão: ${m.tag}</span>
+                        <h4 style="margin:5px 0 3px 0; color:var(--text-light); font-size:1rem;">${m.title}</h4>
+                        <p style="font-size:0.85rem; color:var(--text-muted); margin:0;">${m.desc}</p>
+                    </div>
+                    <div style="text-align:right; margin-left:10px;">
+                        <strong style="color:var(--warning-yellow); font-size:1.1rem;">+${m.xp} XP</strong><br>
+                        <button class="secondary-btn small-btn" style="margin-top:5px; border-color:var(--text-muted); color:var(--text-muted);">Aceitar</button>
+                    </div>
+                 </div>`;
+    });
+    cont.innerHTML = html;
+}
+
 async function construirHomeAdaptativa() {
     const alertCont = document.getElementById('hero-alert-section'); const emoCont = document.getElementById('hero-emotional-section');
     if(!alertCont || !emoCont) return;
@@ -396,58 +366,101 @@ async function construirHomeAdaptativa() {
                 await setDoc(doc(db, "utilizadores", myUserId, "humor", hjIso), { humor:m, timestamp:Date.now(), dataIso:hjIso }); await updateDoc(doc(db, "utilizadores", myUserId), { xp: aXp+10 }); carregarGamificacao({xp: aXp+10}); document.getElementById('checkin-card-dinamico').innerHTML = '<div style="text-align:center; color:var(--success-green); font-weight:bold; font-size:0.95rem; padding:10px;">Obrigado! <span style="color:var(--warning-yellow);">+10 XP</span></div>';
             });
         });
-    } catch(e) { }
+    } catch(e) {}
 }
 
 async function verificarEpocaExames() {
-    if(!minhaTurma) return; const tSnap = await getDoc(doc(db, "turmas", minhaTurma));
-    const tSnapData = tSnap.data();
+    if(!minhaTurma) return; const tSnap = await getDoc(doc(db, "turmas", minhaTurma)); const tSnapData = tSnap.data();
     if(tSnap.exists() && tSnapData.epocaExames && tSnapData.epocaExames.ativa) {
         document.getElementById('exam-mode-banner').style.display='block'; document.body.style.borderTop="5px solid #8b5cf6";
         if(tSnapData.epocaExames.dataFim) { const df = Math.ceil((new Date(tSnapData.epocaExames.dataFim) - new Date()) / (1000 * 60 * 60 * 24)); document.getElementById('exam-countdown').innerText = df > 0 ? `Faltam ${df} dias` : "Já terminou"; }
     }
 }
 
-bindInput('aluno-search-input', async (e) => {
-    const termo = e.target.value.toLowerCase().trim(); const box = document.getElementById('aluno-search-results');
-    if(termo.length < 2) { box.style.display = 'none'; return; } box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">A procurar...</p>'; box.style.display = 'block';
-    try {
-        let resArr = []; 
-        if (minhaTurma) { const sDb = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); sDb.forEach(d => { const tit = d.data().titulo || ""; const dsc = d.data().disciplina || ""; if(tit.toLowerCase().includes(termo) || dsc.toLowerCase().includes(termo)) resArr.push({ t: `Materiais - ${dsc}`, txt: tit, id: 'btn-open-materiais' }); }); }
-        if(resArr.length === 0) box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">Sem resultados.</p>'; else { let h = ''; resArr.forEach(r => h += `<div style="padding:8px; border-bottom:1px solid #333; cursor:pointer;" onclick="document.getElementById('${r.id}').click(); document.getElementById('aluno-search-results').style.display='none'; document.getElementById('aluno-search-input').value='';"><span style="font-size:0.7rem; color:var(--primary-green); text-transform:uppercase;">${r.t}</span><div style="font-size:0.9rem; color:var(--text-light); margin-top:3px;">${r.txt}</div></div>`); box.innerHTML = h; }
-    } catch(err) { box.innerHTML = '<p class="text-danger" style="margin:0;">Erro.</p>'; }
-});
-document.addEventListener('click', (e) => { if (!e.target.closest('#aluno-search-input') && !e.target.closest('#aluno-search-results')) { const el = document.getElementById('aluno-search-results'); if(el) el.style.display = 'none'; } });
-
 // ==========================================
-// 5. PERFIL: GAMIFICAÇÃO E ESTATÍSTICAS
+// 5. PERFIL: PASSAPORTE PROFISSIONAL E BADGES
 // ==========================================
 function carregarGamificacao(dados) {
-    const xp = dados.xp || 0; const nivel = Math.floor(xp / 100) + 1; const prog = ((xp - ((nivel - 1) * 100)) / 100) * 100;
-    document.getElementById('aluno-nivel').innerText = nivel; document.getElementById('aluno-xp-atual').innerText = xp;
-    if(document.getElementById('perfil-xp-totais')) { document.getElementById('perfil-xp-totais').innerText = xp; document.getElementById('perfil-xp-progress').style.width = `${prog}%`; }
+    const xp = dados.xp || 0; 
+    const profInfo = getNivelProInfo(xp);
+    
+    document.getElementById('aluno-nivel').innerText = profInfo.nivel; 
+    document.getElementById('aluno-xp-atual').innerText = xp;
+    
+    const rankElem = document.getElementById('aluno-rank-title'); 
+    if(rankElem) rankElem.innerText = myAcademia ? `${ACADEMIAS_INFO[myAcademia].nome.replace('Academia dos ','')} • ${profInfo.titulo}` : profInfo.titulo;
+
+    const perfilNvlTxt = document.getElementById('perfil-nivel-txt');
+    if(perfilNvlTxt) perfilNvlTxt.innerText = `Nível ${profInfo.nivel} - ${profInfo.titulo}`;
+
+    if(document.getElementById('perfil-xp-totais')) { 
+        document.getElementById('perfil-xp-totais').innerText = xp; 
+        document.getElementById('perfil-xp-progress').style.width = `${profInfo.progresso}%`; 
+    }
+}
+
+function carregarPassaporteEBadges(data) {
+    // PASSAPORTE
+    const passCont = document.getElementById('barras-competencias-perfil');
+    if(passCont) {
+        const getLvl = (xp) => Math.floor((xp || 0) / 100) + 1;
+        const getPerc = (xp) => ((xp || 0) % 100);
+
+        const xpCom = data.xp_comunicacao || 0; const lvlCom = getLvl(xpCom); const percCom = getPerc(xpCom);
+        const xpCri = data.xp_criatividade || 0; const lvlCri = getLvl(xpCri); const percCri = getPerc(xpCri);
+        const xpLid = data.xp_lideranca || 0; const lvlLid = getLvl(xpLid); const percLid = getPerc(xpLid);
+        const xpOrg = data.xp_organizacao || 0; const lvlOrg = getLvl(xpOrg); const percOrg = getPerc(xpOrg);
+
+        let html = `
+        <div style="margin-bottom: 12px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-comments" style="color:#0ea5e9;"></i> Comunicação</span><strong style="color:var(--text-light);">Nvl ${lvlCom}</strong></div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percCom}%; background:#0ea5e9;"></div></div>
+        </div>
+        <div style="margin-bottom: 12px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-lightbulb" style="color:#8b5cf6;"></i> Criatividade</span><strong style="color:var(--text-light);">Nvl ${lvlCri}</strong></div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percCri}%; background:#8b5cf6;"></div></div>
+        </div>
+        <div style="margin-bottom: 12px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-compass" style="color:#f97316;"></i> Liderança</span><strong style="color:var(--text-light);">Nvl ${lvlLid}</strong></div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percLid}%; background:#f97316;"></div></div>
+        </div>
+        <div style="margin-bottom: 12px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-chess-knight" style="color:#10b981;"></i> Estratégia</span><strong style="color:var(--text-light);">Nvl ${lvlOrg}</strong></div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percOrg}%; background:#10b981;"></div></div>
+        </div>`;
+        passCont.innerHTML = html;
+    }
+
+    // BADGES
+    const badCont = document.getElementById('badges-container');
+    if(badCont) {
+        let bHtml = '';
+        BADGES_DEFS.forEach(b => {
+            let earned = false;
+            if(b.reqXp && (data.xp || 0) >= b.reqXp) earned = true;
+            if(b.reqCom && (data.xp_comunicacao || 0) >= b.reqCom) earned = true;
+            if(b.reqCri && (data.xp_criatividade || 0) >= b.reqCri) earned = true;
+            if(b.reqLid && (data.xp_lideranca || 0) >= b.reqLid) earned = true;
+            if(b.reqOrg && (data.xp_organizacao || 0) >= b.reqOrg) earned = true;
+
+            const cl = earned ? 'earned' : '';
+            bHtml += `<div class="badge-item ${cl}"><div class="badge-icon"><i class="fa-solid ${b.icon}"></i></div><div style="font-size:0.7rem; color:${earned ? 'var(--text-light)' : 'var(--text-muted)'};">${b.nome}</div></div>`;
+        });
+        badCont.innerHTML = bHtml;
+    }
 }
 
 async function carregarRankingTurma() {
-    const c = document.getElementById('ranking-turma-container'); 
-    if(!minhaTurma) { c.innerHTML = '<p class="text-muted center">Sem turma atribuída.</p>'; return; }
+    const c = document.getElementById('ranking-turma-container'); if(!minhaTurma) { c.innerHTML = '<p class="text-muted center">Sem turma atribuída.</p>'; return; }
     try {
-        // Agora lê TODOS os alunos da escola (para a Guerra Global das Academias)
         const snap = await getDocs(query(collection(db, "utilizadores"), where("papel", "==", "aluno")));
-        
-        let alunosTurma = [];
-        let academiasXP = { estrategas: 0, embaixadores: 0, exploradores: 0, visionarios: 0 };
+        let alunosTurma = []; let academiasXP = { estrategas: 0, embaixadores: 0, exploradores: 0, visionarios: 0 };
         
         snap.forEach(d => {
             const al = {id: d.id, ...d.data()};
-            if(al.academia && academiasXP[al.academia] !== undefined) {
-                academiasXP[al.academia] += (al.xp || 0);
-            }
-            if(al.turma === minhaTurma) {
-                alunosTurma.push(al);
-            }
+            if(al.academia && academiasXP[al.academia] !== undefined) { academiasXP[al.academia] += (al.xp || 0); }
+            if(al.turma === minhaTurma) { alunosTurma.push(al); }
         });
-        
         alunosTurma.sort((a,b) => (b.xp || 0) - (a.xp || 0));
         
         let hAcad = `<div style="display:flex; justify-content:space-around; margin-bottom:20px; text-align:center; background:rgba(0,0,0,0.2); padding:20px 10px 15px 10px; border-radius:12px; position:relative;">
@@ -457,7 +470,6 @@ async function carregarRankingTurma() {
             const acData = ACADEMIAS_INFO[ac];
             hAcad += `<div><i class="fa-solid ${acData.icon}" style="font-size:2rem; color:${acData.cor}; margin-bottom:8px; display:block;"></i><strong style="color:var(--text-light); font-size:0.85rem;">${acData.nome.split(' ')[2]||acData.nome}</strong><br><span style="color:var(--warning-yellow); font-size:0.9rem; font-weight:bold;">${academiasXP[ac]} XP</span></div>`;
         });
-        
         hAcad += `</div><h4 style="color:var(--text-muted); font-size:0.85rem; text-transform:uppercase; margin-bottom:10px;">🏆 Top 10 (A Tua Turma)</h4>`;
         
         let hAl = '';
@@ -497,30 +509,6 @@ async function carregarObjetivosPessoais() {
 
 window.toggleObjetivo = async (id, status) => { try { await updateDoc(doc(db, "utilizadores", myUserId, "objetivos", id), { concluido: status }); if(status) { const snap = await getDoc(doc(db, "utilizadores", myUserId)); let xp = snap.exists() && snap.data().xp ? snap.data().xp : 0; await updateDoc(doc(db, "utilizadores", myUserId), { xp: xp + 50 }); carregarGamificacao({xp: xp+50}); } carregarObjetivosPessoais(); } catch(e) {} };
 
-function renderizarGraficoNotas() {
-    const ctx = document.getElementById('chart-notas-aluno'); if(!ctx) return;
-    getDocs(collection(db, "utilizadores", myUserId, "notas")).then(notasDb => {
-        let mapN = {}; notasDb.forEach(d => { const n = d.data(); if(n.nota!=='REP'&&!isNaN(n.nota)){ if(!mapN[n.disciplina])mapN[n.disciplina]={s:0,c:0}; mapN[n.disciplina].s+=Number(n.nota); mapN[n.disciplina].c++; } });
-        let l = Object.keys(mapN).sort(); let dt=[], bg=[]; 
-        l.forEach(dc => { 
-            const md=(mapN[dc].s/mapN[dc].c).toFixed(1); dt.push(md); bg.push(md>=10?'#10b981':'#ef4444');
-        });
-        if(chartInstance) chartInstance.destroy();
-        if(l.length === 0) { l = ['Sem Notas']; dt = [0]; bg = ['#333']; }
-        chartInstance = new Chart(ctx, { type:'bar', data:{labels:l, datasets:[{label:'Média', data:dt, backgroundColor:bg, borderRadius:6}]}, options:{responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true, max:20}, x:{grid:{display:false}}}, plugins:{legend:{display:false}}} });
-    });
-}
-
-bindClick('btn-view-mood-history', carregarHistoricoHumor);
-async function carregarHistoricoHumor() {
-    const c = document.getElementById('mood-history-container'); c.innerHTML = '<p class="text-muted center">A atualizar...</p>';
-    try {
-        const s = await getDocs(collection(db, "utilizadores", myUserId, "humor")); let arr = []; s.forEach(d => arr.push(d.data())); arr.sort((a,b) => b.timestamp - a.timestamp);
-        let h = '<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:10px;">'; arr.forEach(hh=>{ h+=`<div style="text-align:center;background:rgba(0,0,0,0.3);padding:10px;border-radius:8px;min-width:60px;"><div style="font-size:1.8rem;">${hh.humor}</div><div style="font-size:0.7rem;color:var(--text-muted);margin-top:5px;">${hh.dataIso.split('-').reverse().slice(0,2).join('/')}</div></div>`;});
-        c.innerHTML = arr.length === 0 ? '<p class="text-muted center" style="margin:0;">Sem registos.</p>' : h+'</div>';
-    } catch(e){}
-}
-
 bindChange('upload-avatar', async (e) => {
     const file = e.target.files[0]; if(!file) return;
     try {
@@ -530,37 +518,74 @@ bindChange('upload-avatar', async (e) => {
 });
 
 // ==========================================
-// 6. CADERNETA E COMUNICAÇÃO
+// 6. CADERNETA: A NOVA ABA EVOLUÇÃO PRO
 // ==========================================
-window.abrirAcaoPrhf = (id, disc, mod, prazo) => {
-    esconderTodasAsVistas(); document.getElementById('view-aluno-acao-prhf').style.display = 'block'; 
-    document.getElementById('prhf-acao-titulo').innerText = `${disc} (Mod. ${mod})`; 
-    document.getElementById('prhf-acao-prazo').innerText = prazo.split('-').reverse().join('/');
-    document.getElementById('btn-voltar-acao-prhf').onclick = () => { document.querySelector('.nav-item[data-target="view-aluno-caderneta"]').click(); };
-    document.getElementById('btn-enviar-proposta-prhf').onclick = async (e) => {
-        const d = document.getElementById('aluno-prhf-proposta-data').value; const hi = document.getElementById('aluno-prhf-proposta-hora-inicio').value; const hf = document.getElementById('aluno-prhf-proposta-hora-fim').value;
-        if(!d || !hi || !hf) { alert("Preenche a data e as horas da tua sugestão!"); return; }
-        const btn = e.currentTarget; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
-        try { 
-            await updateDoc(doc(db, "utilizadores", myUserId, "prhfs", id), { propostaAluno: `O aluno propõe: ${d.split('-').reverse().join('/')} das ${hi} às ${hf}`, propostaLidaDT: false }); 
-            btn.innerHTML = '<i class="fa-solid fa-check"></i> Enviado ao Professor'; btn.style.backgroundColor = 'var(--success-green)'; 
-            setTimeout(() => { document.getElementById('btn-voltar-acao-prhf').click(); btn.innerHTML = 'Enviar Proposta'; btn.disabled = false; btn.style.backgroundColor = 'var(--primary-green)'; }, 1500); 
-        } catch(err) { btn.innerHTML = "Erro de Ligação"; setTimeout(() => { btn.disabled = false; }, 1500); }
-    };
-};
+async function carregarEvolucaoAluno() {
+    const cadernetaContent = document.getElementById('aluno-caderneta-content');
+    if(!cadernetaContent) return;
 
-function carregarDadosPassaporte(dados) {
-    if(dados.fct) { document.getElementById('aluno-fct-horas').innerText = `${dados.fct.horasRealizadas||0} / ${dados.fct.horasTotal||0}h`; document.getElementById('aluno-fct-progress').style.width = `${((dados.fct.horasRealizadas||0)/(dados.fct.horasTotal||1))*100}%`; document.getElementById('input-fct-horas').value = dados.fct.horasRealizadas||'';}
-    if(dados.pap) { document.getElementById('input-pap-tema').value = dados.pap.tema || ''; }
-    if (dados.papFicheiroEnviado) document.getElementById('aluno-pap-file-name').innerText = "Ficheiro submetido.";
+    try {
+        const uSnap = await getDoc(doc(db, "utilizadores", myUserId));
+        const data = uSnap.exists() ? uSnap.data() : {};
+        
+        const getLvl = (xp) => Math.floor((xp || 0) / 100) + 1;
+        const getPerc = (xp) => ((xp || 0) % 100);
+
+        const lvlCom = getLvl(data.xp_comunicacao); const percCom = getPerc(data.xp_comunicacao);
+        const lvlCri = getLvl(data.xp_criatividade); const percCri = getPerc(data.xp_criatividade);
+        const lvlLid = getLvl(data.xp_lideranca); const percLid = getPerc(data.xp_lideranca);
+        const lvlOrg = getLvl(data.xp_organizacao); const percOrg = getPerc(data.xp_organizacao);
+
+        let html = `
+        <div class="card" style="border-top: 4px solid var(--primary-green); margin-bottom: 20px;">
+            <h3 style="color: white; margin-bottom: 15px; font-size: 1.1rem;"><i class="fa-solid fa-chart-radar"></i> O Meu Perfil PRO</h3>
+            <div style="margin-bottom: 12px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-comments" style="color:#0ea5e9;"></i> Comunicação & Hospitalidade</span><strong style="color:var(--primary-green);">Nvl ${lvlCom}</strong></div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percCom}%; background:#0ea5e9;"></div></div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-lightbulb" style="color:#8b5cf6;"></i> Criatividade & Inovação</span><strong style="color:var(--primary-green);">Nvl ${lvlCri}</strong></div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percCri}%; background:#8b5cf6;"></div></div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-compass" style="color:#f97316;"></i> Liderança & Autonomia</span><strong style="color:var(--primary-green);">Nvl ${lvlLid}</strong></div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percLid}%; background:#f97316;"></div></div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-chess-knight" style="color:#10b981;"></i> Organização & Estratégia</span><strong style="color:var(--primary-green);">Nvl ${lvlOrg}</strong></div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percOrg}%; background:#10b981;"></div></div>
+            </div>
+        </div>
+        <h4 style="color:var(--text-muted); margin-bottom:10px; font-size:0.9rem; text-transform:uppercase;"><i class="fa-solid fa-bolt"></i> O Meu Histórico</h4>`;
+
+        const ocSnap = await getDocs(query(collection(db, "utilizadores", myUserId, "ocorrencias")));
+        let regs = []; ocSnap.forEach(d => regs.push(d.data()));
+
+        if(regs.length === 0) { html += getEmptyState('Sem registos de evolução.', 'fa-star'); } 
+        else {
+            regs.sort((a,b) => b.data.localeCompare(a.data));
+            regs.forEach(r => {
+                const isPos = r.tipo === 'positiva';
+                const cor = isPos ? 'var(--success-green)' : 'var(--danger-red)';
+                const bgCor = isPos ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+                const xpLabel = r.xp ? (r.xp > 0 ? `+${r.xp} XP` : `${r.xp} XP`) : (isPos ? 'Registo Positivo' : 'Registo Negativo');
+                
+                html += `
+                <div style="display:flex; align-items:center; justify-content:space-between; background:${bgCor}; border: 1px solid ${cor}; padding: 12px; border-radius: 8px; margin-bottom: 10px;">
+                    <div>
+                        <strong style="color:${cor}; font-size:1.1rem;">${xpLabel}</strong><br>
+                        <span style="color:var(--text-light); font-size:0.95rem; font-weight:bold;">${r.titulo}</span>
+                        ${r.descricao ? `<div style="color:var(--text-muted); font-size:0.85rem; margin-top:3px;">${r.descricao}</div>` : ''}
+                    </div>
+                    <div style="text-align:right; font-size:0.75rem; color:var(--text-muted);">
+                        ${r.data}<br>Prof. ${r.autor}
+                    </div>
+                </div>`;
+            });
+        }
+        cadernetaContent.innerHTML = html;
+    } catch(e) { cadernetaContent.innerHTML = '<p class="text-danger center">Erro ao carregar evolução.</p>'; }
 }
-bindClick('btn-save-fct', async (e) => { const v = document.getElementById('input-fct-horas').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "fct.horasRealizadas": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
-bindClick('btn-save-pap-tema', async (e) => { const v = document.getElementById('input-pap-tema').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "pap.tema": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-save"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
-bindClick('btn-enviar-pap', async (e) => { if(!fPB64) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { const snap = await getDoc(doc(db, "utilizadores", myUserId)); let axp = snap.exists()&&snap.data().xp?snap.data().xp:0; await updateDoc(doc(db, "utilizadores", myUserId), { papFicheiroEnviado:true, papFicheiroBase64:fPB64, xp:axp+200 }); b.style.backgroundColor="var(--success-green)"; b.innerHTML='<i class="fa-solid fa-check"></i> Submetido'; setTimeout(() => { b.style.display='none'; b.disabled=false; document.getElementById('aluno-pap-file-name').style.color="var(--success-green)"; }, 2000); } catch(err){} });
-
-async function pedirPermissaoNotificacoes() { try { const p = await Notification.requestPermission(); if(p==='granted') { const r = await navigator.serviceWorker.register('./firebase-messaging-sw.js'); const t = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: r }); if(t) await updateDoc(doc(db, "utilizadores", myUserId), { tokenNotificacao: t }); } } catch(e){} }
-if(typeof onMessage !== "undefined" && messaging) onMessage(messaging, p => alert(`NOVA NOTIFICAÇÃO:\n${p.notification.title}\n${p.notification.body}`));
-setTimeout(() => { if(myUserId) pedirPermissaoNotificacoes(); }, 4000);
 
 async function obterEventosLinhaTemporal() {
     let ev = [];
@@ -568,7 +593,7 @@ async function obterEventosLinhaTemporal() {
     const fS = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); fS.forEach(d => { const f = d.data(); ev.push({ time: new Date(f.criadoEm || f.dataInicio).getTime(), cat: 'faltas', icon: '<i class="fa-solid fa-user-xmark"></i>', cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Falta a ${f.disciplina} (${f.horas}h)`, desc: f.justificada ? `Justificada` : `Falta registada.` }); });
     const oS = await getDocs(collection(db, "utilizadores", myUserId, "ocorrencias")); oS.forEach(d => { const o = d.data(); ev.push({ time: o.timestamp, cat: 'comportamento', icon: o.tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>', cor: o.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Registo Disciplinar`, desc: `<strong style="color:var(--text-light);">${o.titulo}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">${o.descricao || ''}</span>` }); });
     const pS = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); pS.forEach(d => { const p = d.data(); ev.push({ time: new Date(p.dataRegisto || Date.now()).getTime(), cat: 'prhfs', icon: '<i class="fa-solid fa-book-medical"></i>', cor: 'var(--warning-yellow)', titulo: `Plano de Recuperação Criado`, desc: `${p.disciplina} (Mod. ${p.modulo})` }); });
-    ev.sort((a,b) => b.time - a.time); return ev;
+    ev = ev.filter(e => !isNaN(e.time)); ev.sort((a,b) => b.time - a.time); return ev;
 }
 
 async function carregarTimelineAluno() {
@@ -602,8 +627,7 @@ async function carregarNotasAluno() {
     try {
         const notasDb = await getDocs(collection(db, "utilizadores", myUserId, "notas"));
         let disciplinasDoAluno = {}; notasDb.forEach(d => { const n = d.data(); if(!disciplinasDoAluno[n.disciplina]) disciplinasDoAluno[n.disciplina] = []; disciplinasDoAluno[n.disciplina].push(n); });
-        
-        let ordemDisciplinas = obterDisciplinasDoAno();
+        const ordemDisciplinas = obterDisciplinasDoAno();
         if(ordemDisciplinas.length === 0) { document.getElementById('aluno-caderneta-content').innerHTML = getEmptyState('Ainda não tens disciplinas ativas.', 'fa-book'); return; }
 
         let html = '';
@@ -618,9 +642,7 @@ async function carregarNotasAluno() {
                 });
                 const med = c > 0 ? (sum/c).toFixed(1) : '-'; const medCor = (med !== '-' && med < 10) ? 'var(--danger-red)' : 'var(--text-light)';
                 html += `<div class="disciplina-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'"><span class="disciplina-title" style="color:var(--text-light);">${disc}</span><span><span style="font-size:0.75rem; color:var(--text-muted); margin-right:8px;">Média:</span><span class="disciplina-media" style="color:${medCor};">${med}</span> <i class="fa-solid fa-chevron-down" style="font-size:0.8rem; color:var(--text-muted); margin-left:5px;"></i></span></div><div class="disciplina-modules">${modsHtml}</div>`;
-            } else {
-                html += `<div class="disciplina-header" style="cursor:default;"><span class="disciplina-title" style="color:var(--text-muted);">${disc}</span><span><span class="disciplina-media" style="color:var(--text-muted); font-size:0.9rem;">SN</span></span></div>`;
-            }
+            } else { html += `<div class="disciplina-header" style="cursor:default;"><span class="disciplina-title" style="color:var(--text-muted);">${disc}</span><span><span class="disciplina-media" style="color:var(--text-muted); font-size:0.9rem;">SN</span></span></div>`; }
         });
         document.getElementById('aluno-caderneta-content').innerHTML = html;
     } catch(e) {}
@@ -628,35 +650,20 @@ async function carregarNotasAluno() {
 
 async function carregarFaltasAluno() {
     try {
-        const fDisc = document.getElementById('filtro-caderneta-disc');
-        const fDiscVal = fDisc ? fDisc.value : "";
-        const faltasDb = await getDocs(collection(db, "utilizadores", myUserId, "faltas"));
-        let faltasPorDisc = {};
-        faltasDb.forEach(d => { const f = d.data(); if(!f.justificada && (!fDiscVal || f.disciplina === fDiscVal)) { if(!faltasPorDisc[f.disciplina]) faltasPorDisc[f.disciplina] = {}; if(!faltasPorDisc[f.disciplina][f.modulo]) faltasPorDisc[f.disciplina][f.modulo] = []; faltasPorDisc[f.disciplina][f.modulo].push(f); } });
+        const faltasDb = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); let faltasPorDisc = {};
+        faltasDb.forEach(d => { const f = d.data(); if(!f.justificada) { if(!faltasPorDisc[f.disciplina]) faltasPorDisc[f.disciplina] = {}; if(!faltasPorDisc[f.disciplina][f.modulo]) faltasPorDisc[f.disciplina][f.modulo] = []; faltasPorDisc[f.disciplina][f.modulo].push(f); } });
 
         if(Object.keys(faltasPorDisc).length === 0) { document.getElementById('aluno-caderneta-content').innerHTML = getEmptyState('Sem faltas injustificadas. Excelente!', 'fa-face-smile'); return; }
         
-        let html = ''; const ordemDisciplinas = obterDisciplinasDoAno(); const matriz = getMatriz();
-        
+        let html = ''; const ordemDisciplinas = obterDisciplinasDoAno(); const matriz = getMatrizMap(); // Mock
         ordemDisciplinas.forEach(disc => {
             if(faltasPorDisc[disc]) {
                 let discHtml = ''; let totalFaltasDisc = 0;
                 for(let mod of Object.keys(faltasPorDisc[disc]).sort()) {
                     let sumFaltasMod = 0; faltasPorDisc[disc][mod].forEach(f => sumFaltasMod += Number(f.horas||0)); totalFaltasDisc += sumFaltasMod;
-                    
-                    let limiteHoras = 0; let totalHorasMod = 0;
-                    for (const comp of Object.values(matriz)) { if(comp[disc] && comp[disc][mod]) { totalHorasMod = comp[disc][mod]; limiteHoras = Math.round(totalHorasMod * 0.1); break; } }
-                    
-                    let corBarra = 'var(--success-green)'; let txtRisco = 'Regular'; let perc = 0;
-                    if(totalHorasMod > 0) {
-                        perc = (sumFaltasMod / totalHorasMod) * 100; if(perc > 100) perc = 100;
-                        if(sumFaltasMod > limiteHoras) { corBarra = 'var(--danger-red)'; txtRisco = '⚠️ Abaixo de 90%'; }
-                        else if(sumFaltasMod === limiteHoras) { corBarra = 'var(--warning-yellow)'; txtRisco = 'Atenção (No limite)'; }
-                        else { corBarra = 'var(--success-green)'; txtRisco = 'Regular'; }
-                    }
-
+                    const corBarra = 'var(--danger-red)'; const txtRisco = 'Sem Limite Definido (API Falsa)'; const perc = 100;
                     const modLabel = mod.toString().startsWith('UC') ? mod : `Módulo ${mod}`;
-                    discHtml += `<div style="background:rgba(0,0,0,0.2); padding:12px; border-radius:8px; border:1px solid #333; margin-bottom:10px;"><div style="display:flex; justify-content:space-between; margin-bottom:8px;"><strong style="color:var(--text-light);">${modLabel}</strong><span style="font-size:0.8rem; font-weight:bold; color:${corBarra};">${sumFaltasMod}h / ${limiteHoras > 0 ? limiteHoras+'h' : '?'}</span></div><div class="progress-bar-bg" style="margin-top:0; margin-bottom:5px; height:6px;"><div class="progress-bar-fill" style="width: ${perc}%; background-color:${corBarra};"></div></div><div style="text-align:right; font-size:0.75rem; color:${corBarra};">${txtRisco}</div></div>`;
+                    discHtml += `<div style="background:rgba(0,0,0,0.2); padding:12px; border-radius:8px; border:1px solid #333; margin-bottom:10px;"><div style="display:flex; justify-content:space-between; margin-bottom:8px;"><strong style="color:var(--text-light);">${modLabel}</strong><span style="font-size:0.8rem; font-weight:bold; color:${corBarra};">${sumFaltasMod}h</span></div></div>`;
                 }
                 html += `<div class="disciplina-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'"><span class="disciplina-title" style="color:var(--text-light);">${disc}</span><span><span class="disciplina-media" style="color:var(--danger-red);">${totalFaltasDisc}h</span> <i class="fa-solid fa-chevron-down" style="font-size:0.8rem; color:var(--text-muted); margin-left:5px;"></i></span></div><div class="disciplina-modules">${discHtml}</div>`;
             }
@@ -667,51 +674,14 @@ async function carregarFaltasAluno() {
 
 async function carregarPrhfsAluno() {
     try {
-        const fDisc = document.getElementById('filtro-caderneta-disc');
-        const fDiscVal = fDisc ? fDisc.value : "";
-        const prhfsDb = await getDocs(collection(db, "utilizadores", myUserId, "prhfs"));
-        let prhfsArr = []; prhfsDb.forEach(d => { const p = d.data(); if(!fDiscVal || p.disciplina === fDiscVal) prhfsArr.push({id: d.id, ...p}); });
+        const prhfsDb = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); let prhfsArr = []; prhfsDb.forEach(d => { const p = d.data(); if(p.status !== 'concluida') prhfsArr.push({id: d.id, ...p}); });
         if(prhfsArr.length === 0) { document.getElementById('aluno-caderneta-content').innerHTML = getEmptyState('Não tens Planos de Recuperação.', 'fa-book-medical'); return; }
-        
-        prhfsArr.sort((a,b) => new Date(a.prazo) - new Date(b.prazo));
-        let pendentes = prhfsArr.filter(p => p.status !== 'concluida'); let concluidos = prhfsArr.filter(p => p.status === 'concluida');
-        
-        let html = ''; 
-        const renderP = (p) => {
-            const isUrgente = p.moduloTerminado === true || p.moduloTerminado === "true"; 
-            const cor = isUrgente ? 'var(--danger-red)' : 'var(--warning-yellow)'; 
-            const txtSt = p.status === 'concluida' ? 'CONCLUÍDO' : (isUrgente ? 'URGENTE' : 'EM CURSO'); 
-            const corFinal = p.status === 'concluida' ? 'var(--success-green)' : cor; 
-            const hPres = Number(p.horasPresenciais || 0); const hAut = Number(p.horasTotais || 50) - hPres;
-            
-            const b64Var = p.ficheiroBase64 || p.anexoBase64; 
-            const aHtml = b64Var ? `<a href="${b64Var}" download="PRHF_${p.disciplina}_M${p.modulo}" class="secondary-btn small-btn" style="margin-bottom:10px; color:var(--primary-green); border-color:var(--primary-green); display:block; text-align:center;"><i class="fa-solid fa-download"></i> Descarregar Ficha</a>` : '';
-            const fpHtml = p.feedbackProfessor ? `<div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:10px; font-size:0.85rem;"><strong style="color:var(--primary-green);">Prof. ${p.professor || ''}:</strong> ${p.feedbackProfessor}</div>` : '';
-            const propHtml = p.propostaAluno ? `<div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:15px; font-size:0.85rem;"><strong style="color:var(--warning-yellow);">A tua Proposta:</strong> ${p.propostaAluno} <br><span style="color:${p.propostaLidaDT ? 'var(--success-green)' : 'var(--text-muted)'}; font-size:0.75rem;"><i class="fa-solid ${p.propostaLidaDT ? 'fa-check-double' : 'fa-clock'}"></i> ${p.propostaLidaDT ? 'Validada pelo Prof.' : 'A aguardar validação'}</span></div>` : '';
-            
-            let btn = ''; if(p.status !== 'concluida' && hPres > 0) { btn = `<button class="primary-btn small-btn" style="width:100%; background-color:${corFinal}; color:${corFinal === 'var(--warning-yellow)' ? 'black' : 'white'};" onclick="window.abrirAcaoPrhf('${p.id}', '${p.disciplina}', '${p.modulo}', '${p.prazo}')"><i class="fa-regular fa-calendar"></i> Sugerir Horário</button>`; }
-            
-            return `<div class="card" style="margin-bottom:15px; border-left: 4px solid ${corFinal};"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="font-size: 1.1rem; color:var(--text-light);">${p.disciplina} (Mod. ${p.modulo})</strong><span style="color:${corFinal}; font-size:0.75rem; font-weight:bold;">${txtSt}</span></div><p style="font-size:0.85rem; color:var(--text-light); margin-bottom:10px;">${p.descricao}</p>${aHtml} ${fpHtml} ${propHtml}<div style="font-size:0.8rem; margin-bottom: 15px; border-top:1px dashed #333; padding-top:10px; color:var(--text-light);">Data Limite: <strong style="color:${corFinal};">${p.prazo.split('-').reverse().join('/')}</strong><br>Horas Presenciais: <strong>${hPres}h</strong></div>${btn}</div>`;
-        };
-        
-        pendentes.forEach(p => html += renderP(p)); 
-        if(concluidos.length > 0) { html += `<div class="falta-date-divider" style="margin-top:20px;"><span>Concluídos</span></div>`; concluidos.forEach(p => html += renderP(p)); } 
-        document.getElementById('aluno-caderneta-content').innerHTML = html;
-    } catch(e) {}
-}
-
-async function carregarComportamentoAluno() {
-    try {
-        const fDisc = document.getElementById('filtro-caderneta-disc');
-        const fDiscVal = fDisc ? fDisc.value : "";
-        const res = await getDocs(query(collection(db, "utilizadores", myUserId, "ocorrencias")));
-        let regs = []; res.forEach(d => { if(!fDiscVal || d.data().disciplina === fDiscVal) regs.push(d.data()); }); 
-        if(regs.length === 0) { document.getElementById('aluno-caderneta-content').innerHTML = getEmptyState('Sem registos disciplinares.', 'fa-scale-balanced'); return; }
-        regs.sort((a,b) => b.data.localeCompare(a.data)); 
-        let html = '';
-        regs.forEach(r => {
-            const cor = r.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)';
-            html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${cor};"><div style="display:flex; align-items:center; gap:8px; color:${cor}; margin-bottom:5px;"><i class="fa-solid fa-circle-exclamation"></i> <strong style="color:var(--text-light);">${r.titulo}</strong></div><span style="font-size:0.75rem; color:var(--text-muted);">Data: ${r.data} | Prof. ${r.autor}</span>${r.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px; background:rgba(0,0,0,0.2); padding:8px; border-radius:6px;">${r.descricao}</p>` : ''}</div>`;
+        prhfsArr.sort((a,b) => new Date(a.prazo) - new Date(b.prazo)); let html = '';
+        prhfsArr.forEach(p => {
+            const isUrgente = p.moduloTerminado === true || p.moduloTerminado === "true"; const cor = isUrgente ? 'var(--danger-red)' : 'var(--warning-yellow)'; const txtSt = isUrgente ? 'URGENTE (Mód. Terminado)' : 'EM CURSO';
+            const hPres = Number(p.horasPresenciais || 0);
+            let btn = ''; if(p.status !== 'concluida' && hPres > 0) { btn = `<button class="primary-btn small-btn" style="width:100%; background-color:${cor}; color:${cor === 'var(--warning-yellow)' ? 'black' : 'white'};" onclick="window.abrirAcaoPrhf('${p.id}', '${p.disciplina}', '${p.modulo}', '${p.prazo}')"><i class="fa-regular fa-calendar"></i> Sugerir Horário</button>`; }
+            html += `<div class="card" style="margin-bottom:15px; border-left: 4px solid ${cor};"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="font-size: 1.1rem; color:var(--text-light);">${p.disciplina} (Mod. ${p.modulo})</strong><span style="color:${cor}; font-size:0.75rem; font-weight:bold;">${txtSt}</span></div><p style="font-size:0.85rem; color:var(--text-light); margin-bottom:10px;">${p.descricao}</p><div style="font-size:0.8rem; margin-bottom: 15px; border-top:1px dashed #333; padding-top:10px; color:var(--text-light);">Data Limite: <strong style="color:${cor};">${p.prazo.split('-').reverse().join('/')}</strong><br>Horas Presenciais: <strong>${hPres}h</strong></div>${btn}</div>`;
         });
         document.getElementById('aluno-caderneta-content').innerHTML = html;
     } catch(e) {}
@@ -727,11 +697,66 @@ async function carregarObservacoesAluno(rSel = '1_intercalar') {
         const dS = await getDoc(doc(db, "utilizadores", myUserId, "reunioes", rSel)); let dR = dS.exists() ? dS.data() : {}; let cH = '<div style="display:flex; flex-direction:column; gap:10px;">';
         const ordemDisciplinas = obterDisciplinasDoAno();
         if(ordemDisciplinas.length === 0) { cH += '<p class="text-muted center">Ainda não tens disciplinas associadas.</p>'; }
-        else {
-            ordemDisciplinas.forEach(disc => { const cm = dR.disciplinas && dR.disciplinas[disc] ? dR.disciplinas[disc] : '<span style="color:var(--text-muted);">Sem comentário</span>'; cH += `<div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;"><h4 style="margin-bottom:8px; color:var(--text-light); font-size:1rem;">${disc}</h4><p style="color:var(--text-light); font-size:0.9rem; line-height:1.4; margin:0;">${cm}</p></div>`; });
-        }
+        else { ordemDisciplinas.forEach(disc => { const cm = dR.disciplinas && dR.disciplinas[disc] ? dR.disciplinas[disc] : '<span style="color:var(--text-muted);">Sem comentário</span>'; cH += `<div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;"><h4 style="margin-bottom:8px; color:var(--text-light); font-size:1rem;">${disc}</h4><p style="color:var(--text-light); font-size:0.9rem; line-height:1.4; margin:0;">${cm}</p></div>`; }); }
         const gl = dR.global || '<span style="color:var(--text-muted);">Sem observações globais.</span>'; cH += `<div class="card" style="margin-top:15px; border:1px solid var(--warning-yellow); background:rgba(255,204,0,0.05); padding:15px;"><h3 style="color:var(--warning-yellow); margin-bottom:10px; font-size:1.1rem;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3><p style="color:var(--text-light); font-size:0.95rem; line-height:1.5; margin:0;">${gl}</p></div></div>`;
         document.getElementById('reuniao-content-area').innerHTML = cH;
+    } catch(e) {}
+}
+
+async function carregarAgendaAlunoLista() {
+    const sC = document.getElementById('aluno-agenda-content'); sC.innerHTML = '<p class="text-muted center">A sincronizar agenda...</p>'; if(!minhaTurma) return;
+    const mT = document.getElementById('aluno-filtro-agenda-testes').checked; const mTr = document.getElementById('aluno-filtro-agenda-trabalhos').checked; const mO = document.getElementById('aluno-filtro-agenda-outros').checked;
+    try {
+        const evDb = await getDocs(collection(db, "turmas", minhaTurma, "eventos")); if(evDb.empty) { sC.innerHTML = getEmptyState('Sem eventos na escola.', 'fa-calendar-xmark'); return; }
+        let evs = []; evDb.forEach(d => { const e = d.data(); let bgC = '#8b5cf6'; let txtT = 'Evento'; if(e.tipo === 'teste' || e.tipo === 'avaliacao') { if(mT) { bgC = '#f59e0b'; txtT = 'Avaliação'; evs.push({...e, cor: bgC, txt: txtT}); } } else if(e.tipo === 'trabalho' || e.tipo === 'entrega') { if(mTr) { bgC = '#00d2ff'; txtT = 'Entrega'; evs.push({...e, cor: bgC, txt: txtT}); } } else { if(mO) evs.push({...e, cor: bgC, txt: txtT}); } });
+        if(evs.length === 0) { sC.innerHTML = getEmptyState('Nenhum evento com os filtros atuais.', 'fa-filter'); return; }
+        const hj = new Date().toISOString().split('T')[0]; const fut = evs.filter(e => e.data >= hj).sort((a,b) => a.data.localeCompare(b.data)); const pas = evs.filter(e => e.data < hj).sort((a,b) => b.data.localeCompare(a.data));
+        const mA = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; let html = '';
+        const rEv = (ev) => { const dp = ev.data.split('-'); const mes = mA[parseInt(dp[1])-1]; return `<div class="calendar-event-card" style="border-left-color:${ev.cor}; margin-bottom:10px;"><div class="calendar-date-box"><span class="day">${dp[2]}</span><span class="month" style="color:${ev.cor};">${mes}</span></div><div class="calendar-info"><h4 style="margin:0; color:var(--text-light);">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt||'evento').toUpperCase()}</span></div></div>`; };
+        if(fut.length > 0) fut.forEach(e => html += rEv(e)); else html += '<p class="text-muted center">Sem eventos futuros.</p>';
+        if(pas.length > 0) { html += '<div class="calendar-divider" style="margin-top:20px;"><span>Passados</span></div>'; pas.forEach(e => html += rEv(e)); } sC.innerHTML = html;
+    } catch(e) {}
+}
+
+const getCorEspecial = (dsc) => {
+    if(!dsc) return { c: 'var(--primary-green)', bg: 'rgba(16, 185, 129, 0.05)' };
+    const d = dsc.toLowerCase();
+    if(d.includes('alm')) return { c: 'var(--warning-yellow)', bg: 'rgba(245, 158, 11, 0.1)' };
+    if(d.includes('vis')) return { c: '#00d2ff', bg: 'rgba(0, 210, 255, 0.1)' };
+    if(d.includes('prhf')) return { c: 'var(--danger-red)', bg: 'rgba(239, 68, 68, 0.1)' };
+    if(d.includes('pap') || d.includes('fct')) return { c: '#ff9900', bg: 'rgba(255, 153, 0, 0.1)' };
+    if(['reunião','reuniao','livre','estudo'].some(k => d.includes(k))) return { c: 'var(--accent-purple)', bg: 'rgba(139, 92, 246, 0.1)' };
+    return { c: 'var(--primary-green)', bg: 'rgba(16, 185, 129, 0.05)' };
+};
+
+async function carregarHorarioAluno() {
+    const sC = document.getElementById('aluno-horario-content'); if(!sC) return;
+    sC.innerHTML = '<p class="text-muted center">A gerar horário...</p>'; if(!minhaTurma) return;
+    try {
+        const dS = await getDoc(doc(db, "turmas", minhaTurma)); let hb = {}; if(dS.exists() && dS.data().horario) hb = dS.data().horario;
+        const bK = ['1', '2', '3', '4', '1300', '5', '6', '7']; const bT = { '1': '08:30', '2': '09:35', '3': '10:50', '4': '11:55', '1300': '13:00', '5': '14:05', '6': '15:15', '7': '16:20' }; const dM = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']; const fDt = (dt) => `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;
+        
+        if (ahModo === 'dia') {
+            let tD = new Date(); tD.setDate(tD.getDate() + ahDOff); const hd = document.getElementById('aluno-horario-display'); if(hd) hd.innerText = `${dM[tD.getDay()]}, ${fDt(tD)}`;
+            let h = ''; let tAD = false; const dSStr = `${tD.getFullYear()}-${String(tD.getMonth()+1).padStart(2,'0')}-${String(tD.getDate()).padStart(2,'0')}`;
+            bK.forEach(b => { const dc = hb[`${dSStr}_${b}`]; if(dc) { const sty = getCorEspecial(dc); h += `<div class="horario-list-item" style="border-left-color:${sty.c}; background-color:${sty.bg};"><div class="horario-time-col">${bT[b]}</div><div class="horario-disc-col"><div class="horario-disc-name">${dc}</div><div class="horario-prof" style="font-size:0.75rem; color:#888; margin-top:4px;">Prof. A Atribuir</div></div></div>`; tAD = true; } });
+            sC.innerHTML = tAD ? h : getEmptyState('Sem aulas neste dia.', 'fa-mug-hot');
+        } else {
+            let dT = new Date(); dT.setDate(dT.getDate() + (ahSOff * 7)); dT.setDate(dT.getDate() - (dT.getDay() === 0 ? 6 : dT.getDay() - 1)); let dE = new Date(dT); dE.setDate(dE.getDate() + 4);
+            const hd = document.getElementById('aluno-horario-display'); if(hd) hd.innerText = `${fDt(dT)} a ${fDt(dE)}`;
+            let h = '<div class="horario-grid" style="min-width:100%;"><div class="horario-header"></div>'; let dI = new Date(dT);
+            ['SEG','TER','QUA','QUI','SEX'].forEach(d => { h += `<div class="horario-header">${d}<span>${fDt(dI)}</span></div>`; dI.setDate(dI.getDate()+1); });
+            bK.forEach(b => { 
+                h += `<div class="horario-time">${bT[b]}</div>`; dI = new Date(dT); 
+                for(let i=0; i<5; i++) { 
+                    const dSStr = `${dI.getFullYear()}-${String(dI.getMonth()+1).padStart(2,'0')}-${String(dI.getDate()).padStart(2,'0')}`; const dc = hb[`${dSStr}_${b}`]; 
+                    if(dc) { const sty = getCorEspecial(dc); h += `<div class="horario-slot filled" style="border-color:${sty.c}; background-color:${sty.bg};"><strong>${dc}</strong></div>`; } 
+                    else { h += `<div class="horario-slot"></div>`; }
+                    dI.setDate(dI.getDate()+1); 
+                } 
+            });
+            sC.innerHTML = h + '</div>';
+        }
     } catch(e) {}
 }
 
@@ -748,43 +773,19 @@ async function carregarForuns() {
     cont.innerHTML = html;
 }
 
-// ----------------------------------------------------
-// MATERIAIS / SUMÁRIOS
-// ----------------------------------------------------
-bindInput('aluno-search-input', async (e) => {
-    const termo = e.target.value.toLowerCase().trim(); const box = document.getElementById('aluno-search-results');
-    if(termo.length < 2) { box.style.display = 'none'; return; } box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">A procurar...</p>'; box.style.display = 'block';
-    try {
-        let resArr = []; 
-        if (minhaTurma) { const sDb = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); sDb.forEach(d => { const tit = d.data().titulo || ""; const dsc = d.data().disciplina || ""; if(tit.toLowerCase().includes(termo) || dsc.toLowerCase().includes(termo)) resArr.push({ t: `Materiais - ${dsc}`, txt: tit, id: 'btn-open-materiais' }); }); }
-        if(resArr.length === 0) box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">Sem resultados.</p>'; else { let h = ''; resArr.forEach(r => h += `<div style="padding:8px; border-bottom:1px solid #333; cursor:pointer;" onclick="document.getElementById('${r.id}').click(); document.getElementById('aluno-search-results').style.display='none'; document.getElementById('aluno-search-input').value='';"><span style="font-size:0.7rem; color:var(--primary-green); text-transform:uppercase;">${r.t}</span><div style="font-size:0.9rem; color:var(--text-light); margin-top:3px;">${r.txt}</div></div>`); box.innerHTML = h; }
-    } catch(err) { box.innerHTML = '<p class="text-danger" style="margin:0;">Erro.</p>'; }
-});
-
-async function carregarMateriaisAluno() {
-    const c = document.getElementById('aluno-lista-materiais-container'); c.innerHTML = '<p class="text-muted center">A carregar materiais...</p>'; if(!minhaTurma) return;
-    try {
-        const r = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); 
-        if(r.empty) { c.innerHTML = getEmptyState('Nenhum material publicado.', 'fa-book-open'); return; }
-        
-        let sum = []; let dU = new Set(); r.forEach(d => { const dt = d.data(); sum.push({id: d.id, ...dt}); dU.add(dt.disciplina); });
-        
-        const fS = document.getElementById('aluno-filtro-materiais-disc'); 
-        if (fS && fS.options.length <= 1) { let oH = '<option value="">Todas as Disciplinas</option>'; Array.from(dU).sort().forEach(dc => oH += `<option value="${dc}">${dc}</option>`); fS.innerHTML = oH; }
-        
-        const fA = fS ? fS.value : ""; if(fA) sum = sum.filter(s => s.disciplina === fA); 
-        sum.sort((a,b) => b.timestamp - a.timestamp || (b.data || "").localeCompare(a.data || "")); 
-        
-        if(sum.length === 0) { c.innerHTML = getEmptyState('Sem materiais para esta disciplina.', 'fa-filter'); return; }
-        
+function iniciarChatAluno(fId) {
+    const chatContainer = document.getElementById('aluno-chat-messages-container'); if(!chatContainer) return;
+    chatContainer.innerHTML = ''; if(chatUnsubscribeAluno) chatUnsubscribeAluno();
+    chatUnsubscribeAluno = onSnapshot(query(collection(db, "turmas", minhaTurma, "foruns", fId, "mensagens"), orderBy("timestamp")), (snapshot) => {
         let html = ''; 
-        sum.forEach(s => { 
-            const ficheiro = s.ficheiroBase64 || s.anexoBase64;
-            const nomeFicheiro = s.anexoNome || 'Material_Anexo';
-            const aB = ficheiro ? `<a href="${ficheiro}" download="${nomeFicheiro}" class="primary-btn small-btn" style="display:block; margin-top:15px; width:100%; text-align:center; padding:10px 12px; background-color:#0099ff; color:white;"><i class="fa-solid fa-download"></i> Baixar Anexo</a>` : ''; 
-            html += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #0099ff;"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">${s.data} | ${s.disciplina} | Prof. ${s.professor || ''}</span><h4 style="margin:5px 0; color:var(--text-light);">${s.titulo}</h4>${s.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px;">${s.descricao}</p>` : ''}</div></div>${aB}</div>`; 
-        }); 
-        c.innerHTML = html;
-    } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao carregar os dados.</p>'; }
+        snapshot.forEach(doc => { 
+            const msg = doc.data(); const isMe = msg.remetente === myUserName || msg.autor === myUserName; const remetenteNome = msg.remetente || msg.autor || 'Desconhecido'; const isProf = msg.papel === 'professor';
+            const d = new Date(msg.timestamp); const hora = isNaN(d.getTime()) ? '' : `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+            if (isMe) { html += `<div class="chat-bubble student"><strong>Eu</strong><br>${msg.texto}<span class="chat-meta">${hora}</span></div>`; } 
+            else if (isProf) { html += `<div class="chat-bubble admin"><strong>Prof. ${remetenteNome}</strong><br>${msg.texto}<span class="chat-meta">${hora}</span></div>`; } 
+            else { html += `<div class="chat-bubble student"><strong style="color:var(--primary-green);">${remetenteNome}</strong><br>${msg.texto}<span class="chat-meta">${hora}</span></div>`; }
+        });
+        if (html === '') html = getEmptyState('Sê o primeiro a falar na tua turma!', 'fa-comments');
+        chatContainer.innerHTML = html; setTimeout(() => { chatContainer.scrollTop = chatContainer.scrollHeight; }, 100);
+    });
 }
-bindChange('aluno-filtro-materiais-disc', carregarMateriaisAluno);
