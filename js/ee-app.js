@@ -507,7 +507,7 @@ async function carregarNotasEE() {
         
         const ordemDisciplinas = obterDisciplinasDoAno();
 
-        let html = `<button id="btn-pauta-global" class="primary-btn" style="margin-bottom: 20px; background-color: transparent; border: 1px solid var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-table-list"></i> Pauta Global (3 Anos)</button>`;
+        let html = `<button id="btn-pauta-global" class="primary-btn" style="margin-bottom: 20px; background-color: transparent; border: 1px solid var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-table-list"></i> Pauta Global</button>`;
         
         ordemDisciplinas.forEach(disc => {
             if(disciplinasDoAluno[disc] && disciplinasDoAluno[disc].length > 0) {
