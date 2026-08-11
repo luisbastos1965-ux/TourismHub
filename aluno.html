@@ -32,7 +32,7 @@
         @keyframes pulseGold { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); } }
         .badge-item.earned .badge-icon { background: rgba(255,215,0,0.15) !important; color: #ffd700 !important; border-color: #ffd700 !important; animation: pulseGold 2s infinite; }
 
-       /* Etiqueta Dourada do Delegado - Agora muito mais discreta e fina */
+        /* Etiqueta Dourada do Delegado - Agora muito mais discreta e fina */
         #btn-modo-delegado {
             display: none;
             background: rgba(255, 215, 0, 0.05);
@@ -83,8 +83,18 @@
                         <h2 id="welcome-message" style="margin-bottom: 3px; font-size: 1.4rem;">Olá, <span id="welcome-nome">Aluno</span>!</h2>
                         <p style="font-size: 0.85rem; color: var(--text-muted);"><span id="aluno-rank-title">A classificar...</span></p>
                     </div>
-                    <div style="background: rgba(0, 204, 136, 0.1); border: 1px solid var(--primary-green); padding: 6px 12px; border-radius: 20px; text-align: center;">
-                        <div style="font-weight: bold; color: var(--primary-green); font-size: 1rem;"><i class="fa-solid fa-bolt"></i> <span id="aluno-xp-atual">0</span> <span style="font-size: 0.7rem;">XP</span></div>
+                    
+                    <!-- ZONA DE XP E MULTIPLICADOR (CHAMA) -->
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <!-- CHAMA DE STREAK (Assiduidade) -->
+                        <div id="aluno-streak-flame" style="display: flex; align-items: center; gap: 5px; background: rgba(255, 153, 0, 0.1); border: 1px solid #ff9900; padding: 6px 10px; border-radius: 20px; font-weight: bold; color: #ff9900; font-size: 0.9rem; transition: 0.3s; box-shadow: 0 0 10px rgba(255, 153, 0, 0.2);" title="Bónus de Assiduidade Ativo!">
+                            <i class="fa-solid fa-fire"></i> <span id="aluno-streak-multiplier">x1.2</span>
+                        </div>
+                        
+                        <!-- CAIXA DE XP -->
+                        <div style="background: rgba(0, 204, 136, 0.1); border: 1px solid var(--primary-green); padding: 6px 12px; border-radius: 20px; text-align: center;">
+                            <div style="font-weight: bold; color: var(--primary-green); font-size: 1rem;"><i class="fa-solid fa-bolt"></i> <span id="aluno-xp-atual">0</span> <span style="font-size: 0.7rem;">XP</span></div>
+                        </div>
                     </div>
                 </div>
 
@@ -390,6 +400,6 @@
         </nav>
     </div>
 
-    <script type="module" src="./js/aluno-app.js?v=42"></script>
+    <script type="module" src="./js/aluno-app.js?v=43"></script>
 </body>
 </html>
