@@ -1,6 +1,6 @@
 import { auth, db, messaging, VAPID_KEY, getToken, onMessage } from "./firebase.js";
-import { onAuthStateChanged, signOut } from "[https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js](https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js)";
-import { doc, getDoc, collection, updateDoc, getDocs, query, addDoc, onSnapshot, orderBy, setDoc, enableIndexedDbPersistence, deleteDoc, where } from "[https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js](https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js)";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { doc, getDoc, collection, updateDoc, getDocs, query, addDoc, onSnapshot, orderBy, setDoc, enableIndexedDbPersistence, deleteDoc, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 try { enableIndexedDbPersistence(db).catch(function(){}); } catch(e){}
 
@@ -21,10 +21,7 @@ function safeAddClass(id, className) { const el = document.getElementById(id); i
 function safeRemoveClass(id, className) { const el = document.getElementById(id); if(el) el.classList.remove(className); }
 
 function getEmptyState(mensagem, icone = "fa-folder-open") {
-    return `<div style="text-align:center; padding: 40px 20px; opacity: 0.5;">
-                <i class="fa-solid ${icone}" style="font-size: 3.5rem; margin-bottom: 15px; color: var(--text-muted);"></i>
-                <p style="font-size: 0.95rem; color: var(--text-muted);">${mensagem}</p>
-            </div>`;
+    return `<div style="text-align:center; padding: 40px 20px; opacity: 0.5;"><i class="fa-solid ${icone}" style="font-size: 3.5rem; margin-bottom: 15px; color: var(--text-muted);"></i><p style="font-size: 0.95rem; color: var(--text-muted);">${mensagem}</p></div>`;
 }
 
 // ==========================================
@@ -61,7 +58,7 @@ function obterDisciplinasDoAno() {
 }
 
 // ==========================================
-// ACADEMIAS (TURISMO) E QUIZ
+// ACADEMIAS E QUIZ
 // ==========================================
 const ACADEMIAS_INFO = {
     'estrategas': { nome: 'Academia dos Estrategas', cor: '#10b981', icon: 'fa-chess-knight', desc: 'Mestres do planeamento. Manténs a calma sob pressão.' },
@@ -71,9 +68,9 @@ const ACADEMIAS_INFO = {
 };
 
 const perguntasQuiz = [
-    { q: "Um grupo de turistas acabou de chegar e o quarto ainda não está pronto. O que fazes?", opcoes: [ { text: "Ofereço um café e faço com que se sintam em casa.", academia: "embaixadores" }, { text: "Reorganizo rapidamente o mapa de limpezas.", academia: "estrategas" }, { text: "Levo-os numa pequena visita aos jardins.", academia: "exploradores" }, { text: "Surpreendo-os com uma 'Experiência de Boas-Vindas'.", academia: "visionarios" } ] },
+    { q: "Um grupo de turistas chegou e o quarto ainda não está pronto. O que fazes?", opcoes: [ { text: "Ofereço um café e faço com que se sintam em casa.", academia: "embaixadores" }, { text: "Reorganizo rapidamente o mapa de limpezas.", academia: "estrategas" }, { text: "Levo-os numa visita aos jardins.", academia: "exploradores" }, { text: "Surpreendo-os com uma 'Experiência' que criei.", academia: "visionarios" } ] },
     { q: "Num trabalho de grupo, qual costuma ser o teu papel?", opcoes: [ { text: "Dividir tarefas e garantir prazos.", academia: "estrategas" }, { text: "Apresentar o trabalho à turma.", academia: "embaixadores" }, { text: "Recolher materiais no terreno.", academia: "exploradores" }, { text: "Dar o toque final de design e ideias.", academia: "visionarios" } ] },
-    { q: "Se pudesses escolher o teu ambiente de trabalho de sonho, seria...", opcoes: [ { text: "Ao ar livre, a explorar trilhos.", academia: "exploradores" }, { text: "No escritório, a gerir dados e rotas.", academia: "estrategas" }, { text: "Num lobby de um hotel de luxo.", academia: "embaixadores" }, { text: "Num estúdio criativo.", academia: "visionarios" } ] },
+    { q: "Se pudesses escolher o ambiente de trabalho de sonho, seria...", opcoes: [ { text: "Ao ar livre, a explorar trilhos.", academia: "exploradores" }, { text: "No escritório, a gerir dados e rotas.", academia: "estrategas" }, { text: "Num lobby de um hotel, a falar com pessoas.", academia: "embaixadores" }, { text: "Num estúdio criativo e de marketing.", academia: "visionarios" } ] },
     { q: "Quando tens um problema difícil para resolver, como reages?", opcoes: [ { text: "Improviso usando a imaginação.", academia: "visionarios" }, { text: "Mantenho a empatia para ninguém ficar nervoso.", academia: "embaixadores" }, { text: "Analiso os factos friamente.", academia: "estrategas" }, { text: "Sigo o instinto e tomo a iniciativa.", academia: "exploradores" } ] }
 ];
 
@@ -85,25 +82,26 @@ onAuthStateChanged(auth, async (user) => {
         try {
             const docSnap = await getDoc(doc(db, "utilizadores", myUserId));
             if (docSnap.exists() && docSnap.data().papel === 'aluno') {
-                const d = docSnap.data(); 
-                myUserName = (d.nome || "Aluno").split(' ')[0]; minhaTurma = d.turma || ""; myAcademia = d.academia || null;
+                const d = docSnap.data(); myUserName = (d.nome || "Aluno").split(' ')[0]; minhaTurma = d.turma || ""; myAcademia = d.academia || null;
                 
                 document.getElementById('header-user-name-aluno').innerText = myUserName;
                 document.getElementById('welcome-nome').innerText = myUserName;
-                document.getElementById('perfil-nome-central').innerText = d.nome || myUserName;
+                const centralNome = document.getElementById('perfil-nome-central'); if(centralNome) centralNome.innerText = d.nome || myUserName;
                 
+                const avatarCircle = document.getElementById('header-avatar-circle'); const perfilImg = document.getElementById('perfil-avatar-img');
                 if(d.fotoPerfil) {
-                    document.getElementById('header-avatar-circle').innerHTML = `<img src="${d.fotoPerfil}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-                    document.getElementById('perfil-avatar-img').src = d.fotoPerfil;
-                } else { document.getElementById('perfil-avatar-img').src = `[https://ui-avatars.com/api/?name=$](https://ui-avatars.com/api/?name=$){myUserName}&background=00cc88&color=fff&size=100`; }
+                    if(avatarCircle) avatarCircle.innerHTML = `<img src="${d.fotoPerfil}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+                    if(perfilImg) perfilImg.src = d.fotoPerfil;
+                } else { if(perfilImg) perfilImg.src = `https://ui-avatars.com/api/?name=${myUserName}&background=00cc88&color=fff&size=100`; }
 
-                const objSelect = document.getElementById('obj-disciplina');
-                if(objSelect) objSelect.innerHTML = obterDisciplinasDoAno().map(dc => `<option value="${dc}">${dc}</option>`).join('');
+                const objSelect = document.getElementById('obj-disciplina'); if(objSelect) objSelect.innerHTML = obterDisciplinasDoAno().map(dc => `<option value="${dc}">${dc}</option>`).join('');
 
-                const turmaAno = parseInt((minhaTurma || "").match(/\d+/)?.[0]) || d.ano || 10;
-                const btnPassaporte = document.getElementById('btn-abrir-passaporte');
-                const secFct = document.getElementById('sec-aluno-fct'); const secPap = document.getElementById('sec-aluno-pap');
+                // CORREÇÃO: Leitura do ano feita de forma 100% compatível (sem o ponto de interrogação moderno)
+                const turmaString = minhaTurma || "";
+                const anoEncontrado = turmaString.match(/\d+/);
+                const turmaAno = anoEncontrado ? parseInt(anoEncontrado[0]) : (d.ano || 10);
                 
+                const btnPassaporte = document.getElementById('btn-abrir-passaporte'); const secFct = document.getElementById('sec-aluno-fct'); const secPap = document.getElementById('sec-aluno-pap');
                 if (turmaAno === 10) { if(btnPassaporte) btnPassaporte.style.display = 'none'; } 
                 else if (turmaAno === 11) {
                     if(btnPassaporte) { btnPassaporte.style.display = 'flex'; document.getElementById('btn-passaporte-texto').innerText = 'FCT (Estágio)'; }
@@ -113,22 +111,18 @@ onAuthStateChanged(auth, async (user) => {
                     if(secFct) secFct.style.display = 'block'; if(secPap) secPap.style.display = 'block';
                 }
 
-                carregarGamificacao(d); carregarPassaporteEBadges(d); carregarMissoes();
-                carregarDadosPassaporte(d); construirHomeAdaptativa(); verificarEpocaExames();
-
+                carregarGamificacao(d); carregarPassaporteEBadges(d); carregarMissoes(); carregarDadosPassaporte(d); construirHomeAdaptativa(); verificarEpocaExames();
                 if (!myAcademia) iniciarQuizAcademias(); else aplicarTemaAcademia(myAcademia);
             } else window.location.href = "index.html";
-        } catch (e) {}
+        } catch (e) { console.error(e); }
     } else window.location.href = "index.html";
 });
 
 bindClick('btn-logout-aluno', () => signOut(auth));
 
 function iniciarQuizAcademias() { 
-    document.getElementById('modal-academia-quiz').style.display = 'flex'; 
-    document.getElementById('quiz-step-intro').style.display = 'block'; document.getElementById('quiz-step-question').style.display = 'none'; document.getElementById('quiz-step-result').style.display = 'none'; document.getElementById('quiz-step-loading').style.display = 'none';
+    document.getElementById('modal-academia-quiz').style.display = 'flex'; document.getElementById('quiz-step-intro').style.display = 'block'; document.getElementById('quiz-step-question').style.display = 'none'; document.getElementById('quiz-step-result').style.display = 'none'; document.getElementById('quiz-step-loading').style.display = 'none';
 }
-
 bindClick('btn-start-quiz', () => { document.getElementById('quiz-step-intro').style.display = 'none'; document.getElementById('quiz-step-question').style.display = 'block'; renderizarPergunta(); });
 
 function renderizarPergunta() {
@@ -160,22 +154,84 @@ async function finalizarQuiz() {
         document.getElementById('btn-finish-quiz').style.backgroundColor = ac.cor; document.getElementById('btn-finish-quiz').style.color = "#000";
     }, 2000);
 }
-
 bindClick('btn-finish-quiz', () => { document.getElementById('modal-academia-quiz').style.display = 'none'; aplicarTemaAcademia(myAcademia); });
 
 function aplicarTemaAcademia(idHouse) { 
     const ac = ACADEMIAS_INFO[idHouse]; if(!ac) return; 
     document.documentElement.style.setProperty('--primary-green', ac.cor); 
     const rankElem = document.getElementById('aluno-rank-title'); const rankCentral = document.getElementById('perfil-titulo-central'); 
-    
-    if(rankElem) { const profInfo = getNivelProInfo(parseInt(document.getElementById('aluno-xp-atual').innerText)); rankElem.innerText = `${ac.nome.replace('Academia dos ','')} • ${profInfo.titulo}`; }
+    if(rankElem) { const profInfo = getNivelProInfo(parseInt(document.getElementById('aluno-xp-atual').innerText) || 0); rankElem.innerText = `${ac.nome.replace('Academia dos ','')} • ${profInfo.titulo}`; }
     if(rankCentral) { rankCentral.innerHTML = `<i class="fa-solid ${ac.icon}"></i> ${ac.nome}`; rankCentral.style.color = ac.cor; }
     const avatarImg = document.getElementById('perfil-avatar-img'); if (avatarImg) avatarImg.style.borderColor = ac.cor;
 }
 
+// ==========================================
+// CARREGAMENTOS INICIAIS DA GAMIFICAÇÃO
+// ==========================================
+function carregarGamificacao(dados) {
+    const xp = dados.xp || 0; const profInfo = getNivelProInfo(xp);
+    const nivelEl = document.getElementById('aluno-nivel'); if(nivelEl) nivelEl.innerText = profInfo.nivel; 
+    const xpEl = document.getElementById('aluno-xp-atual'); if(xpEl) xpEl.innerText = xp;
+    const rankElem = document.getElementById('aluno-rank-title'); 
+    if(rankElem && myAcademia && ACADEMIAS_INFO[myAcademia]) { rankElem.innerText = `${ACADEMIAS_INFO[myAcademia].nome.replace('Academia dos ','')} • ${profInfo.titulo}`; }
+    const perfilNvlTxt = document.getElementById('perfil-nivel-txt'); if(perfilNvlTxt) perfilNvlTxt.innerText = `Nível ${profInfo.nivel} - ${profInfo.titulo}`;
+    const totaisEl = document.getElementById('perfil-xp-totais'); const progEl = document.getElementById('perfil-xp-progress');
+    if(totaisEl) totaisEl.innerText = xp; if(progEl) progEl.style.width = `${profInfo.progresso}%`; 
+}
+
+function carregarPassaporteEBadges(data) {
+    const passCont = document.getElementById('barras-competencias-perfil');
+    if(passCont) {
+        const getLvl = (xp) => Math.floor((xp || 0) / 100) + 1; const getPerc = (xp) => ((xp || 0) % 100);
+        const xpCom = data.xp_comunicacao || 0; const lvlCom = getLvl(xpCom); const percCom = getPerc(xpCom);
+        const xpCri = data.xp_criatividade || 0; const lvlCri = getLvl(xpCri); const percCri = getPerc(xpCri);
+        const xpLid = data.xp_lideranca || 0; const lvlLid = getLvl(xpLid); const percLid = getPerc(xpLid);
+        const xpOrg = data.xp_organizacao || 0; const lvlOrg = getLvl(xpOrg); const percOrg = getPerc(xpOrg);
+
+        passCont.innerHTML = `
+        <div style="margin-bottom: 12px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-comments" style="color:#0ea5e9;"></i> Comunicação</span><strong style="color:var(--text-light);">Nvl ${lvlCom}</strong></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percCom}%; background:#0ea5e9;"></div></div></div>
+        <div style="margin-bottom: 12px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-lightbulb" style="color:#8b5cf6;"></i> Criatividade</span><strong style="color:var(--text-light);">Nvl ${lvlCri}</strong></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percCri}%; background:#8b5cf6;"></div></div></div>
+        <div style="margin-bottom: 12px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-compass" style="color:#f97316;"></i> Liderança</span><strong style="color:var(--text-light);">Nvl ${lvlLid}</strong></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percLid}%; background:#f97316;"></div></div></div>
+        <div style="margin-bottom: 12px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-chess-knight" style="color:#10b981;"></i> Estratégia</span><strong style="color:var(--text-light);">Nvl ${lvlOrg}</strong></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percOrg}%; background:#10b981;"></div></div></div>`;
+    }
+    const badCont = document.getElementById('badges-container');
+    if(badCont) {
+        let bHtml = '';
+        BADGES_DEFS.forEach(b => {
+            let earned = false;
+            if(b.reqXp && (data.xp || 0) >= b.reqXp) earned = true;
+            if(b.reqCom && (data.xp_comunicacao || 0) >= b.reqCom) earned = true;
+            if(b.reqCri && (data.xp_criatividade || 0) >= b.reqCri) earned = true;
+            if(b.reqLid && (data.xp_lideranca || 0) >= b.reqLid) earned = true;
+            if(b.reqOrg && (data.xp_organizacao || 0) >= b.reqOrg) earned = true;
+            const cl = earned ? 'earned' : ''; bHtml += `<div class="badge-item ${cl}"><div class="badge-icon"><i class="fa-solid ${b.icon}"></i></div><div style="font-size:0.7rem; color:${earned ? 'var(--text-light)' : 'var(--text-muted)'};">${b.nome}</div></div>`;
+        });
+        badCont.innerHTML = bHtml;
+    }
+}
+
+function carregarMissoes() {
+    const cont = document.getElementById('missoes-container'); if(!cont) return;
+    const missoes = [
+        { title: "Atendimento Impossível", desc: "Apresenta uma solução profissional para um turista sem reserva.", xp: 100, tag: "Embaixadores", cor: "#0ea5e9" },
+        { title: "Operação Turismo", desc: "Organiza uma atividade desde o planeamento até à execução.", xp: 150, tag: "Estrategas", cor: "#10b981" }
+    ];
+    let html = '';
+    missoes.forEach(m => { html += `<div class="card" style="border-left: 4px solid ${m.cor}; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center;"><div style="flex:1;"><span style="font-size:0.7rem; color:${m.cor}; font-weight:bold; text-transform:uppercase; border:1px solid ${m.cor}; padding:2px 6px; border-radius:12px;">Missão: ${m.tag}</span><h4 style="margin:5px 0 3px 0; color:var(--text-light); font-size:1rem;">${m.title}</h4><p style="font-size:0.85rem; color:var(--text-muted); margin:0;">${m.desc}</p></div><div style="text-align:right; margin-left:10px;"><strong style="color:var(--warning-yellow); font-size:1.1rem;">+${m.xp} XP</strong><br><button class="secondary-btn small-btn" style="margin-top:5px; border-color:var(--text-muted); color:var(--text-muted);">Aceitar</button></div></div>`; });
+    cont.innerHTML = html;
+}
+
+function carregarDadosPassaporte(dados) {
+    const hrEl = document.getElementById('aluno-fct-horas'); const prEl = document.getElementById('aluno-fct-progress'); const inEl = document.getElementById('input-fct-horas');
+    if(hrEl && dados.fct) hrEl.innerText = `${dados.fct.horasRealizadas||0} / ${dados.fct.horasTotal||0}h`; 
+    if(prEl && dados.fct) prEl.style.width = `${((dados.fct.horasRealizadas||0)/(dados.fct.horasTotal||1))*100}%`; 
+    if(inEl && dados.fct) inEl.value = dados.fct.horasRealizadas||'';
+    const tEl = document.getElementById('input-pap-tema'); if(tEl && dados.pap) tEl.value = dados.pap.tema || '';
+    const fEl = document.getElementById('aluno-pap-file-name'); if(fEl && dados.papFicheiroEnviado) fEl.innerText = "Ficheiro submetido.";
+}
 
 // ==========================================
-// 3. NAVEGAÇÃO E BINDINGS
+// NAVEGAÇÃO PRINCIPAL E DELEGAÇÃO
 // ==========================================
 function esconderTodasAsVistas() { document.querySelectorAll('.app-content > div').forEach(v => v.style.display = 'none'); }
 
@@ -183,8 +239,7 @@ document.body.addEventListener('click', async (e) => {
     const nav = e.target.closest('.nav-item');
     if(nav) {
         e.preventDefault(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); nav.classList.add('active');
-        esconderTodasAsVistas(); const tId = nav.getAttribute('data-target'); 
-        const tgt = document.getElementById(tId); if(tgt) tgt.style.display = (tId === 'view-aluno-forum') ? 'flex' : 'block';
+        esconderTodasAsVistas(); const tId = nav.getAttribute('data-target'); const tgt = document.getElementById(tId); if(tgt) tgt.style.display = (tId === 'view-aluno-forum') ? 'flex' : 'block';
         if(tId === 'view-aluno-perfil') { carregarRankingTurma(); carregarObjetivosPessoais(); }
         if(tId === 'view-aluno-caderneta') { const el = document.getElementById('tab-aluno-timeline'); if(el) el.click(); }
         if(tId === 'view-aluno-agenda') { const el = document.getElementById('tab-aluno-eventos'); if(el) el.click(); }
@@ -200,10 +255,7 @@ document.body.addEventListener('click', async (e) => {
     if(e.target.closest('#tab-aluno-notas')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarNotasAluno(); }
     if(e.target.closest('#tab-aluno-faltas')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarFaltasAluno(); }
     if(e.target.closest('#tab-aluno-prhfs')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarPrhfsAluno(); }
-    
-    // O CLIQUE NO NOVO TAB EVOLUÇÃO
     if(e.target.closest('#tab-aluno-evolucao')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar evolução...</p>'; carregarEvolucaoAluno(); }
-    
     if(e.target.closest('#tab-aluno-observacoes')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarObservacoesAluno(); }
 
     const tChip = e.target.closest('#timeline-filtros .filter-chip');
@@ -286,34 +338,13 @@ document.body.addEventListener('click', async (e) => {
 bindChange('obj-tipo', async (e) => { const v = e.target.value; document.getElementById('obj-setup-nota').style.display = v === 'nota' ? 'flex' : 'none'; });
 
 // ==========================================
-// 4. MÚLTIPLAS FUNCIONALIDADES - HOME E MISSÕES
+// HOME, FCT, PAP & AVATAR BINDINGS
 // ==========================================
-function carregarMissoes() {
-    const cont = document.getElementById('missoes-container');
-    if(!cont) return;
-    
-    // Missões Falsas Temporárias para gerar o efeito de gamificação no arranque
-    const missoesFalsas = [
-        { title: "Atendimento Impossível", desc: "Apresenta uma solução profissional para um turista sem reserva.", xp: 100, tag: "Embaixadores", cor: "#0ea5e9" },
-        { title: "Operação Turismo", desc: "Organiza uma atividade desde o planeamento até à execução.", xp: 150, tag: "Estrategas", cor: "#10b981" }
-    ];
-
-    let html = '';
-    missoesFalsas.forEach(m => {
-        html += `<div class="card" style="border-left: 4px solid ${m.cor}; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center;">
-                    <div style="flex:1;">
-                        <span style="font-size:0.7rem; color:${m.cor}; font-weight:bold; text-transform:uppercase; border:1px solid ${m.cor}; padding:2px 6px; border-radius:12px;">Missão: ${m.tag}</span>
-                        <h4 style="margin:5px 0 3px 0; color:var(--text-light); font-size:1rem;">${m.title}</h4>
-                        <p style="font-size:0.85rem; color:var(--text-muted); margin:0;">${m.desc}</p>
-                    </div>
-                    <div style="text-align:right; margin-left:10px;">
-                        <strong style="color:var(--warning-yellow); font-size:1.1rem;">+${m.xp} XP</strong><br>
-                        <button class="secondary-btn small-btn" style="margin-top:5px; border-color:var(--text-muted); color:var(--text-muted);">Aceitar</button>
-                    </div>
-                 </div>`;
-    });
-    cont.innerHTML = html;
-}
+bindClick('btn-save-fct', async (e) => { const v = document.getElementById('input-fct-horas').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "fct.horasRealizadas": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
+bindClick('btn-save-pap-tema', async (e) => { const v = document.getElementById('input-pap-tema').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "pap.tema": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-save"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
+bindClick('btn-enviar-pap', async (e) => { if(!fPB64) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { const snap = await getDoc(doc(db, "utilizadores", myUserId)); let axp = snap.exists()&&snap.data().xp?snap.data().xp:0; await updateDoc(doc(db, "utilizadores", myUserId), { papFicheiroEnviado:true, papFicheiroBase64:fPB64, xp:axp+200 }); b.style.backgroundColor="var(--success-green)"; b.innerHTML='<i class="fa-solid fa-check"></i> Submetido'; setTimeout(() => { b.style.display='none'; b.disabled=false; const fNm = document.getElementById('aluno-pap-file-name'); if(fNm) fNm.style.color="var(--success-green)"; }, 2000); } catch(err){} });
+bindChange('aluno-upload-pap', (e) => { const file = e.target.files[0]; if(!file) return; document.getElementById('aluno-pap-file-name').innerText = "Ficheiro: " + file.name; document.getElementById('btn-enviar-pap').style.display = 'block'; const reader = new FileReader(); reader.onload = (ev) => { fPB64 = ev.target.result; }; reader.readAsDataURL(file); });
+bindChange('upload-avatar', async (e) => { const file = e.target.files[0]; if(!file) return; try { const compressedFile = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 500, useWebWorker: true }); const reader = new FileReader(); reader.onload = async (ev) => { const base64 = ev.target.result; document.getElementById('perfil-avatar-img').src = base64; document.getElementById('header-avatar-circle').innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`; await updateDoc(doc(db, "utilizadores", myUserId), { fotoPerfil: base64 }); }; reader.readAsDataURL(compressedFile); } catch(err) {} });
 
 async function construirHomeAdaptativa() {
     const alertCont = document.getElementById('hero-alert-section'); const emoCont = document.getElementById('hero-emotional-section');
@@ -325,10 +356,8 @@ async function construirHomeAdaptativa() {
         const pS = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); pS.forEach(d => { if(d.data().status!=='concluida'){pAtivos++; pHoras+=Number(d.data().horasPresenciais||0);} });
         
         if(minhaTurma) {
-            const evSnap = await getDocs(collection(db, "turmas", minhaTurma, "eventos"));
-            const hj = new Date().toISOString().split('T')[0]; let d7 = new Date(); d7.setDate(d7.getDate()+7); const lIso = d7.toISOString().split('T')[0];
-            evSnap.forEach(d => { const e = d.data(); if(e.data>=hj && e.data<=lIso && ['teste','avaliacao','entrega'].includes(e.tipo)) evs.push(e); });
-            evs.sort((a,b)=>a.data.localeCompare(b.data));
+            const evSnap = await getDocs(collection(db, "turmas", minhaTurma, "eventos")); const hj = new Date().toISOString().split('T')[0]; let d7 = new Date(); d7.setDate(d7.getDate()+7); const lIso = d7.toISOString().split('T')[0];
+            evSnap.forEach(d => { const e = d.data(); if(e.data>=hj && e.data<=lIso && ['teste','avaliacao','entrega'].includes(e.tipo)) evs.push(e); }); evs.sort((a,b)=>a.data.localeCompare(b.data));
         }
 
         let alertHtml = ''; 
@@ -374,158 +403,13 @@ async function verificarEpocaExames() {
 }
 
 // ==========================================
-// 5. PERFIL: PASSAPORTE PROFISSIONAL E BADGES
-// ==========================================
-function carregarGamificacao(dados) {
-    const xp = dados.xp || 0; 
-    const profInfo = getNivelProInfo(xp);
-    
-    document.getElementById('aluno-nivel').innerText = profInfo.nivel; 
-    document.getElementById('aluno-xp-atual').innerText = xp;
-    
-    const rankElem = document.getElementById('aluno-rank-title'); 
-    if(rankElem) rankElem.innerText = myAcademia ? `${ACADEMIAS_INFO[myAcademia].nome.replace('Academia dos ','')} • ${profInfo.titulo}` : profInfo.titulo;
-
-    const perfilNvlTxt = document.getElementById('perfil-nivel-txt');
-    if(perfilNvlTxt) perfilNvlTxt.innerText = `Nível ${profInfo.nivel} - ${profInfo.titulo}`;
-
-    if(document.getElementById('perfil-xp-totais')) { 
-        document.getElementById('perfil-xp-totais').innerText = xp; 
-        document.getElementById('perfil-xp-progress').style.width = `${profInfo.progresso}%`; 
-    }
-}
-
-function carregarPassaporteEBadges(data) {
-    // PASSAPORTE
-    const passCont = document.getElementById('barras-competencias-perfil');
-    if(passCont) {
-        const getLvl = (xp) => Math.floor((xp || 0) / 100) + 1;
-        const getPerc = (xp) => ((xp || 0) % 100);
-
-        const xpCom = data.xp_comunicacao || 0; const lvlCom = getLvl(xpCom); const percCom = getPerc(xpCom);
-        const xpCri = data.xp_criatividade || 0; const lvlCri = getLvl(xpCri); const percCri = getPerc(xpCri);
-        const xpLid = data.xp_lideranca || 0; const lvlLid = getLvl(xpLid); const percLid = getPerc(xpLid);
-        const xpOrg = data.xp_organizacao || 0; const lvlOrg = getLvl(xpOrg); const percOrg = getPerc(xpOrg);
-
-        let html = `
-        <div style="margin-bottom: 12px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-comments" style="color:#0ea5e9;"></i> Comunicação</span><strong style="color:var(--text-light);">Nvl ${lvlCom}</strong></div>
-            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percCom}%; background:#0ea5e9;"></div></div>
-        </div>
-        <div style="margin-bottom: 12px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-lightbulb" style="color:#8b5cf6;"></i> Criatividade</span><strong style="color:var(--text-light);">Nvl ${lvlCri}</strong></div>
-            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percCri}%; background:#8b5cf6;"></div></div>
-        </div>
-        <div style="margin-bottom: 12px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-compass" style="color:#f97316;"></i> Liderança</span><strong style="color:var(--text-light);">Nvl ${lvlLid}</strong></div>
-            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percLid}%; background:#f97316;"></div></div>
-        </div>
-        <div style="margin-bottom: 12px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-chess-knight" style="color:#10b981;"></i> Estratégia</span><strong style="color:var(--text-light);">Nvl ${lvlOrg}</strong></div>
-            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percOrg}%; background:#10b981;"></div></div>
-        </div>`;
-        passCont.innerHTML = html;
-    }
-
-    // BADGES
-    const badCont = document.getElementById('badges-container');
-    if(badCont) {
-        let bHtml = '';
-        BADGES_DEFS.forEach(b => {
-            let earned = false;
-            if(b.reqXp && (data.xp || 0) >= b.reqXp) earned = true;
-            if(b.reqCom && (data.xp_comunicacao || 0) >= b.reqCom) earned = true;
-            if(b.reqCri && (data.xp_criatividade || 0) >= b.reqCri) earned = true;
-            if(b.reqLid && (data.xp_lideranca || 0) >= b.reqLid) earned = true;
-            if(b.reqOrg && (data.xp_organizacao || 0) >= b.reqOrg) earned = true;
-
-            const cl = earned ? 'earned' : '';
-            bHtml += `<div class="badge-item ${cl}"><div class="badge-icon"><i class="fa-solid ${b.icon}"></i></div><div style="font-size:0.7rem; color:${earned ? 'var(--text-light)' : 'var(--text-muted)'};">${b.nome}</div></div>`;
-        });
-        badCont.innerHTML = bHtml;
-    }
-}
-
-async function carregarRankingTurma() {
-    const c = document.getElementById('ranking-turma-container'); if(!minhaTurma) { c.innerHTML = '<p class="text-muted center">Sem turma atribuída.</p>'; return; }
-    try {
-        const snap = await getDocs(query(collection(db, "utilizadores"), where("papel", "==", "aluno")));
-        let alunosTurma = []; let academiasXP = { estrategas: 0, embaixadores: 0, exploradores: 0, visionarios: 0 };
-        
-        snap.forEach(d => {
-            const al = {id: d.id, ...d.data()};
-            if(al.academia && academiasXP[al.academia] !== undefined) { academiasXP[al.academia] += (al.xp || 0); }
-            if(al.turma === minhaTurma) { alunosTurma.push(al); }
-        });
-        alunosTurma.sort((a,b) => (b.xp || 0) - (a.xp || 0));
-        
-        let hAcad = `<div style="display:flex; justify-content:space-around; margin-bottom:20px; text-align:center; background:rgba(0,0,0,0.2); padding:20px 10px 15px 10px; border-radius:12px; position:relative;">
-                        <div style="position:absolute; top:-10px; background:var(--bg-dark); padding:2px 12px; font-size:0.7rem; color:var(--text-muted); border:1px solid #333; border-radius:10px; font-weight:bold; letter-spacing:1px;">GLOBAL (ESCOLA)</div>`;
-        const orderAcad = Object.keys(academiasXP).sort((a,b) => academiasXP[b] - academiasXP[a]);
-        orderAcad.forEach((ac) => {
-            const acData = ACADEMIAS_INFO[ac];
-            hAcad += `<div><i class="fa-solid ${acData.icon}" style="font-size:2rem; color:${acData.cor}; margin-bottom:8px; display:block;"></i><strong style="color:var(--text-light); font-size:0.85rem;">${acData.nome.split(' ')[2]||acData.nome}</strong><br><span style="color:var(--warning-yellow); font-size:0.9rem; font-weight:bold;">${academiasXP[ac]} XP</span></div>`;
-        });
-        hAcad += `</div><h4 style="color:var(--text-muted); font-size:0.85rem; text-transform:uppercase; margin-bottom:10px;">🏆 Top 10 (A Tua Turma)</h4>`;
-        
-        let hAl = '';
-        alunosTurma.slice(0, 10).forEach((al, idx) => {
-            let cor = 'var(--text-muted)'; if(idx === 0) cor = '#f59e0b'; else if(idx === 1) cor = '#9ca3af'; else if(idx === 2) cor = '#d97706';
-            hAl += `<div style="display:flex; align-items:center; gap:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left:3px solid ${cor};"><span style="font-weight:bold; font-size:1.2rem; color:${cor}; width:25px; text-align:center;">${idx+1}</span><img src="${al.fotoPerfil || `[https://ui-avatars.com/api/?name=$](https://ui-avatars.com/api/?name=$){al.nome.split(' ')[0]}&background=00cc88&color=fff`}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"><div style="flex:1;"><strong style="font-size:0.95rem; color:var(--text-light);">${al.nome.split(' ')[0]} ${al.nome.split(' ').pop()}</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">${al.academia ? ACADEMIAS_INFO[al.academia].nome : 'S/ Academia'}</span></div><span style="font-weight:bold; color:var(--primary-green); font-size:0.9rem;">${al.xp || 0} XP</span></div>`;
-        });
-        c.innerHTML = hAcad + (hAl === '' ? '<p class="text-muted center">Ainda não há alunos com XP na tua turma.</p>' : hAl);
-    } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao carregar ranking.</p>'; }
-}
-
-async function carregarObjetivosPessoais() {
-    const cont = document.getElementById('lista-objetivos-container'); cont.innerHTML = '<p class="text-muted center">A carregar...</p>';
-    try {
-        const uSnap = await getDoc(doc(db, "utilizadores", myUserId)); const uXp = uSnap.exists() ? (uSnap.data().xp || 0) : 0;
-        const nSnap = await getDocs(collection(db, "utilizadores", myUserId, "notas")); let notasArr = []; nSnap.forEach(n => notasArr.push(n.data()));
-        const pSnap = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); let numPrhfs = 0; pSnap.forEach(p => { if(p.data().status === 'concluida') numPrhfs++; });
-        const rSnap = await getDocs(query(collection(db, "utilizadores", myUserId, "ocorrencias"), where("tipo", "==", "positiva"))); const numPositivas = rSnap.size;
-
-        const snap = await getDocs(collection(db, "utilizadores", myUserId, "objetivos")); let objArr = []; snap.forEach(d => objArr.push({id: d.id, ...d.data()})); objArr.sort((a,b) => b.timestamp - a.timestamp);
-        let html = ''; let objGanhouXP = false;
-        for (const obj of objArr) {
-            let achieved = false;
-            if(!obj.concluido) {
-                if(obj.tipo === 'nota') { const temNota = notasArr.find(n => n.disciplina === obj.disciplina && Number(n.modulo) === Number(obj.modulo) && Number(n.nota) >= Number(obj.notaAlvo)); if(temNota) achieved = true; } 
-                else if (obj.tipo === 'prhf') { if(numPrhfs >= obj.targetCount) achieved = true; }
-                else if (obj.tipo === 'reconhecimento') { if(numPositivas >= obj.targetCount) achieved = true; }
-            }
-            if(achieved) { await updateDoc(doc(db, "utilizadores", myUserId, "objetivos", obj.id), { concluido: true }); obj.concluido = true; objGanhouXP = true; }
-            const cColor = obj.concluido ? 'var(--success-green)' : '#444'; const txtDec = obj.concluido ? 'line-through' : 'none'; const txtColor = obj.concluido ? 'var(--text-muted)' : 'var(--text-light)';
-            html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left: 3px solid ${cColor};"><div style="display:flex; align-items:center; gap:12px; flex:1;"><div onclick="window.toggleObjetivo('${obj.id}', ${!obj.concluido})" style="width:24px; height:24px; border-radius:50%; border:2px solid ${cColor}; background:${obj.concluido ? cColor : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer;">${obj.concluido ? '<i class="fa-solid fa-check" style="color:var(--bg-dark); font-size:0.75rem;"></i>' : ''}</div><span style="text-decoration:${txtDec}; color:${txtColor}; font-size:0.95rem; flex:1;">${obj.desc}</span></div><i class="fa-solid fa-trash btn-delete-objetivo" data-id="${obj.id}" style="color:var(--danger-red); cursor:pointer; font-size:0.9rem; padding: 5px;"></i></div>`;
-        }
-        if(objGanhouXP) { await updateDoc(doc(db, "utilizadores", myUserId), { xp: uXp + 50 }); carregarGamificacao({xp: uXp+50}); alert("🎉 Parabéns! Uma Meta foi concluída automaticamente! +50 XP"); }
-        cont.innerHTML = html === '' ? '<p class="text-muted center" style="font-size:0.85rem;">Não tens metas ativas. Começa a desafiar-te!</p>' : html;
-    } catch(e) {}
-}
-
-window.toggleObjetivo = async (id, status) => { try { await updateDoc(doc(db, "utilizadores", myUserId, "objetivos", id), { concluido: status }); if(status) { const snap = await getDoc(doc(db, "utilizadores", myUserId)); let xp = snap.exists() && snap.data().xp ? snap.data().xp : 0; await updateDoc(doc(db, "utilizadores", myUserId), { xp: xp + 50 }); carregarGamificacao({xp: xp+50}); } carregarObjetivosPessoais(); } catch(e) {} };
-
-bindChange('upload-avatar', async (e) => {
-    const file = e.target.files[0]; if(!file) return;
-    try {
-        const compressedFile = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 500, useWebWorker: true }); const reader = new FileReader();
-        reader.onload = async (ev) => { const base64 = ev.target.result; document.getElementById('perfil-avatar-img').src = base64; document.getElementById('header-avatar-circle').innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`; await updateDoc(doc(db, "utilizadores", myUserId), { fotoPerfil: base64 }); }; reader.readAsDataURL(compressedFile);
-    } catch(err) {}
-});
-
-// ==========================================
-// 6. CADERNETA: A NOVA ABA EVOLUÇÃO PRO E HISTÓRICO
+// CADERNETA (Evolução PRO e Histórico)
 // ==========================================
 async function carregarEvolucaoAluno() {
-    const cadernetaContent = document.getElementById('aluno-caderneta-content');
-    if(!cadernetaContent) return;
-
+    const cadernetaContent = document.getElementById('aluno-caderneta-content'); if(!cadernetaContent) return;
     try {
-        const uSnap = await getDoc(doc(db, "utilizadores", myUserId));
-        const data = uSnap.exists() ? uSnap.data() : {};
-        
-        const getLvl = (xp) => Math.floor((xp || 0) / 100) + 1;
-        const getPerc = (xp) => ((xp || 0) % 100);
+        const uSnap = await getDoc(doc(db, "utilizadores", myUserId)); const data = uSnap.exists() ? uSnap.data() : {};
+        const getLvl = (xp) => Math.floor((xp || 0) / 100) + 1; const getPerc = (xp) => ((xp || 0) % 100);
 
         const lvlCom = getLvl(data.xp_comunicacao); const percCom = getPerc(data.xp_comunicacao);
         const lvlCri = getLvl(data.xp_criatividade); const percCri = getPerc(data.xp_criatividade);
@@ -535,22 +419,10 @@ async function carregarEvolucaoAluno() {
         let html = `
         <div class="card" style="border-top: 4px solid var(--primary-green); margin-bottom: 20px;">
             <h3 style="color: white; margin-bottom: 15px; font-size: 1.1rem;"><i class="fa-solid fa-chart-radar"></i> O Meu Perfil PRO</h3>
-            <div style="margin-bottom: 12px;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-comments" style="color:#0ea5e9;"></i> Comunicação & Hospitalidade</span><strong style="color:var(--primary-green);">Nvl ${lvlCom}</strong></div>
-                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percCom}%; background:#0ea5e9;"></div></div>
-            </div>
-            <div style="margin-bottom: 12px;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-lightbulb" style="color:#8b5cf6;"></i> Criatividade & Inovação</span><strong style="color:var(--primary-green);">Nvl ${lvlCri}</strong></div>
-                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percCri}%; background:#8b5cf6;"></div></div>
-            </div>
-            <div style="margin-bottom: 12px;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-compass" style="color:#f97316;"></i> Liderança & Autonomia</span><strong style="color:var(--primary-green);">Nvl ${lvlLid}</strong></div>
-                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percLid}%; background:#f97316;"></div></div>
-            </div>
-            <div style="margin-bottom: 12px;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-chess-knight" style="color:#10b981;"></i> Organização & Estratégia</span><strong style="color:var(--primary-green);">Nvl ${lvlOrg}</strong></div>
-                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percOrg}%; background:#10b981;"></div></div>
-            </div>
+            <div style="margin-bottom: 12px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-comments" style="color:#0ea5e9;"></i> Comunicação & Hospitalidade</span><strong style="color:var(--primary-green);">Nvl ${lvlCom}</strong></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percCom}%; background:#0ea5e9;"></div></div></div>
+            <div style="margin-bottom: 12px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-lightbulb" style="color:#8b5cf6;"></i> Criatividade & Inovação</span><strong style="color:var(--primary-green);">Nvl ${lvlCri}</strong></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percCri}%; background:#8b5cf6;"></div></div></div>
+            <div style="margin-bottom: 12px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-compass" style="color:#f97316;"></i> Liderança & Autonomia</span><strong style="color:var(--primary-green);">Nvl ${lvlLid}</strong></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percLid}%; background:#f97316;"></div></div></div>
+            <div style="margin-bottom: 12px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-chess-knight" style="color:#10b981;"></i> Organização & Estratégia</span><strong style="color:var(--primary-green);">Nvl ${lvlOrg}</strong></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percOrg}%; background:#10b981;"></div></div></div>
         </div>
         <h4 style="color:var(--text-muted); margin-bottom:10px; font-size:0.9rem; text-transform:uppercase;"><i class="fa-solid fa-bolt"></i> O Meu Histórico</h4>`;
 
@@ -561,22 +433,9 @@ async function carregarEvolucaoAluno() {
         else {
             regs.sort((a,b) => b.data.localeCompare(a.data));
             regs.forEach(r => {
-                const isPos = r.tipo === 'positiva';
-                const cor = isPos ? 'var(--success-green)' : 'var(--danger-red)';
-                const bgCor = isPos ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+                const isPos = r.tipo === 'positiva'; const cor = isPos ? 'var(--success-green)' : 'var(--danger-red)'; const bgCor = isPos ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
                 const xpLabel = r.xp ? (r.xp > 0 ? `+${r.xp} XP` : `${r.xp} XP`) : (isPos ? 'Registo Positivo' : 'Registo Negativo');
-                
-                html += `
-                <div style="display:flex; align-items:center; justify-content:space-between; background:${bgCor}; border: 1px solid ${cor}; padding: 12px; border-radius: 8px; margin-bottom: 10px;">
-                    <div>
-                        <strong style="color:${cor}; font-size:1.1rem;">${xpLabel}</strong><br>
-                        <span style="color:var(--text-light); font-size:0.95rem; font-weight:bold;">${r.titulo}</span>
-                        ${r.descricao ? `<div style="color:var(--text-muted); font-size:0.85rem; margin-top:3px;">${r.descricao}</div>` : ''}
-                    </div>
-                    <div style="text-align:right; font-size:0.75rem; color:var(--text-muted);">
-                        ${r.data}<br>Prof. ${r.autor}
-                    </div>
-                </div>`;
+                html += `<div style="display:flex; align-items:center; justify-content:space-between; background:${bgCor}; border: 1px solid ${cor}; padding: 12px; border-radius: 8px; margin-bottom: 10px;"><div><strong style="color:${cor}; font-size:1.1rem;">${xpLabel}</strong><br><span style="color:var(--text-light); font-size:0.95rem; font-weight:bold;">${r.titulo}</span>${r.descricao ? `<div style="color:var(--text-muted); font-size:0.85rem; margin-top:3px;">${r.descricao}</div>` : ''}</div><div style="text-align:right; font-size:0.75rem; color:var(--text-muted);">${r.data}<br>Prof. ${r.autor}</div></div>`;
             });
         }
         cadernetaContent.innerHTML = html;
