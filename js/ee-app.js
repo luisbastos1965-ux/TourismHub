@@ -2,8 +2,20 @@ import { auth, db } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, collection, getDocs, query, addDoc, onSnapshot, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-let myUserId = ""; let myUserName = ""; let educandosArray = []; let educandoAtualId = ""; let turmaAtual = "";
+let myUserId = ""; 
+let myUserName = ""; 
+let educandosArray = []; 
+let educandoAtualId = ""; 
+let turmaAtual = "";
 let chartMediaEE = null;
+
+// ==========================================
+// FUNÇÕES DE SEGURANÇA PARA CLIQUES
+// ==========================================
+function bindClick(id, fn) { const el = document.getElementById(id); if(el) el.addEventListener('click', fn); }
+function bindChange(id, fn) { const el = document.getElementById(id); if(el) el.addEventListener('change', fn); }
+function safeAddClass(id, className) { const el = document.getElementById(id); if(el) el.classList.add(className); }
+function safeRemoveClass(id, className) { const el = document.getElementById(id); if(el) el.classList.remove(className); }
 
 // ==========================================
 // A MATRIZ DE REFERÊNCIA OFICIAL
@@ -48,7 +60,7 @@ function getEmptyState(mensagem, icone = "fa-folder-open") {
 }
 
 function getMatriz() {
-    const anoMatch = turmaAtual.match(/\d+/);
+    const anoMatch = turmaAtual ? turmaAtual.match(/\d+/) : null;
     const ano = anoMatch ? parseInt(anoMatch[0]) : 10;
     let m = JSON.parse(JSON.stringify(matrizAmbos));
     m["Técnica"] = (ano >= 11) ? matrizAntigoTecnica : matrizNovoTecnica;
@@ -56,7 +68,7 @@ function getMatriz() {
 }
 
 function getMatrizMap() {
-    const anoMatch = turmaAtual.match(/\d+/);
+    const anoMatch = turmaAtual ? turmaAtual.match(/\d+/) : null;
     const ano = anoMatch ? parseInt(anoMatch[0]) : 10;
     return {
         "Sociocultural": Object.keys(matrizAmbos["Sociocultural"]),
@@ -65,13 +77,8 @@ function getMatrizMap() {
     };
 }
 
-function obterDisciplinasDaMatriz() {
-    const map = getMatrizMap();
-    return [...map["Sociocultural"], ...map["Científica"], ...map["Técnica"]];
-}
-
 function obterDisciplinasDoAno() {
-    const anoMatch = turmaAtual.match(/\d+/);
+    const anoMatch = turmaAtual ? turmaAtual.match(/\d+/) : null;
     const ano = anoMatch ? parseInt(anoMatch[0]) : 10;
     
     const base = {
@@ -116,76 +123,96 @@ onAuthStateChanged(auth, async (user) => {
                 
                 educandosArray = arr;
 
-                if(educandosArray.length > 0) {
+                if (educandosArray.length > 0) {
                     await construirSeletorEducandos();
                 } else {
                     document.getElementById('header-ee-student-selector').innerHTML = '<option value="">Sem alunos</option>';
                     document.getElementById('ee-dashboard').innerHTML = getEmptyState('Sem educandos associados na base de dados.', 'fa-user-group');
                 }
-            } else window.location.href = "index.html"; 
-        } catch (e) {}
-    } else window.location.href = "index.html"; 
+            } else {
+                window.location.href = "index.html";
+            } 
+        } catch (e) { }
+    } else {
+        window.location.href = "index.html";
+    } 
 });
 
 async function construirSeletorEducandos() {
-    const selector = document.getElementById('header-ee-student-selector'); selector.innerHTML = '';
+    const selector = document.getElementById('header-ee-student-selector'); 
+    if(!selector) return;
+    selector.innerHTML = '';
     for (let id of educandosArray) {
-        if(!id) continue;
+        if (!id) continue;
         try {
             const snap = await getDoc(doc(db, "utilizadores", id));
             if (snap.exists()) {
                 const data = snap.data();
                 const opt = document.createElement('option'); 
-                opt.value = id; opt.text = `${data.nome ? data.nome.split(' ')[0] : "Aluno"} (${data.turma || "S/ Turma"})`;
+                opt.value = id; 
+                opt.text = `${data.nome ? data.nome.split(' ')[0] : "Aluno"} (${data.turma || "S/ Turma"})`;
                 selector.appendChild(opt);
             }
         } catch(e) {}
     }
-    if(selector.options.length > 0) {
-        educandoAtualId = selector.value; carregarDadosDoFilhoSelecionado();
-        selector.onchange = (e) => { educandoAtualId = e.target.value; carregarDadosDoFilhoSelecionado(); };
-    } else selector.innerHTML = '<option value="">Alunos não encontrados</option>';
+    if (selector.options.length > 0) {
+        educandoAtualId = selector.value; 
+        carregarDadosDoFilhoSelecionado();
+        selector.onchange = (e) => { 
+            educandoAtualId = e.target.value; 
+            carregarDadosDoFilhoSelecionado(); 
+        };
+    } else {
+        selector.innerHTML = '<option value="">Alunos não encontrados</option>';
+    }
 }
 
-document.getElementById('btn-logout-ee')?.addEventListener('click', () => { signOut(auth).then(() => window.location.href = "index.html"); });
+bindClick('btn-logout-ee', () => { signOut(auth).then(() => window.location.href = "index.html"); });
 
 async function carregarDadosDoFilhoSelecionado() {
-    if(!educandoAtualId) return;
+    if (!educandoAtualId) return;
     try {
         const docSnap = await getDoc(doc(db, "utilizadores", educandoAtualId));
         if (docSnap.exists()) {
-            turmaAtual = docSnap.data().turma; 
+            turmaAtual = docSnap.data().turma || ""; 
             carregarResumoDashboard(); 
             
             const anoMatch = turmaAtual.match(/\d+/);
             const ano = anoMatch ? parseInt(anoMatch[0]) : 0;
-            if (ano < 11) document.getElementById('card-percurso-prof').style.display = 'none';
-            else { document.getElementById('card-percurso-prof').style.display = 'block'; carregarPercursoProfissional(docSnap.data()); }
+            const cardProf = document.getElementById('card-percurso-prof');
+            if (cardProf) {
+                if (ano < 11) {
+                    cardProf.style.display = 'none';
+                } else { 
+                    cardProf.style.display = 'block'; 
+                    carregarPercursoProfissional(docSnap.data()); 
+                }
+            }
 
             preencherFiltrosDisciplinas();
             
             const abaAtivaEl = document.querySelector('.bottom-nav .nav-item.active');
-            if(abaAtivaEl) {
+            if (abaAtivaEl) {
                 const abaAtiva = abaAtivaEl.getAttribute('data-target');
-                if(abaAtiva === 'view-ee-caderneta') ativarTabCadernetaAtual();
-                if(abaAtiva === 'view-ee-agenda') carregarAgendaEE();
-                if(abaAtiva === 'view-ee-horario') carregarHorarioEE();
+                if (abaAtiva === 'view-ee-caderneta') ativarTabCadernetaAtual();
+                if (abaAtiva === 'view-ee-agenda') carregarAgendaEE();
+                if (abaAtiva === 'view-ee-horario') carregarHorarioEE();
             }
         }
     } catch(e) {}
 }
 
 function getUniformCircle(status) {
-    if(status === true || status === 'verde') return '🟢';
-    if(status === false || status === 'vermelho') return '🔴';
-    if(status === 'amarelo') return '🟡';
+    if (status === true || status === 'verde') return '🟢';
+    if (status === false || status === 'vermelho') return '🔴';
+    if (status === 'amarelo') return '🟡';
     return '⚪'; 
 }
 
 function getRiscoBadge(status) {
-    if(status === 'verde') return { cor: 'var(--success-green)', txt: '🟢 Normal' };
-    if(status === 'amarelo') return { cor: 'var(--warning-yellow)', txt: '🟡 Atenção' };
-    if(status === 'vermelho') return { cor: 'var(--danger-red)', txt: '🔴 Crítico' };
+    if (status === 'verde') return { cor: 'var(--success-green)', txt: '🟢 Normal' };
+    if (status === 'amarelo') return { cor: 'var(--warning-yellow)', txt: '🟡 Atenção' };
+    if (status === 'vermelho') return { cor: 'var(--danger-red)', txt: '🔴 Crítico' };
     return { cor: 'var(--text-muted)', txt: '⚪ Pendente' };
 }
 
@@ -194,9 +221,11 @@ function carregarPercursoProfissional(alunoData) {
     const miniFct = document.getElementById('resumo-mini-fct');
     const miniPap = document.getElementById('resumo-mini-pap');
     const btnPap = document.getElementById('btn-tab-pap');
-    if(!cardResumo) return;
+    if (!cardResumo) return;
 
-    miniFct.style.display = 'none'; miniPap.style.display = 'none'; btnPap.style.display = 'none';
+    miniFct.style.display = 'none'; 
+    miniPap.style.display = 'none'; 
+    if(btnPap) btnPap.style.display = 'none';
     let hasFct = false; let hasPap = false; let riscoGeral = null;
 
     if (alunoData.fct) {
@@ -214,12 +243,13 @@ function carregarPercursoProfissional(alunoData) {
         document.getElementById('fct-falta').innerText = ht !== '-' ? (ht - hr) : '-';
         
         const riscoF = getRiscoBadge(f.estadoRisco);
-        document.getElementById('fct-badge-risco').innerText = riscoF.txt; document.getElementById('fct-card-risco').style.borderLeftColor = riscoF.cor;
+        document.getElementById('fct-badge-risco').innerText = riscoF.txt; 
+        document.getElementById('fct-card-risco').style.borderLeftColor = riscoF.cor;
         riscoGeral = f.estadoRisco || 'branco';
 
         let docsHtml = '';
         const dNames = { protocolo: 'Protocolo', plano: 'Plano de Estágio', folhas: 'Folhas de Estágio', registos: 'Registos de Visita', avaliacao: 'Avaliação', autoavaliacao: 'Autoavaliação'};
-        for(let key in dNames) {
+        for (let key in dNames) {
             let st = (f.docs && f.docs[key] !== undefined) ? f.docs[key] : null; 
             let ic = getUniformCircle(st);
             docsHtml += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #222; padding-bottom:5px;"><span>${dNames[key]}</span> <span style="font-size:1.1rem;">${ic}</span></div>`;
@@ -228,7 +258,8 @@ function carregarPercursoProfissional(alunoData) {
     }
 
     if (alunoData.pap) {
-        hasPap = true; miniPap.style.display = 'block'; btnPap.style.display = 'block';
+        hasPap = true; miniPap.style.display = 'block'; 
+        if(btnPap) btnPap.style.display = 'block';
         const p = alunoData.pap;
         
         document.getElementById('txt-mini-pap').innerText = p.faseAtual || 'A aguardar fase...';
@@ -238,7 +269,8 @@ function carregarPercursoProfissional(alunoData) {
         document.getElementById('pap-obs-txt').innerText = p.notasOrientador || 'Sem observações registadas.';
         
         const riscoP = getRiscoBadge(p.estadoRisco);
-        document.getElementById('pap-badge-risco').innerText = riscoP.txt; document.getElementById('pap-card-risco').style.borderLeftColor = riscoP.cor;
+        document.getElementById('pap-badge-risco').innerText = riscoP.txt; 
+        document.getElementById('pap-card-risco').style.borderLeftColor = riscoP.cor;
         
         if (riscoGeral !== 'vermelho') { 
             if (p.estadoRisco === 'vermelho') riscoGeral = 'vermelho';
@@ -249,7 +281,7 @@ function carregarPercursoProfissional(alunoData) {
         let fasesHtml = '';
         const fNames = { escolha: 'Escolha do Tema', aprovacao: 'Aprovação', desenvolvimento: 'Desenvolvimento', relatorio: 'Relatório', apresentacao: 'Apresentação'};
         
-        for(let key in fNames) {
+        for (let key in fNames) {
             let st = (p.fases && p.fases[key] !== undefined) ? p.fases[key] : null;
             let statusVal = null; let prazoVal = "";
             if (st !== null && typeof st === 'object') { statusVal = st.status; prazoVal = st.prazo || ""; } else { statusVal = st; }
@@ -260,28 +292,48 @@ function carregarPercursoProfissional(alunoData) {
         document.getElementById('pap-fases-lista').innerHTML = fasesHtml;
     }
 
-    if(hasFct || hasPap) {
+    if (hasFct || hasPap) {
         cardResumo.style.display = 'block';
-        const rg = getRiscoBadge(riscoGeral || 'branco'); const b = document.getElementById('badge-risco-geral');
-        let bgColor = rg.cor === 'var(--text-muted)' ? 'rgba(255,255,255,0.05)' : rg.cor === 'var(--success-green)' ? 'rgba(40,167,69,0.1)' : rg.cor === 'var(--warning-yellow)' ? 'rgba(255,204,0,0.1)' : 'rgba(255,77,77,0.1)';
-        b.innerText = rg.txt; b.style.color = rg.cor; b.style.background = bgColor; cardResumo.style.borderLeftColor = rg.cor;
+        const rg = getRiscoBadge(riscoGeral || 'branco'); 
+        const b = document.getElementById('badge-risco-geral');
+        if(b) {
+            let bgColor = rg.cor === 'var(--text-muted)' ? 'rgba(255,255,255,0.05)' : rg.cor === 'var(--success-green)' ? 'rgba(40,167,69,0.1)' : rg.cor === 'var(--warning-yellow)' ? 'rgba(255,204,0,0.1)' : 'rgba(255,77,77,0.1)';
+            b.innerText = rg.txt; b.style.color = rg.cor; b.style.background = bgColor; 
+            cardResumo.style.borderLeftColor = rg.cor;
+        }
     }
 }
 
-document.getElementById('card-percurso-prof')?.addEventListener('click', () => { document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active')); esconderTodasAsVistas(); document.getElementById('view-ee-profissional').style.display = 'block'; });
-document.getElementById('btn-voltar-prof')?.addEventListener('click', () => { esconderTodasAsVistas(); document.getElementById('ee-dashboard').style.display = 'block'; document.querySelector('.nav-item[data-target="ee-dashboard"]').classList.add('active'); });
+bindClick('card-percurso-prof', () => { 
+    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active')); 
+    esconderTodasAsVistas(); 
+    document.getElementById('view-ee-profissional').style.display = 'block'; 
+});
 
-const btnTabFct = document.getElementById('btn-tab-fct'); const btnTabPap = document.getElementById('btn-tab-pap');
-const contentFct = document.getElementById('content-prof-fct'); const contentPap = document.getElementById('content-prof-pap');
-btnTabFct?.addEventListener('click', () => { btnTabFct.classList.add('active'); btnTabPap.classList.remove('active'); contentFct.style.display = 'block'; contentPap.style.display = 'none'; });
-btnTabPap?.addEventListener('click', () => { btnTabPap.classList.add('active'); btnTabFct.classList.remove('active'); contentPap.style.display = 'block'; contentFct.style.display = 'none'; });
+bindClick('btn-voltar-prof', () => { 
+    esconderTodasAsVistas(); 
+    document.getElementById('ee-dashboard').style.display = 'block'; 
+    safeAddClass(document.querySelector('.nav-item[data-target="ee-dashboard"]'), 'active');
+});
+
+bindClick('btn-tab-fct', () => { 
+    safeAddClass('btn-tab-fct', 'active'); safeRemoveClass('btn-tab-pap', 'active'); 
+    const cFct = document.getElementById('content-prof-fct'); if(cFct) cFct.style.display = 'block'; 
+    const cPap = document.getElementById('content-prof-pap'); if(cPap) cPap.style.display = 'none'; 
+});
+
+bindClick('btn-tab-pap', () => { 
+    safeAddClass('btn-tab-pap', 'active'); safeRemoveClass('btn-tab-fct', 'active'); 
+    const cPap = document.getElementById('content-prof-pap'); if(cPap) cPap.style.display = 'block'; 
+    const cFct = document.getElementById('content-prof-fct'); if(cFct) cFct.style.display = 'none'; 
+});
 
 // ==========================================
 // DASHBOARD
 // ==========================================
 async function carregarResumoDashboard() {
     let sumG = 0, countG = 0, sumS = 0, countS = 0, sumC = 0, countC = 0, sumT = 0, countT = 0;
-    let faltasTotais = 0; let nOcorrencias = 0; let nPrhf = 0;
+    let faltasTotais = 0; let nPrhf = 0;
 
     try {
         const notasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
@@ -289,13 +341,14 @@ async function carregarResumoDashboard() {
         
         notasSnap.forEach(d => {
             const val = d.data().nota; const disc = d.data().disciplina;
-            if(val !== 'REP' && !isNaN(val)) {
+            if (val !== 'REP' && !isNaN(val)) {
                 const vNum = Number(val); sumG += vNum; countG++;
                 if (map["Sociocultural"].includes(disc)) { sumS += vNum; countS++; }
                 else if (map["Científica"].includes(disc)) { sumC += vNum; countC++; }
                 else { sumT += vNum; countT++; } 
             }
         });
+        
         const mG = countG > 0 ? (sumG/countG).toFixed(1) : '-';
         document.getElementById('resumo-media').innerText = mG;
         document.getElementById('resumo-media').style.color = (mG !== '-' && mG < 10) ? 'var(--danger-red)' : 'var(--primary-green)';
@@ -305,13 +358,11 @@ async function carregarResumoDashboard() {
         document.getElementById('resumo-med-tec').innerText = countT > 0 ? (sumT/countT).toFixed(1) : '-';
 
         const ctx = document.getElementById('eeChartMedia');
-        if(ctx) {
-            if(chartMediaEE) chartMediaEE.destroy();
-            const valS = countS > 0 ? sumS/countS : 0;
-            const valC = countC > 0 ? sumC/countC : 0;
-            const valT = countT > 0 ? sumT/countT : 0;
+        if (ctx) {
+            if (chartMediaEE) chartMediaEE.destroy();
+            const valS = countS > 0 ? sumS/countS : 0; const valC = countC > 0 ? sumC/countC : 0; const valT = countT > 0 ? sumT/countT : 0;
             
-            if(valS === 0 && valC === 0 && valT === 0) {
+            if (valS === 0 && valC === 0 && valT === 0) {
                 chartMediaEE = new Chart(ctx, {
                     type: 'doughnut', data: { labels: ['Sem Notas'], datasets: [{ data: [1], backgroundColor: ['#374151'], borderWidth: 0 }] },
                     options: { cutout: '75%', plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false }
@@ -325,7 +376,6 @@ async function carregarResumoDashboard() {
         }
     } catch(e) {}
 
-    // A ler e preencher Nível XP do aluno
     try {
         const uSnap = await getDoc(doc(db, "utilizadores", educandoAtualId));
         if(uSnap.exists()) {
@@ -337,90 +387,133 @@ async function carregarResumoDashboard() {
 
     try {
         const faltasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
-        faltasSnap.forEach(d => { faltasTotais += d.data().horas; });
+        faltasSnap.forEach(d => { faltasTotais += d.data().horas || 0; });
         document.getElementById('resumo-faltas').innerText = `${faltasTotais}h`;
     } catch(e) {}
 
     try {
         const prhfSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "prhfs"));
-        prhfSnap.forEach(d => { if((d.data().status || 'ativa') === 'ativa') nPrhf++; });
+        prhfSnap.forEach(d => { if ((d.data().status || 'ativa') === 'ativa') nPrhf++; });
         document.getElementById('resumo-prhfs').innerText = nPrhf;
     } catch(e) {}
 
     try {
-        const evSnap = await getDocs(collection(db, "turmas", turmaAtual, "eventos"));
-        const hojeIso = new Date().toISOString().split('T')[0];
-        let futuros = []; evSnap.forEach(d => { if(d.data().data >= hojeIso) futuros.push(d.data()); });
-        if(futuros.length > 0) {
-            futuros.sort((a,b) => a.data.localeCompare(b.data));
-            const dp = futuros[0].data.split('-');
-            document.getElementById('resumo-proximo-evento').innerHTML = `<strong style="color:var(--text-light);">${dp[2]}/${dp[1]}</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">${futuros[0].titulo}</span>`;
-        } else document.getElementById('resumo-proximo-evento').innerText = "Agenda limpa";
+        if (turmaAtual) {
+            const evSnap = await getDocs(collection(db, "turmas", turmaAtual, "eventos"));
+            const hojeIso = new Date().toISOString().split('T')[0];
+            let futuros = []; 
+            evSnap.forEach(d => { if (d.data().data >= hojeIso) futuros.push(d.data()); });
+            
+            if (futuros.length > 0) {
+                futuros.sort((a,b) => a.data.localeCompare(b.data));
+                const dp = futuros[0].data.split('-');
+                document.getElementById('resumo-proximo-evento').innerHTML = `<strong style="color:var(--text-light);">${dp[2]}/${dp[1]}</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">${futuros[0].titulo}</span>`;
+            } else {
+                document.getElementById('resumo-proximo-evento').innerText = "Agenda limpa";
+            }
+        }
     } catch(e) {}
 }
 
 const navItems = document.querySelectorAll('.nav-item');
-const views = [ document.getElementById('ee-dashboard'), document.getElementById('view-ee-caderneta'), document.getElementById('view-ee-agenda'), document.getElementById('view-ee-horario'), document.getElementById('view-ee-chat'), document.getElementById('view-ee-justificar'), document.getElementById('view-ee-notificacoes'), document.getElementById('view-ee-profissional') ];
-function esconderTodasAsVistas() { views.forEach(v => { if(v) v.style.display = 'none'; }); }
+const views = [ 'ee-dashboard', 'view-ee-caderneta', 'view-ee-agenda', 'view-ee-horario', 'view-ee-chat', 'view-ee-justificar', 'view-ee-notificacoes', 'view-ee-profissional' ];
+
+function esconderTodasAsVistas() { 
+    views.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; }); 
+}
 
 navItems.forEach(item => {
     item.addEventListener('click', (e) => {
-        e.preventDefault(); navItems.forEach(nav => nav.classList.remove('active')); e.currentTarget.classList.add('active');
-        esconderTodasAsVistas(); const targetId = e.currentTarget.getAttribute('data-target'); const targetView = document.getElementById(targetId);
-        if(targetId === 'view-ee-chat') targetView.style.display = 'flex'; else if (targetView) targetView.style.display = 'block';
-        if(targetId === 'view-ee-caderneta') ativarTabCadernetaAtual();
-        if(targetId === 'view-ee-agenda') carregarAgendaEE();
-        if(targetId === 'view-ee-horario') carregarHorarioEE();
+        e.preventDefault(); 
+        navItems.forEach(nav => nav.classList.remove('active')); 
+        e.currentTarget.classList.add('active');
+        
+        esconderTodasAsVistas(); 
+        const targetId = e.currentTarget.getAttribute('data-target'); 
+        const targetView = document.getElementById(targetId);
+        
+        if (targetId === 'view-ee-chat') { if(targetView) targetView.style.display = 'flex'; } 
+        else if (targetView) { targetView.style.display = 'block'; }
+        
+        if (targetId === 'view-ee-caderneta') ativarTabCadernetaAtual();
+        if (targetId === 'view-ee-agenda') carregarAgendaEE();
+        if (targetId === 'view-ee-horario') carregarHorarioEE();
     });
 });
 
-document.getElementById('btn-quick-mensagem')?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); esconderTodasAsVistas(); document.getElementById('view-ee-chat').style.display = 'flex'; iniciarChatEE(); });
-document.getElementById('btn-quick-justificar')?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); esconderTodasAsVistas(); document.getElementById('view-ee-justificar').style.display = 'block'; carregarAtestadosEE(); });
-document.querySelectorAll('#btn-voltar-chat-ee, #btn-voltar-justificar, #btn-voltar-notificacoes').forEach(btn => { btn?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); document.querySelector('.nav-item[data-target="ee-dashboard"]').classList.add('active'); esconderTodasAsVistas(); document.getElementById('ee-dashboard').style.display = 'block'; }); });
-document.getElementById('btn-open-notificacoes')?.addEventListener('click', () => { navItems.forEach(nav => nav.classList.remove('active')); esconderTodasAsVistas(); document.getElementById('view-ee-notificacoes').style.display = 'block'; document.getElementById('ee-notificacoes-container').innerHTML = getEmptyState('Ainda não recebeste notificações.', 'fa-bell-slash'); });
+bindClick('btn-quick-mensagem', () => { 
+    navItems.forEach(nav => nav.classList.remove('active')); 
+    esconderTodasAsVistas(); 
+    const vw = document.getElementById('view-ee-chat'); if(vw) vw.style.display = 'flex'; 
+    iniciarChatEE(); 
+});
+
+bindClick('btn-quick-justificar', () => { 
+    navItems.forEach(nav => nav.classList.remove('active')); 
+    esconderTodasAsVistas(); 
+    const vw = document.getElementById('view-ee-justificar'); if(vw) vw.style.display = 'block'; 
+    carregarAtestadosEE(); 
+});
+
+['btn-voltar-chat-ee', 'btn-voltar-justificar', 'btn-voltar-notificacoes'].forEach(id => {
+    bindClick(id, () => { 
+        navItems.forEach(nav => nav.classList.remove('active')); 
+        const tgt = document.querySelector('.nav-item[data-target="ee-dashboard"]'); if(tgt) tgt.classList.add('active'); 
+        esconderTodasAsVistas(); 
+        const dash = document.getElementById('ee-dashboard'); if(dash) dash.style.display = 'block'; 
+    }); 
+});
+
+bindClick('btn-open-notificacoes', () => { 
+    navItems.forEach(nav => nav.classList.remove('active')); 
+    esconderTodasAsVistas(); 
+    const vw = document.getElementById('view-ee-notificacoes'); if(vw) vw.style.display = 'block'; 
+    const cont = document.getElementById('ee-notificacoes-container'); if(cont) cont.innerHTML = getEmptyState('Ainda não recebeste notificações.', 'fa-bell-slash'); 
+});
 
 // ==========================================
 // CADERNETA 
 // ==========================================
-const tabTimeline = document.getElementById('tab-ee-timeline'); 
-const tabNotas = document.getElementById('tab-ee-notas'); 
-const tabFaltas = document.getElementById('tab-ee-faltas'); 
-const tabPrhfs = document.getElementById('tab-ee-prhfs'); 
-const tabEvolucao = document.getElementById('tab-ee-evolucao'); 
-const tabReunioes = document.getElementById('tab-ee-reunioes');
-const cadernetaContent = document.getElementById('ee-caderneta-content'); 
-const filtroContainer = document.getElementById('filtro-caderneta-container'); 
-const filtroDisc = document.getElementById('filtro-caderneta-disc');
-let currentCadernetaTab = tabTimeline;
+let currentCadernetaTabId = 'tab-ee-timeline';
 
 function preencherFiltrosDisciplinas() {
     const disciplinas = obterDisciplinasDoAno();
     let opt = '<option value="">Todas as Disciplinas</option>';
     disciplinas.forEach(d => opt += `<option value="${d}">${d}</option>`);
-    filtroDisc.innerHTML = opt;
-}
-filtroDisc.addEventListener('change', () => ativarTabCadernetaAtual());
-function ativarTabCadernetaAtual() { if(currentCadernetaTab) currentCadernetaTab.click(); }
-function switchTabConfig(tabClicada, tabsParaDesativar, showFilter) { 
-    currentCadernetaTab = tabClicada; tabClicada.classList.add('active'); 
-    tabsParaDesativar.forEach(t => t.classList.remove('active')); 
-    filtroContainer.style.display = showFilter ? 'block' : 'none'; 
-    cadernetaContent.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; 
+    const filtroDisc = document.getElementById('filtro-caderneta-disc');
+    if (filtroDisc) filtroDisc.innerHTML = opt;
 }
 
-tabTimeline?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabNotas, tabFaltas, tabPrhfs, tabEvolucao, tabReunioes], false); carregarTimelineEE(); });
-tabNotas?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabTimeline, tabFaltas, tabPrhfs, tabEvolucao, tabReunioes], false); carregarNotasEE(); });
-tabFaltas?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabTimeline, tabNotas, tabPrhfs, tabEvolucao, tabReunioes], true); carregarFaltasEE(); });
-tabPrhfs?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabTimeline, tabNotas, tabFaltas, tabEvolucao, tabReunioes], true); carregarPrhfsEE(); });
-tabReunioes?.addEventListener('click', (e) => { switchTabConfig(e.currentTarget, [tabTimeline, tabNotas, tabFaltas, tabPrhfs, tabEvolucao], false); carregarReunioesEE(); });
+bindChange('filtro-caderneta-disc', () => ativarTabCadernetaAtual());
 
-// O CLIQUE MÁGICO NA NOVA MONTRA DO PASSAPORTE
-tabEvolucao?.addEventListener('click', (e) => { 
-    switchTabConfig(e.currentTarget, [tabTimeline, tabNotas, tabFaltas, tabPrhfs, tabReunioes], false); 
-    carregarEvolucaoEE(); 
-});
+function ativarTabCadernetaAtual() { 
+    const el = document.getElementById(currentCadernetaTabId);
+    if(el) el.click();
+}
+
+function switchTabConfig(tabId, hideIds, showFilter) { 
+    currentCadernetaTabId = tabId; 
+    safeAddClass(tabId, 'active');
+    hideIds.forEach(id => safeRemoveClass(id, 'active'));
+    
+    const fCont = document.getElementById('filtro-caderneta-container');
+    if (fCont) fCont.style.display = showFilter ? 'block' : 'none'; 
+    
+    const cadCont = document.getElementById('ee-caderneta-content');
+    if (cadCont) cadCont.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; 
+}
+
+bindClick('tab-ee-timeline', () => { switchTabConfig('tab-ee-timeline', ['tab-ee-notas', 'tab-ee-faltas', 'tab-ee-prhfs', 'tab-ee-evolucao', 'tab-ee-reunioes'], false); carregarTimelineEE(); });
+bindClick('tab-ee-notas', () => { switchTabConfig('tab-ee-notas', ['tab-ee-timeline', 'tab-ee-faltas', 'tab-ee-prhfs', 'tab-ee-evolucao', 'tab-ee-reunioes'], false); carregarNotasEE(); });
+bindClick('tab-ee-faltas', () => { switchTabConfig('tab-ee-faltas', ['tab-ee-timeline', 'tab-ee-notas', 'tab-ee-prhfs', 'tab-ee-evolucao', 'tab-ee-reunioes'], true); carregarFaltasEE(); });
+bindClick('tab-ee-prhfs', () => { switchTabConfig('tab-ee-prhfs', ['tab-ee-timeline', 'tab-ee-notas', 'tab-ee-faltas', 'tab-ee-evolucao', 'tab-ee-reunioes'], true); carregarPrhfsEE(); });
+bindClick('tab-ee-evolucao', () => { switchTabConfig('tab-ee-evolucao', ['tab-ee-timeline', 'tab-ee-notas', 'tab-ee-faltas', 'tab-ee-prhfs', 'tab-ee-reunioes'], false); carregarEvolucaoEE(); });
+bindClick('tab-ee-reunioes', () => { switchTabConfig('tab-ee-reunioes', ['tab-ee-timeline', 'tab-ee-notas', 'tab-ee-faltas', 'tab-ee-prhfs', 'tab-ee-evolucao'], false); carregarReunioesEE(); });
 
 async function carregarEvolucaoEE() {
+    const cadernetaContent = document.getElementById('ee-caderneta-content');
+    if(!cadernetaContent) return;
+    
     let html = `
     <div class="card" style="border-top: 4px solid var(--primary-green); margin-bottom: 20px;">
         <h3 style="color: white; margin-bottom: 15px; font-size: 1.1rem;"><i class="fa-solid fa-chart-radar"></i> Perfil de Competências</h3>
@@ -482,38 +575,69 @@ async function carregarEvolucaoEE() {
 }
 
 async function carregarTimelineEE() {
-    if(!educandoAtualId) return;
+    if (!educandoAtualId) return;
+    const cadernetaContent = document.getElementById('ee-caderneta-content');
     try {
         let eventos = [];
         const notasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
-        notasSnap.forEach(d => { const n = d.data(); eventos.push({ time: new Date(n.data).getTime(), icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação', desc: `${n.disciplina} (Mod. ${n.modulo}): <strong style="color:var(--text-light);">${n.nota}</strong>` }); });
-        const faltasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
-        faltasSnap.forEach(d => { const f = d.data(); eventos.push({ time: new Date(f.criadoEm || f.dataInicio).getTime(), icon: '<i class="fa-solid fa-user-xmark"></i>', cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Falta a ${f.disciplina} (${f.horas}h)`, desc: f.justificada ? `Justificada` : `Falta registada.` }); });
+        notasSnap.forEach(d => { 
+            const n = d.data(); 
+            eventos.push({ time: new Date(n.data).getTime(), icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação', desc: `${n.disciplina} (Mod. ${n.modulo}): <strong style="color:var(--text-light);">${n.nota}</strong>` }); 
+        });
         
+        const faltasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
+        faltasSnap.forEach(d => { 
+            const f = d.data(); 
+            eventos.push({ time: new Date(f.criadoEm || f.dataInicio || Date.now()).getTime(), icon: '<i class="fa-solid fa-user-xmark"></i>', cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Falta a ${f.disciplina} (${f.horas}h)`, desc: f.justificada ? `Justificada` : `Falta registada.` }); 
+        });
+        
+        const ocSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "ocorrencias"));
+        ocSnap.forEach(d => { 
+            const o = d.data(); 
+            eventos.push({ time: o.timestamp || Date.now(), icon: o.tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>', cor: o.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Registo Disciplinar`, desc: `<strong style="color:var(--text-light);">${o.titulo}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">${o.descricao || ''}</span>` }); 
+        });
+        
+        const prhfSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "prhfs"));
+        prhfSnap.forEach(d => { 
+            const p = d.data(); 
+            eventos.push({ time: new Date(p.dataRegisto || Date.now()).getTime(), icon: '<i class="fa-solid fa-book-medical"></i>', cor: 'var(--warning-yellow)', titulo: `Plano de Recuperação Criado`, desc: `${p.disciplina} (Mod. ${p.modulo})` }); 
+        });
+        
+        eventos = eventos.filter(ev => !isNaN(ev.time)); 
         eventos.sort((a,b) => b.time - a.time);
-        if(eventos.length === 0) { cadernetaContent.innerHTML = getEmptyState('O histórico está limpo.', 'fa-clock-rotate-left'); return; }
+        
+        if (eventos.length === 0) { 
+            if(cadernetaContent) cadernetaContent.innerHTML = getEmptyState('Nenhuma atividade recente encontrada.', 'fa-timeline'); 
+            return; 
+        }
         
         let html = '<div class="timeline">';
-        eventos.forEach(ev => { html += `<div class="timeline-item"><div class="timeline-icon" style="color: ${ev.cor}; border-color: ${ev.cor};">${ev.icon}</div><div class="timeline-content" style="border-left: 3px solid ${ev.cor};"><span class="timeline-date">${new Date(ev.time).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}</span><strong style="color:var(--text-light); display:block; margin-bottom:5px;">${ev.titulo}</strong><p style="font-size:0.85rem; color:var(--text-light); margin:0;">${ev.desc}</p></div></div>`; });
-        cadernetaContent.innerHTML = html + '</div>';
+        eventos.forEach(ev => { 
+            html += `<div class="timeline-item"><div class="timeline-icon" style="color: ${ev.cor}; border-color: ${ev.cor};">${ev.icon}</div><div class="timeline-content" style="border-left: 3px solid ${ev.cor};"><span class="timeline-date">${new Date(ev.time).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}</span><strong style="color:var(--text-light); display:block; margin-bottom:5px;">${ev.titulo}</strong><p style="font-size:0.85rem; color:var(--text-light); margin:0;">${ev.desc}</p></div></div>`; 
+        });
+        if(cadernetaContent) cadernetaContent.innerHTML = html + '</div>';
     } catch(e) {}
 }
 
 async function carregarNotasEE() {
+    const cadernetaContent = document.getElementById('ee-caderneta-content');
     try {
         const notasDb = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
         let disciplinasDoAluno = {};
-        notasDb.forEach(d => { const n = d.data(); if(!disciplinasDoAluno[n.disciplina]) disciplinasDoAluno[n.disciplina] = []; disciplinasDoAluno[n.disciplina].push(n); });
+        notasDb.forEach(d => { 
+            const n = d.data(); 
+            if (!disciplinasDoAluno[n.disciplina]) disciplinasDoAluno[n.disciplina] = []; 
+            disciplinasDoAluno[n.disciplina].push(n); 
+        });
         
         const ordemDisciplinas = obterDisciplinasDoAno();
-
         let html = `<button id="btn-pauta-global" class="primary-btn" style="margin-bottom: 20px; background-color: transparent; border: 1px solid var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-table-list"></i> Pauta Global</button>`;
         
         ordemDisciplinas.forEach(disc => {
-            if(disciplinasDoAluno[disc] && disciplinasDoAluno[disc].length > 0) {
+            if (disciplinasDoAluno[disc] && disciplinasDoAluno[disc].length > 0) {
                 let sum = 0; let c = 0; let modsHtml = '';
                 disciplinasDoAluno[disc].forEach(n => {
-                    if(n.nota !== 'REP' && !isNaN(n.nota)) { sum += Number(n.nota); c++; }
+                    if (n.nota !== 'REP' && !isNaN(n.nota)) { sum += Number(n.nota); c++; }
                     const cor = (n.nota === 'REP' || Number(n.nota) < 10) ? 'var(--danger-red)' : 'var(--success-green)';
                     const modLabel = n.modulo.toString().startsWith('UC') ? n.modulo : `Módulo ${n.modulo}`;
                     modsHtml += `<div class="modulo-row"><span style="color:var(--text-light);">${modLabel}</span><span style="font-weight:bold; color:${cor};">${n.nota}</span></div>`;
@@ -532,71 +656,94 @@ async function carregarNotasEE() {
                          </div>`;
             }
         });
-        cadernetaContent.innerHTML = html;
         
-        document.getElementById('btn-pauta-global')?.addEventListener('click', async () => { 
-            document.getElementById('modal-pauta-global').style.display = 'flex'; 
+        if(cadernetaContent) cadernetaContent.innerHTML = html;
+        
+        bindClick('btn-pauta-global', async () => { 
+            const mod = document.getElementById('modal-pauta-global'); if(mod) mod.style.display = 'flex'; 
             const container = document.getElementById('pauta-global-content'); 
             try { 
-                const mapNotas = {}; notasDb.forEach(d => { const dt = d.data(); mapNotas[`${dt.disciplina}_${dt.modulo}`] = dt.nota; }); 
-                const matriz = getMatriz(); let pHtml = ''; 
+                const mapNotas = {}; 
+                notasDb.forEach(d => { 
+                    const dt = d.data(); 
+                    mapNotas[`${dt.disciplina}_${dt.modulo}`] = dt.nota; 
+                }); 
+                const matriz = getMatriz(); 
+                let pHtml = ''; 
+                
                 for (const [nomeComponente, disciplinas] of Object.entries(matriz)) { 
                     pHtml += `<div class="pauta-global-componente"><div class="pauta-global-header">${nomeComponente}</div>`; 
                     for (const [nomeDisc, modulos] of Object.entries(disciplinas)) { 
                         pHtml += `<div class="pauta-global-disc"><div class="pauta-global-disc-title">${nomeDisc}</div><div class="pauta-global-notas">`; 
                         const isNumeric = Object.keys(modulos).every(k => !isNaN(k));
                         const modKeys = isNumeric ? Object.keys(modulos).sort((a,b) => parseInt(a) - parseInt(b)) : Object.keys(modulos);
-                        for(const mod of modKeys) { 
-                            const nota = mapNotas[`${nomeDisc}_${mod}`] || 'SN'; let cor = "sn"; 
-                            if(nota !== 'SN' && nota !== 'REP' && nota >= 10) cor = "positiva"; 
-                            else if(nota === 'REP' || nota < 10) cor = "negativa"; 
+                        
+                        for (const mod of modKeys) { 
+                            const nota = mapNotas[`${nomeDisc}_${mod}`] || 'SN'; 
+                            let cor = "sn"; 
+                            if (nota !== 'SN' && nota !== 'REP' && nota >= 10) cor = "positiva"; 
+                            else if (nota === 'REP' || nota < 10) cor = "negativa"; 
                             const modLabel = mod.toString().startsWith('UC') ? mod : `M${mod}`;
                             pHtml += `<div class="pg-nota-item"><span>${modLabel}</span><span class="pg-nota-val ${cor}">${nota}</span></div>`; 
                         } 
                         pHtml += `</div></div>`; 
-                    } pHtml += `</div>`; 
-                } container.innerHTML = pHtml; 
-            } catch(err) { container.innerHTML = '<p class="text-danger center">Erro ao compilar pauta.</p>'; } 
+                    } 
+                    pHtml += `</div>`; 
+                } 
+                if(container) container.innerHTML = pHtml; 
+            } catch(err) { 
+                if(container) container.innerHTML = '<p class="text-danger center">Erro ao compilar pauta.</p>'; 
+            } 
         });
-        document.getElementById('btn-close-pauta')?.addEventListener('click', () => document.getElementById('modal-pauta-global').style.display = 'none');
+        
+        bindClick('btn-close-pauta', () => {
+            const mod = document.getElementById('modal-pauta-global'); if(mod) mod.style.display = 'none';
+        });
 
     } catch(e) {}
 }
 
 async function carregarFaltasEE() {
+    const cadernetaContent = document.getElementById('ee-caderneta-content');
     try {
-        const fDisc = filtroDisc.value;
+        const fDiscEl = document.getElementById('filtro-caderneta-disc');
+        const fDisc = fDiscEl ? fDiscEl.value : "";
         const faltasDb = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
         let faltasPorDisc = {};
         
         faltasDb.forEach(d => {
             const f = d.data();
-            if(!f.justificada && (!fDisc || f.disciplina === fDisc)) {
-                if(!faltasPorDisc[f.disciplina]) faltasPorDisc[f.disciplina] = {};
-                if(!faltasPorDisc[f.disciplina][f.modulo]) faltasPorDisc[f.disciplina][f.modulo] = [];
+            if (!f.justificada && (!fDisc || f.disciplina === fDisc)) {
+                if (!faltasPorDisc[f.disciplina]) faltasPorDisc[f.disciplina] = {};
+                if (!faltasPorDisc[f.disciplina][f.modulo]) faltasPorDisc[f.disciplina][f.modulo] = [];
                 faltasPorDisc[f.disciplina][f.modulo].push(f);
             }
         });
 
-        if(Object.keys(faltasPorDisc).length === 0) { cadernetaContent.innerHTML = getEmptyState('Sem faltas injustificadas.', 'fa-face-smile'); return; }
+        if (Object.keys(faltasPorDisc).length === 0) { 
+            if(cadernetaContent) cadernetaContent.innerHTML = getEmptyState('Sem faltas injustificadas.', 'fa-face-smile'); 
+            return; 
+        }
         
         let html = '';
         const ordemDisciplinas = obterDisciplinasDoAno();
         const matriz = getMatriz();
         
         ordemDisciplinas.forEach(disc => {
-            if(faltasPorDisc[disc]) {
-                let discHtml = ''; let totalFaltasDisc = 0;
+            if (faltasPorDisc[disc]) {
+                let discHtml = ''; 
+                let totalFaltasDisc = 0;
                 
-                for(let mod of Object.keys(faltasPorDisc[disc]).sort()) {
+                for (let mod of Object.keys(faltasPorDisc[disc]).sort()) {
                     let sumFaltasMod = 0;
                     faltasPorDisc[disc][mod].forEach(f => sumFaltasMod += Number(f.horas||0));
                     totalFaltasDisc += sumFaltasMod;
                     
                     let limiteHoras = 0;
                     let totalHorasMod = 0;
+                    
                     for (const comp of Object.values(matriz)) { 
-                        if(comp[disc] && comp[disc][mod]) { 
+                        if (comp[disc] && comp[disc][mod]) { 
                             totalHorasMod = comp[disc][mod];
                             limiteHoras = Math.round(totalHorasMod * 0.1); 
                             break; 
@@ -607,15 +754,15 @@ async function carregarFaltasEE() {
                     let txtRisco = 'Regular'; 
                     let perc = 0;
                     
-                    if(totalHorasMod > 0) {
+                    if (totalHorasMod > 0) {
                         perc = (sumFaltasMod / totalHorasMod) * 100;
-                        if(perc > 100) perc = 100;
+                        if (perc > 100) perc = 100;
 
-                        if(sumFaltasMod > limiteHoras) { 
+                        if (sumFaltasMod > limiteHoras) { 
                             corBarra = 'var(--danger-red)'; 
                             txtRisco = '⚠️ Abaixo de 90% (Reprovado)'; 
                         }
-                        else if(sumFaltasMod === limiteHoras) { 
+                        else if (sumFaltasMod === limiteHoras) { 
                             corBarra = 'var(--warning-yellow)'; 
                             txtRisco = 'Atenção (No limite dos 90%)'; 
                         }
@@ -645,16 +792,26 @@ async function carregarFaltasEE() {
             }
         });
         
-        cadernetaContent.innerHTML = html;
+        if(cadernetaContent) cadernetaContent.innerHTML = html;
     } catch(e) {}
 }
 
 async function carregarPrhfsEE() {
+    const cadernetaContent = document.getElementById('ee-caderneta-content');
     try {
-        const fDisc = filtroDisc.value;
+        const fDiscEl = document.getElementById('filtro-caderneta-disc');
+        const fDisc = fDiscEl ? fDiscEl.value : "";
         const prhfsDb = await getDocs(collection(db, "utilizadores", educandoAtualId, "prhfs"));
-        let prhfsArr = []; prhfsDb.forEach(d => { const p = d.data(); if(p.status !== 'concluida' && (!fDisc || p.disciplina === fDisc)) prhfsArr.push(p); });
-        if(prhfsArr.length === 0) { cadernetaContent.innerHTML = getEmptyState('Nenhum PRHF ativo.', 'fa-book-medical'); return; }
+        let prhfsArr = []; 
+        prhfsDb.forEach(d => { 
+            const p = d.data(); 
+            if (p.status !== 'concluida' && (!fDisc || p.disciplina === fDisc)) prhfsArr.push(p); 
+        });
+        
+        if (prhfsArr.length === 0) { 
+            if(cadernetaContent) cadernetaContent.innerHTML = getEmptyState('Nenhum PRHF ativo.', 'fa-book-medical'); 
+            return; 
+        }
         
         prhfsArr.sort((a,b) => new Date(a.prazo) - new Date(b.prazo));
         let html = '';
@@ -664,11 +821,12 @@ async function carregarPrhfsEE() {
             const txtSt = isUrgente ? 'URGENTE (Mód. Terminado)' : 'EM CURSO';
             html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${cor};"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="color:var(--text-light);">${p.disciplina} (Mod. ${p.modulo})</strong><span style="color:${cor}; font-size:0.75rem; font-weight:bold;">${txtSt}</span></div><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">${p.descricao}</p><div style="font-size:0.8rem; color:var(--text-light);">Data Limite: <strong style="color:${cor};">${p.prazo.split('-').reverse().join('/')}</strong> | Presenciais: <strong style="color:var(--text-light);">${p.horasPresenciais||0}h</strong></div></div>`;
         });
-        cadernetaContent.innerHTML = html;
+        if(cadernetaContent) cadernetaContent.innerHTML = html;
     } catch(e) {}
 }
 
 async function carregarReunioesEE(reuniaoSelecionada = '1_intercalar') {
+    const cadernetaContent = document.getElementById('ee-caderneta-content');
     const reunioesMenu = [
         {id: '1_intercalar', label: '1ª Intercalar'}, {id: '1_avaliacao', label: '1ª Avaliação'},
         {id: '2_intercalar', label: '2ª Intercalar'}, {id: '2_avaliacao', label: '2ª Avaliação'},
@@ -683,276 +841,380 @@ async function carregarReunioesEE(reuniaoSelecionada = '1_intercalar') {
     });
     html += '</div><div id="reuniao-content-area"><p class="text-muted center">A carregar dados...</p></div>';
     
-    cadCompreendido. Aqui tens os dois ficheiros **completos, revistos e sem qualquer corte** (removi também os espaços invisíveis que por vezes causam erros ao copiar/colar). 
+    if(cadernetaContent) cadernetaContent.innerHTML = html;
+    
+    document.querySelectorAll('.btn-select-reuniao').forEach(btn => { 
+        btn.addEventListener('click', (e) => { 
+            carregarReunioesEE(e.currentTarget.getAttribute('data-id')); 
+        }); 
+    });
 
-Podes copiar e substituir integralmente o conteúdo dos teus ficheiros atuais.
+    try {
+        const docSnap = await getDoc(doc(db, "utilizadores", educandoAtualId, "reunioes", reuniaoSelecionada));
+        let dadosReuniao = docSnap.exists() ? docSnap.data() : {};
+        
+        const ordemDisciplinas = obterDisciplinasDoAno();
+        let contentHtml = '<div style="display:flex; flex-direction:column; gap:10px;">';
+        
+        if (ordemDisciplinas.length === 0) {
+            contentHtml += '<p class="text-muted center">Ainda não existem disciplinas associadas.</p>';
+        } else {
+            ordemDisciplinas.forEach(disc => {
+                const comentario = dadosReuniao.disciplinas && dadosReuniao.disciplinas[disc] ? dadosReuniao.disciplinas[disc] : '<span style="color:var(--text-muted);">Sem comentário (SN)</span>';
+                contentHtml += `<div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;"><h4 style="margin-bottom:8px; color:var(--text-light); font-size:1rem;">${disc}</h4><p style="color:var(--text-light); font-size:0.9rem; line-height:1.4; margin:0;">${comentario}</p></div>`;
+            });
+        }
+        
+        const global = dadosReuniao.global || '<span style="color:var(--text-muted);">Sem observações globais registadas (SN).</span>';
+        contentHtml += `<div class="card" style="margin-top:15px; border:1px solid var(--warning-yellow); background:rgba(255,204,0,0.05); padding:15px;"><h3 style="color:var(--warning-yellow); margin-bottom:10px; font-size:1.1rem;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3><p style="color:var(--text-light); font-size:0.95rem; line-height:1.5; margin:0;">${global}</p></div></div>`;
+        
+        const rArea = document.getElementById('reuniao-content-area');
+        if(rArea) rArea.innerHTML = contentHtml;
+    } catch(e) { 
+        const rArea = document.getElementById('reuniao-content-area');
+        if(rArea) rArea.innerHTML = '<p class="text-danger center">Erro ao carregar a reunião.</p>'; 
+    }
+}
 
-### `ee.html`
+// 5. AGENDA E HORÁRIO
+bindChange('filtro-agenda-testes', carregarAgendaEE);
+bindChange('filtro-agenda-trabalhos', carregarAgendaEE);
+bindChange('filtro-agenda-outros', carregarAgendaEE);
 
-```html
-<!DOCTYPE html>
-<html lang="pt-PT">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Turma PRO - Família</title>
-    <link rel="icon" type="image/png" href="logo_tur.png">
-    <link rel="stylesheet" href="style.css?v=11">
-    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
-    <!-- Adicionado o Chart.js para os gráficos -->
-    <script src="[https://cdn.jsdelivr.net/npm/chart.js](https://cdn.jsdelivr.net/npm/chart.js)"></script>
-    <script>
-        const currentTheme = localStorage.getItem('turmapro_theme') || 'dark';
-        document.documentElement.setAttribute('data-theme', currentTheme);
-    </script>
-</head>
-<body>
-    <div id="app-content">
-        <!-- HEADER ESTÁTICO -->
-        <header id="header-ee" class="app-header">
-            <div class="user-profile" style="flex: 1; min-width: 0;">
-                <select id="header-ee-student-selector" class="ee-student-selector">
-                    <option value="">A carregar...</option>
-                </select>
-            </div>
-            <div style="display: flex; align-items: center; gap: 15px; flex-shrink: 0;">
-                <button id="btn-open-notificacoes" class="notification-bell">
-                    <i class="fa-solid fa-bell"></i>
-                    <span id="badge-notificacoes" class="notification-badge" style="display:none;">0</span>
-                </button>
-                <button id="btn-logout-ee" class="logout-btn" title="Sair" style="font-size: 1.2rem;"><i class="fa-solid fa-right-from-bracket"></i></button>
-            </div>
-        </header>
+async function carregarAgendaEE() {
+    const subContainer = document.getElementById('ee-agenda-content'); 
+    if (!subContainer) return;
+    subContainer.innerHTML = '<p class="text-muted center">A sincronizar agenda...</p>';
+    if (!turmaAtual) return;
 
-        <main class="app-content">
+    const elT = document.getElementById('filtro-agenda-testes');
+    const elTr = document.getElementById('filtro-agenda-trabalhos');
+    const elO = document.getElementById('filtro-agenda-outros');
+    const mostraT = elT ? elT.checked : true; 
+    const mostraTr = elTr ? elTr.checked : true; 
+    const mostraO = elO ? elO.checked : true;
+    
+    try {
+        const evDb = await getDocs(collection(db, "turmas", turmaAtual, "eventos"));
+        if (evDb.empty) { 
+            subContainer.innerHTML = getEmptyState('Sem eventos agendados.', 'fa-calendar-xmark'); 
+            return; 
+        }
+        
+        let evs = [];
+        evDb.forEach(d => { 
+            const e = d.data(); 
+            let bgC = '#8b5cf6'; 
+            let txtT = 'Evento';
             
-            <!-- 1. DASHBOARD PRINCIPAL -->
-            <div id="ee-dashboard">
-                <div class="ee-summary-grid">
-                    
-                    <!-- CARTÃO DA MÉDIA COM GRÁFICO (NOVO) -->
-                    <div class="ee-summary-card ee-card-extended" style="display: flex; flex-direction: row; align-items: center; gap: 20px;">
-                        <div style="flex: 1;">
-                            <div><i class="fa-solid fa-chart-pie" style="font-size: 1.2rem;"></i><div class="ee-summary-label">Média Global</div></div>
-                            <div class="ee-summary-value" id="resumo-media" style="color: var(--primary-green); font-size: 2.5rem;">...</div>
-                            <div style="display:flex; flex-direction:column; gap: 5px; margin-top: 10px;">
-                                <div style="display:flex; align-items:center; gap:5px; font-size:0.75rem; color:var(--text-muted);"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#8b5cf6;"></span> Sócio. <strong style="color:var(--text-light); margin-left:auto;" id="resumo-med-socio">-</strong></div>
-                                <div style="display:flex; align-items:center; gap:5px; font-size:0.75rem; color:var(--text-muted);"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#00d2ff;"></span> Científica <strong style="color:var(--text-light); margin-left:auto;" id="resumo-med-cient">-</strong></div>
-                                <div style="display:flex; align-items:center; gap:5px; font-size:0.75rem; color:var(--text-muted);"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981;"></span> Técnica <strong style="color:var(--text-light); margin-left:auto;" id="resumo-med-tec">-</strong></div>
-                            </div>
+            if (e.tipo === 'teste' || e.tipo === 'avaliacao') { 
+                if (mostraT) { bgC = '#f59e0b'; txtT = 'Avaliação'; evs.push({...e, cor: bgC, txt: txtT}); } 
+            } 
+            else if (e.tipo === 'trabalho' || e.tipo === 'entrega') { 
+                if (mostraTr) { bgC = '#00d2ff'; txtT = 'Entrega'; evs.push({...e, cor: bgC, txt: txtT}); } 
+            } 
+            else { 
+                if (mostraO) evs.push({...e, cor: bgC, txt: txtT}); 
+            }
+        });
+        
+        if (evs.length === 0) { 
+            subContainer.innerHTML = getEmptyState('Sem eventos com os filtros atuais.', 'fa-filter'); 
+            return; 
+        }
+        
+        const hoje = new Date().toISOString().split('T')[0];
+        const futuros = evs.filter(e => (e.data || '') >= hoje).sort((a,b) => (a.data || '').localeCompare(b.data || ''));
+        const passados = evs.filter(e => (e.data || '') < hoje).sort((a,b) => (b.data || '').localeCompare(a.data || ''));
+        const mesArr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        let html = '';
+
+        const renderEv = (ev) => { 
+            if (!ev.data) return '';
+            const dp = ev.data.split('-'); 
+            const mes = mesArr[parseInt(dp[1])-1]; 
+            return `<div class="calendar-event-card" style="border-left-color:${ev.cor}; margin-bottom:10px;"><div class="calendar-date-box"><span class="day">${dp[2]}</span><span class="month" style="color:${ev.cor};">${mes}</span></div><div class="calendar-info"><h4 style="margin:0; color:var(--text-light);">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt||'evento').toUpperCase()}</span></div></div>`; 
+        };
+
+        if (futuros.length > 0) { 
+            futuros.forEach(e => html += renderEv(e)); 
+        } else { 
+            html += '<p class="text-muted center">Sem eventos futuros.</p>'; 
+        }
+        
+        if (passados.length > 0) { 
+            html += '<div class="calendar-divider" style="margin-top:20px;"><span>Passados</span></div>'; 
+            passados.forEach(e => html += renderEv(e)); 
+        }
+        
+        subContainer.innerHTML = html;
+    } catch(e) {}
+}
+
+let eeHorarioModo = 'dia'; 
+let eeHorarioDiaOffset = 0; 
+let eeHorarioSemanaOffset = 0;
+
+bindClick('btn-horario-dia', (e) => { 
+    eeHorarioModo = 'dia'; 
+    safeAddClass('btn-horario-dia', 'active');
+    safeRemoveClass('btn-horario-grelha', 'active');
+    carregarHorarioEE(); 
+});
+bindClick('btn-horario-grelha', (e) => { 
+    eeHorarioModo = 'grelha'; 
+    safeAddClass('btn-horario-grelha', 'active');
+    safeRemoveClass('btn-horario-dia', 'active');
+    carregarHorarioEE(); 
+});
+bindClick('btn-ee-prev-horario', () => { 
+    if (eeHorarioModo === 'dia') eeHorarioDiaOffset--; 
+    else eeHorarioSemanaOffset--; 
+    carregarHorarioEE(); 
+});
+bindClick('btn-ee-next-horario', () => { 
+    if (eeHorarioModo === 'dia') eeHorarioDiaOffset++; 
+    else eeHorarioSemanaOffset++; 
+    carregarHorarioEE(); 
+});
+
+const getCorEspecial = (dsc) => {
+    if (!dsc) return { c: 'var(--primary-green)', bg: 'rgba(16, 185, 129, 0.05)' };
+    const d = dsc.toLowerCase();
+    if (d.includes('alm')) return { c: 'var(--warning-yellow)', bg: 'rgba(245, 158, 11, 0.1)' };
+    if (d.includes('vis')) return { c: '#00d2ff', bg: 'rgba(0, 210, 255, 0.1)' };
+    if (d.includes('prhf')) return { c: 'var(--danger-red)', bg: 'rgba(239, 68, 68, 0.1)' };
+    if (d.includes('pap') || d.includes('fct')) return { c: '#ff9900', bg: 'rgba(255, 153, 0, 0.1)' };
+    if (['reunião','reuniao','livre','estudo'].some(k => d.includes(k))) return { c: 'var(--accent-purple)', bg: 'rgba(139, 92, 246, 0.1)' };
+    return { c: 'var(--primary-green)', bg: 'rgba(16, 185, 129, 0.05)' };
+};
+
+async function carregarHorarioEE() {
+    const subContainer = document.getElementById('ee-horario-content'); 
+    if (!subContainer) return;
+    subContainer.innerHTML = '<p class="text-muted center">A gerar horário...</p>';
+    if (!turmaAtual) return;
+
+    try {
+        const docSnap = await getDoc(doc(db, "turmas", turmaAtual));
+        let hb = {}; 
+        if (docSnap.exists() && docSnap.data().horario) hb = docSnap.data().horario;
+        
+        let profsCache = {};
+        const pSnap = await getDocs(query(collection(db, "utilizadores"), where("papel", "==", "professor"), where("turmas", "array-contains", turmaAtual)));
+        pSnap.forEach(d => { 
+            const profData = d.data(); 
+            if (profData.disciplinas) { 
+                profData.disciplinas.forEach(dsc => { 
+                    profsCache[dsc] = profData.nome ? profData.nome.split(' ')[0] : 'Desconhecido'; 
+                }); 
+            } 
+        });
+
+        const blocosKeys = ['1', '2', '3', '4', '1300', '5', '6', '7']; 
+        const blocosTempo = { '1': '08:30', '2': '09:35', '3': '10:50', '4': '11:55', '1300': '13:00', '5': '14:05', '6': '15:15', '7': '16:20' }; 
+        const diasMap = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']; 
+        const fDt = (dt) => `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;
+
+        if (eeHorarioModo === 'dia') {
+            let targetDate = new Date(); 
+            targetDate.setDate(targetDate.getDate() + eeHorarioDiaOffset);
+            const hd = document.getElementById('ee-horario-display');
+            if(hd) hd.innerText = `${diasMap[targetDate.getDay()]}, ${fDt(targetDate)}`;
+
+            let html = ''; 
+            let temAulasDia = false;
+            const dataStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth()+1).padStart(2,'0')}-${String(targetDate.getDate()).padStart(2,'0')}`;
+
+            blocosKeys.forEach(bId => {
+                const disc = hb[`${dataStr}_${bId}`];
+                if (disc) {
+                    const sty = getCorEspecial(disc); 
+                    const profNome = profsCache[disc] ? `Prof. ${profsCache[disc]}` : 'Prof. A Atribuir';
+                    html += `<div class="horario-list-item" style="border-left-color:${sty.c}; background-color:${sty.bg};"><div class="horario-time-col">${blocosTempo[bId]}</div><div class="horario-disc-col"><div class="horario-disc-name">${disc}</div><div class="horario-prof">${profNome}</div></div></div>`;
+                    temAulasDia = true;
+                }
+            });
+            subContainer.innerHTML = temAulasDia ? html : getEmptyState('Sem aulas agendadas para hoje.', 'fa-mug-hot');
+        } else {
+            let dtT = new Date(); 
+            dtT.setDate(dtT.getDate() + (eeHorarioSemanaOffset * 7)); 
+            dtT.setDate(dtT.getDate() - (dtT.getDay() === 0 ? 6 : dtT.getDay() - 1));
+            let dEnd = new Date(dtT); 
+            dEnd.setDate(dEnd.getDate() + 4);
+            const hd = document.getElementById('ee-horario-display');
+            if(hd) hd.innerText = `${fDt(dtT)} a ${fDt(dEnd)}`;
+
+            let html = '<div class="horario-grid"><div class="horario-header"></div>'; 
+            let dtIter = new Date(dtT);
+            ['SEG','TER','QUA','QUI','SEX'].forEach(d => { 
+                html += `<div class="horario-header">${d}<span>${fDt(dtIter)}</span></div>`; 
+                dtIter.setDate(dtIter.getDate()+1); 
+            });
+            
+            blocosKeys.forEach(bId => {
+                html += `<div class="horario-time">${blocosTempo[bId]}</div>`; 
+                dtIter = new Date(dtT);
+                for (let i=0; i<5; i++) {
+                    const dStr = `${dtIter.getFullYear()}-${String(dtIter.getMonth()+1).padStart(2,'0')}-${String(dtIter.getDate()).padStart(2,'0')}`; 
+                    const disc = hb[`${dStr}_${bId}`];
+                    if (disc) { 
+                        const sty = getCorEspecial(disc); 
+                        html += `<div class="horario-slot filled" style="border-color:${sty.c}; background-color:${sty.bg};"><strong>${disc}</strong></div>`; 
+                    } 
+                    else {
+                        html += `<div class="horario-slot"></div>`;
+                    }
+                    dtIter.setDate(dtIter.getDate()+1);
+                }
+            });
+            subContainer.innerHTML = html + '</div>';
+        }
+    } catch(e) {}
+}
+
+// 6. CHAT E JUSTIFICAÇÕES 
+let chatUnsubscribeEE = null;
+
+function iniciarChatEE() {
+    const chatContainer = document.getElementById('ee-chat-messages-container'); 
+    if (!educandoAtualId || !chatContainer) return; 
+    
+    if (chatUnsubscribeEE) chatUnsubscribeEE();
+    
+    chatUnsubscribeEE = onSnapshot(query(collection(db, "utilizadores", educandoAtualId, "chat_dt"), orderBy("timestamp")), (snapshot) => {
+        let html = '';
+        snapshot.forEach(doc => {
+            const msg = doc.data(); 
+            const isMe = msg.remetente === myUserName || msg.autor === 'ee'; 
+            const classe = isMe ? 'admin' : 'student'; 
+            const autorLabel = isMe ? 'Tu' : (msg.autor === 'dt' ? 'Diretor de Turma' : msg.remetente);
+            html += `<div class="chat-bubble ${classe}"><strong style="color:var(--text-light);">${autorLabel}</strong><br>${msg.texto}<span class="chat-meta">${new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span></div>`;
+        });
+        
+        if (html === '') html = getEmptyState('Inicie aqui a comunicação.', 'fa-comments');
+        chatContainer.innerHTML = html; 
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    });
+}
+
+bindClick('btn-ee-send-msg', async () => { 
+    const inp = document.getElementById('ee-input-chat-msg'); 
+    if (!inp) return;
+    const txt = inp.value.trim(); 
+    if (!txt || !educandoAtualId) return; 
+    
+    try { 
+        await addDoc(collection(db, "utilizadores", educandoAtualId, "chat_dt"), { 
+            remetente: myUserName, 
+            autor: 'ee', 
+            texto: txt, 
+            timestamp: Date.now() 
+        }); 
+        inp.value = ''; 
+    } catch(e) {} 
+});
+
+let atestadoBase64 = "";
+bindChange('ee-upload-atestado', (e) => {
+    const file = e.target.files[0]; 
+    if (!file) return; 
+    if (file.size > 2097152) { 
+        alert("Ficheiro demasiado grande! Máximo de 2MB permitido."); 
+        return; 
+    } 
+    const fn = document.getElementById('ee-atestado-file-name');
+    if(fn) fn.innerText = "Ficheiro anexado: " + file.name; 
+    const btnEnv = document.getElementById('btn-ee-enviar-atestado');
+    if(btnEnv) btnEnv.style.display = 'block';
+    
+    const reader = new FileReader(); 
+    reader.onload = (ev) => { atestadoBase64 = ev.target.result; }; 
+    reader.readAsDataURL(file);
+});
+
+bindClick('btn-ee-enviar-atestado', async (e) => {
+    if (!atestadoBase64 || !educandoAtualId) return; 
+    
+    const obsEl = document.getElementById('ee-atestado-obs');
+    const obs = obsEl ? obsEl.value.trim() : "";
+    const btnRef = e.currentTarget; 
+    btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A enviar...'; 
+    btnRef.disabled = true;
+    
+    try {
+        await addDoc(collection(db, "utilizadores", educandoAtualId, "atestados"), { 
+            ficheiroBase64: atestadoBase64, 
+            observacoes: obs, 
+            status: "pendente", 
+            dataEnvio: new Date().toISOString() 
+        });
+        
+        btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Enviado com sucesso!';
+        
+        setTimeout(() => { 
+            const fn = document.getElementById('ee-atestado-file-name'); if(fn) fn.innerText = ""; 
+            if(obsEl) obsEl.value = ""; 
+            atestadoBase64 = ""; 
+            btnRef.style.display = 'none'; 
+            btnRef.disabled = false; 
+            btnRef.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Atestado'; 
+            carregarAtestadosEE(); 
+        }, 2000);
+    } catch(err) { 
+        btnRef.innerHTML = "Erro ao enviar!"; 
+        setTimeout(() => { 
+            btnRef.disabled = false; 
+            btnRef.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Atestado'; 
+        }, 2000); 
+    }
+});
+
+async function carregarAtestadosEE() {
+    const container = document.getElementById('ee-lista-atestados-container'); 
+    if (!container) return;
+    container.innerHTML = '<p class="text-muted center">A procurar histórico...</p>';
+    if (!educandoAtualId) return;
+    
+    try {
+        const res = await getDocs(query(collection(db, "utilizadores", educandoAtualId, "atestados")));
+        if (res.empty) { 
+            container.innerHTML = getEmptyState('Nenhum comprovativo enviado.', 'fa-file-invoice'); 
+            return; 
+        }
+        
+        let arr = []; 
+        res.forEach(d => arr.push(d.data())); 
+        arr.sort((a,b) => (b.dataEnvio || '').localeCompare(a.dataEnvio || '')); 
+        
+        let html = '';
+        arr.forEach(a => {
+            let corStatus = 'var(--warning-yellow)'; 
+            let txtStatus = 'Em análise'; 
+            let iconStatus = '<i class="fa-regular fa-clock"></i>';
+            
+            if (a.status === 'aprovado' || a.status === 'aceite') { 
+                corStatus = 'var(--success-green)'; 
+                txtStatus = 'Aceite'; 
+                iconStatus = '<i class="fa-solid fa-check-circle"></i>'; 
+            }
+            if (a.status === 'rejeitado' || a.status === 'recusada') { 
+                corStatus = 'var(--danger-red)'; 
+                txtStatus = 'Recusada'; 
+                iconStatus = '<i class="fa-solid fa-xmark-circle"></i>'; 
+            }
+            
+            html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${corStatus}; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <strong style="color:var(--text-light);">Enviado a ${new Date(a.dataEnvio).toLocaleDateString('pt-PT')}</strong><br>
+                            <span style="font-size:0.75rem; color:var(--text-muted);">${a.observacoes || 'Sem observações adicionais'}</span>
                         </div>
-                        <div style="width: 110px; height: 110px; position: relative;">
-                            <canvas id="eeChartMedia"></canvas>
+                        <div style="text-align: right;">
+                            <span style="font-size:0.8rem; font-weight:bold; color:${corStatus}; padding:6px 12px; background:rgba(255,255,255,0.05); border-radius:20px; display:inline-block;">${iconStatus} ${txtStatus}</span>
                         </div>
-                    </div>
-
-                    <div class="ee-summary-card">
-                        <div><i class="fa-solid fa-user-xmark" style="color: var(--danger-red);"></i><div class="ee-summary-value" id="resumo-faltas">...</div></div>
-                        <div class="ee-summary-label">Total de Faltas</div>
-                    </div>
-                    <div class="ee-summary-card">
-                        <div><i class="fa-regular fa-calendar-check" style="color: var(--warning-yellow);"></i><div class="ee-summary-value" id="resumo-proximo-evento" style="font-size: 1.1rem;">...</div></div>
-                        <div class="ee-summary-label">Próximo Evento</div>
-                    </div>
-                    <div class="ee-summary-card">
-                        <div><i class="fa-solid fa-book-medical" style="color: #0099ff;"></i><div class="ee-summary-value" id="resumo-prhfs">...</div></div>
-                        <div class="ee-summary-label">PRHFs Ativos</div>
-                    </div>
-                    <div class="ee-summary-card">
-                        <div><i class="fa-solid fa-triangle-exclamation" style="color: #e67e22;"></i><div class="ee-summary-value" id="resumo-ocorrencias">...</div></div>
-                        <div class="ee-summary-label">Ocorrências</div>
-                    </div>
-                </div>
-
-                <!-- RESUMO PERCURSO PROFISSIONAL (FCT / PAP) -->
-                <div class="card" id="card-percurso-prof" style="display:none; border-left: 4px solid var(--text-muted); cursor: pointer; transition: 0.2s;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <h3 style="font-size: 1.1rem; color: #0099ff; margin:0;"><i class="fa-solid fa-briefcase"></i> Percurso Profissional</h3>
-                        <span id="badge-risco-geral" style="font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; font-weight:bold; background: rgba(255,255,255,0.05); color: var(--text-muted);">⚪ Pendente</span>
-                    </div>
-                    <div id="resumo-mini-fct" style="display:none; font-size:0.9rem; margin-bottom:8px; color:var(--text-light); border-bottom: 1px dashed #333; padding-bottom: 8px;">
-                        <strong>FCT:</strong> <span id="txt-mini-fct">A carregar...</span>
-                    </div>
-                    <div id="resumo-mini-pap" style="display:none; font-size:0.9rem; color:var(--text-light);">
-                        <strong>PAP:</strong> <span id="txt-mini-pap">A carregar...</span>
-                    </div>
-                    <div style="text-align:center; margin-top:12px; font-size:0.75rem; color:var(--text-muted);"><i class="fa-solid fa-hand-pointer"></i> Tocar para ver detalhes</div>
-                </div>
-
-                <!-- Botões de Ação Rápida Otimizados -->
-                <div style="display: flex; gap: 10px; margin-top: 15px;">
-                    <button class="primary-btn" id="btn-quick-justificar" style="background-color: var(--success-green); flex: 1; padding: 18px 10px;">
-                        <span style="font-size:1rem; font-weight:bold; color:white;">Justificar Falta</span>
-                    </button>
-                    <button class="primary-btn" id="btn-quick-mensagem" style="background-color: var(--warning-yellow); flex: 1; padding: 18px 10px;">
-                        <span style="font-size:1rem; font-weight:bold; color:black;">Falar com DT</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- VISTA DETALHADA: FCT & PAP -->
-            <div id="view-ee-profissional" style="display: none;">
-                <div class="class-header" style="margin-bottom: 15px;"><button id="btn-voltar-prof" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Início</button></div>
-                
-                <div class="falta-tabs" style="margin-bottom: 15px;">
-                    <button class="falta-tab-btn active" id="btn-tab-fct">FCT (Estágio)</button>
-                    <button class="falta-tab-btn" id="btn-tab-pap" style="display:none;">PAP (Projeto Final)</button>
-                </div>
-
-                <div id="content-prof-fct" style="display:block;">
-                    <div class="card" style="border-left: 4px solid var(--text-muted);" id="fct-card-risco">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <h3 style="margin:0; font-size:1.1rem; color:var(--text-light);">Estado Geral</h3>
-                            <span id="fct-badge-risco" style="font-size: 1rem;">⚪ Pendente</span>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h3 style="margin-bottom:15px; font-size:1rem; color:var(--text-light);"><i class="fa-solid fa-clock"></i> Horas Realizadas</h3>
-                        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:5px;">
-                            <span style="font-size:1.4rem; font-weight:bold; color:var(--primary-green);" id="fct-horas-txt">0 / 0 h</span>
-                            <span style="font-size:0.9rem; color:var(--text-muted);" id="fct-perc-txt">0%</span>
-                        </div>
-                        <div class="progress-bar-bg"><div class="progress-bar-fill" id="fct-progresso" style="width: 0%;"></div></div>
-                        <div style="display:flex; justify-content:space-between; margin-top:15px; font-size:0.85rem; color:var(--text-muted); border-top:1px dashed #333; padding-top:10px;">
-                            <div>Previstas: <strong style="color:var(--text-light);" id="fct-prev">0</strong></div>
-                            <div>Em Falta: <strong style="color:var(--warning-yellow);" id="fct-falta">0</strong></div>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h3 style="margin-bottom:15px; font-size:1rem; color:var(--text-light);"><i class="fa-solid fa-file-signature"></i> Documentação</h3>
-                        <div id="fct-docs-lista" style="display:flex; flex-direction:column; gap:10px; font-size:0.9rem;"></div>
-                    </div>
-                </div>
-
-                <div id="content-prof-pap" style="display:none;">
-                    <div class="card" style="border-left: 4px solid var(--text-muted);" id="pap-card-risco">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <h3 style="margin:0; font-size:1.1rem; color:var(--text-light);">Estado do Projeto</h3>
-                            <span id="pap-badge-risco" style="font-size: 1rem;">⚪ Pendente</span>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <span style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Tema da PAP</span>
-                        <h3 style="margin:5px 0 15px 0; font-size:1.2rem; color:var(--primary-green); line-height:1.3;" id="pap-tema">A carregar...</h3>
-                        <div style="display:flex; justify-content:space-between; font-size:0.85rem; border-top:1px dashed #333; padding-top:10px; margin-bottom:5px;">
-                            <span style="color:var(--text-muted);">Orientador:</span> <strong style="color:var(--text-light);" id="pap-orientador">-</strong>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
-                            <span style="color:var(--text-muted);">Data de Defesa:</span> <strong style="color:var(--text-light);" id="pap-data">-</strong>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h3 style="margin-bottom:15px; font-size:1rem; color:var(--text-light);"><i class="fa-solid fa-bars-progress"></i> Fases do Projeto</h3>
-                        <div id="pap-fases-lista" style="display:flex; flex-direction:column; gap:10px; font-size:0.9rem;"></div>
-                    </div>
-
-                    <div class="card" id="pap-obs-container">
-                        <h3 style="margin-bottom:10px; font-size:1rem; color:var(--text-light);"><i class="fa-solid fa-comment-dots"></i> Observações do Orientador</h3>
-                        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border-left: 3px solid var(--primary-green); font-size:0.9rem; line-height:1.4;" id="pap-obs-txt">
-                            Sem observações recentes.
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- CADERNETA -->
-            <div id="view-ee-caderneta" style="display: none;">
-                <div class="falta-tabs" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; justify-content:center; margin-bottom: 20px;">
-                    <button class="falta-tab-btn active" id="tab-ee-timeline">Linha Temporal</button>
-                    <button class="falta-tab-btn" id="tab-ee-notas">Notas</button>
-                    <button class="falta-tab-btn" id="tab-ee-faltas">Faltas</button>
-                    <button class="falta-tab-btn" id="tab-ee-prhfs">PRHFs</button>
-                    <button class="falta-tab-btn" id="tab-ee-comportamento">Comportamento</button>
-                    <button class="falta-tab-btn" id="tab-ee-reunioes">Reuniões</button>
-                </div>
-                
-                <div id="filtro-caderneta-container" style="display:none; margin-bottom: 15px;">
-                    <select id="filtro-caderneta-disc" style="margin:0; background-color: var(--bg-dark); border-radius: 8px;"><option value="">Todas as Disciplinas</option></select>
-                </div>
-                <div id="ee-caderneta-content"></div>
-            </div>
-
-            <!-- AGENDA -->
-            <div id="view-ee-agenda" style="display: none;">
-                <div class="agenda-filters">
-                    <label class="agenda-filter-label"><input type="checkbox" id="filtro-agenda-testes" checked> <span style="color:#ffaa00;">●</span> Testes/Av.</label>
-                    <label class="agenda-filter-label"><input type="checkbox" id="filtro-agenda-trabalhos" checked> <span style="color:#00d2ff;">●</span> Entregas</label>
-                    <label class="agenda-filter-label"><input type="checkbox" id="filtro-agenda-outros" checked> <span style="color:#b82bf2;">●</span> Outros</label>
-                </div>
-                <div id="ee-agenda-content"></div>
-            </div>
-
-            <!-- HORÁRIO -->
-            <div id="view-ee-horario" style="display: none;">
-                <div class="falta-tabs" style="margin-bottom: 15px;">
-                    <button class="falta-tab-btn active" id="btn-horario-dia">Vista Diária</button>
-                    <button class="falta-tab-btn" id="btn-horario-grelha">Grelha Semanal</button>
-                </div>
-                <div class="week-nav-bar">
-                    <button id="btn-ee-prev-horario"><i class="fa-solid fa-chevron-left"></i></button>
-                    <span id="ee-horario-display">A carregar...</span>
-                    <button id="btn-ee-next-horario"><i class="fa-solid fa-chevron-right"></i></button>
-                </div>
-                <div id="ee-horario-content" style="margin-top:15px; overflow-x: auto;"></div>
-            </div>
-
-            <!-- CHAT E JUSTIFICAR -->
-            <div id="view-ee-chat" style="display: none; flex-direction: column; height: 75vh;">
-                <div class="class-header" style="margin-bottom: 10px;"><button id="btn-voltar-chat-ee" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Início</button></div>
-                <div class="forum-messages" id="ee-chat-messages-container" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:15px; background: var(--bg-card); border-radius: 12px 12px 0 0; border: 1px solid #333; border-bottom: none;"></div>
-                <div class="forum-input-area" style="background:#1a1a1a; padding:10px; border: 1px solid #333; display:flex; gap:8px; align-items:center; border-radius: 0 0 12px 12px;">
-                    <input type="text" id="ee-input-chat-msg" placeholder="A sua mensagem..." style="margin:0; flex:1; border-radius:20px; padding:10px 15px;">
-                    <button id="btn-ee-send-msg" class="forum-send-btn" style="width:40px; height:40px; background-color: var(--warning-yellow); color: black;"><i class="fa-solid fa-paper-plane"></i></button>
-                </div>
-            </div>
-
-            <div id="view-ee-justificar" style="display: none;">
-                <div class="class-header" style="margin-bottom: 15px;"><button id="btn-voltar-justificar" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Início</button></div>
-                <div class="card" style="margin-bottom: 20px;">
-                    <h3 style="margin-bottom: 15px; font-size: 1rem; color: var(--text-light);"><i class="fa-solid fa-cloud-arrow-up"></i> Enviar Comprovativo</h3>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Tire foto do atestado para justificar ausências.</p>
-                    <div style="background:var(--bg-dark); padding:20px; border-radius:8px; border:1px dashed #555; text-align:center; margin-bottom:15px;">
-                        <label for="ee-upload-atestado" class="secondary-btn" style="margin:0 auto; width:fit-content; border-color: var(--success-green); color: var(--success-green); cursor: pointer;"><i class="fa-solid fa-camera"></i> Anexar Foto / PDF</label>
-                        <input type="file" id="ee-upload-atestado" style="display:none;" accept="image/*,.pdf">
-                        <span id="ee-atestado-file-name" class="file-name-display" style="display:block; margin-top:10px; font-size:0.85rem; color:var(--text-light);"></span>
-                    </div>
-                    <textarea id="ee-atestado-obs" class="input-field" placeholder="Observações" style="min-height: 80px; margin-bottom: 15px;"></textarea>
-                    <button id="btn-ee-enviar-atestado" class="primary-btn" style="width:100%; background-color: var(--success-green); display:none;"><i class="fa-solid fa-paper-plane"></i> Enviar Atestado</button>
-                </div>
-                <h3 style="color: var(--primary-green); font-size: 1rem; margin-bottom: 15px;">Histórico de Envios</h3>
-                <div id="ee-lista-atestados-container"></div>
-            </div>
-
-            <div id="view-ee-notificacoes" style="display: none;">
-                <div class="class-header" style="margin-bottom: 15px;"><button id="btn-voltar-notificacoes" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
-                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: var(--text-light);"><i class="fa-solid fa-bell"></i> Central de Alertas</h2>
-                <div id="ee-notificacoes-container"></div>
-            </div>
-        </main>
-
-        <nav class="bottom-nav">
-            <a href="#" class="nav-item active" data-target="ee-dashboard"><i class="fa-solid fa-house"></i><span>Início</span></a>
-            <a href="#" class="nav-item" data-target="view-ee-caderneta"><i class="fa-solid fa-book-open"></i><span>Caderneta</span></a>
-            <a href="#" class="nav-item" data-target="view-ee-agenda"><i class="fa-regular fa-calendar-check"></i><span>Agenda</span></a>
-            <a href="#" class="nav-item" data-target="view-ee-horario"><i class="fa-solid fa-clock"></i><span>Horário</span></a>
-        </nav>
-    </div>
-
-    <!-- MODAL PAUTA GLOBAL -->
-    <div id="modal-pauta-global" class="modal-overlay">
-        <div class="action-sheet" style="max-width: 600px; width: 95%; max-height: 85vh; overflow-y: auto; padding: 20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
-                <h2 style="color: var(--primary-green); font-size:1.3rem; margin:0;"><i class="fa-solid fa-table-list"></i> Pauta Global</h2>
-                <button id="btn-close-pauta" style="background:none; border:none; color:var(--text-muted); font-size:1.5rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div id="pauta-global-content"><p class="text-muted" style="text-align:center;">A compilar notas...</p></div>
-        </div>
-    </div>
-
-    <script type="module" src="./js/ee-app.js?v=17"></script>
-</body>
-</html>
+                     </div>`;
+        });
+        
+        container.innerHTML = html;
+    } catch(e) {}
+}
