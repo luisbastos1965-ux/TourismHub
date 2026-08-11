@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Turma PRO - Painel Delegado</title>
     <link rel="icon" type="image/png" href="logo_tur.png">
-    <link rel="stylesheet" href="style.css?v=30">
+    <link rel="stylesheet" href="style.css?v=31">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
         const currentTheme = localStorage.getItem('turmapro_theme') || 'dark';
@@ -58,7 +58,32 @@
                         </div>
                     </div>
 
-                    <button id="btn-salvar-evento" class="primary-btn" style="background:#ffd700; color:#000; margin-top:5px; font-weight:bold;">
+                    <!-- NOVO: SELEÇÃO DE HORÁRIO -->
+                    <div style="display:flex; gap:10px;">
+                        <div style="flex:1;">
+                            <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px; display:block;">Horário</label>
+                            <select id="input-evento-tempo-tipo" class="input-padrao">
+                                <option value="dia_inteiro">Dia Inteiro</option>
+                                <option value="manha">Manhã</option>
+                                <option value="tarde">Tarde</option>
+                                <option value="especifico">Horas em concreto...</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- CAIXA OCULTA PARA HORAS ESPECÍFICAS -->
+                    <div id="box-horas-especificas" style="display:none; gap:10px; margin-top:5px;">
+                        <div style="flex:1;">
+                            <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px; display:block;">Início</label>
+                            <input type="time" id="input-evento-hora-inicio" class="input-padrao">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px; display:block;">Fim (Opcional)</label>
+                            <input type="time" id="input-evento-hora-fim" class="input-padrao">
+                        </div>
+                    </div>
+
+                    <button id="btn-salvar-evento" class="primary-btn" style="background:#ffd700; color:#000; margin-top:10px; font-weight:bold;">
                         <i class="fa-solid fa-paper-plane"></i> Publicar para a Turma
                     </button>
                 </div>
@@ -85,6 +110,6 @@
         </div>
     </div>
 
-    <script type="module" src="./js/delegado-app.js?v=1"></script>
+    <script type="module" src="./js/delegado-app.js?v=2"></script>
 </body>
 </html>
