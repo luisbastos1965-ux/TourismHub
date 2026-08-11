@@ -228,7 +228,6 @@ function carregarPassaporteEBadges(data) {
         badCont.innerHTML = bHtml;
     }
 }
-
 function carregarMissoes() {
     const cont = document.getElementById('missoes-container'); if(!cont) return;
     cont.innerHTML = getEmptyState('Nenhuma missão ativa de momento.', 'fa-bullseye');
@@ -256,10 +255,8 @@ async function carregarRankingTurma() {
         });
         alunosTurma.sort((a,b) => (b.xp || 0) - (a.xp || 0));
         
-        let hAcad = `<div style="display:flex; justify-content:space-around; margin-bottom:20px; text-align:center; background:rgba(0,0,0,0.2); padding:15px; border-radius:12px;">`;
-        const orderAcad = Object.keys(academiasXP).sort((a,b) => academiasXP[b] - academiasXP[a]);
-        
-        orderAcad.forEach((ac) => {
+        let hAcad = `<div style="display:flex; justify-content:space-around; flex-wrap: wrap; gap:10px; margin-bottom:20px; text-align:center; background:rgba(0,0,0,0.2); padding:15px; border-radius:12px;">`;
+        Object.keys(academiasXP).sort((a,b) => academiasXP[b] - academiasXP[a]).forEach((ac) => {
             const acData = ACADEMIAS_INFO[ac];
             if(acData) { 
                 const shortName = acData.nome.replace('Academia dos ', '');
@@ -294,18 +291,11 @@ async function carregarObjetivosPessoais() {
     try {
         const uSnap = await getDoc(doc(db, "utilizadores", myUserId)); const uXp = uSnap.exists() ? (uSnap.data().xp || 0) : 0;
         const nSnap = await getDocs(collection(db, "utilizadores", myUserId, "notas")); let notasArr = []; nSnap.forEach(n => notasArr.push(n.data()));
-        const pSnap = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); let numPrhfs = 0; pSnap.forEach(p => { if(p.data().status === 'concluida') numPrhfs++; });
-        const rSnap = await getDocs(query(collection(db, "utilizadores", myUserId, "ocorrencias"), where("tipo", "==", "positiva"))); const numPositivas = rSnap.size;
-
         const snap = await getDocs(collection(db, "utilizadores", myUserId, "objetivos")); let objArr = []; snap.forEach(d => objArr.push({id: d.id, ...d.data()})); objArr.sort((a,b) => b.timestamp - a.timestamp);
         let html = ''; let objGanhouXP = false;
         for (const obj of objArr) {
             let achieved = false;
-            if(!obj.concluido) {
-                if(obj.tipo === 'nota') { const temNota = notasArr.find(n => n.disciplina === obj.disciplina && Number(n.modulo) === Number(obj.modulo) && Number(n.nota) >= Number(obj.notaAlvo)); if(temNota) achieved = true; } 
-                else if (obj.tipo === 'prhf') { if(numPrhfs >= obj.targetCount) achieved = true; }
-                else if (obj.tipo === 'reconhecimento') { if(numPositivas >= obj.targetCount) achieved = true; }
-            }
+            if(!obj.concluido && obj.tipo === 'nota') { const temNota = notasArr.find(n => n.disciplina === obj.disciplina && Number(n.modulo) === Number(obj.modulo) && Number(n.nota) >= Number(obj.notaAlvo)); if(temNota) achieved = true; }
             if(achieved) { await updateDoc(doc(db, "utilizadores", myUserId, "objetivos", obj.id), { concluido: true }); obj.concluido = true; objGanhouXP = true; }
             const cColor = obj.concluido ? 'var(--success-green)' : '#444'; const txtDec = obj.concluido ? 'line-through' : 'none'; const txtColor = obj.concluido ? 'var(--text-muted)' : 'var(--text-light)';
             html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left: 3px solid ${cColor};"><div style="display:flex; align-items:center; gap:12px; flex:1;"><div onclick="window.toggleObjetivo('${obj.id}', ${!obj.concluido})" style="width:24px; height:24px; border-radius:50%; border:2px solid ${cColor}; background:${obj.concluido ? cColor : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer;">${obj.concluido ? '<i class="fa-solid fa-check" style="color:var(--bg-dark); font-size:0.75rem;"></i>' : ''}</div><span style="text-decoration:${txtDec}; color:${txtColor}; font-size:0.95rem; flex:1;">${obj.desc}</span></div><i class="fa-solid fa-trash btn-delete-objetivo" data-id="${obj.id}" style="color:var(--danger-red); cursor:pointer; font-size:0.9rem; padding: 5px;"></i></div>`;
@@ -316,29 +306,6 @@ async function carregarObjetivosPessoais() {
 }
 window.toggleObjetivo = async (id, status) => { try { await updateDoc(doc(db, "utilizadores", myUserId, "objetivos", id), { concluido: status }); if(status) { const snap = await getDoc(doc(db, "utilizadores", myUserId)); let xp = snap.exists() && snap.data().xp ? snap.data().xp : 0; await updateDoc(doc(db, "utilizadores", myUserId), { xp: xp + 50 }); carregarGamificacao({xp: xp+50}); } carregarObjetivosPessoais(); } catch(e) {} };
 
-bindClick('btn-add-objetivo', async () => {
-    const tipo = document.getElementById('obj-tipo').value; let data = { tipo: tipo, concluido: false, timestamp: Date.now() };
-    if(tipo === 'nota') {
-        data.disciplina = document.getElementById('obj-disciplina').value; data.modulo = document.getElementById('obj-modulo').value; data.notaAlvo = document.getElementById('obj-nota-alvo').value;
-        if(!data.disciplina || !data.modulo || !data.notaAlvo) return alert("Preenche todos os campos.");
-        data.desc = `Tirar ${data.notaAlvo} a ${data.disciplina} no Mod. ${data.modulo}`;
-    } else if (tipo === 'prhf') { 
-        const pSnap = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); let c = 0; pSnap.forEach(p => { if(p.data().status === 'concluida') c++; });
-        data.targetCount = c + 1; data.desc = `Concluir +1 Plano de Recuperação (PRHF)`;
-    } else if (tipo === 'reconhecimento') {
-        const rSnap = await getDocs(query(collection(db, "utilizadores", myUserId, "ocorrencias"), where("tipo", "==", "positiva")));
-        data.targetCount = rSnap.size + 1; data.desc = `Receber +1 Registo Positivo do Professor`;
-    } else if (tipo === 'assiduidade') {
-        data.desc = `Manter assiduidade sem faltas injustificadas.`;
-    }
-    try { await addDoc(collection(db, "utilizadores", myUserId, "objetivos"), data); document.getElementById('obj-nota-alvo').value = ''; carregarObjetivosPessoais(); } catch(err) {}
-});
-
-bindChange('obj-tipo', async (e) => { const v = e.target.value; document.getElementById('obj-setup-nota').style.display = v === 'nota' ? 'flex' : 'none'; });
-
-// ==========================================
-// DELEGAÇÃO DE EVENTOS DE CLIQUE GERAIS
-// ==========================================
 document.body.addEventListener('click', async (e) => {
     if(e.target.closest('.btn-delete-objetivo')) { e.stopPropagation(); pendingDeleteObjetivoId = e.target.closest('.btn-delete-objetivo').getAttribute('data-id'); document.getElementById('modal-confirm-delete-objetivo').style.display = 'flex'; }
     if(e.target.closest('#btn-cancel-delete-objetivo')) { document.getElementById('modal-confirm-delete-objetivo').style.display = 'none'; pendingDeleteObjetivoId = null; }
@@ -384,57 +351,31 @@ document.body.addEventListener('click', async (e) => {
     if(e.target.closest('#btn-aluno-send-msg')) {
         const inp = document.getElementById('aluno-input-forum-msg'); const t = inp.value.trim(); if(!t || !alunoForumAtivoId) return; 
         try { 
-            // Injeção Chat de Academias
-            if(alunoForumAtivoId.startsWith('academia_')) {
-                const idAcademia = alunoForumAtivoId.replace('academia_', '');
-                await addDoc(collection(db, "academias", idAcademia, "mensagens"), { remetente: myUserName, texto: t, timestamp: Date.now() });
-            } else {
-                await addDoc(collection(db, "turmas", minhaTurma, "foruns", alunoForumAtivoId, "mensagens"), { remetente: myUserName, texto: t, timestamp: Date.now() }); 
-            }
+            if(alunoForumAtivoId.startsWith('academia_')) { const idAcademia = alunoForumAtivoId.replace('academia_', ''); await addDoc(collection(db, "academias", idAcademia, "mensagens"), { remetente: myUserName, texto: t, timestamp: Date.now() }); } 
+            else { await addDoc(collection(db, "turmas", minhaTurma, "foruns", alunoForumAtivoId, "mensagens"), { remetente: myUserName, texto: t, timestamp: Date.now() }); }
             inp.value = ''; 
         } catch(err) {} 
     }
 });
 
-// Event Delegation global para Inputs e Selects
 document.body.addEventListener('change', (e) => {
     if(e.target.closest('.agenda-filter-label input')) { carregarAgendaAlunoLista(); }
-    if(e.target.id === 'obj-disciplina') { atualizarModulosMeta(); }
-    if(e.target.id === 'aluno-upload-pap') {
-        const file = e.target.files[0]; if(!file) return; document.getElementById('aluno-pap-file-name').innerText = "Ficheiro: " + file.name; document.getElementById('btn-enviar-pap').style.display = 'block'; const reader = new FileReader(); reader.onload = (ev) => { fPB64 = ev.target.result; }; reader.readAsDataURL(file);
+    if(e.target.id === 'obj-disciplina') { 
+        const disc = e.target.value; const selMod = document.getElementById('obj-modulo'); selMod.innerHTML = ''; if(!disc) { selMod.innerHTML = '<option value="">Mod.</option>'; return; }
+        const matriz = getMatriz(); let mods = null; for(let comp in matriz) { if(matriz[comp][disc]) mods = matriz[comp][disc]; }
+        if(mods) { const modKeys = Object.keys(mods); if(modKeys.every(k=>!isNaN(k))) modKeys.sort((a,b)=>parseInt(a)-parseInt(b)); modKeys.forEach(m => { selMod.innerHTML += `<option value="${m}">${m.toString().startsWith('UC')?m:`M${m}`}</option>`; }); } else { selMod.innerHTML = '<option value="">Mod.</option>'; }
     }
-    if(e.target.id === 'upload-avatar') {
-        const file = e.target.files[0]; if(!file) return;
-        try { const reader = new FileReader(); reader.onload = async (ev) => { const base64 = ev.target.result; document.getElementById('perfil-avatar-img').src = base64; document.getElementById('header-avatar-circle').innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`; await updateDoc(doc(db, "utilizadores", myUserId), { fotoPerfil: base64 }); }; reader.readAsDataURL(file); } catch(err) {} 
-    }
+    if(e.target.id === 'aluno-upload-pap') { const file = e.target.files[0]; if(!file) return; document.getElementById('aluno-pap-file-name').innerText = "Ficheiro: " + file.name; document.getElementById('btn-enviar-pap').style.display = 'block'; const reader = new FileReader(); reader.onload = (ev) => { fPB64 = ev.target.result; }; reader.readAsDataURL(file); }
+    if(e.target.id === 'upload-avatar') { const file = e.target.files[0]; if(!file) return; try { const reader = new FileReader(); reader.onload = async (ev) => { const base64 = ev.target.result; document.getElementById('perfil-avatar-img').src = base64; document.getElementById('header-avatar-circle').innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`; await updateDoc(doc(db, "utilizadores", myUserId), { fotoPerfil: base64 }); }; reader.readAsDataURL(file); } catch(err) {} }
 });
 
-function atualizarModulosMeta() {
-    const disc = document.getElementById('obj-disciplina').value;
-    const selMod = document.getElementById('obj-modulo');
-    selMod.innerHTML = '';
-    if(!disc) { selMod.innerHTML = '<option value="">Mod.</option>'; return; }
-    
-    const matriz = getMatriz();
-    let mods = null;
-    for(let comp in matriz) { if(matriz[comp][disc]) mods = matriz[comp][disc]; }
-    
-    if(mods) {
-        const modKeys = Object.keys(mods);
-        const isNumeric = modKeys.every(k => !isNaN(k));
-        if(isNumeric) modKeys.sort((a,b) => parseInt(a) - parseInt(b));
-        modKeys.forEach(m => {
-            const label = m.toString().startsWith('UC') ? m : `M${m}`;
-            selMod.innerHTML += `<option value="${m}">${label}</option>`;
-        });
-    } else {
-        selMod.innerHTML = '<option value="">Mod.</option>';
-    }
-}
+bindClick('btn-add-objetivo', async () => {
+    const data = { tipo: 'nota', concluido: false, timestamp: Date.now() };
+    data.disciplina = document.getElementById('obj-disciplina').value; data.modulo = document.getElementById('obj-modulo').value; data.notaAlvo = document.getElementById('obj-nota-alvo').value;
+    if(!data.disciplina || !data.modulo || !data.notaAlvo) return alert("Preenche todos os campos."); data.desc = `Tirar ${data.notaAlvo} a ${data.disciplina} no Mod. ${data.modulo}`;
+    try { await addDoc(collection(db, "utilizadores", myUserId, "objetivos"), data); document.getElementById('obj-nota-alvo').value = ''; carregarObjetivosPessoais(); } catch(err) {}
+});
 
-// ==========================================
-// HOME, FCT, PAP BINDINGS E FUNÇÕES GERAIS
-// ==========================================
 bindClick('btn-save-fct', async (e) => { const v = document.getElementById('input-fct-horas').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "fct.horasRealizadas": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
 bindClick('btn-save-pap-tema', async (e) => { const v = document.getElementById('input-pap-tema').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "pap.tema": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-save"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
 bindClick('btn-enviar-pap', async (e) => { if(!fPB64) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { const snap = await getDoc(doc(db, "utilizadores", myUserId)); let axp = snap.exists()&&snap.data().xp?snap.data().xp:0; await updateDoc(doc(db, "utilizadores", myUserId), { papFicheiroEnviado:true, papFicheiroBase64:fPB64, xp:axp+200 }); b.style.backgroundColor="var(--success-green)"; b.innerHTML='<i class="fa-solid fa-check"></i> Submetido'; setTimeout(() => { b.style.display='none'; b.disabled=false; const fNm = document.getElementById('aluno-pap-file-name'); if(fNm) fNm.style.color="var(--success-green)"; }, 2000); } catch(err){} });
@@ -447,56 +388,26 @@ async function construirHomeAdaptativa() {
         const fS = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); fS.forEach(d => { if(!d.data().justificada && !d.data().comprovativoEnviado) tFaltas++; });
         const nS = await getDocs(collection(db, "utilizadores", myUserId, "notas")); nS.forEach(d => { const n = d.data().nota; if(n==='REP'||Number(n)<10) mRep++; });
         const pS = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); pS.forEach(d => { if(d.data().status!=='concluida'){pAtivos++; pHoras+=Number(d.data().horasPresenciais||0);} });
-        
-        if(minhaTurma) {
-            const evSnap = await getDocs(collection(db, "turmas", minhaTurma, "eventos")); const hj = new Date().toISOString().split('T')[0]; let d7 = new Date(); d7.setDate(d7.getDate()+7); const lIso = d7.toISOString().split('T')[0];
-            evSnap.forEach(d => { const e = d.data(); if(e.data>=hj && e.data<=lIso && ['teste','avaliacao','entrega'].includes(e.tipo)) evs.push(e); }); evs.sort((a,b)=>a.data.localeCompare(b.data));
-        }
+        if(minhaTurma) { const evSnap = await getDocs(collection(db, "turmas", minhaTurma, "eventos")); const hj = new Date().toISOString().split('T')[0]; let d7 = new Date(); d7.setDate(d7.getDate()+7); const lIso = d7.toISOString().split('T')[0]; evSnap.forEach(d => { const e = d.data(); if(e.data>=hj && e.data<=lIso && ['teste','avaliacao','entrega'].includes(e.tipo)) evs.push(e); }); evs.sort((a,b)=>a.data.localeCompare(b.data)); }
 
         let alertHtml = ''; 
-        if(tFaltas>0 || pAtivos>0 || mRep>0) {
-            alertHtml += `<div class="card" style="background:linear-gradient(135deg,#ef4444,#b91c1c); color:white; border:none; border-radius:16px; margin-bottom:20px;"><h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-triangle-exclamation"></i> Ação Necessária</h3><p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens pendências urgentes que prejudicam a tua avaliação.</p><ul style="margin-bottom:20px; padding-left:20px; font-size:1.1rem; font-weight:bold; line-height:1.6;">${tFaltas>0?`<li>${tFaltas} Falta(s) injustificada(s)</li>`:''}${mRep>0?`<li>${mRep} Módulo(s) Reprovado(s)</li>`:''}${pAtivos>0?`<li>${pAtivos} PRHF(s) pendentes (${pHoras}h presenciais)</li>`:''}</ul><button class="primary-btn" style="background:white; color:#b91c1c; font-size:1.1rem; padding:15px;" onclick="document.querySelector('.nav-item[data-target=\\'view-aluno-caderneta\\']').click()">Abrir Caderneta e Resolver</button></div>`;
-        } else if(evs.length>0) {
-            const ev = evs[0]; const dF = ev.data.split('-').reverse().join('/');
-            alertHtml += `<div class="card" style="background:linear-gradient(135deg,#f59e0b,#d97706); color:white; border:none; border-radius:16px; margin-bottom:20px;"><h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-calendar-exclamation"></i> Prepara-te</h3><p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens <strong>${ev.titulo}</strong> no dia ${dF}.</p></div>`;
-        } else {
-            alertHtml += `<div class="card" style="background:linear-gradient(135deg,var(--primary-green),var(--primary-hover)); color:white; border:none; border-radius:16px; margin-bottom:20px;"><h3 style="margin-bottom:5px; font-size:1.6rem;"><i class="fa-solid fa-leaf"></i> Dia Tranquilo</h3><p style="font-size:1.05rem; margin-bottom:0; opacity:0.9;">Não tens avaliações marcadas nem pendências.</p></div>`;
-        }
+        if(tFaltas>0 || pAtivos>0 || mRep>0) { alertHtml += `<div class="card" style="background:linear-gradient(135deg,#ef4444,#b91c1c); color:white; border:none; border-radius:16px; margin-bottom:20px;"><h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-triangle-exclamation"></i> Ação Necessária</h3><p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens pendências urgentes que prejudicam a tua avaliação.</p><ul style="margin-bottom:20px; padding-left:20px; font-size:1.1rem; font-weight:bold; line-height:1.6;">${tFaltas>0?`<li>${tFaltas} Falta(s) injustificada(s)</li>`:''}${mRep>0?`<li>${mRep} Módulo(s) Reprovado(s)</li>`:''}${pAtivos>0?`<li>${pAtivos} PRHF(s) pendentes (${pHoras}h presenciais)</li>`:''}</ul><button class="primary-btn" style="background:white; color:#b91c1c; font-size:1.1rem; padding:15px;" onclick="document.querySelector('.nav-item[data-target=\\'view-aluno-caderneta\\']').click()">Abrir Caderneta e Resolver</button></div>`; } 
+        else if(evs.length>0) { const ev = evs[0]; const dF = ev.data.split('-').reverse().join('/'); alertHtml += `<div class="card" style="background:linear-gradient(135deg,#f59e0b,#d97706); color:white; border:none; border-radius:16px; margin-bottom:20px;"><h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-calendar-exclamation"></i> Prepara-te</h3><p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens <strong>${ev.titulo}</strong> no dia ${dF}.</p></div>`; } 
+        else { alertHtml += `<div class="card" style="background:linear-gradient(135deg,var(--primary-green),var(--primary-hover)); color:white; border:none; border-radius:16px; margin-bottom:20px;"><h3 style="margin-bottom:5px; font-size:1.6rem;"><i class="fa-solid fa-leaf"></i> Dia Tranquilo</h3><p style="font-size:1.05rem; margin-bottom:0; opacity:0.9;">Não tens avaliações marcadas nem pendências.</p></div>`; }
         alertCont.innerHTML = alertHtml;
 
-        let emoHtml = '';
-        if(minhaTurma) {
-            const tSnap = await getDoc(doc(db, "turmas", minhaTurma));
-            if(tSnap.exists() && tSnap.data().missaoTitulo) {
-                const tm = tSnap.data();
-                emoHtml += `<div class="card" id="missao-card" style="border-left:4px solid var(--warning-yellow); margin-bottom:20px;"><h3 style="font-size:1rem; margin-bottom:5px; color:var(--text-light);"><i class="fa-solid fa-users"></i> Missão da Turma</h3><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:${tm.missaoProgresso!==undefined?'10px':'0'};">${tm.missaoTitulo}</p>${tm.missaoProgresso!==undefined?`<div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${tm.missaoProgresso}%; background:var(--warning-yellow);"></div></div>`:''}</div>`;
-            }
-        }
+        let emoHtml = ''; if(minhaTurma) { const tSnap = await getDoc(doc(db, "turmas", minhaTurma)); if(tSnap.exists() && tSnap.data().missaoTitulo) { const tm = tSnap.data(); emoHtml += `<div class="card" id="missao-card" style="border-left:4px solid var(--warning-yellow); margin-bottom:20px;"><h3 style="font-size:1rem; margin-bottom:5px; color:var(--text-light);"><i class="fa-solid fa-users"></i> Missão da Turma</h3><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:${tm.missaoProgresso!==undefined?'10px':'0'};">${tm.missaoTitulo}</p>${tm.missaoProgresso!==undefined?`<div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${tm.missaoProgresso}%; background:var(--warning-yellow);"></div></div>`:''}</div>`; } }
         const hjIso = new Date().toISOString().split('T')[0]; const hSnap = await getDoc(doc(db, "utilizadores", myUserId, "humor", hjIso));
-        if(!hSnap.exists()) {
-            emoHtml += `<div class="card" id="checkin-card-dinamico" style="border-left:4px solid var(--accent-purple); margin-bottom:20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="font-size: 1rem; margin:0; color:var(--text-light);"><i class="fa-solid fa-heart-pulse"></i> Como te sentes hoje?</h3></div><div style="display: flex; justify-content: space-around; font-size: 2.2rem;" id="mood-buttons-dinamicos"><span class="mood-btn-dinamico" data-mood="😡" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">😡</span><span class="mood-btn-dinamico" data-mood="🙁" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">🙁</span><span class="mood-btn-dinamico" data-mood="😐" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">😐</span><span class="mood-btn-dinamico" data-mood="🙂" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">🙂</span><span class="mood-btn-dinamico" data-mood="🤩" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">🤩</span></div></div>`;
-        }
+        if(!hSnap.exists()) { emoHtml += `<div class="card" id="checkin-card-dinamico" style="border-left:4px solid var(--accent-purple); margin-bottom:20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="font-size: 1rem; margin:0; color:var(--text-light);"><i class="fa-solid fa-heart-pulse"></i> Como te sentes hoje?</h3></div><div style="display: flex; justify-content: space-around; font-size: 2.2rem;" id="mood-buttons-dinamicos"><span class="mood-btn-dinamico" data-mood="😡" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">😡</span><span class="mood-btn-dinamico" data-mood="🙁" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">🙁</span><span class="mood-btn-dinamico" data-mood="😐" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">😐</span><span class="mood-btn-dinamico" data-mood="🙂" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">🙂</span><span class="mood-btn-dinamico" data-mood="🤩" style="cursor:pointer; filter:grayscale(100%); transition:0.2s;">🤩</span></div></div>`; }
         emoCont.innerHTML = emoHtml;
-        document.querySelectorAll('.mood-btn-dinamico').forEach(btn => {
-            btn.addEventListener('mouseover',()=>btn.style.filter='grayscale(0%)'); btn.addEventListener('mouseout',()=>btn.style.filter='grayscale(100%)');
-            btn.addEventListener('click', async (e) => {
-                const m = e.currentTarget.getAttribute('data-mood'); const s = await getDoc(doc(db, "utilizadores", myUserId)); let aXp = s.exists()&&s.data().xp?s.data().xp:0;
-                await setDoc(doc(db, "utilizadores", myUserId, "humor", hjIso), { humor:m, timestamp:Date.now(), dataIso:hjIso }); await updateDoc(doc(db, "utilizadores", myUserId), { xp: aXp+10 }); carregarGamificacao({xp: aXp+10}); document.getElementById('checkin-card-dinamico').innerHTML = '<div style="text-align:center; color:var(--success-green); font-weight:bold; font-size:0.95rem; padding:10px;">Obrigado! <span style="color:var(--warning-yellow);">+10 XP</span></div>';
-            });
-        });
+        document.querySelectorAll('.mood-btn-dinamico').forEach(btn => { btn.addEventListener('mouseover',()=>btn.style.filter='grayscale(0%)'); btn.addEventListener('mouseout',()=>btn.style.filter='grayscale(100%)'); btn.addEventListener('click', async (e) => { const m = e.currentTarget.getAttribute('data-mood'); const s = await getDoc(doc(db, "utilizadores", myUserId)); let aXp = s.exists()&&s.data().xp?s.data().xp:0; await setDoc(doc(db, "utilizadores", myUserId, "humor", hjIso), { humor:m, timestamp:Date.now(), dataIso:hjIso }); await updateDoc(doc(db, "utilizadores", myUserId), { xp: aXp+10 }); carregarGamificacao({xp: aXp+10}); document.getElementById('checkin-card-dinamico').innerHTML = '<div style="text-align:center; color:var(--success-green); font-weight:bold; font-size:0.95rem; padding:10px;">Obrigado! <span style="color:var(--warning-yellow);">+10 XP</span></div>'; }); });
     } catch(e) { }
 }
 
-async function verificarEpocaExames() {
-    if(!minhaTurma) return; const tSnap = await getDoc(doc(db, "turmas", minhaTurma)); const tSnapData = tSnap.data();
-    if(tSnap.exists() && tSnapData.epocaExames && tSnapData.epocaExames.ativa) {
-        document.getElementById('exam-mode-banner').style.display='block'; document.body.style.borderTop="5px solid #8b5cf6";
-        if(tSnapData.epocaExames.dataFim) { const df = Math.ceil((new Date(tSnapData.epocaExames.dataFim) - new Date()) / (1000 * 60 * 60 * 24)); document.getElementById('exam-countdown').innerText = df > 0 ? `Faltam ${df} dias` : "Já terminou"; }
-    }
-}
+async function verificarEpocaExames() { if(!minhaTurma) return; const tSnap = await getDoc(doc(db, "turmas", minhaTurma)); const tSnapData = tSnap.data(); if(tSnap.exists() && tSnapData.epocaExames && tSnapData.epocaExames.ativa) { document.getElementById('exam-mode-banner').style.display='block'; document.body.style.borderTop="5px solid #8b5cf6"; if(tSnapData.epocaExames.dataFim) { const df = Math.ceil((new Date(tSnapData.epocaExames.dataFim) - new Date()) / (1000 * 60 * 60 * 24)); document.getElementById('exam-countdown').innerText = df > 0 ? `Faltam ${df} dias` : "Já terminou"; } } }
 
 // ==========================================
-// CADERNETA E VISTAS COMPLEMENTARES
+// CADERNETA: NOTAS (PAUTA GLOBAL) E EVOLUÇÃO (EXTRATO)
 // ==========================================
 async function carregarNotasAluno() {
     const cCont = document.getElementById('aluno-caderneta-content'); if(!cCont) return;
@@ -645,7 +556,7 @@ async function carregarPrhfsAluno() {
         prhfsArr.forEach(p => {
             const isUrgente = p.moduloTerminado === true || p.moduloTerminado === "true"; const cor = isUrgente ? 'var(--danger-red)' : 'var(--warning-yellow)'; const txtSt = isUrgente ? 'URGENTE (Mód. Terminado)' : 'EM CURSO';
             const hPres = Number(p.horasPresenciais || 0);
-            let btn = ''; if(p.status !== 'concluida' && hPres > 0) { btn = `<button class="primary-btn small-btn" style="width:100%; background-color:${cor}; color:${cor === 'var(--warning-yellow)' ? 'black' : 'white'};" onclick="window.abrirAcaoPrhf('${p.id}', '${p.disciplina}', '${p.modulo}', '${p.prazo}')"><i class="fa-regular fa-calendar"></i> Sugerir Horário</button>`; }
+            let btn = ''; if(p.status !== 'concluida' && hPres > 0) { btn = `<button class="primary-btn small-btn" style="width:100%; background-color:${cor}; color:${cor === 'var(--warning-yellow)' ? 'black' : 'white'};" onclick="document.getElementById('view-aluno-caderneta').style.display='none'; document.getElementById('view-aluno-acao-prhf').style.display='block';"><i class="fa-regular fa-calendar"></i> Sugerir Horário</button>`; }
             html += `<div class="card" style="margin-bottom:15px; border-left: 4px solid ${cor};"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="font-size: 1.1rem; color:var(--text-light);">${p.disciplina} (Mod. ${p.modulo})</strong><span style="color:${cor}; font-size:0.75rem; font-weight:bold;">${txtSt}</span></div><p style="font-size:0.85rem; color:var(--text-light); margin-bottom:10px;">${p.descricao}</p><div style="font-size:0.8rem; margin-bottom: 15px; border-top:1px dashed #333; padding-top:10px; color:var(--text-light);">Data Limite: <strong style="color:${cor};">${p.prazo.split('-').reverse().join('/')}</strong><br>Horas Presenciais: <strong>${hPres}h</strong></div>${btn}</div>`;
         });
         document.getElementById('aluno-caderneta-content').innerHTML = html;
@@ -666,51 +577,6 @@ async function carregarObservacoesAluno(rSel = '1_intercalar') {
         const gl = dR.global || '<span style="color:var(--text-muted);">Sem observações globais.</span>'; cH += `<div class="card" style="margin-top:15px; border:1px solid var(--warning-yellow); background:rgba(255,204,0,0.05); padding:15px;"><h3 style="color:var(--warning-yellow); margin-bottom:10px; font-size:1.1rem;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3><p style="color:var(--text-light); font-size:0.95rem; line-height:1.5; margin:0;">${gl}</p></div></div>`;
         document.getElementById('reuniao-content-area').innerHTML = cH;
     } catch(e) {}
-}
-
-async function carregarAgendaAlunoLista() {
-    const sC = document.getElementById('aluno-agenda-content'); sC.innerHTML = '<p class="text-muted center">A sincronizar agenda...</p>'; if(!minhaTurma) { sC.innerHTML = getEmptyState('Sem turma configurada.', 'fa-calendar-xmark'); return; }
-    
-    // Leitura à prova de falhas dos checkboxes
-    const elT = document.getElementById('aluno-filtro-agenda-testes');
-    const elTr = document.getElementById('aluno-filtro-agenda-trabalhos');
-    const elO = document.getElementById('aluno-filtro-agenda-outros');
-    const mT = elT ? elT.checked : true; 
-    const mTr = elTr ? elTr.checked : true; 
-    const mO = elO ? elO.checked : true;
-    
-    try {
-        const evDb = await getDocs(collection(db, "turmas", minhaTurma, "eventos")); 
-        if(evDb.empty) { sC.innerHTML = getEmptyState('Sem eventos na escola.', 'fa-calendar-xmark'); return; }
-        
-        let evs = []; 
-        evDb.forEach(d => { 
-            const e = d.data(); 
-            let bgC = '#8b5cf6'; let txtT = 'Evento'; 
-            
-            if(e.tipo === 'teste' || e.tipo === 'avaliacao') { 
-                if(mT) { bgC = '#f59e0b'; txtT = 'Avaliação'; evs.push({...e, cor: bgC, txt: txtT}); } 
-            } else if(e.tipo === 'trabalho' || e.tipo === 'entrega') { 
-                if(mTr) { bgC = '#00d2ff'; txtT = 'Entrega'; evs.push({...e, cor: bgC, txt: txtT}); } 
-            } else { 
-                if(mO) evs.push({...e, cor: bgC, txt: txtT}); 
-            } 
-        });
-        
-        if(evs.length === 0) { sC.innerHTML = getEmptyState('Nenhum evento com os filtros atuais.', 'fa-filter'); return; }
-        
-        const hj = new Date().toISOString().split('T')[0]; 
-        const fut = evs.filter(e => (e.data || '') >= hj).sort((a,b) => (a.data || '').localeCompare(b.data || '')); 
-        const pas = evs.filter(e => (e.data || '') < hj).sort((a,b) => (b.data || '').localeCompare(a.data || ''));
-        const mA = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; 
-        let html = '';
-        
-        const rEv = (ev) => { if (!ev.data) return ''; const dp = ev.data.split('-'); const mes = mA[parseInt(dp[1])-1]; return `<div class="calendar-event-card" style="border-left-color:${ev.cor}; margin-bottom:10px;"><div class="calendar-date-box"><span class="day">${dp[2]}</span><span class="month" style="color:${ev.cor};">${mes}</span></div><div class="calendar-info"><h4 style="margin:0; color:var(--text-light);">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt||'evento').toUpperCase()}</span></div></div>`; };
-        
-        if(fut.length > 0) fut.forEach(e => html += rEv(e)); else html += '<p class="text-muted center">Sem eventos futuros.</p>';
-        if(pas.length > 0) { html += '<div class="calendar-divider" style="margin-top:20px;"><span>Passados</span></div>'; pas.forEach(e => html += rEv(e)); } 
-        sC.innerHTML = html;
-    } catch(e) { sC.innerHTML = getEmptyState('Erro ao sincronizar.', 'fa-triangle-exclamation'); }
 }
 
 const getCorEspecial = (dsc) => {
@@ -735,7 +601,6 @@ async function carregarHorarioAluno() {
     try {
         const dS = await getDoc(doc(db, "turmas", minhaTurma)); 
         let hb = {}; 
-        
         if(dS.exists() && dS.data().horario && typeof dS.data().horario === 'object') {
             hb = dS.data().horario;
         }
@@ -809,7 +674,7 @@ async function carregarHorarioAluno() {
 async function carregarForuns() {
     const cont = document.getElementById('aluno-forum-channel-list'); cont.innerHTML = '<p class="text-muted center">A configurar fóruns...</p>'; if(!minhaTurma) return;
     
-    // Injeção do Fórum da Academia do Aluno (Networking e Apadrinhamento)
+    // Injeção do Fórum da Academia do Aluno
     let acHtml = '';
     if(myAcademia && ACADEMIAS_INFO[myAcademia]) {
         const aI = ACADEMIAS_INFO[myAcademia];
