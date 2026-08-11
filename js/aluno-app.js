@@ -665,9 +665,13 @@ async function carregarHorarioAluno() {
     
     try {
         const dS = await getDoc(doc(db, "turmas", minhaTurma)); 
-        let hb = {}; if(dS.exists() && dS.data().horario) hb = dS.data().horario;
+        let hb = {}; 
         
-        // CORREÇÃO: Cofre de segurança para a procura de professores
+        // CORREÇÃO: Prevenção contra dados antigos ou corrompidos na Firebase (null, arrays, etc)
+        if(dS.exists() && dS.data().horario && typeof dS.data().horario === 'object') {
+            hb = dS.data().horario;
+        }
+        
         let profsCache = {};
         try {
             const pSnap = await getDocs(query(collection(db, "utilizadores"), where("papel", "==", "professor")));
@@ -680,7 +684,7 @@ async function carregarHorarioAluno() {
                 } 
             });
         } catch (erroProfs) {
-            console.warn("Aviso: Professores não carregados, a desenhar o horário na mesma.");
+            console.warn("Aviso: Falha ao carregar professores, a avançar na mesma.");
         }
 
         const bK = ['1', '2', '3', '4', '1300', '5', '6', '7']; 
@@ -697,7 +701,8 @@ async function carregarHorarioAluno() {
             
             bK.forEach(b => { 
                 const dc = hb[`${dSStr}_${b}`]; 
-                if(dc) { 
+                // CORREÇÃO: Garante que só desenha se 'dc' for um texto válido (ignora dados velhos/erros)
+                if(dc && typeof dc === 'string' && dc.trim() !== '') { 
                     const sty = getCorEspecial(dc); 
                     const profNome = profsCache[dc] ? `Prof. ${profsCache[dc]}` : 'Prof. A Atribuir';
                     h += `<div class="horario-list-item" style="border-left-color:${sty.c}; background-color:${sty.bg};"><div class="horario-time-col">${bT[b]}</div><div class="horario-disc-col"><div class="horario-disc-name">${dc}</div><div class="horario-prof" style="font-size:0.75rem; color:#888; margin-top:4px;">${profNome}</div></div></div>`; 
@@ -715,17 +720,22 @@ async function carregarHorarioAluno() {
             bK.forEach(b => { 
                 h += `<div class="horario-time">${bT[b]}</div>`; dI = new Date(dT); 
                 for(let i=0; i<5; i++) { 
-                    const dSStr = `${dI.getFullYear()}-${String(dI.getMonth()+1).padStart(2,'0')}-${String(dI.getDate()).padStart(2,'0')}`; const dc = hb[`${dSStr}_${b}`]; 
-                    if(dc) { const sty = getCorEspecial(dc); h += `<div class="horario-slot filled" style="border-color:${sty.c}; background-color:${sty.bg};"><strong>${dc}</strong></div>`; } 
-                    else { h += `<div class="horario-slot"></div>`; }
+                    const dSStr = `${dI.getFullYear()}-${String(dI.getMonth()+1).padStart(2,'0')}-${String(dI.getDate()).padStart(2,'0')}`; 
+                    const dc = hb[`${dSStr}_${b}`]; 
+                    if(dc && typeof dc === 'string' && dc.trim() !== '') { 
+                        const sty = getCorEspecial(dc); 
+                        h += `<div class="horario-slot filled" style="border-color:${sty.c}; background-color:${sty.bg};"><strong>${dc}</strong></div>`; 
+                    } else { 
+                        h += `<div class="horario-slot"></div>`; 
+                    }
                     dI.setDate(dI.getDate()+1); 
                 } 
             });
             sC.innerHTML = h + '</div>';
         }
     } catch(e) { 
-        console.error("Erro critico no horario", e);
-        sC.innerHTML = '<p class="text-danger center">Erro a gerar o horário.</p>'; 
+        console.error("Erro critico na renderização do horário:", e);
+        sC.innerHTML = '<p class="text-danger center">Erro ao desenhar horário. Tente recarregar.</p>'; 
     }
 }
 
