@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Turma PRO - Aluno</title>
     <link rel="icon" type="image/png" href="logo_tur.png">
-    <link rel="stylesheet" href="style.css?v=28">
+    <link rel="stylesheet" href="style.css?v=29">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
@@ -31,6 +31,23 @@
         .badge-icon { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 8px auto; background: rgba(255,255,255,0.05); color: #555; border: 2px solid #333; transition: 0.3s; }
         @keyframes pulseGold { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); } }
         .badge-item.earned .badge-icon { background: rgba(255,215,0,0.15) !important; color: #ffd700 !important; border-color: #ffd700 !important; animation: pulseGold 2s infinite; }
+
+        /* Etiqueta Dourada do Delegado */
+        #btn-modo-delegado {
+            display: none;
+            background: linear-gradient(135deg, #ffd700, #f59e0b);
+            color: #000;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.65rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 5px rgba(255, 215, 0, 0.3);
+            transition: 0.2s;
+            text-transform: uppercase;
+        }
+        #btn-modo-delegado:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
@@ -40,7 +57,11 @@
                 <div class="profile-avatar" id="header-avatar-circle" style="width: 38px; height: 38px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 0; flex-shrink: 0;">
                     <i class="fa-solid fa-user" style="color: white; font-size: 1rem;"></i>
                 </div>
-                <span id="header-user-name-aluno" style="margin: 0; font-weight: bold; line-height: 1;">A carregar...</span>
+                <div style="display: flex; flex-direction: column;">
+                    <span id="header-user-name-aluno" style="margin: 0; font-weight: bold; line-height: 1.2;">A carregar...</span>
+                    <!-- Botão de Acesso ao Modo Delegado -->
+                    <button id="btn-modo-delegado" onclick="window.location.href='delegado.html'"><i class="fa-solid fa-crown"></i> Painel Delegado</button>
+                </div>
             </div>
             <div style="display: flex; align-items: center; gap: 15px;">
                 <button id="btn-open-notificacoes" style="background:none; border:none; color:var(--text-light); font-size:1.3rem; position:relative; cursor:pointer;">
@@ -60,7 +81,6 @@
                         <h2 id="welcome-message" style="margin-bottom: 3px; font-size: 1.4rem;">Olá, <span id="welcome-nome">Aluno</span>!</h2>
                         <p style="font-size: 0.85rem; color: var(--text-muted);"><span id="aluno-rank-title">A classificar...</span></p>
                     </div>
-                    <!-- Caixa XP Apenas Informativa (Sem clique) -->
                     <div style="background: rgba(0, 204, 136, 0.1); border: 1px solid var(--primary-green); padding: 6px 12px; border-radius: 20px; text-align: center;">
                         <div style="font-weight: bold; color: var(--primary-green); font-size: 1rem;"><i class="fa-solid fa-bolt"></i> <span id="aluno-xp-atual">0</span> <span style="font-size: 0.7rem;">XP</span></div>
                     </div>
@@ -72,11 +92,9 @@
                     <div id="exam-countdown" style="font-size: 1.5rem; font-weight: bold; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; display: inline-block;">Faltam X dias</div>
                 </div>
 
-                <!-- ALERTAS E EMOÇÕES -->
                 <div id="hero-alert-section"></div>
                 <div id="hero-emotional-section"></div>
 
-                <!-- MATERIAIS E PASSAPORTE NOVO LAYOUT -->
                 <div class="lms-action-grid" style="margin-bottom: 25px;">
                     <button class="lms-btn" id="btn-open-materiais" style="border-color:#0099ff; color:#0099ff; background: rgba(0, 153, 255, 0.05); display: flex;">
                         <i class="fa-solid fa-book-open"></i><span>Materiais</span>
@@ -86,12 +104,9 @@
                     </button>
                 </div>
 
-                <!-- MISSÕES NO FUNDO -->
                 <div id="missoes-section" style="margin-bottom: 20px;">
                     <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;"><i class="fa-solid fa-bullseye"></i> Missões Disponíveis</h3>
-                    <div id="missoes-container">
-                        <!-- Gerado por JS -->
-                    </div>
+                    <div id="missoes-container"></div>
                 </div>
             </div>
 
@@ -121,9 +136,7 @@
                         <i class="fa-solid fa-chevron-down" style="color:var(--text-muted); transition:0.3s;"></i>
                     </div>
                     <div id="badges-wrapper" style="display:none; padding-top: 10px;">
-                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 15px; text-align: center;" id="badges-container">
-                            <!-- Gerado via JS -->
-                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 15px; text-align: center;" id="badges-container"></div>
                     </div>
                 </div>
 
@@ -135,7 +148,6 @@
                         <input type="hidden" id="obj-tipo" value="nota">
                         <div id="obj-setup-nota" style="display:flex; gap:8px;">
                             <select id="obj-disciplina" class="input-padrao" style="flex:1; margin:0;"></select>
-                            <!-- SUBSTITUÍDO: Agora é um Select dinâmico -->
                             <select id="obj-modulo" class="input-padrao" style="width:75px; margin:0;"></select>
                             <input type="number" id="obj-nota-alvo" placeholder="Nota" class="input-padrao" style="width:70px; margin:0;" min="10" max="20">
                         </div>
@@ -227,8 +239,10 @@
                     <label class="agenda-filter-label"><input type="checkbox" id="aluno-filtro-agenda-outros" checked> <span style="color:#b82bf2;">●</span> Outros</label>
                 </div>
                 
+                <!-- ONDE OS EVENTOS APARECEM -->
                 <div id="aluno-agenda-content" style="margin-top:10px; overflow-x: auto; padding-bottom: 40px;"><p class="text-muted" style="text-align:center;">A carregar dados...</p></div>
 
+                <!-- ONDE O HORÁRIO APARECE -->
                 <div id="aluno-horario-container" style="display:none;">
                     <div class="falta-tabs" style="margin-bottom: 15px;">
                         <button class="falta-tab-btn active" id="btn-aluno-horario-dia">Vista Diária</button>
