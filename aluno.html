@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Turma PRO - Aluno</title>
     <link rel="icon" type="image/png" href="logo_tur.png">
-    <link rel="stylesheet" href="style.css?v=25">
+    <link rel="stylesheet" href="style.css?v=26">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
@@ -25,34 +25,15 @@
         .input-padrao { background: var(--bg-dark); border: 1px solid #333; color: var(--text-light); border-radius: 8px; padding: 10px; font-family: inherit; }
         .input-padrao:focus { outline: none; border-color: var(--primary-green); }
         
-        /* MAGIA UX: Efeito Fade-In nas abas e transições */
-        @keyframes fadeSlide {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        main.app-content > div, #aluno-caderneta-content {
-            animation: fadeSlide 0.3s ease-out forwards;
-        }
+        @keyframes fadeSlide { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        main.app-content > div, #aluno-caderneta-content { animation: fadeSlide 0.3s ease-out forwards; }
 
-        /* MAGIA UX: Pulsar nas Medalhas Ganhas */
         .badge-icon { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 8px auto; background: rgba(255,255,255,0.05); color: #555; border: 2px solid #333; transition: 0.3s; }
-        @keyframes pulseGold {
-            0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
-        }
-        .badge-item.earned .badge-icon { 
-            background: rgba(255,215,0,0.15) !important; color: #ffd700 !important; border-color: #ffd700 !important;
-            animation: pulseGold 2s infinite; 
-        }
+        @keyframes pulseGold { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); } }
+        .badge-item.earned .badge-icon { background: rgba(255,215,0,0.15) !important; color: #ffd700 !important; border-color: #ffd700 !important; animation: pulseGold 2s infinite; }
 
-        /* MAGIA UX: Efeito Brilho e "Pop" nas Missões Aceites */
         .mission-card { transition: all 0.3s ease; }
-        .mission-card.accepted {
-            border-color: var(--success-green) !important;
-            box-shadow: 0 0 15px rgba(0, 204, 136, 0.15);
-            transform: scale(1.02);
-        }
+        .mission-card.accepted { border-color: var(--success-green) !important; box-shadow: 0 0 15px rgba(0, 204, 136, 0.15); transform: scale(1.02); }
     </style>
 </head>
 <body>
@@ -95,12 +76,9 @@
 
                 <div id="hero-alert-section"></div>
 
-                <!-- NOVA SECÇÃO: MISSÕES -->
                 <div id="missoes-section" style="margin-bottom: 20px;">
                     <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;"><i class="fa-solid fa-bullseye"></i> Missões Disponíveis</h3>
-                    <div id="missoes-container">
-                        <p class="text-muted center">A carregar missões...</p>
-                    </div>
+                    <div id="missoes-container"><p class="text-muted center">A carregar missões...</p></div>
                 </div>
 
                 <div id="hero-emotional-section"></div>
@@ -132,16 +110,12 @@
 
                 <div class="card" id="perfil-competencias-container" style="border-left: 4px solid #0ea5e9; margin-bottom: 20px;">
                     <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: var(--text-light);"><i class="fa-solid fa-id-card"></i> Passaporte Profissional</h3>
-                    <div id="barras-competencias-perfil">
-                        <p class="text-muted center">A gerar perfil...</p>
-                    </div>
+                    <div id="barras-competencias-perfil"><p class="text-muted center">A gerar perfil...</p></div>
                 </div>
 
                 <div class="card" style="margin-bottom: 20px;">
                     <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: var(--text-light);"><i class="fa-solid fa-award"></i> Conquistas</h3>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center;" id="badges-container">
-                        <!-- Gerado via JS -->
-                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center;" id="badges-container"></div>
                 </div>
 
                 <div class="card" style="border-left: 4px solid var(--warning-yellow);">
@@ -153,6 +127,7 @@
                             <option value="nota">Atingir nota num Módulo</option>
                             <option value="prhf">Concluir Plano de Recuperação (PRHF)</option>
                             <option value="reconhecimento">Receber Registo Positivo (+ XP)</option>
+                            <option value="assiduidade">Assiduidade: Ter 0 Faltas Injustificadas</option>
                         </select>
                         <div id="obj-setup-nota" style="display:flex; gap:8px;">
                             <select id="obj-disciplina" class="input-padrao" style="flex:1; margin:0;"></select>
@@ -166,9 +141,7 @@
 
                 <div class="card" style="border-left: 4px solid #ffd700; margin-bottom: 20px;">
                     <h3 style="font-size: 1.1rem; color: var(--text-light); margin-bottom: 15px;"><i class="fa-solid fa-trophy"></i> Rankings</h3>
-                    <div id="ranking-turma-container">
-                        <p class="text-muted center">A classificar alunos e academias...</p>
-                    </div>
+                    <div id="ranking-turma-container"><p class="text-muted center">A classificar alunos...</p></div>
                 </div>
             </div>
 
@@ -208,7 +181,8 @@
                     <button class="falta-tab-btn" id="tab-aluno-notas">Notas</button>
                     <button class="falta-tab-btn" id="tab-aluno-faltas">Faltas</button>
                     <button class="falta-tab-btn" id="tab-aluno-prhfs">PRHFs</button>
-                    <button class="falta-tab-btn" id="tab-aluno-evolucao" style="color: var(--primary-green); border-color: var(--primary-green);"><i class="fa-solid fa-chart-line"></i> Evolução PRO</button>
+                    <!-- BOTÃO EVOLUÇÃO LIMPO DE DESTAQUES -->
+                    <button class="falta-tab-btn" id="tab-aluno-evolucao">Evolução PRO</button>
                     <button class="falta-tab-btn" id="tab-aluno-observacoes">Reuniões</button>
                 </div>
 
@@ -225,25 +199,13 @@
 
             <!-- VISTA AÇÃO PRHF -->
             <div id="view-aluno-acao-prhf" style="display: none;">
-                <div class="class-header" style="margin-bottom: 10px;"><button id="btn-voltar-acao-prhf" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar aos Planos</button></div>
-                
+                <div class="class-header" style="margin-bottom: 10px;"><button id="btn-voltar-acao-prhf" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
                 <div class="card" style="margin-bottom: 20px; border-left: 4px solid var(--warning-yellow);">
                     <h3 style="margin-bottom: 5px; font-size: 1.1rem; color: var(--text-light);" id="prhf-acao-titulo">Disciplina</h3>
-                    <div style="display:flex; justify-content:space-between; margin-bottom: 15px; font-size:0.8rem; border-bottom: 1px dashed #333; padding-bottom:10px;">
-                        <span>Data Limite: <strong id="prhf-acao-prazo" style="color:var(--warning-yellow);">...</strong></span>
-                    </div>
-                    
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 15px; font-size:0.8rem; border-bottom: 1px dashed #333; padding-bottom:10px;"><span>Data Limite: <strong id="prhf-acao-prazo" style="color:var(--warning-yellow);">...</strong></span></div>
                     <h4 style="font-size: 0.95rem; margin-bottom: 10px; margin-top: 15px; color:var(--primary-green);">Agendar Sessão Presencial</h4>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Indica o dia e o horário para validação do Professor.</p>
-                    
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                        <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Data Sugerida</label><input type="date" id="aluno-prhf-proposta-data" style="margin:0; width:100%;" class="input-padrao"></div>
-                    </div>
-                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                        <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Hora de Início</label><input type="time" id="aluno-prhf-proposta-hora-inicio" style="margin:0; width:100%;" class="input-padrao"></div>
-                        <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Hora de Fim</label><input type="time" id="aluno-prhf-proposta-hora-fim" style="margin:0; width:100%;" class="input-padrao"></div>
-                    </div>
-                    
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;"><div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Data</label><input type="date" id="aluno-prhf-proposta-data" style="margin:0; width:100%;" class="input-padrao"></div></div>
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;"><div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Início</label><input type="time" id="aluno-prhf-proposta-hora-inicio" style="margin:0; width:100%;" class="input-padrao"></div><div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Fim</label><input type="time" id="aluno-prhf-proposta-hora-fim" style="margin:0; width:100%;" class="input-padrao"></div></div>
                     <button id="btn-enviar-proposta-prhf" class="primary-btn" style="width:100%; background-color: var(--primary-green);">Enviar Proposta</button>
                 </div>
             </div>
@@ -273,15 +235,12 @@
                     </div>
                 </div>
 
-                <div id="aluno-agenda-content" style="margin-top:10px; overflow-x: auto; padding-bottom: 40px;">
-                    <p class="text-muted" style="text-align:center;">A carregar dados...</p>
-                </div>
+                <div id="aluno-agenda-content" style="margin-top:10px; overflow-x: auto; padding-bottom: 40px;"><p class="text-muted" style="text-align:center;">A carregar dados...</p></div>
             </div>
 
             <!-- VISTA FÓRUM -->
             <div id="view-aluno-forum" style="display: none; flex-direction:column;">
                 <button id="btn-create-chat-aluno" class="primary-btn" style="background:var(--bg-dark); border:2px dashed var(--primary-green); color:var(--primary-green); width: 100%; margin-bottom: 20px; font-size:1.1rem; padding:15px;"><i class="fa-solid fa-plus"></i> Novo Grupo de Estudo</button>
-                
                 <div id="aluno-forum-channel-list"></div>
 
                 <div id="aluno-forum-chat-view" style="display:none; flex-direction:column; height:70vh; background:var(--bg-card); border-radius:12px; border:1px solid #333; overflow:hidden;">
@@ -300,18 +259,10 @@
             <!-- MODAL FÓRUM (Colegas) -->
             <div id="modal-criar-forum" class="modal-overlay">
                 <div class="action-sheet" style="max-width:400px; border-radius:12px; margin:20px; animation: none;">
-                    <h3 style="margin-bottom: 15px; color:var(--primary-green);"><i class="fa-solid fa-comments"></i> Novo Grupo de Estudo</h3>
-                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">Cria um grupo e escolhe os colegas da tua turma que queres adicionar.</p>
-                    <input type="text" id="input-nome-novo-forum" placeholder="Nome do Grupo (Ex: Trabalho de Física)" style="width:100%; margin-bottom:15px;" class="input-padrao">
-                    
-                    <div id="lista-colegas-forum" style="max-height: 150px; overflow-y: auto; background: #111; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333;">
-                        <p class="text-muted center">A carregar turma...</p>
-                    </div>
-
-                    <div style="display:flex; gap:10px;">
-                        <button id="btn-cancelar-novo-forum" class="secondary-btn">Cancelar</button>
-                        <button id="btn-confirm-novo-forum" class="primary-btn">Criar Grupo</button>
-                    </div>
+                    <h3 style="margin-bottom: 15px; color:var(--primary-green);"><i class="fa-solid fa-comments"></i> Novo Grupo</h3>
+                    <input type="text" id="input-nome-novo-forum" placeholder="Nome do Grupo (Ex: Trabalho)" style="width:100%; margin-bottom:15px;" class="input-padrao">
+                    <div id="lista-colegas-forum" style="max-height: 150px; overflow-y: auto; background: #111; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333;"></div>
+                    <div style="display:flex; gap:10px;"><button id="btn-cancelar-novo-forum" class="secondary-btn">Cancelar</button><button id="btn-confirm-novo-forum" class="primary-btn">Criar Grupo</button></div>
                 </div>
             </div>
 
@@ -327,10 +278,7 @@
                         <div class="progress-bar-bg" style="margin-bottom: 20px;"><div class="progress-bar-fill" id="aluno-fct-progress" style="width:0%;"></div></div>
                         <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid #333;">
                             <label style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; display: block;">Atualizar as minhas horas:</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="number" id="input-fct-horas" placeholder="Ex: 120" style="margin: 0; flex: 1;" class="input-padrao">
-                                <button id="btn-save-fct" class="primary-btn" style="width: auto; padding: 0 20px;"><i class="fa-solid fa-check"></i></button>
-                            </div>
+                            <div style="display: flex; gap: 10px;"><input type="number" id="input-fct-horas" placeholder="Ex: 120" style="margin: 0; flex: 1;" class="input-padrao"><button id="btn-save-fct" class="primary-btn" style="width: auto; padding: 0 20px;"><i class="fa-solid fa-check"></i></button></div>
                         </div>
                     </div>
                 </div>
@@ -340,17 +288,11 @@
                     <div class="card">
                         <div style="margin-bottom: 20px;">
                             <label style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; display: block;">Tema do Projeto:</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="text" id="input-pap-tema" placeholder="O teu tema..." style="margin: 0; flex: 1;" class="input-padrao">
-                                <button id="btn-save-pap-tema" class="primary-btn" style="width: auto; padding: 0 20px;"><i class="fa-solid fa-save"></i></button>
-                            </div>
+                            <div style="display: flex; gap: 10px;"><input type="text" id="input-pap-tema" placeholder="O teu tema..." style="margin: 0; flex: 1;" class="input-padrao"><button id="btn-save-pap-tema" class="primary-btn" style="width: auto; padding: 0 20px;"><i class="fa-solid fa-save"></i></button></div>
                         </div>
                         <div style="border-top: 1px dashed #333; padding-top: 15px;">
                             <label style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; display: block;">Entrega de Documentos (Anteprojeto/Relatório):</label>
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <label for="aluno-upload-pap" class="secondary-btn small-btn" style="margin:0; flex:1; text-align:center; border-style: dashed;"><i class="fa-solid fa-upload"></i> Anexar Ficheiro</label>
-                                <input type="file" id="aluno-upload-pap" style="display:none;" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.zip">
-                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;"><label for="aluno-upload-pap" class="secondary-btn small-btn" style="margin:0; flex:1; text-align:center; border-style: dashed;"><i class="fa-solid fa-upload"></i> Anexar Ficheiro</label><input type="file" id="aluno-upload-pap" style="display:none;" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.zip"></div>
                             <span id="aluno-pap-file-name" class="file-name-display" style="display:block; margin-top:10px; font-size:0.85rem; color:var(--success-green);"></span>
                             <button id="btn-enviar-pap" class="primary-btn" style="display:none; width:100%; margin-top:10px;">Submeter à Escola</button>
                         </div>
@@ -361,7 +303,6 @@
             <!-- MODAL ACADEMIA QUIZ -->
             <div id="modal-academia-quiz" class="modal-overlay" style="z-index: 9999; background: var(--bg-dark); align-items: stretch; padding: 0;">
                 <div style="width: 100%; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; justify-content: center; padding: 30px; position: relative;">
-                    
                     <div id="quiz-step-intro" style="text-align: center; animation: fadeSlide 0.5s ease;">
                         <i class="fa-solid fa-map-location-dot" style="font-size: 4rem; color: var(--primary-green); margin-bottom: 20px;"></i>
                         <h1 style="font-size: 2rem; color: var(--text-light); margin-bottom: 15px;">Bem-vindo ao teu Percurso!</h1>
@@ -372,9 +313,7 @@
                     <div id="quiz-step-question" style="display: none; width: 100%;">
                         <div style="font-size: 0.9rem; color: var(--text-muted); font-weight: bold; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;" id="quiz-progress-text">Pergunta 1 de 4</div>
                         <div class="progress-bar-bg" style="height: 4px; margin-bottom: 30px;"><div class="progress-bar-fill" id="quiz-progress-bar" style="width: 25%; background: var(--primary-green);"></div></div>
-                        
                         <h2 id="quiz-q-title" style="font-size: 1.3rem; color: var(--text-light); margin-bottom: 30px; line-height: 1.4;">Carregando pergunta...</h2>
-                        
                         <div id="quiz-q-options" style="display: flex; flex-direction: column; gap: 12px;"></div>
                     </div>
 
@@ -396,25 +335,26 @@
             <!-- MODAIS DE ELIMINAÇÃO -->
             <div id="modal-confirm-delete-chat" class="modal-overlay" style="z-index: 5000;">
                 <div class="action-sheet" style="max-width:350px; border-radius:12px; margin:20px; text-align: center;">
-                    <i class="fa-solid fa-trash-can" style="font-size: 3rem; color: var(--danger-red); margin-bottom: 15px;"></i>
-                    <h3 style="margin-bottom: 10px; color: var(--text-light);">Apagar Chat?</h3>
-                    <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;">Esta ação não pode ser revertida.</p>
-                    <div style="display:flex; gap:10px;">
-                        <button id="btn-cancel-delete-chat" class="secondary-btn" style="flex:1;">Cancelar</button>
-                        <button id="btn-confirm-delete-chat" class="primary-btn" style="flex:1; background:var(--danger-red); color:white; border:none;">Sim, Apagar</button>
-                    </div>
+                    <i class="fa-solid fa-trash-can" style="font-size: 3rem; color: var(--danger-red); margin-bottom: 15px;"></i><h3 style="margin-bottom: 10px; color: var(--text-light);">Apagar Chat?</h3>
+                    <div style="display:flex; gap:10px;"><button id="btn-cancel-delete-chat" class="secondary-btn" style="flex:1;">Cancelar</button><button id="btn-confirm-delete-chat" class="primary-btn" style="flex:1; background:var(--danger-red); color:white; border:none;">Sim, Apagar</button></div>
                 </div>
             </div>
 
             <div id="modal-confirm-delete-objetivo" class="modal-overlay" style="z-index: 5000;">
                 <div class="action-sheet" style="max-width:350px; border-radius:12px; margin:20px; text-align: center;">
-                    <i class="fa-solid fa-bullseye" style="font-size: 3rem; color: var(--danger-red); margin-bottom: 15px;"></i>
-                    <h3 style="margin-bottom: 10px; color: var(--text-light);">Apagar Meta?</h3>
-                    <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;">O teu progresso associado a este objetivo será descartado.</p>
-                    <div style="display:flex; gap:10px;">
-                        <button id="btn-cancel-delete-objetivo" class="secondary-btn" style="flex:1;">Cancelar</button>
-                        <button id="btn-confirm-delete-objetivo" class="primary-btn" style="flex:1; background:var(--danger-red); color:white; border:none;">Sim, Apagar</button>
+                    <i class="fa-solid fa-bullseye" style="font-size: 3rem; color: var(--danger-red); margin-bottom: 15px;"></i><h3 style="margin-bottom: 10px; color: var(--text-light);">Apagar Meta?</h3>
+                    <div style="display:flex; gap:10px;"><button id="btn-cancel-delete-objetivo" class="secondary-btn" style="flex:1;">Cancelar</button><button id="btn-confirm-delete-objetivo" class="primary-btn" style="flex:1; background:var(--danger-red); color:white; border:none;">Sim, Apagar</button></div>
+                </div>
+            </div>
+
+            <!-- MODAL PAUTA GLOBAL -->
+            <div id="modal-pauta-global" class="modal-overlay">
+                <div class="action-sheet" style="max-width: 600px; width: 95%; max-height: 85vh; overflow-y: auto; padding: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                        <h2 style="color: var(--primary-green); font-size:1.3rem; margin:0;"><i class="fa-solid fa-table-list"></i> Pauta Global</h2>
+                        <button id="btn-close-pauta" style="background:none; border:none; color:var(--text-muted); font-size:1.5rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
                     </div>
+                    <div id="pauta-global-content"><p class="text-muted" style="text-align:center;">A compilar notas...</p></div>
                 </div>
             </div>
             
@@ -429,6 +369,6 @@
         </nav>
     </div>
 
-    <script type="module" src="./js/aluno-app.js?v=30"></script>
+    <script type="module" src="./js/aluno-app.js?v=35"></script>
 </body>
 </html>
