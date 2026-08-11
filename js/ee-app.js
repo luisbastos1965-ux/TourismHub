@@ -513,65 +513,82 @@ bindClick('tab-ee-reunioes', () => { switchTabConfig('tab-ee-reunioes', ['tab-ee
 async function carregarEvolucaoEE() {
     const cadernetaContent = document.getElementById('ee-caderneta-content');
     if(!cadernetaContent) return;
-    
-    let html = `
-    <div class="card" style="border-top: 4px solid var(--primary-green); margin-bottom: 20px;">
-        <h3 style="color: white; margin-bottom: 15px; font-size: 1.1rem;"><i class="fa-solid fa-chart-radar"></i> Perfil de Competências</h3>
-        
-        <div style="margin-bottom: 12px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-comments" style="color:#0ea5e9;"></i> Comunicação & Hospitalidade</span><strong style="color:var(--primary-green);">Nvl 4</strong></div>
-            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 80%; background:#0ea5e9;"></div></div>
-        </div>
-        
-        <div style="margin-bottom: 12px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-lightbulb" style="color:#8b5cf6;"></i> Criatividade & Inovação</span><strong style="color:var(--primary-green);">Nvl 5</strong></div>
-            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 100%; background:#8b5cf6;"></div></div>
-        </div>
-        
-        <div style="margin-bottom: 12px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-compass" style="color:#f97316;"></i> Liderança & Autonomia</span><strong style="color:var(--primary-green);">Nvl 3</strong></div>
-            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 60%; background:#f97316;"></div></div>
-        </div>
-        
-        <div style="margin-bottom: 12px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-chess-knight" style="color:#10b981;"></i> Organização & Estratégia</span><strong style="color:var(--primary-green);">Nvl 2</strong></div>
-            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 40%; background:#10b981;"></div></div>
-        </div>
-    </div>
-    
-    <h4 style="color:var(--text-muted); margin-bottom:10px; font-size:0.9rem; text-transform:uppercase;"><i class="fa-solid fa-bolt"></i> Últimos Registos</h4>
-    
-    <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(16, 185, 129, 0.1); border: 1px solid var(--primary-green); padding: 12px; border-radius: 8px; margin-bottom: 10px;">
-        <div>
-            <strong style="color:var(--primary-green); font-size:1.1rem;">+40 XP</strong><br>
-            <span style="color:var(--text-light); font-size:0.95rem;">Criatividade (Ideia fora da caixa)</span>
-        </div>
-        <div style="text-align:right; font-size:0.75rem; color:var(--text-muted);">
-            Hoje<br>Prof. Silva
-        </div>
-    </div>
-    
-    <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(16, 185, 129, 0.1); border: 1px solid var(--primary-green); padding: 12px; border-radius: 8px; margin-bottom: 10px;">
-        <div>
-            <strong style="color:var(--primary-green); font-size:1.1rem;">+20 XP</strong><br>
-            <span style="color:var(--text-light); font-size:0.95rem;">Espírito de Equipa (Ajudou colega)</span>
-        </div>
-        <div style="text-align:right; font-size:0.75rem; color:var(--text-muted);">
-            Ontem<br>Prof. Martins
-        </div>
-    </div>
+    cadernetaContent.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar evolução...</p>';
 
-    <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(239, 68, 68, 0.1); border: 1px solid var(--danger-red); padding: 12px; border-radius: 8px; margin-bottom: 10px;">
-        <div>
-            <strong style="color:var(--danger-red); font-size:1.1rem;">-15 XP</strong><br>
-            <span style="color:var(--text-light); font-size:0.95rem;">Uso Indevido de Telemóvel</span>
+    try {
+        const uSnap = await getDoc(doc(db, "utilizadores", educandoAtualId));
+        const data = uSnap.exists() ? uSnap.data() : {};
+        
+        const getLvl = (xp) => Math.floor((xp || 0) / 100) + 1;
+        const getPerc = (xp) => ((xp || 0) % 100);
+
+        const lvlCom = getLvl(data.xp_comunicacao); const percCom = getPerc(data.xp_comunicacao);
+        const lvlCri = getLvl(data.xp_criatividade); const percCri = getPerc(data.xp_criatividade);
+        const lvlLid = getLvl(data.xp_lideranca); const percLid = getPerc(data.xp_lideranca);
+        const lvlOrg = getLvl(data.xp_organizacao); const percOrg = getPerc(data.xp_organizacao);
+
+        let html = `
+        <div class="card" style="border-top: 4px solid var(--primary-green); margin-bottom: 20px;">
+            <h3 style="color: white; margin-bottom: 15px; font-size: 1.1rem;"><i class="fa-solid fa-chart-radar"></i> Perfil de Competências</h3>
+            
+            <div style="margin-bottom: 12px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-comments" style="color:#0ea5e9;"></i> Comunicação & Hospitalidade</span><strong style="color:var(--primary-green);">Nvl ${lvlCom}</strong></div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percCom}%; background:#0ea5e9;"></div></div>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-lightbulb" style="color:#8b5cf6;"></i> Criatividade & Inovação</span><strong style="color:var(--primary-green);">Nvl ${lvlCri}</strong></div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percCri}%; background:#8b5cf6;"></div></div>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-compass" style="color:#f97316;"></i> Liderança & Autonomia</span><strong style="color:var(--primary-green);">Nvl ${lvlLid}</strong></div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percLid}%; background:#f97316;"></div></div>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-chess-knight" style="color:#10b981;"></i> Organização & Estratégia</span><strong style="color:var(--primary-green);">Nvl ${lvlOrg}</strong></div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percOrg}%; background:#10b981;"></div></div>
+            </div>
         </div>
-        <div style="text-align:right; font-size:0.75rem; color:var(--text-muted);">
-            12/03<br>Prof. Costa
-        </div>
-    </div>
-    `;
-    cadernetaContent.innerHTML = html;
+        
+        <h4 style="color:var(--text-muted); margin-bottom:10px; font-size:0.9rem; text-transform:uppercase;"><i class="fa-solid fa-bolt"></i> Últimos Registos</h4>`;
+
+        const fDiscEl = document.getElementById('filtro-caderneta-disc');
+        const fDisc = fDiscEl ? fDiscEl.value : "";
+        const ocSnap = await getDocs(query(collection(db, "utilizadores", educandoAtualId, "ocorrencias")));
+        let regs = []; 
+        ocSnap.forEach(d => { if (!fDisc || d.data().disciplina === fDisc) regs.push(d.data()); });
+
+        if(regs.length === 0) {
+            html += getEmptyState('Sem registos de evolução.', 'fa-star');
+        } else {
+            regs.sort((a,b) => b.data.localeCompare(a.data));
+            regs.slice(0, 15).forEach(r => {
+                const isPos = r.tipo === 'positiva';
+                const cor = isPos ? 'var(--success-green)' : 'var(--danger-red)';
+                const bgCor = isPos ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+                const xpLabel = r.xp ? (r.xp > 0 ? `+${r.xp} XP` : `${r.xp} XP`) : (isPos ? 'Registo Positivo' : 'Registo Negativo');
+                
+                html += `
+                <div style="display:flex; align-items:center; justify-content:space-between; background:${bgCor}; border: 1px solid ${cor}; padding: 12px; border-radius: 8px; margin-bottom: 10px;">
+                    <div>
+                        <strong style="color:${cor}; font-size:1.1rem;">${xpLabel}</strong><br>
+                        <span style="color:var(--text-light); font-size:0.95rem; font-weight:bold;">${r.titulo}</span>
+                        ${r.descricao ? `<div style="color:var(--text-muted); font-size:0.85rem; margin-top:3px;">${r.descricao}</div>` : ''}
+                    </div>
+                    <div style="text-align:right; font-size:0.75rem; color:var(--text-muted);">
+                        ${r.data}<br>Prof. ${r.autor}
+                    </div>
+                </div>`;
+            });
+        }
+        
+        cadernetaContent.innerHTML = html;
+    } catch(e) {
+        console.error("Erro evolução:", e);
+        cadernetaContent.innerHTML = '<p class="text-danger center">Erro ao carregar evolução.</p>';
+    }
 }
 
 async function carregarTimelineEE() {
