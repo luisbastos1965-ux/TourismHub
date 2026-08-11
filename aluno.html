@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Turma PRO - Aluno</title>
     <link rel="icon" type="image/png" href="logo_tur.png">
-    <link rel="stylesheet" href="style.css?v=12">
+    <link rel="stylesheet" href="style.css?v=20">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
@@ -24,6 +24,8 @@
         .filter-chip.active { background: var(--primary-green); color: var(--bg-dark); border-color: var(--primary-green); font-weight: bold; }
         .input-padrao { background: var(--bg-dark); border: 1px solid #333; color: var(--text-light); border-radius: 8px; padding: 10px; font-family: inherit; }
         .input-padrao:focus { outline: none; border-color: var(--primary-green); }
+        .badge-icon { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 8px auto; background: rgba(255,255,255,0.05); color: #555; border: 2px solid #333; transition: 0.3s; }
+        .badge-item.earned .badge-icon { background: rgba(255,215,0,0.1); color: #ffd700; border-color: #ffd700; box-shadow: 0 0 15px rgba(255,215,0,0.2); }
     </style>
 </head>
 <body>
@@ -51,7 +53,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <div>
                         <h2 id="welcome-message" style="margin-bottom: 3px; font-size: 1.4rem;">Olá, <span id="welcome-nome">Aluno</span>!</h2>
-                        <p style="font-size: 0.85rem; color: var(--text-muted);"><span id="aluno-rank-title">A classificar...</span> • Lvl <span id="aluno-nivel">1</span></p>
+                        <p style="font-size: 0.85rem; color: var(--text-muted);"><span id="aluno-rank-title">A classificar...</span></p>
                     </div>
                     <div style="background: rgba(0, 204, 136, 0.1); border: 1px solid var(--primary-green); padding: 6px 12px; border-radius: 20px; text-align: center; cursor: pointer;" onclick="document.querySelector('.nav-item[data-target=\'view-aluno-perfil\']').click()">
                         <div style="font-weight: bold; color: var(--primary-green); font-size: 1rem;"><i class="fa-solid fa-bolt"></i> <span id="aluno-xp-atual">0</span> <span style="font-size: 0.7rem;">XP</span></div>
@@ -65,6 +67,15 @@
                 </div>
 
                 <div id="hero-alert-section"></div>
+
+                <!-- NOVA SECÇÃO: MISSÕES -->
+                <div id="missoes-section" style="margin-bottom: 20px;">
+                    <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;"><i class="fa-solid fa-bullseye"></i> Missões Disponíveis</h3>
+                    <div id="missoes-container">
+                        <p class="text-muted center">A carregar missões...</p>
+                    </div>
+                </div>
+
                 <div id="hero-emotional-section"></div>
 
                 <div class="lms-action-grid" style="margin-bottom: 20px;">
@@ -77,29 +88,47 @@
                 </div>
             </div>
 
-            <!-- VISTA PERFIL -->
+            <!-- VISTA PERFIL (PORTFÓLIO / PASSAPORTE) -->
             <div id="view-aluno-perfil" style="display: none; padding-top: 10px;">
-                <div class="card" style="text-align: center;">
+                <div class="card" style="text-align: center; border-bottom: 4px solid var(--primary-green);">
                     <div style="position:relative; width: 100px; height: 100px; margin: 0 auto 15px auto;">
                         <img id="perfil-avatar-img" src="https://via.placeholder.com/100" style="width:100%; height:100%; border-radius:50%; object-fit:cover; border: 3px solid var(--primary-green);">
                         <label for="upload-avatar" style="position:absolute; bottom:0; right:0; background:var(--primary-green); color:var(--bg-dark); width:35px; height:35px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; border: 2px solid var(--bg-card);"><i class="fa-solid fa-camera"></i></label>
                         <input type="file" id="upload-avatar" style="display:none;" accept="image/*">
                     </div>
                     <h3 id="perfil-nome-central" style="margin-bottom: 5px; font-size: 1.3rem;">Nome</h3>
-                    <p id="perfil-titulo-central" style="color: var(--warning-yellow); font-weight: bold; margin-bottom: 15px;">A classificar...</p>
+                    <p id="perfil-titulo-central" style="color: var(--primary-green); font-weight: bold; margin-bottom: 5px;">A classificar...</p>
+                    <p id="perfil-nivel-txt" style="color: var(--warning-yellow); font-size: 0.9rem; margin-bottom: 15px;">Nível 1 - Aprendiz</p>
                     <div class="progress-bar-bg"><div class="progress-bar-fill" id="perfil-xp-progress" style="width: 0%;"></div></div>
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;"><span id="perfil-xp-totais">0</span> XP totais alcançados</p>
                 </div>
 
+                <!-- NOVO: PASSAPORTE PROFISSIONAL -->
+                <div class="card" id="perfil-competencias-container" style="border-left: 4px solid #0ea5e9; margin-bottom: 20px;">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: var(--text-light);"><i class="fa-solid fa-id-card"></i> Passaporte Profissional</h3>
+                    <div id="barras-competencias-perfil">
+                        <p class="text-muted center">A gerar perfil...</p>
+                    </div>
+                </div>
+
+                <!-- NOVO: BADGES / CONQUISTAS -->
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: var(--text-light);"><i class="fa-solid fa-award"></i> Conquistas</h3>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center;" id="badges-container">
+                        <!-- Gerado via JS -->
+                    </div>
+                </div>
+
+                <!-- MANTER: METAS PESSOAIS -->
                 <div class="card" style="border-left: 4px solid var(--warning-yellow);">
-                    <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: var(--text-light);"><i class="fa-solid fa-bullseye"></i> Metas</h3>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">A app valida o teu progresso automaticamente e dá-te <strong style="color:var(--warning-yellow);">+50 XP</strong> quando cumprires os objetivos.</p>
+                    <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: var(--text-light);"><i class="fa-solid fa-bullseye"></i> Metas Pessoais</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">A app dá-te <strong style="color:var(--warning-yellow);">+50 XP</strong> quando cumprires os objetivos.</p>
                     
                     <div style="display:flex; flex-direction:column; gap:10px; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
                         <select id="obj-tipo" class="input-padrao" style="width:100%; margin:0;">
-                            <option value="nota">Manter / Atingir nota num Módulo</option>
+                            <option value="nota">Atingir nota num Módulo</option>
                             <option value="prhf">Concluir Plano de Recuperação (PRHF)</option>
-                            <option value="reconhecimento">Receber Reconhecimento Positivo</option>
+                            <option value="reconhecimento">Receber Registo Positivo (+ XP)</option>
                         </select>
                         <div id="obj-setup-nota" style="display:flex; gap:8px;">
                             <select id="obj-disciplina" class="input-padrao" style="flex:1; margin:0;"></select>
@@ -111,27 +140,11 @@
                     <div id="lista-objetivos-container"></div>
                 </div>
 
+                <!-- MANTER: RANKING GLOBAL E TURMA -->
                 <div class="card" style="border-left: 4px solid #ffd700; margin-bottom: 20px;">
-                    <h3 style="font-size: 1.1rem; color: var(--text-light); margin-bottom: 15px;"><i class="fa-solid fa-trophy"></i> Ranking da Turma</h3>
+                    <h3 style="font-size: 1.1rem; color: var(--text-light); margin-bottom: 15px;"><i class="fa-solid fa-trophy"></i> Rankings</h3>
                     <div id="ranking-turma-container">
                         <p class="text-muted center">A classificar alunos e academias...</p>
-                    </div>
-                </div>
-
-                <div class="card" id="card-stats-grafico">
-                    <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: var(--text-light);"><i class="fa-solid fa-chart-pie"></i> Desempenho por Disciplina</h3>
-                    <div style="position: relative; height: 220px; width: 100%;">
-                        <canvas id="chart-notas-aluno"></canvas>
-                    </div>
-                </div>
-
-                <div class="card" style="border-left: 4px solid #b82bf2; margin-top: 20px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                        <h3 style="font-size: 1.1rem; color: var(--text-light); margin:0;"><i class="fa-solid fa-heart-pulse"></i> Histórico Emocional</h3>
-                        <button id="btn-view-mood-history" style="background:rgba(255,255,255,0.05); border:1px solid #333; color:var(--text-light); cursor:pointer; font-size:0.85rem; padding: 4px 10px; border-radius: 6px; transition:0.2s;"><i class="fa-solid fa-arrows-rotate"></i> Atualizar</button>
-                    </div>
-                    <div id="mood-history-container">
-                        <p class="text-muted center" style="font-size: 0.85rem;">A carregar histórico...</p>
                     </div>
                 </div>
             </div>
@@ -167,20 +180,21 @@
 
             <!-- VISTA CADERNETA E LINHA TEMPORAL -->
             <div id="view-aluno-caderneta" style="display: none;">
-                <div class="falta-tabs" style="display:flex; flex-wrap:wrap; gap:5px; justify-content:center; margin-bottom: 15px;">
-                    <button class="falta-tab-btn active" id="tab-aluno-timeline" style="flex: 1 1 100%; border-color: var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-clock-rotate-left"></i> Histórico</button>
-                    <button class="falta-tab-btn" id="tab-aluno-notas" style="flex: 1 1 30%;">Notas</button>
-                    <button class="falta-tab-btn" id="tab-aluno-faltas" style="flex: 1 1 30%;">Faltas</button>
-                    <button class="falta-tab-btn" id="tab-aluno-prhfs" style="flex: 1 1 30%;">PRHFs</button>
-                    <button class="falta-tab-btn" id="tab-aluno-comportamento" style="flex: 1 1 45%;">Comportamento</button>
-                    <button class="falta-tab-btn" id="tab-aluno-observacoes" style="flex: 1 1 45%;">Reuniões</button>
+                <div class="falta-tabs" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; justify-content:center; margin-bottom: 15px;">
+                    <button class="falta-tab-btn active" id="tab-aluno-timeline">Linha Temporal</button>
+                    <button class="falta-tab-btn" id="tab-aluno-notas">Notas</button>
+                    <button class="falta-tab-btn" id="tab-aluno-faltas">Faltas</button>
+                    <button class="falta-tab-btn" id="tab-aluno-prhfs">PRHFs</button>
+                    <!-- ABA MUDADA PARA EVOLUÇÃO PRO -->
+                    <button class="falta-tab-btn" id="tab-aluno-evolucao" style="color: var(--primary-green); border-color: var(--primary-green);"><i class="fa-solid fa-chart-line"></i> Evolução PRO</button>
+                    <button class="falta-tab-btn" id="tab-aluno-observacoes">Reuniões</button>
                 </div>
 
                 <div class="filter-chips-container" id="timeline-filtros" style="display: flex;">
                     <div class="filter-chip active" data-cat="all">Tudo</div>
                     <div class="filter-chip" data-cat="notas">Avaliações</div>
                     <div class="filter-chip" data-cat="faltas">Faltas</div>
-                    <div class="filter-chip" data-cat="comportamento">Comportamento</div>
+                    <div class="filter-chip" data-cat="comportamento">Registos</div>
                     <div class="filter-chip" data-cat="gamificacao">Gamificação</div>
                 </div>
 
@@ -279,13 +293,13 @@
                 </div>
             </div>
 
-            <!-- VISTA PASSAPORTE -->
+            <!-- VISTA PASSAPORTE FCT/PAP -->
             <div id="view-aluno-passaporte" style="display: none;">
                 <div class="class-header" style="margin-bottom: 10px;"><button id="btn-voltar-passaporte" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
-                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: var(--text-light);"><i class="fa-solid fa-passport"></i> Passaporte</h2>
+                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: var(--text-light);"><i class="fa-solid fa-briefcase"></i> Estágio / Projeto</h2>
                 
                 <div id="sec-aluno-fct" style="display: none;">
-                    <h3 style="color: var(--primary-green); font-size: 1rem; margin-bottom: 15px;"><i class="fa-solid fa-briefcase"></i> FCT (Estágio)</h3>
+                    <h3 style="color: var(--primary-green); font-size: 1rem; margin-bottom: 15px;"><i class="fa-solid fa-building"></i> FCT (Estágio)</h3>
                     <div class="card">
                         <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><strong>Horas Concluídas:</strong> <span style="color:var(--primary-green); font-weight:bold;" id="aluno-fct-horas">0 / 0h</span></div>
                         <div class="progress-bar-bg" style="margin-bottom: 20px;"><div class="progress-bar-fill" id="aluno-fct-progress" style="width:0%;"></div></div>
@@ -356,7 +370,6 @@
                         <p id="quiz-result-desc" style="font-size: 1rem; color: var(--text-light); margin-bottom: 40px; line-height: 1.6; padding: 0 10px;"></p>
                         <button id="btn-finish-quiz" class="primary-btn" style="font-size: 1.2rem; padding: 15px 30px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); border: none;">Entrar na Turma PRO</button>
                     </div>
-                    
                 </div>
             </div>
             
@@ -396,6 +409,6 @@
         </nav>
     </div>
 
-    <script type="module" src="./js/aluno-app.js?v=2"></script>
+    <script type="module" src="./js/aluno-app.js?v=25"></script>
 </body>
 </html>
