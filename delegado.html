@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Turma PRO - Painel Delegado</title>
+    <link rel="icon" type="image/png" href="logo_tur.png">
+    <link rel="stylesheet" href="style.css?v=30">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        const currentTheme = localStorage.getItem('turmapro_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+    </script>
+    <style>
+        .input-padrao { background: var(--bg-dark); border: 1px solid #333; color: var(--text-light); border-radius: 8px; padding: 12px; font-family: inherit; width: 100%; box-sizing: border-box; }
+        .input-padrao:focus { outline: none; border-color: #ffd700; }
+        .delegado-header { background: linear-gradient(135deg, #111, #222); border-bottom: 2px solid #ffd700; }
+        .event-type-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; border: 1px solid; }
+    </style>
+</head>
+<body>
+    <div id="app-content">
+        <header class="app-header delegado-header" style="justify-content: flex-start; gap: 15px;">
+            <button onclick="window.location.href='aluno.html'" class="secondary-btn small-btn" style="width:auto; border:none; background:rgba(255,255,255,0.1);"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <i class="fa-solid fa-crown" style="color:#ffd700; font-size:1.5rem;"></i>
+                <div>
+                    <h2 style="margin:0; font-size:1.1rem; color:var(--text-light);">Painel de Gestão</h2>
+                    <span style="font-size:0.75rem; color:var(--text-muted);" id="delegado-turma-label">Turma...</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-content">
+            <!-- CAIXA: ADICIONAR NOVO EVENTO -->
+            <div class="card" style="border-left: 4px solid #ffd700; margin-bottom: 25px;">
+                <h3 style="margin-bottom: 15px; font-size: 1.1rem; color: var(--text-light);"><i class="fa-solid fa-calendar-plus"></i> Marcar Novo Evento</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Este evento ficará visível na agenda de todos os teus colegas de turma.</p>
+                
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <div>
+                        <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px; display:block;">Título do Evento</label>
+                        <input type="text" id="input-evento-titulo" class="input-padrao" placeholder="Ex: Teste de Inglês">
+                    </div>
+                    
+                    <div style="display:flex; gap:10px;">
+                        <div style="flex:1;">
+                            <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px; display:block;">Data</label>
+                            <input type="date" id="input-evento-data" class="input-padrao">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px; display:block;">Tipo de Evento</label>
+                            <select id="input-evento-tipo" class="input-padrao">
+                                <option value="teste">Teste / Avaliação</option>
+                                <option value="entrega">Entrega de Trabalho</option>
+                                <option value="outro">Outro</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button id="btn-salvar-evento" class="primary-btn" style="background:#ffd700; color:#000; margin-top:5px; font-weight:bold;">
+                        <i class="fa-solid fa-paper-plane"></i> Publicar para a Turma
+                    </button>
+                </div>
+            </div>
+
+            <!-- CAIXA: LISTA DE EVENTOS -->
+            <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 15px; text-transform: uppercase;"><i class="fa-solid fa-list"></i> Próximos Eventos da Turma</h3>
+            <div id="lista-eventos-delegado">
+                <p class="text-muted center">A carregar calendário...</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL CONFIRMAR APAGAR -->
+    <div id="modal-delete-evento" class="modal-overlay">
+        <div class="action-sheet" style="max-width:350px; border-radius:12px; margin:20px; text-align: center;">
+            <i class="fa-solid fa-trash-can" style="font-size: 3rem; color: var(--danger-red); margin-bottom: 15px;"></i>
+            <h3 style="margin-bottom: 10px; color: var(--text-light);">Apagar Evento?</h3>
+            <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;">Vai desaparecer da agenda de toda a turma.</p>
+            <div style="display:flex; gap:10px;">
+                <button id="btn-cancel-delete" class="secondary-btn" style="flex:1;">Cancelar</button>
+                <button id="btn-confirm-delete" class="primary-btn" style="flex:1; background:var(--danger-red); color:white; border:none;">Apagar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./js/delegado-app.js?v=1"></script>
+</body>
+</html>
