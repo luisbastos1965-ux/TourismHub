@@ -22,7 +22,7 @@ function getEmptyState(mensagem, icone = "fa-folder-open") {
 }
 
 // ==========================================
-// NÍVEIS PROFISSIONAIS E 22 BADGES
+// 12 NÍVEIS PROFISSIONAIS E 22 BADGES
 // ==========================================
 function getNivelProInfo(xpTotal) {
     const xp = xpTotal || 0;
@@ -45,23 +45,18 @@ const BADGES_DEFS = [
     { id: "b2", nome: "Promessa", icon: "fa-star", reqXp: 1000 },
     { id: "b3", nome: "Veterano", icon: "fa-shield", reqXp: 5000 },
     { id: "b4", nome: "Lenda da Escola", icon: "fa-building-columns", reqXp: 10000 },
-    
     { id: "b5", nome: "Comunicador Nato", icon: "fa-microphone", reqCom: 100 },
     { id: "b6", nome: "Voz da Razão", icon: "fa-comment-dots", reqCom: 500 },
     { id: "b7", nome: "Mestre da Oratória", icon: "fa-bullhorn", reqCom: 1000 },
-    
     { id: "b8", nome: "Faísca Criativa", icon: "fa-lightbulb", reqCri: 100 },
     { id: "b9", nome: "Mente Inovadora", icon: "fa-wand-magic-sparkles", reqCri: 500 },
     { id: "b10", nome: "Visionário", icon: "fa-eye", reqCri: 1000 },
-    
     { id: "b11", nome: "Guia Local", icon: "fa-map-location-dot", reqLid: 100 },
     { id: "b12", nome: "Líder Natural", icon: "fa-crown", reqLid: 500 },
     { id: "b13", nome: "Capitão de Equipa", icon: "fa-anchor", reqLid: 1000 },
-    
     { id: "b14", nome: "Organizado", icon: "fa-list-check", reqOrg: 100 },
     { id: "b15", nome: "Estratega", icon: "fa-chess-knight", reqOrg: 500 },
     { id: "b16", nome: "Arquiteto", icon: "fa-compass-drafting", reqOrg: 1000 },
-    
     { id: "b17", nome: "Colega 5 Estrelas", icon: "fa-handshake-angle", reqXp: 1500 },
     { id: "b18", nome: "Imparável", icon: "fa-fire-flame-curved", reqXp: 8000 },
     { id: "b19", nome: "Coração de Ouro", icon: "fa-heart", reqXp: 3000 },
@@ -107,7 +102,7 @@ const perguntasQuiz = [
 let pAtual = 0; let quizScores = { estrategas: 0, embaixadores: 0, exploradores: 0, visionarios: 0 };
 
 // ==========================================
-// ARRANQUE E NAVEGAÇÃO
+// ARRANQUE E NAVEGAÇÃO INICIAL
 // ==========================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -120,14 +115,17 @@ onAuthStateChanged(auth, async (user) => {
                 document.getElementById('header-user-name-aluno').innerText = myUserName; document.getElementById('welcome-nome').innerText = myUserName;
                 const centralNome = document.getElementById('perfil-nome-central'); if(centralNome) centralNome.innerText = d.nome || myUserName;
                 
+                // MODO DELEGADO SWITCH
+                if(d.cargo === 'delegado' || d.cargo === 'subdelegado') {
+                    document.getElementById('btn-modo-delegado').style.display = 'inline-block';
+                }
+
                 const avatarCircle = document.getElementById('header-avatar-circle'); const perfilImg = document.getElementById('perfil-avatar-img');
                 if(d.fotoPerfil) { if(avatarCircle) avatarCircle.innerHTML = `<img src="${d.fotoPerfil}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`; if(perfilImg) perfilImg.src = d.fotoPerfil; } 
                 else { if(perfilImg) perfilImg.src = `https://ui-avatars.com/api/?name=${myUserName}&background=00cc88&color=fff&size=100`; }
 
                 const objSelect = document.getElementById('obj-disciplina'); 
-                if(objSelect) {
-                    objSelect.innerHTML = '<option value="">Escolhe a Disciplina...</option>' + obterDisciplinasDoAno().map(dc => `<option value="${dc}">${dc}</option>`).join('');
-                }
+                if(objSelect) { objSelect.innerHTML = '<option value="">Escolhe a Disciplina...</option>' + obterDisciplinasDoAno().map(dc => `<option value="${dc}">${dc}</option>`).join(''); }
 
                 const mStr = minhaTurma || ""; const mMatch = mStr.match(/\d+/); const turmaAno = mMatch ? parseInt(mMatch[0]) : (d.ano || 10);
                 
@@ -186,7 +184,7 @@ function aplicarTemaAcademia(idHouse) {
 }
 
 // ==========================================
-// GAMIFICAÇÃO, PASSAPORTE E MISSÕES
+// GAMIFICAÇÃO E PERFIL
 // ==========================================
 function carregarGamificacao(dados) {
     const xp = dados.xp || 0; const profInfo = getNivelProInfo(xp);
@@ -245,38 +243,111 @@ function carregarDadosPassaporte(dados) {
     const fEl = document.getElementById('aluno-pap-file-name'); if(fEl && dados.papFicheiroEnviado) fEl.innerText = "Ficheiro submetido.";
 }
 
-// ==========================================
-// EVENTOS PRINCIPAIS DE NAVEGAÇÃO E BINDINGS
-// ==========================================
-function esconderTodasAsVistas() { document.querySelectorAll('.app-content > div').forEach(v => v.style.display = 'none'); }
+async function carregarRankingTurma() {
+    const c = document.getElementById('ranking-turma-container'); if(!minhaTurma) { c.innerHTML = '<p class="text-muted center">Sem turma atribuída.</p>'; return; }
+    try {
+        const snap = await getDocs(query(collection(db, "utilizadores"), where("papel", "==", "aluno")));
+        let alunosTurma = []; let academiasXP = { estrategas: 0, embaixadores: 0, exploradores: 0, visionarios: 0 };
+        
+        snap.forEach(d => {
+            const al = {id: d.id, ...d.data()};
+            if(al.academia && academiasXP[al.academia] !== undefined) { academiasXP[al.academia] += (al.xp || 0); }
+            if(al.turma === minhaTurma) { alunosTurma.push(al); }
+        });
+        alunosTurma.sort((a,b) => (b.xp || 0) - (a.xp || 0));
+        
+        let hAcad = `<div style="display:flex; justify-content:space-around; margin-bottom:20px; text-align:center; background:rgba(0,0,0,0.2); padding:15px; border-radius:12px;">`;
+        const orderAcad = Object.keys(academiasXP).sort((a,b) => academiasXP[b] - academiasXP[a]);
+        
+        orderAcad.forEach((ac) => {
+            const acData = ACADEMIAS_INFO[ac];
+            if(acData) { 
+                const shortName = acData.nome.replace('Academia dos ', '');
+                hAcad += `<div><i class="fa-solid ${acData.icon}" style="font-size:1.8rem; color:${acData.cor}; margin-bottom:8px; display:block;"></i><strong style="color:var(--text-light); font-size:0.75rem;">${shortName}</strong><br><span style="color:var(--warning-yellow); font-size:0.9rem; font-weight:bold;">${academiasXP[ac]} XP</span></div>`;
+            }
+        });
+        hAcad += `</div><h4 style="color:var(--text-muted); font-size:0.85rem; text-transform:uppercase; margin-bottom:10px;">🏆 Top 10</h4>`;
+        
+        let hAl = '';
+        alunosTurma.slice(0, 10).forEach((al, idx) => {
+            let cor = 'var(--text-muted)'; let iconePos = `${idx+1}`;
+            if(idx === 0) { cor = '#ffd700'; iconePos = '<i class="fa-solid fa-crown" style="font-size:1.4rem;"></i>'; } 
+            else if(idx === 1) { cor = '#c0c0c0'; iconePos = '<i class="fa-solid fa-medal" style="font-size:1.3rem;"></i>'; } 
+            else if(idx === 2) { cor = '#cd7f32'; iconePos = '<i class="fa-solid fa-award" style="font-size:1.3rem;"></i>'; }
+            
+            hAl += `<div style="display:flex; align-items:center; gap:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left:3px solid ${cor};">
+                        <span style="font-weight:bold; font-size:1.2rem; color:${cor}; width:35px; text-align:center; display:inline-block;">${iconePos}</span>
+                        <img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=00cc88&color=fff`}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;">
+                        <div style="flex:1;">
+                            <strong style="font-size:0.95rem; color:var(--text-light);">${al.nome.split(' ')[0]} ${al.nome.split(' ').pop()}</strong><br>
+                            <span style="font-size:0.7rem; color:var(--text-muted);">${al.academia && ACADEMIAS_INFO[al.academia] ? ACADEMIAS_INFO[al.academia].nome.replace('Academia dos ','') : 'S/ Academia'}</span>
+                        </div>
+                        <span style="font-weight:bold; color:var(--primary-green); font-size:0.9rem;">${al.xp || 0} XP</span>
+                    </div>`;
+        });
+        c.innerHTML = hAcad + (hAl === '' ? '<p class="text-muted center">Ainda não há alunos com XP na tua turma.</p>' : hAl);
+    } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao carregar ranking.</p>'; }
+}
 
+async function carregarObjetivosPessoais() {
+    const cont = document.getElementById('lista-objetivos-container'); cont.innerHTML = '<p class="text-muted center">A carregar...</p>';
+    try {
+        const uSnap = await getDoc(doc(db, "utilizadores", myUserId)); const uXp = uSnap.exists() ? (uSnap.data().xp || 0) : 0;
+        const nSnap = await getDocs(collection(db, "utilizadores", myUserId, "notas")); let notasArr = []; nSnap.forEach(n => notasArr.push(n.data()));
+        const pSnap = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); let numPrhfs = 0; pSnap.forEach(p => { if(p.data().status === 'concluida') numPrhfs++; });
+        const rSnap = await getDocs(query(collection(db, "utilizadores", myUserId, "ocorrencias"), where("tipo", "==", "positiva"))); const numPositivas = rSnap.size;
+
+        const snap = await getDocs(collection(db, "utilizadores", myUserId, "objetivos")); let objArr = []; snap.forEach(d => objArr.push({id: d.id, ...d.data()})); objArr.sort((a,b) => b.timestamp - a.timestamp);
+        let html = ''; let objGanhouXP = false;
+        for (const obj of objArr) {
+            let achieved = false;
+            if(!obj.concluido) {
+                if(obj.tipo === 'nota') { const temNota = notasArr.find(n => n.disciplina === obj.disciplina && Number(n.modulo) === Number(obj.modulo) && Number(n.nota) >= Number(obj.notaAlvo)); if(temNota) achieved = true; } 
+                else if (obj.tipo === 'prhf') { if(numPrhfs >= obj.targetCount) achieved = true; }
+                else if (obj.tipo === 'reconhecimento') { if(numPositivas >= obj.targetCount) achieved = true; }
+            }
+            if(achieved) { await updateDoc(doc(db, "utilizadores", myUserId, "objetivos", obj.id), { concluido: true }); obj.concluido = true; objGanhouXP = true; }
+            const cColor = obj.concluido ? 'var(--success-green)' : '#444'; const txtDec = obj.concluido ? 'line-through' : 'none'; const txtColor = obj.concluido ? 'var(--text-muted)' : 'var(--text-light)';
+            html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left: 3px solid ${cColor};"><div style="display:flex; align-items:center; gap:12px; flex:1;"><div onclick="window.toggleObjetivo('${obj.id}', ${!obj.concluido})" style="width:24px; height:24px; border-radius:50%; border:2px solid ${cColor}; background:${obj.concluido ? cColor : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer;">${obj.concluido ? '<i class="fa-solid fa-check" style="color:var(--bg-dark); font-size:0.75rem;"></i>' : ''}</div><span style="text-decoration:${txtDec}; color:${txtColor}; font-size:0.95rem; flex:1;">${obj.desc}</span></div><i class="fa-solid fa-trash btn-delete-objetivo" data-id="${obj.id}" style="color:var(--danger-red); cursor:pointer; font-size:0.9rem; padding: 5px;"></i></div>`;
+        }
+        if(objGanhouXP) { await updateDoc(doc(db, "utilizadores", myUserId), { xp: uXp + 50 }); carregarGamificacao({xp: uXp+50}); alert("🎉 Parabéns! Uma Meta foi concluída automaticamente! +50 XP"); }
+        cont.innerHTML = html === '' ? '<p class="text-muted center" style="font-size:0.85rem;">Não tens metas ativas. Começa a desafiar-te!</p>' : html;
+    } catch(e) {}
+}
+window.toggleObjetivo = async (id, status) => { try { await updateDoc(doc(db, "utilizadores", myUserId, "objetivos", id), { concluido: status }); if(status) { const snap = await getDoc(doc(db, "utilizadores", myUserId)); let xp = snap.exists() && snap.data().xp ? snap.data().xp : 0; await updateDoc(doc(db, "utilizadores", myUserId), { xp: xp + 50 }); carregarGamificacao({xp: xp+50}); } carregarObjetivosPessoais(); } catch(e) {} };
+
+bindClick('btn-add-objetivo', async () => {
+    const tipo = document.getElementById('obj-tipo').value; let data = { tipo: tipo, concluido: false, timestamp: Date.now() };
+    if(tipo === 'nota') {
+        data.disciplina = document.getElementById('obj-disciplina').value; data.modulo = document.getElementById('obj-modulo').value; data.notaAlvo = document.getElementById('obj-nota-alvo').value;
+        if(!data.disciplina || !data.modulo || !data.notaAlvo) return alert("Preenche todos os campos.");
+        data.desc = `Tirar ${data.notaAlvo} a ${data.disciplina} no Mod. ${data.modulo}`;
+    } else if (tipo === 'prhf') { 
+        const pSnap = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); let c = 0; pSnap.forEach(p => { if(p.data().status === 'concluida') c++; });
+        data.targetCount = c + 1; data.desc = `Concluir +1 Plano de Recuperação (PRHF)`;
+    } else if (tipo === 'reconhecimento') {
+        const rSnap = await getDocs(query(collection(db, "utilizadores", myUserId, "ocorrencias"), where("tipo", "==", "positiva")));
+        data.targetCount = rSnap.size + 1; data.desc = `Receber +1 Registo Positivo do Professor`;
+    } else if (tipo === 'assiduidade') {
+        data.desc = `Manter assiduidade sem faltas injustificadas.`;
+    }
+    try { await addDoc(collection(db, "utilizadores", myUserId, "objetivos"), data); document.getElementById('obj-nota-alvo').value = ''; carregarObjetivosPessoais(); } catch(err) {}
+});
+
+bindChange('obj-tipo', async (e) => { const v = e.target.value; document.getElementById('obj-setup-nota').style.display = v === 'nota' ? 'flex' : 'none'; });
+
+// ==========================================
+// DELEGAÇÃO DE EVENTOS DE CLIQUE GERAIS
+// ==========================================
 document.body.addEventListener('click', async (e) => {
-    const nav = e.target.closest('.nav-item');
-    if(nav) {
-        e.preventDefault(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); nav.classList.add('active');
-        esconderTodasAsVistas(); const tId = nav.getAttribute('data-target'); const tgt = document.getElementById(tId); if(tgt) tgt.style.display = (tId === 'view-aluno-forum') ? 'flex' : 'block';
-        if(tId === 'view-aluno-perfil') { carregarRankingTurma(); carregarObjetivosPessoais(); }
-        if(tId === 'view-aluno-caderneta') { const el = document.getElementById('tab-aluno-timeline'); if(el) el.click(); }
-        if(tId === 'view-aluno-agenda') { const el = document.getElementById('tab-aluno-eventos'); if(el) el.click(); }
-        if(tId === 'view-aluno-forum') carregarForuns();
+    if(e.target.closest('.btn-delete-objetivo')) { e.stopPropagation(); pendingDeleteObjetivoId = e.target.closest('.btn-delete-objetivo').getAttribute('data-id'); document.getElementById('modal-confirm-delete-objetivo').style.display = 'flex'; }
+    if(e.target.closest('#btn-cancel-delete-objetivo')) { document.getElementById('modal-confirm-delete-objetivo').style.display = 'none'; pendingDeleteObjetivoId = null; }
+    if(e.target.closest('#btn-confirm-delete-objetivo')) {
+        if(pendingDeleteObjetivoId) { const btn = e.target.closest('#btn-confirm-delete-objetivo'); btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true; try { await deleteDoc(doc(db, "utilizadores", myUserId, "objetivos", pendingDeleteObjetivoId)); document.getElementById('modal-confirm-delete-objetivo').style.display = 'none'; carregarObjetivosPessoais(); } catch(err){} finally { btn.innerHTML = 'Sim, Apagar'; btn.disabled = false; pendingDeleteObjetivoId = null; } }
     }
     
-    if(e.target.closest('#btn-open-materiais')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); const el = document.getElementById('view-aluno-materiais'); if(el) el.style.display = 'block'; carregarMateriaisAluno(); }
-    if(e.target.closest('#btn-abrir-passaporte')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); const el = document.getElementById('view-aluno-passaporte'); if(el) el.style.display = 'block'; }
-    if(e.target.closest('#btn-open-notificacoes')) { esconderTodasAsVistas(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); const el = document.getElementById('view-aluno-notificacoes'); if(el) el.style.display = 'block'; carregarNotificacoesAluno(); }
-    if(e.target.closest('#btn-voltar-notificacoes') || e.target.closest('#btn-voltar-materiais') || e.target.closest('#btn-voltar-passaporte')) { const el = document.querySelector('.nav-item[data-target="student-dashboard"]'); if(el) el.click(); }
-
-    if(e.target.closest('#tab-aluno-timeline')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='flex'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarTimelineAluno(); }
-    if(e.target.closest('#tab-aluno-notas')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarNotasAluno(); }
-    if(e.target.closest('#tab-aluno-faltas')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarFaltasAluno(); }
-    if(e.target.closest('#tab-aluno-prhfs')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarPrhfsAluno(); }
-    if(e.target.closest('#tab-aluno-evolucao')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar evolução...</p>'; carregarEvolucaoAluno(); }
-    if(e.target.closest('#tab-aluno-observacoes')) { document.querySelectorAll('.falta-tab-btn').forEach(b=>b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('timeline-filtros').style.display='none'; document.getElementById('aluno-caderneta-content').innerHTML='<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; carregarObservacoesAluno(); }
-
-    const tChip = e.target.closest('#timeline-filtros .filter-chip');
-    if(tChip) { document.querySelectorAll('#timeline-filtros .filter-chip').forEach(c => c.classList.remove('active')); tChip.classList.add('active'); window.timelineFilterCat = tChip.getAttribute('data-cat'); carregarTimelineAluno(); }
-    const nChip = e.target.closest('#notificacoes-filtros .filter-chip');
-    if(nChip) { document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(c => c.classList.remove('active')); nChip.classList.add('active'); window.notifFilterCat = nChip.getAttribute('data-cat'); carregarNotificacoesAluno(); }
+    const tChip = e.target.closest('#timeline-filtros .filter-chip'); if(tChip) { document.querySelectorAll('#timeline-filtros .filter-chip').forEach(c => c.classList.remove('active')); tChip.classList.add('active'); window.timelineFilterCat = tChip.getAttribute('data-cat'); carregarTimelineAluno(); }
+    const nChip = e.target.closest('#notificacoes-filtros .filter-chip'); if(nChip) { document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(c => c.classList.remove('active')); nChip.classList.add('active'); window.notifFilterCat = nChip.getAttribute('data-cat'); carregarNotificacoesAluno(); }
 
     if(e.target.closest('#tab-aluno-eventos')) { document.getElementById('tab-aluno-eventos').classList.add('active'); document.getElementById('tab-aluno-horario').classList.remove('active'); document.getElementById('aluno-agenda-filtros').style.display = 'flex'; document.getElementById('aluno-horario-container').style.display = 'none'; document.getElementById('aluno-agenda-content').style.display = 'block'; carregarAgendaAlunoLista(); }
     if(e.target.closest('#tab-aluno-horario')) { document.getElementById('tab-aluno-horario').classList.add('active'); document.getElementById('tab-aluno-eventos').classList.remove('active'); document.getElementById('aluno-agenda-filtros').style.display = 'none'; document.getElementById('aluno-agenda-content').style.display = 'none'; document.getElementById('aluno-horario-container').style.display = 'block'; carregarHorarioAluno(); }
@@ -287,11 +358,7 @@ document.body.addEventListener('click', async (e) => {
 
     if(e.target.closest('#btn-create-chat-aluno')) {
         document.getElementById('modal-criar-forum').style.display = 'flex'; const cCont = document.getElementById('lista-colegas-forum'); cCont.innerHTML = '<p class="text-muted center">A procurar colegas...</p>';
-        try {
-            const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", minhaTurma))); let cH = ''; 
-            cS.forEach(d => { if(d.data().papel === 'aluno' && d.id !== myUserId) { cH += `<label style="display:flex; align-items:center; gap:10px; color:white; font-size:0.9rem; padding:8px 0; cursor:pointer;"><input type="checkbox" class="colegas-check" value="${d.id}" style="width:18px;height:18px;accent-color:var(--primary-green);"> ${d.data().nome}</label>`; } });
-            cCont.innerHTML = cH === '' ? '<p class="text-muted center" style="font-size:0.8rem;">Ainda és o único aluno registado nesta turma.</p>' : cH;
-        } catch(err) { cCont.innerHTML = '<p class="text-danger center">Erro ao listar turma.</p>'; }
+        try { const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", minhaTurma))); let cH = ''; cS.forEach(d => { if(d.data().papel === 'aluno' && d.id !== myUserId) { cH += `<label style="display:flex; align-items:center; gap:10px; color:white; font-size:0.9rem; padding:8px 0; cursor:pointer;"><input type="checkbox" class="colegas-check" value="${d.id}" style="width:18px;height:18px;accent-color:var(--primary-green);"> ${d.data().nome}</label>`; } }); cCont.innerHTML = cH === '' ? '<p class="text-muted center" style="font-size:0.8rem;">Ainda és o único aluno registado nesta turma.</p>' : cH; } catch(err) { cCont.innerHTML = '<p class="text-danger center">Erro ao listar turma.</p>'; }
     }
     if(e.target.closest('#btn-cancelar-novo-forum')) { document.getElementById('modal-criar-forum').style.display = 'none'; document.getElementById('input-nome-novo-forum').value = ''; }
     if(e.target.closest('#btn-confirm-novo-forum')) {
@@ -304,11 +371,7 @@ document.body.addEventListener('click', async (e) => {
     if(e.target.closest('.btn-delete-chat')) { e.stopPropagation(); pendingDeleteChatId = e.target.closest('.btn-delete-chat').getAttribute('data-id'); document.getElementById('modal-confirm-delete-chat').style.display = 'flex'; }
     if(e.target.closest('#btn-cancel-delete-chat')) { document.getElementById('modal-confirm-delete-chat').style.display = 'none'; pendingDeleteChatId = null; }
     if(e.target.closest('#btn-confirm-delete-chat')) {
-        if(pendingDeleteChatId) {
-            const btn = e.target.closest('#btn-confirm-delete-chat'); btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
-            try { await deleteDoc(doc(db, "turmas", minhaTurma, "foruns", pendingDeleteChatId)); document.getElementById('modal-confirm-delete-chat').style.display = 'none'; carregarForuns(); } catch(err){}
-            finally { btn.innerHTML = 'Sim, Apagar'; btn.disabled = false; pendingDeleteChatId = null; }
-        }
+        if(pendingDeleteChatId) { const btn = e.target.closest('#btn-confirm-delete-chat'); btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true; try { await deleteDoc(doc(db, "turmas", minhaTurma, "foruns", pendingDeleteChatId)); document.getElementById('modal-confirm-delete-chat').style.display = 'none'; carregarForuns(); } catch(err){} finally { btn.innerHTML = 'Sim, Apagar'; btn.disabled = false; pendingDeleteChatId = null; } }
     }
 
     const cardF = e.target.closest('.canal-card');
@@ -320,27 +383,16 @@ document.body.addEventListener('click', async (e) => {
     if(e.target.closest('#btn-aluno-voltar-canais')) { document.getElementById('aluno-forum-chat-view').style.display = 'none'; document.getElementById('aluno-forum-channel-list').style.display = 'block'; document.getElementById('btn-create-chat-aluno').style.display = 'block'; }
     if(e.target.closest('#btn-aluno-send-msg')) {
         const inp = document.getElementById('aluno-input-forum-msg'); const t = inp.value.trim(); if(!t || !alunoForumAtivoId) return; 
-        try { await addDoc(collection(db, "turmas", minhaTurma, "foruns", alunoForumAtivoId, "mensagens"), { remetente: myUserName, texto: t, timestamp: Date.now() }); inp.value = ''; } catch(err) {} 
-    }
-    
-    if(e.target.closest('#btn-add-objetivo')) {
-        const tipo = document.getElementById('obj-tipo').value; let data = { tipo: tipo, concluido: false, timestamp: Date.now() };
-        if(tipo === 'nota') {
-            data.disciplina = document.getElementById('obj-disciplina').value; data.modulo = document.getElementById('obj-modulo').value; data.notaAlvo = document.getElementById('obj-nota-alvo').value;
-            if(!data.disciplina || !data.modulo || !data.notaAlvo) return alert("Preenche todos os campos.");
-            data.desc = `Tirar ${data.notaAlvo} a ${data.disciplina} no Mod. ${data.modulo}`;
-        }
-        try { await addDoc(collection(db, "utilizadores", myUserId, "objetivos"), data); document.getElementById('obj-nota-alvo').value = ''; carregarObjetivosPessoais(); } catch(err) {}
-    }
-
-    if(e.target.closest('.btn-delete-objetivo')) { e.stopPropagation(); pendingDeleteObjetivoId = e.target.closest('.btn-delete-objetivo').getAttribute('data-id'); document.getElementById('modal-confirm-delete-objetivo').style.display = 'flex'; }
-    if(e.target.closest('#btn-cancel-delete-objetivo')) { document.getElementById('modal-confirm-delete-objetivo').style.display = 'none'; pendingDeleteObjetivoId = null; }
-    if(e.target.closest('#btn-confirm-delete-objetivo')) {
-        if(pendingDeleteObjetivoId) {
-            const btn = e.target.closest('#btn-confirm-delete-objetivo'); btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
-            try { await deleteDoc(doc(db, "utilizadores", myUserId, "objetivos", pendingDeleteObjetivoId)); document.getElementById('modal-confirm-delete-objetivo').style.display = 'none'; carregarObjetivosPessoais(); } catch(err){}
-            finally { btn.innerHTML = 'Sim, Apagar'; btn.disabled = false; pendingDeleteObjetivoId = null; }
-        }
+        try { 
+            // Injeção Chat de Academias
+            if(alunoForumAtivoId.startsWith('academia_')) {
+                const idAcademia = alunoForumAtivoId.replace('academia_', '');
+                await addDoc(collection(db, "academias", idAcademia, "mensagens"), { remetente: myUserName, texto: t, timestamp: Date.now() });
+            } else {
+                await addDoc(collection(db, "turmas", minhaTurma, "foruns", alunoForumAtivoId, "mensagens"), { remetente: myUserName, texto: t, timestamp: Date.now() }); 
+            }
+            inp.value = ''; 
+        } catch(err) {} 
     }
 });
 
@@ -380,6 +432,9 @@ function atualizarModulosMeta() {
     }
 }
 
+// ==========================================
+// HOME, FCT, PAP BINDINGS E FUNÇÕES GERAIS
+// ==========================================
 bindClick('btn-save-fct', async (e) => { const v = document.getElementById('input-fct-horas').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "fct.horasRealizadas": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
 bindClick('btn-save-pap-tema', async (e) => { const v = document.getElementById('input-pap-tema').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "pap.tema": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-save"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
 bindClick('btn-enviar-pap', async (e) => { if(!fPB64) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { const snap = await getDoc(doc(db, "utilizadores", myUserId)); let axp = snap.exists()&&snap.data().xp?snap.data().xp:0; await updateDoc(doc(db, "utilizadores", myUserId), { papFicheiroEnviado:true, papFicheiroBase64:fPB64, xp:axp+200 }); b.style.backgroundColor="var(--success-green)"; b.innerHTML='<i class="fa-solid fa-check"></i> Submetido'; setTimeout(() => { b.style.display='none'; b.disabled=false; const fNm = document.getElementById('aluno-pap-file-name'); if(fNm) fNm.style.color="var(--success-green)"; }, 2000); } catch(err){} });
@@ -441,7 +496,7 @@ async function verificarEpocaExames() {
 }
 
 // ==========================================
-// CADERNETA: NOTAS (PAUTA GLOBAL) E EVOLUÇÃO (EXTRATO)
+// CADERNETA E VISTAS COMPLEMENTARES
 // ==========================================
 async function carregarNotasAluno() {
     const cCont = document.getElementById('aluno-caderneta-content'); if(!cCont) return;
@@ -616,7 +671,7 @@ async function carregarObservacoesAluno(rSel = '1_intercalar') {
 async function carregarAgendaAlunoLista() {
     const sC = document.getElementById('aluno-agenda-content'); sC.innerHTML = '<p class="text-muted center">A sincronizar agenda...</p>'; if(!minhaTurma) { sC.innerHTML = getEmptyState('Sem turma configurada.', 'fa-calendar-xmark'); return; }
     
-    // Ler checkboxes com fallback (caso o DOM não as encontre)
+    // Leitura à prova de falhas dos checkboxes
     const elT = document.getElementById('aluno-filtro-agenda-testes');
     const elTr = document.getElementById('aluno-filtro-agenda-trabalhos');
     const elO = document.getElementById('aluno-filtro-agenda-outros');
@@ -658,6 +713,20 @@ async function carregarAgendaAlunoLista() {
     } catch(e) { sC.innerHTML = getEmptyState('Erro ao sincronizar.', 'fa-triangle-exclamation'); }
 }
 
+const getCorEspecial = (dsc) => {
+    if(!dsc) return { c: 'var(--primary-green)', bg: 'rgba(16, 185, 129, 0.05)' };
+    const d = dsc.toLowerCase();
+    if(d.includes('alm')) return { c: 'var(--warning-yellow)', bg: 'rgba(245, 158, 11, 0.1)' };
+    if(d.includes('vis')) return { c: '#00d2ff', bg: 'rgba(0, 210, 255, 0.1)' };
+    if(d.includes('prhf')) return { c: 'var(--danger-red)', bg: 'rgba(239, 68, 68, 0.1)' };
+    if(d.includes('pap') || d.includes('fct')) return { c: '#ff9900', bg: 'rgba(255, 153, 0, 0.1)' };
+    if(['reunião','reuniao','livre','estudo'].some(k => d.includes(k))) return { c: 'var(--accent-purple)', bg: 'rgba(139, 92, 246, 0.1)' };
+    return { c: 'var(--primary-green)', bg: 'rgba(16, 185, 129, 0.05)' };
+};
+
+// ==========================================
+// HORÁRIO BLINDADO CONTRA DADOS ANTIGOS
+// ==========================================
 async function carregarHorarioAluno() {
     const sC = document.getElementById('aluno-horario-content'); if(!sC) return;
     sC.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A gerar horário...</p>'; 
@@ -667,7 +736,6 @@ async function carregarHorarioAluno() {
         const dS = await getDoc(doc(db, "turmas", minhaTurma)); 
         let hb = {}; 
         
-        // CORREÇÃO: Prevenção contra dados antigos ou corrompidos na Firebase (null, arrays, etc)
         if(dS.exists() && dS.data().horario && typeof dS.data().horario === 'object') {
             hb = dS.data().horario;
         }
@@ -701,7 +769,6 @@ async function carregarHorarioAluno() {
             
             bK.forEach(b => { 
                 const dc = hb[`${dSStr}_${b}`]; 
-                // CORREÇÃO: Garante que só desenha se 'dc' for um texto válido (ignora dados velhos/erros)
                 if(dc && typeof dc === 'string' && dc.trim() !== '') { 
                     const sty = getCorEspecial(dc); 
                     const profNome = profsCache[dc] ? `Prof. ${profsCache[dc]}` : 'Prof. A Atribuir';
@@ -739,61 +806,21 @@ async function carregarHorarioAluno() {
     }
 }
 
-// ==========================================
-// RANKINGS, FORUNS, E MATERIAIS
-// ==========================================
-async function carregarRankingTurma() {
-    const c = document.getElementById('ranking-turma-container'); if(!minhaTurma) { c.innerHTML = '<p class="text-muted center">Sem turma atribuída.</p>'; return; }
-    try {
-        const snap = await getDocs(query(collection(db, "utilizadores"), where("papel", "==", "aluno")));
-        let alunosTurma = []; let academiasXP = { estrategas: 0, embaixadores: 0, exploradores: 0, visionarios: 0 };
-        
-        snap.forEach(d => {
-            const al = {id: d.id, ...d.data()};
-            if(al.academia && academiasXP[al.academia] !== undefined) { academiasXP[al.academia] += (al.xp || 0); }
-            if(al.turma === minhaTurma) { alunosTurma.push(al); }
-        });
-        alunosTurma.sort((a,b) => (b.xp || 0) - (a.xp || 0));
-        
-        let hAcad = `<div style="display:flex; justify-content:space-around; margin-bottom:20px; text-align:center; background:rgba(0,0,0,0.2); padding:15px; border-radius:12px;">`;
-        const orderAcad = Object.keys(academiasXP).sort((a,b) => academiasXP[b] - academiasXP[a]);
-        
-        orderAcad.forEach((ac) => {
-            const acData = ACADEMIAS_INFO[ac];
-            if(acData) { // Escudo de proteção adicionado
-                const shortName = acData.nome.replace('Academia dos ', '');
-                hAcad += `<div><i class="fa-solid ${acData.icon}" style="font-size:1.8rem; color:${acData.cor}; margin-bottom:8px; display:block;"></i><strong style="color:var(--text-light); font-size:0.75rem;">${shortName}</strong><br><span style="color:var(--warning-yellow); font-size:0.9rem; font-weight:bold;">${academiasXP[ac]} XP</span></div>`;
-            }
-        });
-        hAcad += `</div><h4 style="color:var(--text-muted); font-size:0.85rem; text-transform:uppercase; margin-bottom:10px;">🏆 Top 10</h4>`;
-        
-        let hAl = '';
-        alunosTurma.slice(0, 10).forEach((al, idx) => {
-            let cor = 'var(--text-muted)'; 
-            let iconePos = `${idx+1}`;
-            if(idx === 0) { cor = '#ffd700'; iconePos = '<i class="fa-solid fa-crown" style="font-size:1.4rem;"></i>'; } 
-            else if(idx === 1) { cor = '#c0c0c0'; iconePos = '<i class="fa-solid fa-medal" style="font-size:1.3rem;"></i>'; } 
-            else if(idx === 2) { cor = '#cd7f32'; iconePos = '<i class="fa-solid fa-award" style="font-size:1.3rem;"></i>'; }
-            
-            hAl += `<div style="display:flex; align-items:center; gap:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left:3px solid ${cor};">
-                        <span style="font-weight:bold; font-size:1.2rem; color:${cor}; width:35px; text-align:center; display:inline-block;">${iconePos}</span>
-                        <img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=00cc88&color=fff`}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;">
-                        <div style="flex:1;">
-                            <strong style="font-size:0.95rem; color:var(--text-light);">${al.nome.split(' ')[0]} ${al.nome.split(' ').pop()}</strong><br>
-                            <span style="font-size:0.7rem; color:var(--text-muted);">${al.academia && ACADEMIAS_INFO[al.academia] ? ACADEMIAS_INFO[al.academia].nome.replace('Academia dos ','') : 'S/ Academia'}</span>
-                        </div>
-                        <span style="font-weight:bold; color:var(--primary-green); font-size:0.9rem;">${al.xp || 0} XP</span>
-                    </div>`;
-        });
-        c.innerHTML = hAcad + (hAl === '' ? '<p class="text-muted center">Ainda não há alunos com XP na tua turma.</p>' : hAl);
-    } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao carregar ranking.</p>'; }
-}
-
 async function carregarForuns() {
     const cont = document.getElementById('aluno-forum-channel-list'); cont.innerHTML = '<p class="text-muted center">A configurar fóruns...</p>'; if(!minhaTurma) return;
-    let html = `<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apoio & Turma</h3><div class="canal-card" data-id="turma_global" data-nome="Turma ${minhaTurma}" style="margin-bottom: 15px;"><div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-users"></i></div><div class="canal-info"><h4>Turma ${minhaTurma}</h4><p>Canal Geral</p></div></div><div class="canal-card" data-id="dt_${myUserId}" data-nome="Chat DT"><div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div><div class="canal-info"><h4>Diretor de Turma</h4><p>Mensagem Privada</p></div></div><h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Disciplinas</h3><div style="display:flex; flex-wrap:wrap; gap:10px;">`;
+    
+    // Injeção do Fórum da Academia do Aluno (Networking e Apadrinhamento)
+    let acHtml = '';
+    if(myAcademia && ACADEMIAS_INFO[myAcademia]) {
+        const aI = ACADEMIAS_INFO[myAcademia];
+        acHtml = `<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">A Minha Academia</h3><div class="canal-card" data-id="academia_${myAcademia}" data-nome="Global: ${aI.nome}" style="margin-bottom: 20px;"><div class="canal-icon" style="color:${aI.cor}; border-color:${aI.cor};"><i class="fa-solid ${aI.icon}"></i></div><div class="canal-info"><h4>${aI.nome}</h4><p>Chat Global (1º ao 3º Ano)</p></div></div>`;
+    }
+
+    let html = acHtml + `<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apoio & Turma</h3><div class="canal-card" data-id="turma_global" data-nome="Turma ${minhaTurma}" style="margin-bottom: 15px;"><div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-users"></i></div><div class="canal-info"><h4>Turma ${minhaTurma}</h4><p>Canal Geral</p></div></div><div class="canal-card" data-id="dt_${myUserId}" data-nome="Chat DT"><div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div><div class="canal-info"><h4>Diretor de Turma</h4><p>Mensagem Privada</p></div></div><h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Disciplinas</h3><div style="display:flex; flex-wrap:wrap; gap:10px;">`;
+    
     const ordemDisciplinas = obterDisciplinasDoAno();
     ordemDisciplinas.forEach(disc => { html += `<div class="canal-card" data-id="disc_${disc}" data-nome="Fórum ${disc}" style="flex: 1 1 45%; padding: 10px;"><div class="canal-info" style="text-align:center;"><h4 style="margin:0; font-size:0.9rem; color:#00d2ff;"><i class="fa-solid fa-book-open"></i> ${disc}</h4></div></div>`; }); html += '</div>';
+    
     try {
         const res = await getDocs(collection(db, "turmas", minhaTurma, "foruns")); let extrasHtml = '';
         res.forEach(docSnap => { const f = docSnap.data(); if(f.membros && f.membros.includes(myUserId) && !f.isDefault) { extrasHtml += `<div class="canal-card" data-id="${docSnap.id}" data-nome="${f.nome}" style="position:relative;"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-comments"></i></div><div class="canal-info"><h4>${f.nome}</h4><p>Grupo de Trabalho</p></div><i class="fa-solid fa-trash btn-delete-chat" data-id="${docSnap.id}" style="color:var(--danger-red); position:absolute; right:15px; font-size:1.1rem; cursor:pointer;"></i></div>`; } });
@@ -805,7 +832,15 @@ async function carregarForuns() {
 function iniciarChatAluno(fId) {
     const chatContainer = document.getElementById('aluno-chat-messages-container'); if(!chatContainer) return;
     chatContainer.innerHTML = ''; if(chatUnsubscribeAluno) chatUnsubscribeAluno();
-    chatUnsubscribeAluno = onSnapshot(query(collection(db, "turmas", minhaTurma, "foruns", fId, "mensagens"), orderBy("timestamp")), (snapshot) => {
+    
+    // Lógica para detetar se é o Chat da Academia Global
+    let queryRef = query(collection(db, "turmas", minhaTurma, "foruns", fId, "mensagens"), orderBy("timestamp"));
+    if(fId.startsWith('academia_')) {
+        const idAcademia = fId.replace('academia_', '');
+        queryRef = query(collection(db, "academias", idAcademia, "mensagens"), orderBy("timestamp"));
+    }
+
+    chatUnsubscribeAluno = onSnapshot(queryRef, (snapshot) => {
         let html = ''; 
         snapshot.forEach(doc => { 
             const msg = doc.data(); const isMe = msg.remetente === myUserName || msg.autor === myUserName; const remetenteNome = msg.remetente || msg.autor || 'Desconhecido'; const isProf = msg.papel === 'professor';
@@ -814,7 +849,7 @@ function iniciarChatAluno(fId) {
             else if (isProf) { html += `<div class="chat-bubble admin"><strong>Prof. ${remetenteNome}</strong><br>${msg.texto}<span class="chat-meta">${hora}</span></div>`; } 
             else { html += `<div class="chat-bubble student"><strong style="color:var(--primary-green);">${remetenteNome}</strong><br>${msg.texto}<span class="chat-meta">${hora}</span></div>`; }
         });
-        if (html === '') html = getEmptyState('Sê o primeiro a falar na tua turma!', 'fa-comments');
+        if (html === '') html = getEmptyState('Sê o primeiro a falar neste canal!', 'fa-comments');
         chatContainer.innerHTML = html; setTimeout(() => { chatContainer.scrollTop = chatContainer.scrollHeight; }, 100);
     });
 }
