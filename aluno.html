@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Turma PRO - Aluno</title>
     <link rel="icon" type="image/png" href="logo_tur.png">
-    <link rel="stylesheet" href="style.css?v=20">
+    <link rel="stylesheet" href="style.css?v=25">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
@@ -24,8 +24,35 @@
         .filter-chip.active { background: var(--primary-green); color: var(--bg-dark); border-color: var(--primary-green); font-weight: bold; }
         .input-padrao { background: var(--bg-dark); border: 1px solid #333; color: var(--text-light); border-radius: 8px; padding: 10px; font-family: inherit; }
         .input-padrao:focus { outline: none; border-color: var(--primary-green); }
+        
+        /* MAGIA UX: Efeito Fade-In nas abas e transições */
+        @keyframes fadeSlide {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        main.app-content > div, #aluno-caderneta-content {
+            animation: fadeSlide 0.3s ease-out forwards;
+        }
+
+        /* MAGIA UX: Pulsar nas Medalhas Ganhas */
         .badge-icon { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 8px auto; background: rgba(255,255,255,0.05); color: #555; border: 2px solid #333; transition: 0.3s; }
-        .badge-item.earned .badge-icon { background: rgba(255,215,0,0.1); color: #ffd700; border-color: #ffd700; box-shadow: 0 0 15px rgba(255,215,0,0.2); }
+        @keyframes pulseGold {
+            0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+        }
+        .badge-item.earned .badge-icon { 
+            background: rgba(255,215,0,0.15) !important; color: #ffd700 !important; border-color: #ffd700 !important;
+            animation: pulseGold 2s infinite; 
+        }
+
+        /* MAGIA UX: Efeito Brilho e "Pop" nas Missões Aceites */
+        .mission-card { transition: all 0.3s ease; }
+        .mission-card.accepted {
+            border-color: var(--success-green) !important;
+            box-shadow: 0 0 15px rgba(0, 204, 136, 0.15);
+            transform: scale(1.02);
+        }
     </style>
 </head>
 <body>
@@ -103,7 +130,6 @@
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;"><span id="perfil-xp-totais">0</span> XP totais alcançados</p>
                 </div>
 
-                <!-- NOVO: PASSAPORTE PROFISSIONAL -->
                 <div class="card" id="perfil-competencias-container" style="border-left: 4px solid #0ea5e9; margin-bottom: 20px;">
                     <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: var(--text-light);"><i class="fa-solid fa-id-card"></i> Passaporte Profissional</h3>
                     <div id="barras-competencias-perfil">
@@ -111,7 +137,6 @@
                     </div>
                 </div>
 
-                <!-- NOVO: BADGES / CONQUISTAS -->
                 <div class="card" style="margin-bottom: 20px;">
                     <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: var(--text-light);"><i class="fa-solid fa-award"></i> Conquistas</h3>
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center;" id="badges-container">
@@ -119,7 +144,6 @@
                     </div>
                 </div>
 
-                <!-- MANTER: METAS PESSOAIS -->
                 <div class="card" style="border-left: 4px solid var(--warning-yellow);">
                     <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: var(--text-light);"><i class="fa-solid fa-bullseye"></i> Metas Pessoais</h3>
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">A app dá-te <strong style="color:var(--warning-yellow);">+50 XP</strong> quando cumprires os objetivos.</p>
@@ -140,7 +164,6 @@
                     <div id="lista-objetivos-container"></div>
                 </div>
 
-                <!-- MANTER: RANKING GLOBAL E TURMA -->
                 <div class="card" style="border-left: 4px solid #ffd700; margin-bottom: 20px;">
                     <h3 style="font-size: 1.1rem; color: var(--text-light); margin-bottom: 15px;"><i class="fa-solid fa-trophy"></i> Rankings</h3>
                     <div id="ranking-turma-container">
@@ -185,7 +208,6 @@
                     <button class="falta-tab-btn" id="tab-aluno-notas">Notas</button>
                     <button class="falta-tab-btn" id="tab-aluno-faltas">Faltas</button>
                     <button class="falta-tab-btn" id="tab-aluno-prhfs">PRHFs</button>
-                    <!-- ABA MUDADA PARA EVOLUÇÃO PRO -->
                     <button class="falta-tab-btn" id="tab-aluno-evolucao" style="color: var(--primary-green); border-color: var(--primary-green);"><i class="fa-solid fa-chart-line"></i> Evolução PRO</button>
                     <button class="falta-tab-btn" id="tab-aluno-observacoes">Reuniões</button>
                 </div>
@@ -336,11 +358,11 @@
                 </div>
             </div>
 
-            <!-- MODAL ACADEMIA QUIZ (CHAPÉU SELECIONADOR TURISMO) -->
+            <!-- MODAL ACADEMIA QUIZ -->
             <div id="modal-academia-quiz" class="modal-overlay" style="z-index: 9999; background: var(--bg-dark); align-items: stretch; padding: 0;">
                 <div style="width: 100%; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; justify-content: center; padding: 30px; position: relative;">
                     
-                    <div id="quiz-step-intro" style="text-align: center; animation: fadeAndSlideIn 0.5s ease;">
+                    <div id="quiz-step-intro" style="text-align: center; animation: fadeSlide 0.5s ease;">
                         <i class="fa-solid fa-map-location-dot" style="font-size: 4rem; color: var(--primary-green); margin-bottom: 20px;"></i>
                         <h1 style="font-size: 2rem; color: var(--text-light); margin-bottom: 15px;">Bem-vindo ao teu Percurso!</h1>
                         <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 30px; line-height: 1.5;">O mundo do Turismo é feito de talentos diferentes. Para personalizarmos a tua aplicação, precisamos de saber qual é o teu perfil natural.</p>
@@ -353,9 +375,7 @@
                         
                         <h2 id="quiz-q-title" style="font-size: 1.3rem; color: var(--text-light); margin-bottom: 30px; line-height: 1.4;">Carregando pergunta...</h2>
                         
-                        <div id="quiz-q-options" style="display: flex; flex-direction: column; gap: 12px;">
-                            <!-- Botões Injetados via JS -->
-                        </div>
+                        <div id="quiz-q-options" style="display: flex; flex-direction: column; gap: 12px;"></div>
                     </div>
 
                     <div id="quiz-step-loading" style="display: none; text-align: center;">
@@ -363,7 +383,7 @@
                         <h2 style="color: var(--text-light);">A traçar o teu perfil...</h2>
                     </div>
 
-                    <div id="quiz-step-result" style="display: none; text-align: center; animation: fadeAndSlideIn 0.8s ease;">
+                    <div id="quiz-step-result" style="display: none; text-align: center; animation: fadeSlide 0.8s ease;">
                         <div id="quiz-result-icon" style="font-size: 5rem; margin-bottom: 20px;"></div>
                         <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 5px;">O teu perfil enquadra-se na</p>
                         <h1 id="quiz-result-title" style="font-size: 2.5rem; margin-bottom: 15px; font-weight: 800;">...</h1>
@@ -409,6 +429,6 @@
         </nav>
     </div>
 
-    <script type="module" src="./js/aluno-app.js?v=25"></script>
+    <script type="module" src="./js/aluno-app.js?v=30"></script>
 </body>
 </html>
