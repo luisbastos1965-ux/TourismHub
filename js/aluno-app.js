@@ -22,7 +22,7 @@ function getEmptyState(mensagem, icone = "fa-folder-open") {
 }
 
 // ==========================================
-// NÍVEIS PROFISSIONAIS (12 Níveis para 3 anos) E BADGES (15)
+// 12 NÍVEIS PROFISSIONAIS E 22 BADGES DE TURISMO
 // ==========================================
 function getNivelProInfo(xpTotal) {
     const xp = xpTotal || 0;
@@ -44,18 +44,30 @@ const BADGES_DEFS = [
     { id: "b1", nome: "Primeiro Passo", icon: "fa-shoe-prints", reqXp: 100 },
     { id: "b2", nome: "Promessa", icon: "fa-star", reqXp: 1000 },
     { id: "b3", nome: "Veterano", icon: "fa-shield", reqXp: 5000 },
-    { id: "b4", nome: "Boa Comunicação", icon: "fa-microphone", reqCom: 100 },
-    { id: "b5", nome: "Orador Nato", icon: "fa-bullhorn", reqCom: 500 },
-    { id: "b6", nome: "Ideia Brilhante", icon: "fa-lightbulb", reqCri: 100 },
-    { id: "b7", nome: "Mente Inovadora", icon: "fa-wand-magic-sparkles", reqCri: 500 },
-    { id: "b8", nome: "Guia", icon: "fa-compass", reqLid: 100 },
-    { id: "b9", nome: "Líder Natural", icon: "fa-crown", reqLid: 500 },
-    { id: "b10", nome: "Organizado", icon: "fa-list-check", reqOrg: 100 },
-    { id: "b11", nome: "Mestre Estratega", icon: "fa-chess", reqOrg: 500 },
-    { id: "b12", nome: "Colega 5 Estrelas", icon: "fa-handshake-angle", reqXp: 1500 },
-    { id: "b13", nome: "Imparável", icon: "fa-fire-flame-curved", reqXp: 8000 },
-    { id: "b14", nome: "Coração de Ouro", icon: "fa-heart", reqCom: 1000 },
-    { id: "b15", nome: "Mestre do Turismo", icon: "fa-plane-departure", reqXp: 15000 }
+    { id: "b4", nome: "Lenda da Escola", icon: "fa-building-columns", reqXp: 10000 },
+    
+    { id: "b5", nome: "Comunicador Nato", icon: "fa-microphone", reqCom: 100 },
+    { id: "b6", nome: "Voz da Razão", icon: "fa-comment-dots", reqCom: 500 },
+    { id: "b7", nome: "Mestre da Oratória", icon: "fa-bullhorn", reqCom: 1000 },
+    
+    { id: "b8", nome: "Faísca Criativa", icon: "fa-lightbulb", reqCri: 100 },
+    { id: "b9", nome: "Mente Inovadora", icon: "fa-wand-magic-sparkles", reqCri: 500 },
+    { id: "b10", nome: "Visionário", icon: "fa-eye", reqCri: 1000 },
+    
+    { id: "b11", nome: "Guia Local", icon: "fa-map-location-dot", reqLid: 100 },
+    { id: "b12", nome: "Líder Natural", icon: "fa-crown", reqLid: 500 },
+    { id: "b13", nome: "Capitão de Equipa", icon: "fa-anchor", reqLid: 1000 },
+    
+    { id: "b14", nome: "Organizado", icon: "fa-list-check", reqOrg: 100 },
+    { id: "b15", nome: "Estratega", icon: "fa-chess-knight", reqOrg: 500 },
+    { id: "b16", nome: "Arquiteto", icon: "fa-compass-drafting", reqOrg: 1000 },
+    
+    { id: "b17", nome: "Colega 5 Estrelas", icon: "fa-handshake-angle", reqXp: 1500 },
+    { id: "b18", nome: "Imparável", icon: "fa-fire-flame-curved", reqXp: 8000 },
+    { id: "b19", nome: "Coração de Ouro", icon: "fa-heart", reqXp: 3000 },
+    { id: "b20", nome: "Mestre do Turismo", icon: "fa-plane-departure", reqXp: 15000 },
+    { id: "b21", nome: "Embaixador VIP", icon: "fa-gem", reqXp: 20000 },
+    { id: "b22", nome: "Turma PRO", icon: "fa-trophy", reqXp: 25000 }
 ];
 
 const ACADEMIAS_INFO = {
@@ -66,11 +78,11 @@ const ACADEMIAS_INFO = {
 };
 
 const matrizAmbos = {
-    "Sociocultural": { "PORT": {"1":33,"2":34}, "ING": {"1":27,"2":24}, "AI": {"1":36}, "EF": {"1":10}, "TIC": {"1":25} },
-    "Científica": { "GEO": {"1":33}, "HCA": {"1":20}, "MAT": {"1":33} }
+    "Sociocultural": { "PORT": {"1":33,"2":34,"3":33,"4":33,"5":34,"6":33,"7":40,"8":40,"9":40}, "ING": {"1":27,"2":24,"3":24,"4":24,"5":24,"6":24,"7":24,"8":24,"9":24}, "AI": {"1":36,"2":36,"3":36,"4":36,"5":37,"6":39}, "EF": {"1":10,"2":8,"3":10,"4":10,"5":10,"6":12,"7":6,"8":12,"9":8,"10":10,"11":12,"12":8,"13":6,"14":10,"15":6,"16":2}, "TIC": {"1":25,"2":25,"3":25,"4":25} },
+    "Científica": { "GEO": {"1":33,"2":33,"3":30,"4":26,"5":21,"6":21,"7":21,"8":15}, "HCA": {"1":20,"2":18,"3":18,"4":18,"5":24,"6":18,"7":18,"8":24,"9":21,"10":21}, "MAT": {"1":33,"2":27,"3":20,"4":20} }
 };
-const matrizAntigoTecnica = { "CF": {"1":24}, "TIAT": {"1":27}, "TCAT": {"1":33}, "OTET": {"1":24} };
-const matrizNovoTecnica = { "AET": {"UC00038":20}, "OGOT": {"UC03629":20}, "CMET": {"UC00034":30}, "LNTT": {"UC00044":50} };
+const matrizAntigoTecnica = { "CF": {"1":24,"2":21,"3":21,"4":21,"5":21,"6":21,"7":9,"8":15,"9":15}, "TIAT": {"1":27,"2":24,"3":24,"4":24,"5":33,"6":30,"7":30,"8":30,"9":36,"10":30,"11":33,"12":30,"13":24}, "TCAT": {"1":33,"2":33,"3":30,"4":33,"5":36,"6":36,"7":24}, "OTET": {"1":24,"2":24,"3":33,"4":30,"5":24,"6":24,"7":36,"8":27,"9":33,"10":30,"11":30,"12":17} };
+const matrizNovoTecnica = { "AET": {"UC00038":20,"UC03611":20,"UC03623":40,"UC03612":40,"UC03613":20,"UC03614":40,"UC00056":20,"UC03631":40,"UC00063":20}, "OGOT": {"UC03629":20,"UC03619":40,"UC03621":40,"UC00055":20,"UC03630":20,"UC03616":20,"UC03617":40,"UC03618":20,"UC03620":40,"UC03628":40,"UC03632":20}, "CMET": {"UC00034":30,"UC00033":30,"UC00593":20,"UC03622":40,"UC03623":40,"UC00031":30,"UC00032":30,"UC00433":20,"UC03624":20,"UC03627":20}, "LNTT": {"UC00044":50,"UC00071":50,"UC03615":40,"UC03625":20} };
 
 function getMatriz() {
     const mStr = minhaTurma || ""; const mMatch = mStr.match(/\d+/); const ano = mMatch ? parseInt(mMatch[0]) : 10;
@@ -127,11 +139,6 @@ onAuthStateChanged(auth, async (user) => {
 
 bindClick('btn-logout-aluno', () => signOut(auth));
 
-function iniciarQuizAcademias() { 
-    document.getElementById('modal-academia-quiz').style.display = 'flex'; document.getElementById('quiz-step-intro').style.display = 'block'; document.getElementById('quiz-step-question').style.display = 'none'; document.getElementById('quiz-step-result').style.display = 'none'; document.getElementById('quiz-step-loading').style.display = 'none';
-}
-bindClick('btn-start-quiz', () => { document.getElementById('quiz-step-intro').style.display = 'none'; document.getElementById('quiz-step-question').style.display = 'block'; renderizarPergunta(); });
-
 function renderizarPergunta() {
     if(pAtual >= perguntasQuiz.length) { finalizarQuiz(); return; }
     const qData = perguntasQuiz[pAtual];
@@ -143,10 +150,11 @@ function renderizarPergunta() {
     shuffled.forEach(opt => {
         const btn = document.createElement('button'); btn.className = 'secondary-btn'; btn.style.cssText = 'text-align: left; padding: 18px 20px; height: auto; font-size: 1rem; border-color: #333; justify-content: flex-start; transition: 0.3s; color: var(--text-light);'; btn.innerText = opt.text;
         btn.addEventListener('mouseover', () => btn.style.borderColor = 'var(--primary-green)'); btn.addEventListener('mouseout', () => btn.style.borderColor = '#333');
-        btn.addEventListener('click', () => { quizScores[opt.academia]++; pAtual++; renderizarPergunta(); });
-        optContainer.appendChild(btn);
+        btn.addEventListener('click', () => { quizScores[opt.academia]++; pAtual++; renderizarPergunta(); }); optContainer.appendChild(btn);
     });
 }
+
+bindClick('btn-start-quiz', () => { document.getElementById('quiz-step-intro').style.display = 'none'; document.getElementById('quiz-step-question').style.display = 'block'; renderizarPergunta(); });
 
 async function finalizarQuiz() { 
     document.getElementById('quiz-step-question').style.display = 'none'; document.getElementById('quiz-step-loading').style.display = 'block';
@@ -173,7 +181,7 @@ function aplicarTemaAcademia(idHouse) {
 }
 
 // ==========================================
-// CARREGAMENTOS INICIAIS DA GAMIFICAÇÃO
+// GAMIFICAÇÃO, PASSAPORTE E MISSÕES
 // ==========================================
 function carregarGamificacao(dados) {
     const xp = dados.xp || 0; const profInfo = getNivelProInfo(xp);
@@ -220,16 +228,7 @@ function carregarPassaporteEBadges(data) {
 
 function carregarMissoes() {
     const cont = document.getElementById('missoes-container'); if(!cont) return;
-    const missoes = [
-        { id: "m1", title: "Atendimento Impossível", desc: "Apresenta uma solução profissional para um turista sem reserva.", xp: 100, tag: "Embaixadores", cor: "#0ea5e9" },
-        { id: "m2", title: "Operação Turismo", desc: "Organiza uma atividade desde o planeamento até à execução.", xp: 150, tag: "Estrategas", cor: "#10b981" }
-    ];
-    let html = '';
-    missoes.forEach(m => { 
-        html += `<div class="card mission-card" id="mission-card-${m.id}" style="border-left: 4px solid ${m.cor}; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center;"><div style="flex:1;"><span style="font-size:0.7rem; color:${m.cor}; font-weight:bold; text-transform:uppercase; border:1px solid ${m.cor}; padding:2px 6px; border-radius:12px;">Missão: ${m.tag}</span><h4 style="margin:5px 0 3px 0; color:var(--text-light); font-size:1rem;">${m.title}</h4><p style="font-size:0.85rem; color:var(--text-muted); margin:0;">${m.desc}</p></div><div style="text-align:right; margin-left:10px;"><strong style="color:var(--warning-yellow); font-size:1.1rem;">+${m.xp} XP</strong><br><button class="secondary-btn small-btn btn-accept-mission" style="margin-top:5px; border-color:var(--text-muted); color:var(--text-muted); cursor:pointer;">Aceitar</button></div></div>`; 
-    });
-    cont.innerHTML = html;
-    document.querySelectorAll('.btn-accept-mission').forEach(btn => { btn.addEventListener('click', (e) => { const b = e.currentTarget; const card = b.closest('.mission-card'); card.classList.add('accepted'); b.innerHTML = '<i class="fa-solid fa-check"></i> Aceite'; b.style.backgroundColor = 'var(--success-green)'; b.style.color = '#fff'; b.style.borderColor = 'var(--success-green)'; b.disabled = true; }); });
+    cont.innerHTML = getEmptyState('Nenhuma missão ativa de momento.', 'fa-bullseye');
 }
 
 function carregarDadosPassaporte(dados) {
@@ -274,8 +273,8 @@ document.body.addEventListener('click', async (e) => {
     const nChip = e.target.closest('#notificacoes-filtros .filter-chip');
     if(nChip) { document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(c => c.classList.remove('active')); nChip.classList.add('active'); window.notifFilterCat = nChip.getAttribute('data-cat'); carregarNotificacoesAluno(); }
 
-    if(e.target.closest('#tab-aluno-eventos')) { document.getElementById('tab-aluno-eventos').classList.add('active'); document.getElementById('tab-aluno-horario').classList.remove('active'); document.getElementById('aluno-agenda-filtros').style.display = 'flex'; document.getElementById('aluno-horario-container').style.display = 'none'; carregarAgendaAlunoLista(); }
-    if(e.target.closest('#tab-aluno-horario')) { document.getElementById('tab-aluno-horario').classList.add('active'); document.getElementById('tab-aluno-eventos').classList.remove('active'); document.getElementById('aluno-agenda-filtros').style.display = 'none'; document.getElementById('aluno-horario-container').style.display = 'block'; carregarHorarioAluno(); }
+    if(e.target.closest('#tab-aluno-eventos')) { document.getElementById('tab-aluno-eventos').classList.add('active'); document.getElementById('tab-aluno-horario').classList.remove('active'); document.getElementById('aluno-agenda-filtros').style.display = 'flex'; document.getElementById('aluno-horario-container').style.display = 'none'; document.getElementById('aluno-agenda-content').style.display = 'block'; carregarAgendaAlunoLista(); }
+    if(e.target.closest('#tab-aluno-horario')) { document.getElementById('tab-aluno-horario').classList.add('active'); document.getElementById('tab-aluno-eventos').classList.remove('active'); document.getElementById('aluno-agenda-filtros').style.display = 'none'; document.getElementById('aluno-agenda-content').style.display = 'none'; document.getElementById('aluno-horario-container').style.display = 'block'; carregarHorarioAluno(); }
     if(e.target.closest('#btn-aluno-horario-dia')) { ahModo = 'dia'; document.getElementById('btn-aluno-horario-dia').classList.add('active'); document.getElementById('btn-aluno-horario-grelha').classList.remove('active'); carregarHorarioAluno(); }
     if(e.target.closest('#btn-aluno-horario-grelha')) { ahModo = 'grelha'; document.getElementById('btn-aluno-horario-grelha').classList.add('active'); document.getElementById('btn-aluno-horario-dia').classList.remove('active'); carregarHorarioAluno(); }
     if(e.target.closest('#btn-aluno-prev-horario')) { if(ahModo === 'dia') ahDOff--; else ahSOff--; carregarHorarioAluno(); }
@@ -325,12 +324,6 @@ document.body.addEventListener('click', async (e) => {
             data.disciplina = document.getElementById('obj-disciplina').value; data.modulo = document.getElementById('obj-modulo').value; data.notaAlvo = document.getElementById('obj-nota-alvo').value;
             if(!data.disciplina || !data.modulo || !data.notaAlvo) return alert("Preenche todos os campos.");
             data.desc = `Tirar ${data.notaAlvo} a ${data.disciplina} no Mod. ${data.modulo}`;
-        } else if (tipo === 'prhf') { 
-            const pSnap = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); let c = 0; pSnap.forEach(p => { if(p.data().status === 'concluida') c++; });
-            data.targetCount = c + 1; data.desc = `Concluir +1 Plano de Recuperação (PRHF)`;
-        } else if (tipo === 'reconhecimento') {
-            const rSnap = await getDocs(query(collection(db, "utilizadores", myUserId, "ocorrencias"), where("tipo", "==", "positiva")));
-            data.targetCount = rSnap.size + 1; data.desc = `Receber +1 Registo Positivo do Professor`;
         }
         try { await addDoc(collection(db, "utilizadores", myUserId, "objetivos"), data); document.getElementById('obj-nota-alvo').value = ''; carregarObjetivosPessoais(); } catch(err) {}
     }
@@ -346,10 +339,8 @@ document.body.addEventListener('click', async (e) => {
     }
 });
 
-bindChange('obj-tipo', async (e) => { const v = e.target.value; document.getElementById('obj-setup-nota').style.display = v === 'nota' ? 'flex' : 'none'; });
-
 // ==========================================
-// HOME, FCT, PAP BINDINGS E FUNÇÕES GERAIS
+// BINDINGS ADICIONAIS
 // ==========================================
 bindClick('btn-save-fct', async (e) => { const v = document.getElementById('input-fct-horas').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "fct.horasRealizadas": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
 bindClick('btn-save-pap-tema', async (e) => { const v = document.getElementById('input-pap-tema').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "pap.tema": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-save"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
@@ -424,7 +415,7 @@ async function carregarNotasAluno() {
         const ordemDisciplinas = obterDisciplinasDoAno();
         if(ordemDisciplinas.length === 0) { cCont.innerHTML = getEmptyState('Ainda não tens disciplinas ativas.', 'fa-book'); return; }
 
-        let html = `<button id="btn-pauta-global" class="primary-btn" style="margin-bottom: 20px; background-color: transparent; border: 1px solid var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-table-list"></i> Pauta Global</button>`;
+        let html = `<button id="btn-pauta-global" class="primary-btn" style="margin-bottom: 20px; background-color: transparent; border: 1px solid var(--primary-green); color: var(--primary-green);">Pauta Global</button>`;
         ordemDisciplinas.forEach(disc => {
             if(disciplinasDoAluno[disc] && disciplinasDoAluno[disc].length > 0) {
                 let sum = 0; let c = 0; let modsHtml = '';
@@ -448,7 +439,7 @@ async function carregarNotasAluno() {
                     pHtml += `<div class="pauta-global-componente"><div class="pauta-global-header">${nomeComponente}</div>`; 
                     for (const [nomeDisc, modulos] of Object.entries(disciplinas)) { 
                         pHtml += `<div class="pauta-global-disc"><div class="pauta-global-disc-title">${nomeDisc}</div><div class="pauta-global-notas">`; 
-                        const isNumeric = Object.keys(modulos).every(k => !isNaN(k)); const modKeys = isNumeric ? Object.keys(modulos).sort((a,b) => parseInt(a) - parseInt(b)) : Object.keys(modulos);
+                        const modKeys = Object.keys(modulos);
                         for (const mod of modKeys) { 
                             const nota = mapNotas[`${nomeDisc}_${mod}`] || 'SN'; let cor = "sn"; 
                             if (nota !== 'SN' && nota !== 'REP' && nota >= 10) cor = "positiva"; else if (nota === 'REP' || nota < 10) cor = "negativa"; 
@@ -465,28 +456,6 @@ async function carregarNotasAluno() {
     } catch(e) {}
 }
 
-async function carregarEvolucaoAluno() {
-    const cCont = document.getElementById('aluno-caderneta-content'); if(!cCont) return;
-    try {
-        let html = `<h4 style="color:var(--text-muted); margin-bottom:15px; font-size:0.9rem; text-transform:uppercase;"><i class="fa-solid fa-bolt"></i> Histórico de Ações (Extrato)</h4>`;
-        const ocSnap = await getDocs(query(collection(db, "utilizadores", myUserId, "ocorrencias"))); let regs = []; ocSnap.forEach(d => regs.push(d.data()));
-
-        if(regs.length === 0) { html += getEmptyState('Sem registos de evolução.', 'fa-star'); } 
-        else {
-            regs.sort((a,b) => b.data.localeCompare(a.data));
-            regs.forEach(r => {
-                const isPos = r.tipo === 'positiva'; const cor = isPos ? 'var(--success-green)' : 'var(--danger-red)'; const bgCor = isPos ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
-                const xpLabel = r.xp ? (r.xp > 0 ? `+${r.xp} XP` : `${r.xp} XP`) : (isPos ? 'Registo Positivo' : 'Registo Negativo');
-                html += `<div style="display:flex; align-items:center; justify-content:space-between; background:${bgCor}; border: 1px solid ${cor}; padding: 12px; border-radius: 8px; margin-bottom: 10px;"><div><strong style="color:${cor}; font-size:1.1rem;">${xpLabel}</strong><br><span style="color:var(--text-light); font-size:0.95rem; font-weight:bold;">${r.titulo}</span>${r.descricao ? `<div style="color:var(--text-muted); font-size:0.85rem; margin-top:3px;">${r.descricao}</div>` : ''}</div><div style="text-align:right; font-size:0.75rem; color:var(--text-muted);">${r.data}<br>Prof. ${r.autor}</div></div>`;
-            });
-        }
-        cCont.innerHTML = html;
-    } catch(e) { cCont.innerHTML = '<p class="text-danger center">Erro ao carregar histórico.</p>'; }
-}
-
-// ==========================================
-// OUTRAS VISTAS (Timeline, Faltas, PRHF, Reuniões)
-// ==========================================
 async function obterEventosLinhaTemporal() {
     let ev = [];
     const nS = await getDocs(collection(db, "utilizadores", myUserId, "notas")); nS.forEach(d => { const n = d.data(); ev.push({ time: new Date(n.data).getTime(), cat: 'notas', icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação', desc: `${n.disciplina} (Mod. ${n.modulo}): <strong style="color:var(--text-light);">${n.nota}</strong>` }); });
@@ -634,36 +603,6 @@ async function carregarHorarioAluno() {
             sC.innerHTML = h + '</div>';
         }
     } catch(e) {}
-}
-
-async function carregarForuns() {
-    const cont = document.getElementById('aluno-forum-channel-list'); cont.innerHTML = '<p class="text-muted center">A configurar fóruns...</p>'; if(!minhaTurma) return;
-    let html = `<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apoio & Turma</h3><div class="canal-card" data-id="turma_global" data-nome="Turma ${minhaTurma}" style="margin-bottom: 15px;"><div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-users"></i></div><div class="canal-info"><h4>Turma ${minhaTurma}</h4><p>Canal Geral</p></div></div><div class="canal-card" data-id="dt_${myUserId}" data-nome="Chat DT"><div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div><div class="canal-info"><h4>Diretor de Turma</h4><p>Mensagem Privada</p></div></div><h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Disciplinas</h3><div style="display:flex; flex-wrap:wrap; gap:10px;">`;
-    const ordemDisciplinas = obterDisciplinasDoAno();
-    ordemDisciplinas.forEach(disc => { html += `<div class="canal-card" data-id="disc_${disc}" data-nome="Fórum ${disc}" style="flex: 1 1 45%; padding: 10px;"><div class="canal-info" style="text-align:center;"><h4 style="margin:0; font-size:0.9rem; color:#00d2ff;"><i class="fa-solid fa-book-open"></i> ${disc}</h4></div></div>`; }); html += '</div>';
-    try {
-        const res = await getDocs(collection(db, "turmas", minhaTurma, "foruns")); let extrasHtml = '';
-        res.forEach(docSnap => { const f = docSnap.data(); if(f.membros && f.membros.includes(myUserId) && !f.isDefault) { extrasHtml += `<div class="canal-card" data-id="${docSnap.id}" data-nome="${f.nome}" style="position:relative;"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-comments"></i></div><div class="canal-info"><h4>${f.nome}</h4><p>Grupo de Trabalho</p></div><i class="fa-solid fa-trash btn-delete-chat" data-id="${docSnap.id}" style="color:var(--danger-red); position:absolute; right:15px; font-size:1.1rem; cursor:pointer;"></i></div>`; } });
-        if (extrasHtml !== '') html += `<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Grupos de Trabalho</h3>` + extrasHtml;
-    } catch(e) {}
-    cont.innerHTML = html;
-}
-
-function iniciarChatAluno(fId) {
-    const chatContainer = document.getElementById('aluno-chat-messages-container'); if(!chatContainer) return;
-    chatContainer.innerHTML = ''; if(chatUnsubscribeAluno) chatUnsubscribeAluno();
-    chatUnsubscribeAluno = onSnapshot(query(collection(db, "turmas", minhaTurma, "foruns", fId, "mensagens"), orderBy("timestamp")), (snapshot) => {
-        let html = ''; 
-        snapshot.forEach(doc => { 
-            const msg = doc.data(); const isMe = msg.remetente === myUserName || msg.autor === myUserName; const remetenteNome = msg.remetente || msg.autor || 'Desconhecido'; const isProf = msg.papel === 'professor';
-            const d = new Date(msg.timestamp); const hora = isNaN(d.getTime()) ? '' : `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
-            if (isMe) { html += `<div class="chat-bubble student"><strong>Eu</strong><br>${msg.texto}<span class="chat-meta">${hora}</span></div>`; } 
-            else if (isProf) { html += `<div class="chat-bubble admin"><strong>Prof. ${remetenteNome}</strong><br>${msg.texto}<span class="chat-meta">${hora}</span></div>`; } 
-            else { html += `<div class="chat-bubble student"><strong style="color:var(--primary-green);">${remetenteNome}</strong><br>${msg.texto}<span class="chat-meta">${hora}</span></div>`; }
-        });
-        if (html === '') html = getEmptyState('Sê o primeiro a falar na tua turma!', 'fa-comments');
-        chatContainer.innerHTML = html; setTimeout(() => { chatContainer.scrollTop = chatContainer.scrollHeight; }, 100);
-    });
 }
 
 async function carregarMateriaisAluno() {
