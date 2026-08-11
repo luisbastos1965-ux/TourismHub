@@ -1,6 +1,6 @@
 import { auth, db, messaging, VAPID_KEY, getToken, onMessage } from "./firebase.js";
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, collection, updateDoc, getDocs, query, addDoc, onSnapshot, orderBy, setDoc, enableIndexedDbPersistence, deleteDoc, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { onAuthStateChanged, signOut } from "[https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js](https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js)";
+import { doc, getDoc, collection, updateDoc, getDocs, query, addDoc, onSnapshot, orderBy, setDoc, enableIndexedDbPersistence, deleteDoc, where } from "[https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js](https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js)";
 
 try { enableIndexedDbPersistence(db).catch(function(){}); } catch(e){}
 
@@ -12,7 +12,7 @@ window.timelineFilterCat = 'all'; window.notifFilterCat = 'all';
 let ahModo = 'dia', ahDOff = 0, ahSOff = 0;
 
 // ==========================================
-// FUNÇÕES DE SEGURANÇA
+// FUNÇÕES DE SEGURANÇA E HELPERS
 // ==========================================
 function bindClick(id, fn) { const el = document.getElementById(id); if(el) el.addEventListener('click', fn); }
 function bindChange(id, fn) { const el = document.getElementById(id); if(el) el.addEventListener('change', fn); }
@@ -50,9 +50,6 @@ const BADGES_DEFS = [
     { id: "b6", nome: "Colega 5 Estrelas", icon: "fa-handshake-angle", reqXp: 1500 }
 ];
 
-// ==========================================
-// A MATRIZ DE REFERÊNCIA OFICIAL
-// ==========================================
 function obterDisciplinasDoAno() {
     const turmaStr = minhaTurma || ""; const anoMatch = turmaStr.match(/\d+/); const ano = anoMatch ? parseInt(anoMatch[0]) : 10;
     const base = { 10: ["PORT", "ING", "AI", "EF", "TIC", "GEO", "HCA", "MAT"], 11: ["PORT", "ING", "AI", "EF", "GEO", "HCA"], 12: ["PORT", "ING", "EF", "GEO", "HCA"] };
@@ -98,7 +95,7 @@ onAuthStateChanged(auth, async (user) => {
                 if(d.fotoPerfil) {
                     document.getElementById('header-avatar-circle').innerHTML = `<img src="${d.fotoPerfil}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
                     document.getElementById('perfil-avatar-img').src = d.fotoPerfil;
-                } else { document.getElementById('perfil-avatar-img').src = `https://ui-avatars.com/api/?name=${myUserName}&background=00cc88&color=fff&size=100`; }
+                } else { document.getElementById('perfil-avatar-img').src = `[https://ui-avatars.com/api/?name=$](https://ui-avatars.com/api/?name=$){myUserName}&background=00cc88&color=fff&size=100`; }
 
                 const objSelect = document.getElementById('obj-disciplina');
                 if(objSelect) objSelect.innerHTML = obterDisciplinasDoAno().map(dc => `<option value="${dc}">${dc}</option>`).join('');
@@ -171,7 +168,6 @@ function aplicarTemaAcademia(idHouse) {
     document.documentElement.style.setProperty('--primary-green', ac.cor); 
     const rankElem = document.getElementById('aluno-rank-title'); const rankCentral = document.getElementById('perfil-titulo-central'); 
     
-    // Agora o rank mostra a Academia E O Nível Profissional
     if(rankElem) { const profInfo = getNivelProInfo(parseInt(document.getElementById('aluno-xp-atual').innerText)); rankElem.innerText = `${ac.nome.replace('Academia dos ','')} • ${profInfo.titulo}`; }
     if(rankCentral) { rankCentral.innerHTML = `<i class="fa-solid ${ac.icon}"></i> ${ac.nome}`; rankCentral.style.color = ac.cor; }
     const avatarImg = document.getElementById('perfil-avatar-img'); if (avatarImg) avatarImg.style.borderColor = ac.cor;
@@ -179,7 +175,7 @@ function aplicarTemaAcademia(idHouse) {
 
 
 // ==========================================
-// 3. NAVEGAÇÃO
+// 3. NAVEGAÇÃO E BINDINGS
 // ==========================================
 function esconderTodasAsVistas() { document.querySelectorAll('.app-content > div').forEach(v => v.style.display = 'none'); }
 
@@ -366,7 +362,7 @@ async function construirHomeAdaptativa() {
                 await setDoc(doc(db, "utilizadores", myUserId, "humor", hjIso), { humor:m, timestamp:Date.now(), dataIso:hjIso }); await updateDoc(doc(db, "utilizadores", myUserId), { xp: aXp+10 }); carregarGamificacao({xp: aXp+10}); document.getElementById('checkin-card-dinamico').innerHTML = '<div style="text-align:center; color:var(--success-green); font-weight:bold; font-size:0.95rem; padding:10px;">Obrigado! <span style="color:var(--warning-yellow);">+10 XP</span></div>';
             });
         });
-    } catch(e) {}
+    } catch(e) { }
 }
 
 async function verificarEpocaExames() {
@@ -475,7 +471,7 @@ async function carregarRankingTurma() {
         let hAl = '';
         alunosTurma.slice(0, 10).forEach((al, idx) => {
             let cor = 'var(--text-muted)'; if(idx === 0) cor = '#f59e0b'; else if(idx === 1) cor = '#9ca3af'; else if(idx === 2) cor = '#d97706';
-            hAl += `<div style="display:flex; align-items:center; gap:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left:3px solid ${cor};"><span style="font-weight:bold; font-size:1.2rem; color:${cor}; width:25px; text-align:center;">${idx+1}</span><img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=00cc88&color=fff`}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"><div style="flex:1;"><strong style="font-size:0.95rem; color:var(--text-light);">${al.nome.split(' ')[0]} ${al.nome.split(' ').pop()}</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">${al.academia ? ACADEMIAS_INFO[al.academia].nome : 'S/ Academia'}</span></div><span style="font-weight:bold; color:var(--primary-green); font-size:0.9rem;">${al.xp || 0} XP</span></div>`;
+            hAl += `<div style="display:flex; align-items:center; gap:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left:3px solid ${cor};"><span style="font-weight:bold; font-size:1.2rem; color:${cor}; width:25px; text-align:center;">${idx+1}</span><img src="${al.fotoPerfil || `[https://ui-avatars.com/api/?name=$](https://ui-avatars.com/api/?name=$){al.nome.split(' ')[0]}&background=00cc88&color=fff`}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"><div style="flex:1;"><strong style="font-size:0.95rem; color:var(--text-light);">${al.nome.split(' ')[0]} ${al.nome.split(' ').pop()}</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">${al.academia ? ACADEMIAS_INFO[al.academia].nome : 'S/ Academia'}</span></div><span style="font-weight:bold; color:var(--primary-green); font-size:0.9rem;">${al.xp || 0} XP</span></div>`;
         });
         c.innerHTML = hAcad + (hAl === '' ? '<p class="text-muted center">Ainda não há alunos com XP na tua turma.</p>' : hAl);
     } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao carregar ranking.</p>'; }
@@ -518,7 +514,7 @@ bindChange('upload-avatar', async (e) => {
 });
 
 // ==========================================
-// 6. CADERNETA: A NOVA ABA EVOLUÇÃO PRO
+// 6. CADERNETA: A NOVA ABA EVOLUÇÃO PRO E HISTÓRICO
 // ==========================================
 async function carregarEvolucaoAluno() {
     const cadernetaContent = document.getElementById('aluno-caderneta-content');
@@ -655,7 +651,7 @@ async function carregarFaltasAluno() {
 
         if(Object.keys(faltasPorDisc).length === 0) { document.getElementById('aluno-caderneta-content').innerHTML = getEmptyState('Sem faltas injustificadas. Excelente!', 'fa-face-smile'); return; }
         
-        let html = ''; const ordemDisciplinas = obterDisciplinasDoAno(); const matriz = getMatrizMap(); // Mock
+        let html = ''; const ordemDisciplinas = obterDisciplinasDoAno(); 
         ordemDisciplinas.forEach(disc => {
             if(faltasPorDisc[disc]) {
                 let discHtml = ''; let totalFaltasDisc = 0;
@@ -789,3 +785,33 @@ function iniciarChatAluno(fId) {
         chatContainer.innerHTML = html; setTimeout(() => { chatContainer.scrollTop = chatContainer.scrollHeight; }, 100);
     });
 }
+
+async function carregarMateriaisAluno() {
+    const c = document.getElementById('aluno-lista-materiais-container'); c.innerHTML = '<p class="text-muted center">A carregar materiais...</p>'; if(!minhaTurma) return;
+    try {
+        const r = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); 
+        if(r.empty) { c.innerHTML = getEmptyState('Nenhum material publicado.', 'fa-book-open'); return; }
+        
+        let sum = []; let dU = new Set(); r.forEach(d => { const dt = d.data(); sum.push({id: d.id, ...dt}); dU.add(dt.disciplina); });
+        const fS = document.getElementById('aluno-filtro-materiais-disc'); 
+        if (fS && fS.options.length <= 1) { let oH = '<option value="">Todas as Disciplinas</option>'; Array.from(dU).sort().forEach(dc => oH += `<option value="${dc}">${dc}</option>`); fS.innerHTML = oH; }
+        
+        const fA = fS ? fS.value : ""; if(fA) sum = sum.filter(s => s.disciplina === fA); 
+        sum.sort((a,b) => b.timestamp - a.timestamp || (b.data || "").localeCompare(a.data || "")); 
+        
+        if(sum.length === 0) { c.innerHTML = getEmptyState('Sem materiais para esta disciplina.', 'fa-filter'); return; }
+        
+        let html = ''; 
+        sum.forEach(s => { 
+            const ficheiro = s.ficheiroBase64 || s.anexoBase64; const nomeFicheiro = s.anexoNome || 'Material_Anexo';
+            const aB = ficheiro ? `<a href="${ficheiro}" download="${nomeFicheiro}" class="primary-btn small-btn" style="display:block; margin-top:15px; width:100%; text-align:center; padding:10px 12px; background-color:#0099ff; color:white;"><i class="fa-solid fa-download"></i> Baixar Anexo</a>` : ''; 
+            html += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #0099ff;"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">${s.data} | ${s.disciplina} | Prof. ${s.professor || ''}</span><h4 style="margin:5px 0; color:var(--text-light);">${s.titulo}</h4>${s.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px;">${s.descricao}</p>` : ''}</div></div>${aB}</div>`; 
+        }); 
+        c.innerHTML = html;
+    } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao carregar os dados.</p>'; }
+}
+bindChange('aluno-filtro-materiais-disc', carregarMateriaisAluno);
+
+async function pedirPermissaoNotificacoes() { try { const p = await Notification.requestPermission(); if(p==='granted') { const r = await navigator.serviceWorker.register('./firebase-messaging-sw.js'); const t = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: r }); if(t) await updateDoc(doc(db, "utilizadores", myUserId), { tokenNotificacao: t }); } } catch(e){} }
+if(typeof onMessage !== "undefined" && messaging) onMessage(messaging, p => alert(`NOVA NOTIFICAÇÃO:\n${p.notification.title}\n${p.notification.body}`));
+setTimeout(() => { if(myUserId) pedirPermissaoNotificacoes(); }, 4000);
