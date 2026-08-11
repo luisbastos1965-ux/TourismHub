@@ -32,20 +32,22 @@
         @keyframes pulseGold { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); } }
         .badge-item.earned .badge-icon { background: rgba(255,215,0,0.15) !important; color: #ffd700 !important; border-color: #ffd700 !important; animation: pulseGold 2s infinite; }
 
-        /* Etiqueta Dourada do Delegado */
+       /* Etiqueta Dourada do Delegado - Agora muito mais discreta e fina */
         #btn-modo-delegado {
             display: none;
-            background: linear-gradient(135deg, #ffd700, #f59e0b);
-            color: #000;
-            padding: 3px 10px;
-            border-radius: 12px;
-            font-size: 0.65rem;
-            font-weight: bold;
+            background: rgba(255, 215, 0, 0.05);
+            color: #ffd700;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
             cursor: pointer;
-            border: none;
-            box-shadow: 0 2px 5px rgba(255, 215, 0, 0.3);
             transition: 0.2s;
-            text-transform: uppercase;
+            margin-top: 5px;
+        }
+        #btn-modo-delegado:hover {
+            background: rgba(255, 215, 0, 0.15);
+            border-color: #ffd700;
         }
         #btn-modo-delegado:active { transform: scale(0.95); }
     </style>
