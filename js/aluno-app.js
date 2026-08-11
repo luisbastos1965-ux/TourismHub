@@ -953,16 +953,12 @@ async function carregarObservacoesAluno(rSel = '1_intercalar') {
 // 10. AGENDA, HORÁRIO E MATERIAIS
 // ==========================================
 async function carregarAgendaAlunoLista() {
-    const sC = document.getElementById('aluno-agenda-content'); 
-    sC.innerHTML = '<p class="text-muted center">A sincronizar agenda...</p>'; 
-    if(!minhaTurma) { sC.innerHTML = getEmptyState('Sem turma configurada.', 'fa-calendar-xmark'); return; }
+    const sC = document.getElementById('aluno-agenda-content'); sC.innerHTML = '<p class="text-muted center">A sincronizar agenda...</p>'; if(!minhaTurma) { sC.innerHTML = getEmptyState('Sem turma configurada.', 'fa-calendar-xmark'); return; }
     
     const elT = document.getElementById('aluno-filtro-agenda-testes');
     const elTr = document.getElementById('aluno-filtro-agenda-trabalhos');
     const elO = document.getElementById('aluno-filtro-agenda-outros');
-    const mT = elT ? elT.checked : true; 
-    const mTr = elTr ? elTr.checked : true; 
-    const mO = elO ? elO.checked : true;
+    const mT = elT ? elT.checked : true; const mTr = elTr ? elTr.checked : true; const mO = elO ? elO.checked : true;
     
     try {
         const evDb = await getDocs(collection(db, "turmas", minhaTurma, "eventos")); 
@@ -970,16 +966,10 @@ async function carregarAgendaAlunoLista() {
         
         let evs = []; 
         evDb.forEach(d => { 
-            const e = d.data(); 
-            let bgC = '#8b5cf6'; let txtT = 'Evento'; 
-            
-            if(e.tipo === 'teste' || e.tipo === 'avaliacao') { 
-                if(mT) { bgC = '#f59e0b'; txtT = 'Avaliação'; evs.push({...e, cor: bgC, txt: txtT}); } 
-            } else if(e.tipo === 'trabalho' || e.tipo === 'entrega') { 
-                if(mTr) { bgC = '#00d2ff'; txtT = 'Entrega'; evs.push({...e, cor: bgC, txt: txtT}); } 
-            } else { 
-                if(mO) evs.push({...e, cor: bgC, txt: txtT}); 
-            } 
+            const e = d.data(); let bgC = '#8b5cf6'; let txtT = 'Evento'; 
+            if(e.tipo === 'teste' || e.tipo === 'avaliacao') { if(mT) { bgC = '#f59e0b'; txtT = 'Avaliação'; evs.push({...e, cor: bgC, txt: txtT}); } } 
+            else if(e.tipo === 'trabalho' || e.tipo === 'entrega') { if(mTr) { bgC = '#00d2ff'; txtT = 'Entrega'; evs.push({...e, cor: bgC, txt: txtT}); } } 
+            else { if(mO) evs.push({...e, cor: bgC, txt: txtT}); } 
         });
         
         if(evs.length === 0) { sC.innerHTML = getEmptyState('Nenhum evento com os filtros atuais.', 'fa-filter'); return; }
@@ -992,11 +982,11 @@ async function carregarAgendaAlunoLista() {
         
         const rEv = (ev) => { 
             if (!ev.data) return ''; 
-            const dp = ev.data.split('-'); 
-            const mes = mA[parseInt(dp[1])-1]; 
+            const dp = ev.data.split('-'); const mes = mA[parseInt(dp[1])-1]; 
+            const tInfo = ev.tempo ? ` • <i class="fa-regular fa-clock"></i> ${ev.tempo}` : '';
             return `<div class="calendar-event-card" style="border-left-color:${ev.cor}; margin-bottom:10px;">
                         <div class="calendar-date-box"><span class="day">${dp[2]}</span><span class="month" style="color:${ev.cor};">${mes}</span></div>
-                        <div class="calendar-info"><h4 style="margin:0; color:var(--text-light);">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt||'evento').toUpperCase()}</span></div>
+                        <div class="calendar-info"><h4 style="margin:0; color:var(--text-light);">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt||'evento').toUpperCase()}${tInfo}</span></div>
                     </div>`; 
         };
         
