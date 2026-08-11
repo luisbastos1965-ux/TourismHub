@@ -667,24 +667,33 @@ async function carregarHorarioAluno() {
         const dS = await getDoc(doc(db, "turmas", minhaTurma)); 
         let hb = {}; if(dS.exists() && dS.data().horario) hb = dS.data().horario;
         
-        // CORREÇÃO DO BUG: Recolhe profs SEM precisar do Firebase Index
+        // CORREÇÃO: Cofre de segurança para a procura de professores
         let profsCache = {};
-        const pSnap = await getDocs(query(collection(db, "utilizadores"), where("papel", "==", "professor")));
-        pSnap.forEach(d => { 
-            const profData = d.data(); 
-            // Só guarda na memória se o professor der aulas a esta turma
-            if (profData.turmas && profData.turmas.includes(minhaTurma) && profData.disciplinas) { 
-                profData.disciplinas.forEach(dsc => { 
-                    profsCache[dsc] = profData.nome ? profData.nome.split(' ')[0] : 'Desconhecido'; 
-                }); 
-            } 
-        });
+        try {
+            const pSnap = await getDocs(query(collection(db, "utilizadores"), where("papel", "==", "professor")));
+            pSnap.forEach(d => { 
+                const profData = d.data(); 
+                if (profData.turmas && profData.turmas.includes(minhaTurma) && profData.disciplinas) { 
+                    profData.disciplinas.forEach(dsc => { 
+                        profsCache[dsc] = profData.nome ? profData.nome.split(' ')[0] : 'Desconhecido'; 
+                    }); 
+                } 
+            });
+        } catch (erroProfs) {
+            console.warn("Aviso: Professores não carregados, a desenhar o horário na mesma.");
+        }
 
-        const bK = ['1', '2', '3', '4', '1300', '5', '6', '7']; const bT = { '1': '08:30', '2': '09:35', '3': '10:50', '4': '11:55', '1300': '13:00', '5': '14:05', '6': '15:15', '7': '16:20' }; const dM = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']; const fDt = (dt) => `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;
+        const bK = ['1', '2', '3', '4', '1300', '5', '6', '7']; 
+        const bT = { '1': '08:30', '2': '09:35', '3': '10:50', '4': '11:55', '1300': '13:00', '5': '14:05', '6': '15:15', '7': '16:20' }; 
+        const dM = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']; 
+        const fDt = (dt) => `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;
         
         if (ahModo === 'dia') {
-            let tD = new Date(); tD.setDate(tD.getDate() + ahDOff); const hd = document.getElementById('aluno-horario-display'); if(hd) hd.innerText = `${dM[tD.getDay()]}, ${fDt(tD)}`;
-            let h = ''; let tAD = false; const dSStr = `${tD.getFullYear()}-${String(tD.getMonth()+1).padStart(2,'0')}-${String(tD.getDate()).padStart(2,'0')}`;
+            let tD = new Date(); tD.setDate(tD.getDate() + ahDOff); 
+            const hd = document.getElementById('aluno-horario-display'); if(hd) hd.innerText = `${dM[tD.getDay()]}, ${fDt(tD)}`;
+            
+            let h = ''; let tAD = false; 
+            const dSStr = `${tD.getFullYear()}-${String(tD.getMonth()+1).padStart(2,'0')}-${String(tD.getDate()).padStart(2,'0')}`;
             
             bK.forEach(b => { 
                 const dc = hb[`${dSStr}_${b}`]; 
@@ -714,7 +723,10 @@ async function carregarHorarioAluno() {
             });
             sC.innerHTML = h + '</div>';
         }
-    } catch(e) { sC.innerHTML = '<p class="text-danger center">Erro a gerar o horário.</p>'; }
+    } catch(e) { 
+        console.error("Erro critico no horario", e);
+        sC.innerHTML = '<p class="text-danger center">Erro a gerar o horário.</p>'; 
+    }
 }
 
 // ==========================================
