@@ -21,7 +21,10 @@ function safeAddClass(id, className) { const el = document.getElementById(id); i
 function safeRemoveClass(id, className) { const el = document.getElementById(id); if(el) el.classList.remove(className); }
 
 function getEmptyState(mensagem, icone = "fa-folder-open") {
-    return `<div style="text-align:center; padding: 40px 20px; opacity: 0.5;"><i class="fa-solid ${icone}" style="font-size: 3.5rem; margin-bottom: 15px; color: var(--text-muted);"></i><p style="font-size: 0.95rem; color: var(--text-muted);">${mensagem}</p></div>`;
+    return `<div style="text-align:center; padding: 40px 20px; opacity: 0.5;">
+                <i class="fa-solid ${icone}" style="font-size: 3.5rem; margin-bottom: 15px; color: var(--text-muted);"></i>
+                <p style="font-size: 0.95rem; color: var(--text-muted);">${mensagem}</p>
+            </div>`;
 }
 
 // ==========================================
@@ -58,7 +61,7 @@ function obterDisciplinasDoAno() {
 }
 
 // ==========================================
-// ACADEMIAS E QUIZ
+// ACADEMIAS (TURISMO) E QUIZ
 // ==========================================
 const ACADEMIAS_INFO = {
     'estrategas': { nome: 'Academia dos Estrategas', cor: '#10b981', icon: 'fa-chess-knight', desc: 'Mestres do planeamento. Manténs a calma sob pressão.' },
@@ -96,11 +99,7 @@ onAuthStateChanged(auth, async (user) => {
 
                 const objSelect = document.getElementById('obj-disciplina'); if(objSelect) objSelect.innerHTML = obterDisciplinasDoAno().map(dc => `<option value="${dc}">${dc}</option>`).join('');
 
-                // CORREÇÃO: Leitura do ano feita de forma 100% compatível (sem o ponto de interrogação moderno)
-                const turmaString = minhaTurma || "";
-                const anoEncontrado = turmaString.match(/\d+/);
-                const turmaAno = anoEncontrado ? parseInt(anoEncontrado[0]) : (d.ano || 10);
-                
+                const turmaAno = parseInt((minhaTurma || "").match(/\d+/)?.[0]) || d.ano || 10;
                 const btnPassaporte = document.getElementById('btn-abrir-passaporte'); const secFct = document.getElementById('sec-aluno-fct'); const secPap = document.getElementById('sec-aluno-pap');
                 if (turmaAno === 10) { if(btnPassaporte) btnPassaporte.style.display = 'none'; } 
                 else if (turmaAno === 11) {
@@ -210,15 +209,42 @@ function carregarPassaporteEBadges(data) {
     }
 }
 
+// MAGIA UX: Interação Animada nas Missões
 function carregarMissoes() {
     const cont = document.getElementById('missoes-container'); if(!cont) return;
     const missoes = [
-        { title: "Atendimento Impossível", desc: "Apresenta uma solução profissional para um turista sem reserva.", xp: 100, tag: "Embaixadores", cor: "#0ea5e9" },
-        { title: "Operação Turismo", desc: "Organiza uma atividade desde o planeamento até à execução.", xp: 150, tag: "Estrategas", cor: "#10b981" }
+        { id: "m1", title: "Atendimento Impossível", desc: "Apresenta uma solução profissional para um turista sem reserva.", xp: 100, tag: "Embaixadores", cor: "#0ea5e9" },
+        { id: "m2", title: "Operação Turismo", desc: "Organiza uma atividade desde o planeamento até à execução.", xp: 150, tag: "Estrategas", cor: "#10b981" }
     ];
     let html = '';
-    missoes.forEach(m => { html += `<div class="card" style="border-left: 4px solid ${m.cor}; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center;"><div style="flex:1;"><span style="font-size:0.7rem; color:${m.cor}; font-weight:bold; text-transform:uppercase; border:1px solid ${m.cor}; padding:2px 6px; border-radius:12px;">Missão: ${m.tag}</span><h4 style="margin:5px 0 3px 0; color:var(--text-light); font-size:1rem;">${m.title}</h4><p style="font-size:0.85rem; color:var(--text-muted); margin:0;">${m.desc}</p></div><div style="text-align:right; margin-left:10px;"><strong style="color:var(--warning-yellow); font-size:1.1rem;">+${m.xp} XP</strong><br><button class="secondary-btn small-btn" style="margin-top:5px; border-color:var(--text-muted); color:var(--text-muted);">Aceitar</button></div></div>`; });
+    missoes.forEach(m => { 
+        html += `<div class="card mission-card" id="mission-card-${m.id}" style="border-left: 4px solid ${m.cor}; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="flex:1;">
+                        <span style="font-size:0.7rem; color:${m.cor}; font-weight:bold; text-transform:uppercase; border:1px solid ${m.cor}; padding:2px 6px; border-radius:12px;">Missão: ${m.tag}</span>
+                        <h4 style="margin:5px 0 3px 0; color:var(--text-light); font-size:1rem;">${m.title}</h4>
+                        <p style="font-size:0.85rem; color:var(--text-muted); margin:0;">${m.desc}</p>
+                    </div>
+                    <div style="text-align:right; margin-left:10px;">
+                        <strong style="color:var(--warning-yellow); font-size:1.1rem;">+${m.xp} XP</strong><br>
+                        <button class="secondary-btn small-btn btn-accept-mission" style="margin-top:5px; border-color:var(--text-muted); color:var(--text-muted); cursor:pointer;">Aceitar</button>
+                    </div>
+                 </div>`; 
+    });
     cont.innerHTML = html;
+
+    // Listener para o clique animado
+    document.querySelectorAll('.btn-accept-mission').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const b = e.currentTarget;
+            const card = b.closest('.mission-card');
+            card.classList.add('accepted');
+            b.innerHTML = '<i class="fa-solid fa-check"></i> Aceite';
+            b.style.backgroundColor = 'var(--success-green)';
+            b.style.color = '#fff';
+            b.style.borderColor = 'var(--success-green)';
+            b.disabled = true;
+        });
+    });
 }
 
 function carregarDadosPassaporte(dados) {
@@ -338,13 +364,12 @@ document.body.addEventListener('click', async (e) => {
 bindChange('obj-tipo', async (e) => { const v = e.target.value; document.getElementById('obj-setup-nota').style.display = v === 'nota' ? 'flex' : 'none'; });
 
 // ==========================================
-// HOME, FCT, PAP & AVATAR BINDINGS
+// HOME, FCT, PAP BINDINGS
 // ==========================================
 bindClick('btn-save-fct', async (e) => { const v = document.getElementById('input-fct-horas').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "fct.horasRealizadas": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
 bindClick('btn-save-pap-tema', async (e) => { const v = document.getElementById('input-pap-tema').value.trim(); if(!v) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", myUserId), { "pap.tema": v }); b.style.backgroundColor = 'var(--success-green)'; b.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => { b.style.backgroundColor = 'var(--primary-green)'; b.innerHTML = '<i class="fa-solid fa-save"></i>'; b.disabled = false; }, 2000); } catch(err) {} });
 bindClick('btn-enviar-pap', async (e) => { if(!fPB64) return; const b = e.currentTarget; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { const snap = await getDoc(doc(db, "utilizadores", myUserId)); let axp = snap.exists()&&snap.data().xp?snap.data().xp:0; await updateDoc(doc(db, "utilizadores", myUserId), { papFicheiroEnviado:true, papFicheiroBase64:fPB64, xp:axp+200 }); b.style.backgroundColor="var(--success-green)"; b.innerHTML='<i class="fa-solid fa-check"></i> Submetido'; setTimeout(() => { b.style.display='none'; b.disabled=false; const fNm = document.getElementById('aluno-pap-file-name'); if(fNm) fNm.style.color="var(--success-green)"; }, 2000); } catch(err){} });
 bindChange('aluno-upload-pap', (e) => { const file = e.target.files[0]; if(!file) return; document.getElementById('aluno-pap-file-name').innerText = "Ficheiro: " + file.name; document.getElementById('btn-enviar-pap').style.display = 'block'; const reader = new FileReader(); reader.onload = (ev) => { fPB64 = ev.target.result; }; reader.readAsDataURL(file); });
-bindChange('upload-avatar', async (e) => { const file = e.target.files[0]; if(!file) return; try { const compressedFile = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 500, useWebWorker: true }); const reader = new FileReader(); reader.onload = async (ev) => { const base64 = ev.target.result; document.getElementById('perfil-avatar-img').src = base64; document.getElementById('header-avatar-circle').innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`; await updateDoc(doc(db, "utilizadores", myUserId), { fotoPerfil: base64 }); }; reader.readAsDataURL(compressedFile); } catch(err) {} });
 
 async function construirHomeAdaptativa() {
     const alertCont = document.getElementById('hero-alert-section'); const emoCont = document.getElementById('hero-emotional-section');
@@ -394,23 +419,60 @@ async function construirHomeAdaptativa() {
     } catch(e) { }
 }
 
-async function verificarEpocaExames() {
-    if(!minhaTurma) return; const tSnap = await getDoc(doc(db, "turmas", minhaTurma)); const tSnapData = tSnap.data();
-    if(tSnap.exists() && tSnapData.epocaExames && tSnapData.epocaExames.ativa) {
-        document.getElementById('exam-mode-banner').style.display='block'; document.body.style.borderTop="5px solid #8b5cf6";
-        if(tSnapData.epocaExames.dataFim) { const df = Math.ceil((new Date(tSnapData.epocaExames.dataFim) - new Date()) / (1000 * 60 * 60 * 24)); document.getElementById('exam-countdown').innerText = df > 0 ? `Faltam ${df} dias` : "Já terminou"; }
-    }
+// MAGIA UX: PÓDIO DE HONRA NO RANKING
+// ==========================================
+async function carregarRankingTurma() {
+    const c = document.getElementById('ranking-turma-container'); if(!minhaTurma) { c.innerHTML = '<p class="text-muted center">Sem turma atribuída.</p>'; return; }
+    try {
+        const snap = await getDocs(query(collection(db, "utilizadores"), where("papel", "==", "aluno")));
+        let alunosTurma = []; let academiasXP = { estrategas: 0, embaixadores: 0, exploradores: 0, visionarios: 0 };
+        
+        snap.forEach(d => {
+            const al = {id: d.id, ...d.data()};
+            if(al.academia && academiasXP[al.academia] !== undefined) { academiasXP[al.academia] += (al.xp || 0); }
+            if(al.turma === minhaTurma) { alunosTurma.push(al); }
+        });
+        alunosTurma.sort((a,b) => (b.xp || 0) - (a.xp || 0));
+        
+        let hAcad = `<div style="display:flex; justify-content:space-around; margin-bottom:20px; text-align:center; background:rgba(0,0,0,0.2); padding:20px 10px 15px 10px; border-radius:12px; position:relative;">
+                        <div style="position:absolute; top:-10px; background:var(--bg-dark); padding:2px 12px; font-size:0.7rem; color:var(--text-muted); border:1px solid #333; border-radius:10px; font-weight:bold; letter-spacing:1px;">GLOBAL (ESCOLA)</div>`;
+        const orderAcad = Object.keys(academiasXP).sort((a,b) => academiasXP[b] - academiasXP[a]);
+        orderAcad.forEach((ac) => {
+            const acData = ACADEMIAS_INFO[ac];
+            hAcad += `<div><i class="fa-solid ${acData.icon}" style="font-size:2rem; color:${acData.cor}; margin-bottom:8px; display:block;"></i><strong style="color:var(--text-light); font-size:0.85rem;">${acData.nome.split(' ')[2]||acData.nome}</strong><br><span style="color:var(--warning-yellow); font-size:0.9rem; font-weight:bold;">${academiasXP[ac]} XP</span></div>`;
+        });
+        hAcad += `</div><h4 style="color:var(--text-muted); font-size:0.85rem; text-transform:uppercase; margin-bottom:10px;">🏆 Top 10 (A Tua Turma)</h4>`;
+        
+        let hAl = '';
+        alunosTurma.slice(0, 10).forEach((al, idx) => {
+            let cor = 'var(--text-muted)'; 
+            let iconePos = `${idx+1}`;
+            
+            // Lógica do Pódio (Ouro, Prata, Bronze)
+            if(idx === 0) { cor = '#ffd700'; iconePos = '<i class="fa-solid fa-crown" style="font-size:1.4rem;"></i>'; } 
+            else if(idx === 1) { cor = '#c0c0c0'; iconePos = '<i class="fa-solid fa-medal" style="font-size:1.3rem;"></i>'; } 
+            else if(idx === 2) { cor = '#cd7f32'; iconePos = '<i class="fa-solid fa-award" style="font-size:1.3rem;"></i>'; }
+            
+            hAl += `<div style="display:flex; align-items:center; gap:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left:3px solid ${cor};">
+                        <span style="font-weight:bold; font-size:1.2rem; color:${cor}; width:35px; text-align:center; display:inline-block;">${iconePos}</span>
+                        <img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=00cc88&color=fff`}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;">
+                        <div style="flex:1;">
+                            <strong style="font-size:0.95rem; color:var(--text-light);">${al.nome.split(' ')[0]} ${al.nome.split(' ').pop()}</strong><br>
+                            <span style="font-size:0.7rem; color:var(--text-muted);">${al.academia ? ACADEMIAS_INFO[al.academia].nome : 'S/ Academia'}</span>
+                        </div>
+                        <span style="font-weight:bold; color:var(--primary-green); font-size:0.9rem;">${al.xp || 0} XP</span>
+                    </div>`;
+        });
+        c.innerHTML = hAcad + (hAl === '' ? '<p class="text-muted center">Ainda não há alunos com XP na tua turma.</p>' : hAl);
+    } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao carregar ranking.</p>'; }
 }
 
-// ==========================================
-// CADERNETA (Evolução PRO e Histórico)
-// ==========================================
+// Restantes funções standard da aplicação
 async function carregarEvolucaoAluno() {
     const cadernetaContent = document.getElementById('aluno-caderneta-content'); if(!cadernetaContent) return;
     try {
         const uSnap = await getDoc(doc(db, "utilizadores", myUserId)); const data = uSnap.exists() ? uSnap.data() : {};
         const getLvl = (xp) => Math.floor((xp || 0) / 100) + 1; const getPerc = (xp) => ((xp || 0) % 100);
-
         const lvlCom = getLvl(data.xp_comunicacao); const percCom = getPerc(data.xp_comunicacao);
         const lvlCri = getLvl(data.xp_criatividade); const percCri = getPerc(data.xp_criatividade);
         const lvlLid = getLvl(data.xp_lideranca); const percLid = getPerc(data.xp_lideranca);
@@ -426,8 +488,7 @@ async function carregarEvolucaoAluno() {
         </div>
         <h4 style="color:var(--text-muted); margin-bottom:10px; font-size:0.9rem; text-transform:uppercase;"><i class="fa-solid fa-bolt"></i> O Meu Histórico</h4>`;
 
-        const ocSnap = await getDocs(query(collection(db, "utilizadores", myUserId, "ocorrencias")));
-        let regs = []; ocSnap.forEach(d => regs.push(d.data()));
+        const ocSnap = await getDocs(query(collection(db, "utilizadores", myUserId, "ocorrencias"))); let regs = []; ocSnap.forEach(d => regs.push(d.data()));
 
         if(regs.length === 0) { html += getEmptyState('Sem registos de evolução.', 'fa-star'); } 
         else {
@@ -457,7 +518,6 @@ async function carregarTimelineAluno() {
         let eventos = await obterEventosLinhaTemporal();
         if(window.timelineFilterCat !== 'all') { eventos = eventos.filter(e => e.cat === window.timelineFilterCat); }
         if(eventos.length === 0) { cCont.innerHTML = getEmptyState('O teu histórico está limpo.', 'fa-clock-rotate-left'); return; }
-        
         let html = '<div class="timeline">';
         eventos.forEach(ev => { html += `<div class="timeline-item"><div class="timeline-icon" style="color: ${ev.cor}; border-color: ${ev.cor};">${ev.icon}</div><div class="timeline-content" style="border-left: 3px solid ${ev.cor};"><span class="timeline-date">${new Date(ev.time).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}</span><strong style="color:var(--text-light); display:block; margin-bottom:5px;">${ev.titulo}</strong><p style="font-size:0.85rem; color:var(--text-light); margin:0;">${ev.desc}</p></div></div>`; });
         cCont.innerHTML = html + '</div>';
@@ -472,7 +532,6 @@ async function carregarNotificacoesAluno() {
         if(window.notifFilterCat !== 'all') evs = evs.filter(e => e.nCat === window.notifFilterCat);
         const rec = evs.slice(0, 15);
         if(rec.length === 0) { cont.innerHTML = getEmptyState('Sem alertas nesta categoria.', 'fa-bell-slash'); return; }
-        
         let h = ''; rec.forEach(ev => { h += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${ev.cor}; display:flex; align-items:flex-start; gap: 15px; padding: 15px;"><div style="font-size: 1.5rem; color: ${ev.cor};">${ev.icon}</div><div><strong style="color:var(--text-light); font-size:1rem; display:block; margin-bottom:3px;">${ev.titulo}</strong><span style="font-size:0.85rem; color:var(--text-light);">${ev.desc}</span><div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px;">${new Date(ev.time).toLocaleString('pt-PT')}</div></div></div>`; }); cont.innerHTML = h; 
         if(window.notifFilterCat === 'all') document.getElementById('badge-notificacoes').style.display = 'none';
     } catch(e) {}
@@ -484,7 +543,6 @@ async function carregarNotasAluno() {
         let disciplinasDoAluno = {}; notasDb.forEach(d => { const n = d.data(); if(!disciplinasDoAluno[n.disciplina]) disciplinasDoAluno[n.disciplina] = []; disciplinasDoAluno[n.disciplina].push(n); });
         const ordemDisciplinas = obterDisciplinasDoAno();
         if(ordemDisciplinas.length === 0) { document.getElementById('aluno-caderneta-content').innerHTML = getEmptyState('Ainda não tens disciplinas ativas.', 'fa-book'); return; }
-
         let html = '';
         ordemDisciplinas.forEach(disc => {
             if(disciplinasDoAluno[disc] && disciplinasDoAluno[disc].length > 0) {
@@ -507,7 +565,6 @@ async function carregarFaltasAluno() {
     try {
         const faltasDb = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); let faltasPorDisc = {};
         faltasDb.forEach(d => { const f = d.data(); if(!f.justificada) { if(!faltasPorDisc[f.disciplina]) faltasPorDisc[f.disciplina] = {}; if(!faltasPorDisc[f.disciplina][f.modulo]) faltasPorDisc[f.disciplina][f.modulo] = []; faltasPorDisc[f.disciplina][f.modulo].push(f); } });
-
         if(Object.keys(faltasPorDisc).length === 0) { document.getElementById('aluno-caderneta-content').innerHTML = getEmptyState('Sem faltas injustificadas. Excelente!', 'fa-face-smile'); return; }
         
         let html = ''; const ordemDisciplinas = obterDisciplinasDoAno(); 
@@ -516,8 +573,7 @@ async function carregarFaltasAluno() {
                 let discHtml = ''; let totalFaltasDisc = 0;
                 for(let mod of Object.keys(faltasPorDisc[disc]).sort()) {
                     let sumFaltasMod = 0; faltasPorDisc[disc][mod].forEach(f => sumFaltasMod += Number(f.horas||0)); totalFaltasDisc += sumFaltasMod;
-                    const corBarra = 'var(--danger-red)'; const txtRisco = 'Sem Limite Definido (API Falsa)'; const perc = 100;
-                    const modLabel = mod.toString().startsWith('UC') ? mod : `Módulo ${mod}`;
+                    const corBarra = 'var(--danger-red)'; const modLabel = mod.toString().startsWith('UC') ? mod : `Módulo ${mod}`;
                     discHtml += `<div style="background:rgba(0,0,0,0.2); padding:12px; border-radius:8px; border:1px solid #333; margin-bottom:10px;"><div style="display:flex; justify-content:space-between; margin-bottom:8px;"><strong style="color:var(--text-light);">${modLabel}</strong><span style="font-size:0.8rem; font-weight:bold; color:${corBarra};">${sumFaltasMod}h</span></div></div>`;
                 }
                 html += `<div class="disciplina-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'"><span class="disciplina-title" style="color:var(--text-light);">${disc}</span><span><span class="disciplina-media" style="color:var(--danger-red);">${totalFaltasDisc}h</span> <i class="fa-solid fa-chevron-down" style="font-size:0.8rem; color:var(--text-muted); margin-left:5px;"></i></span></div><div class="disciplina-modules">${discHtml}</div>`;
@@ -558,106 +614,27 @@ async function carregarObservacoesAluno(rSel = '1_intercalar') {
     } catch(e) {}
 }
 
-async function carregarAgendaAlunoLista() {
-    const sC = document.getElementById('aluno-agenda-content'); sC.innerHTML = '<p class="text-muted center">A sincronizar agenda...</p>'; if(!minhaTurma) return;
-    const mT = document.getElementById('aluno-filtro-agenda-testes').checked; const mTr = document.getElementById('aluno-filtro-agenda-trabalhos').checked; const mO = document.getElementById('aluno-filtro-agenda-outros').checked;
+bindInput('aluno-search-input', async (e) => {
+    const termo = e.target.value.toLowerCase().trim(); const box = document.getElementById('aluno-search-results');
+    if(termo.length < 2) { box.style.display = 'none'; return; } box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">A procurar...</p>'; box.style.display = 'block';
     try {
-        const evDb = await getDocs(collection(db, "turmas", minhaTurma, "eventos")); if(evDb.empty) { sC.innerHTML = getEmptyState('Sem eventos na escola.', 'fa-calendar-xmark'); return; }
-        let evs = []; evDb.forEach(d => { const e = d.data(); let bgC = '#8b5cf6'; let txtT = 'Evento'; if(e.tipo === 'teste' || e.tipo === 'avaliacao') { if(mT) { bgC = '#f59e0b'; txtT = 'Avaliação'; evs.push({...e, cor: bgC, txt: txtT}); } } else if(e.tipo === 'trabalho' || e.tipo === 'entrega') { if(mTr) { bgC = '#00d2ff'; txtT = 'Entrega'; evs.push({...e, cor: bgC, txt: txtT}); } } else { if(mO) evs.push({...e, cor: bgC, txt: txtT}); } });
-        if(evs.length === 0) { sC.innerHTML = getEmptyState('Nenhum evento com os filtros atuais.', 'fa-filter'); return; }
-        const hj = new Date().toISOString().split('T')[0]; const fut = evs.filter(e => e.data >= hj).sort((a,b) => a.data.localeCompare(b.data)); const pas = evs.filter(e => e.data < hj).sort((a,b) => b.data.localeCompare(a.data));
-        const mA = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; let html = '';
-        const rEv = (ev) => { const dp = ev.data.split('-'); const mes = mA[parseInt(dp[1])-1]; return `<div class="calendar-event-card" style="border-left-color:${ev.cor}; margin-bottom:10px;"><div class="calendar-date-box"><span class="day">${dp[2]}</span><span class="month" style="color:${ev.cor};">${mes}</span></div><div class="calendar-info"><h4 style="margin:0; color:var(--text-light);">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt||'evento').toUpperCase()}</span></div></div>`; };
-        if(fut.length > 0) fut.forEach(e => html += rEv(e)); else html += '<p class="text-muted center">Sem eventos futuros.</p>';
-        if(pas.length > 0) { html += '<div class="calendar-divider" style="margin-top:20px;"><span>Passados</span></div>'; pas.forEach(e => html += rEv(e)); } sC.innerHTML = html;
-    } catch(e) {}
-}
-
-const getCorEspecial = (dsc) => {
-    if(!dsc) return { c: 'var(--primary-green)', bg: 'rgba(16, 185, 129, 0.05)' };
-    const d = dsc.toLowerCase();
-    if(d.includes('alm')) return { c: 'var(--warning-yellow)', bg: 'rgba(245, 158, 11, 0.1)' };
-    if(d.includes('vis')) return { c: '#00d2ff', bg: 'rgba(0, 210, 255, 0.1)' };
-    if(d.includes('prhf')) return { c: 'var(--danger-red)', bg: 'rgba(239, 68, 68, 0.1)' };
-    if(d.includes('pap') || d.includes('fct')) return { c: '#ff9900', bg: 'rgba(255, 153, 0, 0.1)' };
-    if(['reunião','reuniao','livre','estudo'].some(k => d.includes(k))) return { c: 'var(--accent-purple)', bg: 'rgba(139, 92, 246, 0.1)' };
-    return { c: 'var(--primary-green)', bg: 'rgba(16, 185, 129, 0.05)' };
-};
-
-async function carregarHorarioAluno() {
-    const sC = document.getElementById('aluno-horario-content'); if(!sC) return;
-    sC.innerHTML = '<p class="text-muted center">A gerar horário...</p>'; if(!minhaTurma) return;
-    try {
-        const dS = await getDoc(doc(db, "turmas", minhaTurma)); let hb = {}; if(dS.exists() && dS.data().horario) hb = dS.data().horario;
-        const bK = ['1', '2', '3', '4', '1300', '5', '6', '7']; const bT = { '1': '08:30', '2': '09:35', '3': '10:50', '4': '11:55', '1300': '13:00', '5': '14:05', '6': '15:15', '7': '16:20' }; const dM = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']; const fDt = (dt) => `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;
-        
-        if (ahModo === 'dia') {
-            let tD = new Date(); tD.setDate(tD.getDate() + ahDOff); const hd = document.getElementById('aluno-horario-display'); if(hd) hd.innerText = `${dM[tD.getDay()]}, ${fDt(tD)}`;
-            let h = ''; let tAD = false; const dSStr = `${tD.getFullYear()}-${String(tD.getMonth()+1).padStart(2,'0')}-${String(tD.getDate()).padStart(2,'0')}`;
-            bK.forEach(b => { const dc = hb[`${dSStr}_${b}`]; if(dc) { const sty = getCorEspecial(dc); h += `<div class="horario-list-item" style="border-left-color:${sty.c}; background-color:${sty.bg};"><div class="horario-time-col">${bT[b]}</div><div class="horario-disc-col"><div class="horario-disc-name">${dc}</div><div class="horario-prof" style="font-size:0.75rem; color:#888; margin-top:4px;">Prof. A Atribuir</div></div></div>`; tAD = true; } });
-            sC.innerHTML = tAD ? h : getEmptyState('Sem aulas neste dia.', 'fa-mug-hot');
-        } else {
-            let dT = new Date(); dT.setDate(dT.getDate() + (ahSOff * 7)); dT.setDate(dT.getDate() - (dT.getDay() === 0 ? 6 : dT.getDay() - 1)); let dE = new Date(dT); dE.setDate(dE.getDate() + 4);
-            const hd = document.getElementById('aluno-horario-display'); if(hd) hd.innerText = `${fDt(dT)} a ${fDt(dE)}`;
-            let h = '<div class="horario-grid" style="min-width:100%;"><div class="horario-header"></div>'; let dI = new Date(dT);
-            ['SEG','TER','QUA','QUI','SEX'].forEach(d => { h += `<div class="horario-header">${d}<span>${fDt(dI)}</span></div>`; dI.setDate(dI.getDate()+1); });
-            bK.forEach(b => { 
-                h += `<div class="horario-time">${bT[b]}</div>`; dI = new Date(dT); 
-                for(let i=0; i<5; i++) { 
-                    const dSStr = `${dI.getFullYear()}-${String(dI.getMonth()+1).padStart(2,'0')}-${String(dI.getDate()).padStart(2,'0')}`; const dc = hb[`${dSStr}_${b}`]; 
-                    if(dc) { const sty = getCorEspecial(dc); h += `<div class="horario-slot filled" style="border-color:${sty.c}; background-color:${sty.bg};"><strong>${dc}</strong></div>`; } 
-                    else { h += `<div class="horario-slot"></div>`; }
-                    dI.setDate(dI.getDate()+1); 
-                } 
-            });
-            sC.innerHTML = h + '</div>';
-        }
-    } catch(e) {}
-}
-
-async function carregarForuns() {
-    const cont = document.getElementById('aluno-forum-channel-list'); cont.innerHTML = '<p class="text-muted center">A configurar fóruns...</p>'; if(!minhaTurma) return;
-    let html = `<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apoio & Turma</h3><div class="canal-card" data-id="turma_global" data-nome="Turma ${minhaTurma}" style="margin-bottom: 15px;"><div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-users"></i></div><div class="canal-info"><h4>Turma ${minhaTurma}</h4><p>Canal Geral</p></div></div><div class="canal-card" data-id="dt_${myUserId}" data-nome="Chat DT"><div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div><div class="canal-info"><h4>Diretor de Turma</h4><p>Mensagem Privada</p></div></div><h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Disciplinas</h3><div style="display:flex; flex-wrap:wrap; gap:10px;">`;
-    const ordemDisciplinas = obterDisciplinasDoAno();
-    ordemDisciplinas.forEach(disc => { html += `<div class="canal-card" data-id="disc_${disc}" data-nome="Fórum ${disc}" style="flex: 1 1 45%; padding: 10px;"><div class="canal-info" style="text-align:center;"><h4 style="margin:0; font-size:0.9rem; color:#00d2ff;"><i class="fa-solid fa-book-open"></i> ${disc}</h4></div></div>`; }); html += '</div>';
-    try {
-        const res = await getDocs(collection(db, "turmas", minhaTurma, "foruns")); let extrasHtml = '';
-        res.forEach(docSnap => { const f = docSnap.data(); if(f.membros && f.membros.includes(myUserId) && !f.isDefault) { extrasHtml += `<div class="canal-card" data-id="${docSnap.id}" data-nome="${f.nome}" style="position:relative;"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-comments"></i></div><div class="canal-info"><h4>${f.nome}</h4><p>Grupo de Trabalho</p></div><i class="fa-solid fa-trash btn-delete-chat" data-id="${docSnap.id}" style="color:var(--danger-red); position:absolute; right:15px; font-size:1.1rem; cursor:pointer;"></i></div>`; } });
-        if (extrasHtml !== '') html += `<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Grupos de Trabalho</h3>` + extrasHtml;
-    } catch(e) {}
-    cont.innerHTML = html;
-}
-
-function iniciarChatAluno(fId) {
-    const chatContainer = document.getElementById('aluno-chat-messages-container'); if(!chatContainer) return;
-    chatContainer.innerHTML = ''; if(chatUnsubscribeAluno) chatUnsubscribeAluno();
-    chatUnsubscribeAluno = onSnapshot(query(collection(db, "turmas", minhaTurma, "foruns", fId, "mensagens"), orderBy("timestamp")), (snapshot) => {
-        let html = ''; 
-        snapshot.forEach(doc => { 
-            const msg = doc.data(); const isMe = msg.remetente === myUserName || msg.autor === myUserName; const remetenteNome = msg.remetente || msg.autor || 'Desconhecido'; const isProf = msg.papel === 'professor';
-            const d = new Date(msg.timestamp); const hora = isNaN(d.getTime()) ? '' : `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
-            if (isMe) { html += `<div class="chat-bubble student"><strong>Eu</strong><br>${msg.texto}<span class="chat-meta">${hora}</span></div>`; } 
-            else if (isProf) { html += `<div class="chat-bubble admin"><strong>Prof. ${remetenteNome}</strong><br>${msg.texto}<span class="chat-meta">${hora}</span></div>`; } 
-            else { html += `<div class="chat-bubble student"><strong style="color:var(--primary-green);">${remetenteNome}</strong><br>${msg.texto}<span class="chat-meta">${hora}</span></div>`; }
-        });
-        if (html === '') html = getEmptyState('Sê o primeiro a falar na tua turma!', 'fa-comments');
-        chatContainer.innerHTML = html; setTimeout(() => { chatContainer.scrollTop = chatContainer.scrollHeight; }, 100);
-    });
-}
+        let resArr = []; 
+        if (minhaTurma) { const sDb = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); sDb.forEach(d => { const tit = d.data().titulo || ""; const dsc = d.data().disciplina || ""; if(tit.toLowerCase().includes(termo) || dsc.toLowerCase().includes(termo)) resArr.push({ t: `Materiais - ${dsc}`, txt: tit, id: 'btn-open-materiais' }); }); }
+        if(resArr.length === 0) box.innerHTML = '<p class="text-muted" style="margin:0; font-size:0.85rem;">Sem resultados.</p>'; else { let h = ''; resArr.forEach(r => h += `<div style="padding:8px; border-bottom:1px solid #333; cursor:pointer;" onclick="document.getElementById('${r.id}').click(); document.getElementById('aluno-search-results').style.display='none'; document.getElementById('aluno-search-input').value='';"><span style="font-size:0.7rem; color:var(--primary-green); text-transform:uppercase;">${r.t}</span><div style="font-size:0.9rem; color:var(--text-light); margin-top:3px;">${r.txt}</div></div>`); box.innerHTML = h; }
+    } catch(err) { box.innerHTML = '<p class="text-danger" style="margin:0;">Erro.</p>'; }
+});
+document.addEventListener('click', (e) => { if (!e.target.closest('#aluno-search-input') && !e.target.closest('#aluno-search-results')) { const el = document.getElementById('aluno-search-results'); if(el) el.style.display = 'none'; } });
 
 async function carregarMateriaisAluno() {
     const c = document.getElementById('aluno-lista-materiais-container'); c.innerHTML = '<p class="text-muted center">A carregar materiais...</p>'; if(!minhaTurma) return;
     try {
         const r = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); 
         if(r.empty) { c.innerHTML = getEmptyState('Nenhum material publicado.', 'fa-book-open'); return; }
-        
         let sum = []; let dU = new Set(); r.forEach(d => { const dt = d.data(); sum.push({id: d.id, ...dt}); dU.add(dt.disciplina); });
         const fS = document.getElementById('aluno-filtro-materiais-disc'); 
         if (fS && fS.options.length <= 1) { let oH = '<option value="">Todas as Disciplinas</option>'; Array.from(dU).sort().forEach(dc => oH += `<option value="${dc}">${dc}</option>`); fS.innerHTML = oH; }
-        
         const fA = fS ? fS.value : ""; if(fA) sum = sum.filter(s => s.disciplina === fA); 
         sum.sort((a,b) => b.timestamp - a.timestamp || (b.data || "").localeCompare(a.data || "")); 
-        
         if(sum.length === 0) { c.innerHTML = getEmptyState('Sem materiais para esta disciplina.', 'fa-filter'); return; }
         
         let html = ''; 
@@ -669,7 +646,6 @@ async function carregarMateriaisAluno() {
         c.innerHTML = html;
     } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao carregar os dados.</p>'; }
 }
-bindChange('aluno-filtro-materiais-disc', carregarMateriaisAluno);
 
 async function pedirPermissaoNotificacoes() { try { const p = await Notification.requestPermission(); if(p==='granted') { const r = await navigator.serviceWorker.register('./firebase-messaging-sw.js'); const t = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: r }); if(t) await updateDoc(doc(db, "utilizadores", myUserId), { tokenNotificacao: t }); } } catch(e){} }
 if(typeof onMessage !== "undefined" && messaging) onMessage(messaging, p => alert(`NOVA NOTIFICAÇÃO:\n${p.notification.title}\n${p.notification.body}`));
