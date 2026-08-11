@@ -15,26 +15,26 @@ onAuthStateChanged(auth, async (user) => {
             const docSnap = await getDoc(doc(db, "utilizadores", userId));
             if (docSnap.exists()) {
                 const dados = docSnap.data();
-                
-                // Expulsa se não for aluno ou se não for delegado/subdelegado
                 if (dados.papel !== 'aluno' || (dados.cargo !== 'delegado' && dados.cargo !== 'subdelegado')) {
                     window.location.href = "aluno.html"; 
                     return;
                 }
-
                 minhaTurma = dados.turma || "";
                 document.getElementById('delegado-turma-label').innerText = `Gestão: Turma ${minhaTurma}`;
-
-                // Inicia escuta da agenda em tempo real
                 iniciarAgendaRealTime();
-            } else {
-                window.location.href = "index.html";
-            }
-        } catch (e) {
-            console.error("Erro na verificação de delegado:", e);
-        }
+            } else { window.location.href = "index.html"; }
+        } catch (e) { console.error(e); }
+    } else { window.location.href = "index.html"; }
+});
+
+// LÓGICA DO SELETOR DE HORAS
+document.getElementById('input-evento-tempo-tipo').addEventListener('change', (e) => {
+    const val = e.target.value;
+    const boxHoras = document.getElementById('box-horas-especificas');
+    if(val === 'especifico') {
+        boxHoras.style.display = 'flex';
     } else {
-        window.location.href = "index.html";
+        boxHoras.style.display = 'none';
     }
 });
 
@@ -42,17 +42,23 @@ onAuthStateChanged(auth, async (user) => {
 // 2. CRIAR NOVO EVENTO
 // ==========================================
 document.getElementById('btn-salvar-evento').addEventListener('click', async (e) => {
-    const tituloInput = document.getElementById('input-evento-titulo');
-    const dataInput = document.getElementById('input-evento-data');
-    const tipoInput = document.getElementById('input-evento-tipo');
+    const titulo = document.getElementById('input-evento-titulo').value.trim();
+    const dataVal = document.getElementById('input-evento-data').value;
+    const tipo = document.getElementById('input-evento-tipo').value;
+    
+    // Ler os dados do horário
+    const tempoTipo = document.getElementById('input-evento-tempo-tipo').value;
+    const horaInicio = document.getElementById('input-evento-hora-inicio').value;
+    const horaFim = document.getElementById('input-evento-hora-fim').value;
 
-    const titulo = tituloInput.value.trim();
-    const dataVal = dataInput.value;
-    const tipo = tipoInput.value;
+    if (!titulo || !dataVal) { alert("Por favor, preenche o título e a data do evento."); return; }
 
-    if (!titulo || !dataVal) {
-        alert("Por favor, preenche o título e a data do evento.");
-        return;
+    let infoTempo = "Dia Inteiro";
+    if (tempoTipo === "manha") infoTempo = "Manhã";
+    else if (tempoTipo === "tarde") infoTempo = "Tarde";
+    else if (tempoTipo === "especifico") {
+        if (!horaInicio) { alert("Tens de definir a hora de início!"); return; }
+        infoTempo = horaFim ? `${horaInicio} - ${horaFim}` : `${horaInicio}`;
     }
 
     const btn = e.currentTarget;
@@ -64,28 +70,25 @@ document.getElementById('btn-salvar-evento').addEventListener('click', async (e)
             titulo: titulo,
             data: dataVal,
             tipo: tipo,
+            tempo: infoTempo, // Guarda a informação de tempo!
             criadoEm: Date.now()
         });
 
-        // Sucesso visual e limpeza
         btn.innerHTML = '<i class="fa-solid fa-check"></i> Evento Publicado!';
-        btn.style.backgroundColor = "var(--success-green)";
-        btn.style.color = "white";
+        btn.style.backgroundColor = "var(--success-green)"; btn.style.color = "white";
         
-        tituloInput.value = "";
-        dataInput.value = "";
+        document.getElementById('input-evento-titulo').value = "";
+        document.getElementById('input-evento-data').value = "";
+        document.getElementById('input-evento-hora-inicio').value = "";
+        document.getElementById('input-evento-hora-fim').value = "";
 
         setTimeout(() => {
             btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Publicar para a Turma';
-            btn.style.backgroundColor = "#ffd700";
-            btn.style.color = "#000";
-            btn.disabled = false;
+            btn.style.backgroundColor = "#ffd700"; btn.style.color = "#000"; btn.disabled = false;
         }, 2000);
-
     } catch (error) {
         alert("Erro ao guardar o evento. Tenta novamente.");
-        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Publicar para a Turma';
-        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Publicar para a Turma'; btn.disabled = false;
     }
 });
 
@@ -94,38 +97,30 @@ document.getElementById('btn-salvar-evento').addEventListener('click', async (e)
 // ==========================================
 function iniciarAgendaRealTime() {
     if(!minhaTurma) return;
-
     const q = query(collection(db, "turmas", minhaTurma, "eventos"), orderBy("data", "asc"));
     
     onSnapshot(q, (snapshot) => {
         const container = document.getElementById('lista-eventos-delegado');
-        let html = "";
-
-        const hoje = new Date().toISOString().split('T')[0];
-        let temEventosFuturos = false;
+        let html = ""; const hoje = new Date().toISOString().split('T')[0]; let temEventosFuturos = false;
 
         snapshot.forEach(docSnap => {
-            const ev = docSnap.data();
-            const evId = docSnap.id;
-            
-            // Mostrar apenas eventos de hoje para a frente
+            const ev = docSnap.data(); const evId = docSnap.id;
             if(ev.data >= hoje) {
                 temEventosFuturos = true;
-                
-                // Formatar Data (YYYY-MM-DD para DD/MM/YYYY)
                 const dataFormatada = ev.data.split('-').reverse().join('/');
                 
-                // Cores e Labels consoante o tipo
                 let cor = "#b82bf2"; let label = "Outro";
                 if(ev.tipo === 'teste' || ev.tipo === 'avaliacao') { cor = "#f59e0b"; label = "Avaliação"; }
                 if(ev.tipo === 'entrega' || ev.tipo === 'trabalho') { cor = "#00d2ff"; label = "Entrega"; }
+
+                const textoTempo = ev.tempo ? ` | <i class="fa-regular fa-clock"></i> ${ev.tempo}` : '';
 
                 html += `
                 <div class="card" style="border-left: 4px solid ${cor}; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center; padding: 15px;">
                     <div>
                         <span class="event-type-badge" style="color: ${cor}; border-color: ${cor};">${label}</span>
                         <h4 style="margin: 8px 0 5px 0; color: var(--text-light); font-size: 1.1rem;">${ev.titulo}</h4>
-                        <span style="color: var(--text-muted); font-size: 0.85rem;"><i class="fa-regular fa-calendar"></i> ${dataFormatada}</span>
+                        <span style="color: var(--text-muted); font-size: 0.85rem;"><i class="fa-regular fa-calendar"></i> ${dataFormatada}${textoTempo}</span>
                     </div>
                     <button class="btn-delete-ev" data-id="${evId}" style="background:none; border:none; color:var(--danger-red); font-size:1.2rem; cursor:pointer; padding:10px;">
                         <i class="fa-solid fa-trash"></i>
@@ -140,42 +135,18 @@ function iniciarAgendaRealTime() {
                         <p style="font-size: 0.9rem; color: var(--text-muted);">A agenda da turma está livre.</p>
                     </div>`;
         }
-
         container.innerHTML = html;
-
-        // Adicionar eventos aos botões de apagar
-        document.querySelectorAll('.btn-delete-ev').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                pendingDeleteId = e.currentTarget.getAttribute('data-id');
-                document.getElementById('modal-delete-evento').style.display = 'flex';
-            });
-        });
+        document.querySelectorAll('.btn-delete-ev').forEach(btn => { btn.addEventListener('click', (e) => { pendingDeleteId = e.currentTarget.getAttribute('data-id'); document.getElementById('modal-delete-evento').style.display = 'flex'; }); });
     });
 }
 
 // ==========================================
 // 4. ELIMINAR EVENTO (MODAL)
 // ==========================================
-document.getElementById('btn-cancel-delete').addEventListener('click', () => {
-    document.getElementById('modal-delete-evento').style.display = 'none';
-    pendingDeleteId = null;
-});
-
+document.getElementById('btn-cancel-delete').addEventListener('click', () => { document.getElementById('modal-delete-evento').style.display = 'none'; pendingDeleteId = null; });
 document.getElementById('btn-confirm-delete').addEventListener('click', async (e) => {
     if(!pendingDeleteId || !minhaTurma) return;
-    
-    const btn = e.currentTarget;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-    btn.disabled = true;
-
-    try {
-        await deleteDoc(doc(db, "turmas", minhaTurma, "eventos", pendingDeleteId));
-        document.getElementById('modal-delete-evento').style.display = 'none';
-    } catch(err) {
-        alert("Erro ao apagar o evento.");
-    } finally {
-        btn.innerHTML = 'Apagar';
-        btn.disabled = false;
-        pendingDeleteId = null;
-    }
+    const btn = e.currentTarget; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
+    try { await deleteDoc(doc(db, "turmas", minhaTurma, "eventos", pendingDeleteId)); document.getElementById('modal-delete-evento').style.display = 'none'; } catch(err) {} 
+    finally { btn.innerHTML = 'Apagar'; btn.disabled = false; pendingDeleteId = null; }
 });
