@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Turma PRO - Aluno</title>
     <link rel="icon" type="image/png" href="logo_tur.png">
-    <link rel="stylesheet" href="style.css?v=27">
+    <link rel="stylesheet" href="style.css?v=28">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
@@ -60,7 +60,8 @@
                         <h2 id="welcome-message" style="margin-bottom: 3px; font-size: 1.4rem;">Olá, <span id="welcome-nome">Aluno</span>!</h2>
                         <p style="font-size: 0.85rem; color: var(--text-muted);"><span id="aluno-rank-title">A classificar...</span></p>
                     </div>
-                    <div style="background: rgba(0, 204, 136, 0.1); border: 1px solid var(--primary-green); padding: 6px 12px; border-radius: 20px; text-align: center; cursor: pointer;" onclick="document.querySelector('.nav-item[data-target=\'view-aluno-perfil\']').click()">
+                    <!-- Caixa XP Apenas Informativa (Sem clique) -->
+                    <div style="background: rgba(0, 204, 136, 0.1); border: 1px solid var(--primary-green); padding: 6px 12px; border-radius: 20px; text-align: center;">
                         <div style="font-weight: bold; color: var(--primary-green); font-size: 1rem;"><i class="fa-solid fa-bolt"></i> <span id="aluno-xp-atual">0</span> <span style="font-size: 0.7rem;">XP</span></div>
                     </div>
                 </div>
@@ -89,7 +90,7 @@
                 <div id="missoes-section" style="margin-bottom: 20px;">
                     <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;"><i class="fa-solid fa-bullseye"></i> Missões Disponíveis</h3>
                     <div id="missoes-container">
-                        <!-- Gerado por JS (Sem missões ativas) -->
+                        <!-- Gerado por JS -->
                     </div>
                 </div>
             </div>
@@ -131,9 +132,11 @@
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">A app dá-te <strong style="color:var(--warning-yellow);">+50 XP</strong> quando cumprires o objetivo.</p>
                     
                     <div style="display:flex; flex-direction:column; gap:10px; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
+                        <input type="hidden" id="obj-tipo" value="nota">
                         <div id="obj-setup-nota" style="display:flex; gap:8px;">
                             <select id="obj-disciplina" class="input-padrao" style="flex:1; margin:0;"></select>
-                            <input type="number" id="obj-modulo" placeholder="Mod." class="input-padrao" style="width:60px; margin:0;" min="1">
+                            <!-- SUBSTITUÍDO: Agora é um Select dinâmico -->
+                            <select id="obj-modulo" class="input-padrao" style="width:75px; margin:0;"></select>
                             <input type="number" id="obj-nota-alvo" placeholder="Nota" class="input-padrao" style="width:70px; margin:0;" min="10" max="20">
                         </div>
                         <button id="btn-add-objetivo" class="primary-btn" style="width:100%; margin-top:5px; background:var(--warning-yellow); color:black;"><i class="fa-solid fa-plus"></i> Guardar Meta</button>
@@ -142,7 +145,7 @@
                 </div>
 
                 <div class="card" style="border-left: 4px solid #ffd700; margin-bottom: 20px;">
-                    <h3 style="font-size: 1.1rem; color: var(--text-light); margin-bottom: 15px;"><i class="fa-solid fa-trophy"></i> Rankings</h3>
+                    <h3 style="font-size: 1.1rem; color: var(--text-light); margin-bottom: 15px;"><i class="fa-solid fa-trophy"></i> Rankings da Turma</h3>
                     <div id="ranking-turma-container"><p class="text-muted center">A classificar alunos...</p></div>
                 </div>
             </div>
@@ -224,10 +227,8 @@
                     <label class="agenda-filter-label"><input type="checkbox" id="aluno-filtro-agenda-outros" checked> <span style="color:#b82bf2;">●</span> Outros</label>
                 </div>
                 
-                <!-- ONDE OS EVENTOS APARECEM -->
                 <div id="aluno-agenda-content" style="margin-top:10px; overflow-x: auto; padding-bottom: 40px;"><p class="text-muted" style="text-align:center;">A carregar dados...</p></div>
 
-                <!-- ONDE O HORÁRIO APARECE -->
                 <div id="aluno-horario-container" style="display:none;">
                     <div class="falta-tabs" style="margin-bottom: 15px;">
                         <button class="falta-tab-btn active" id="btn-aluno-horario-dia">Vista Diária</button>
@@ -373,6 +374,6 @@
         </nav>
     </div>
 
-    <script type="module" src="./js/aluno-app.js?v=40"></script>
+    <script type="module" src="./js/aluno-app.js?v=42"></script>
 </body>
 </html>
