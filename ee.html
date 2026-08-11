@@ -5,9 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Turma PRO - Família</title>
     <link rel="icon" type="image/png" href="logo_tur.png">
-    <link rel="stylesheet" href="style.css?v=11">
+    <link rel="stylesheet" href="style.css?v=14">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Adicionado o Chart.js para os gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         const currentTheme = localStorage.getItem('turmapro_theme') || 'dark';
@@ -66,9 +65,11 @@
                         <div><i class="fa-solid fa-book-medical" style="color: #0099ff;"></i><div class="ee-summary-value" id="resumo-prhfs">...</div></div>
                         <div class="ee-summary-label">PRHFs Ativos</div>
                     </div>
+                    
+                    <!-- CARTÃO SUBSTITUÍDO: De "Ocorrências" para "Nível PRO" -->
                     <div class="ee-summary-card">
-                        <div><i class="fa-solid fa-triangle-exclamation" style="color: #e67e22;"></i><div class="ee-summary-value" id="resumo-ocorrencias">...</div></div>
-                        <div class="ee-summary-label">Ocorrências</div>
+                        <div><i class="fa-solid fa-medal" style="color: #ffd700;"></i><div class="ee-summary-value" id="resumo-nivel-xp">Nvl 1</div></div>
+                        <div class="ee-summary-label">Nível PRO</div>
                     </div>
                 </div>
 
@@ -174,7 +175,9 @@
                     <button class="falta-tab-btn" id="tab-ee-notas">Notas</button>
                     <button class="falta-tab-btn" id="tab-ee-faltas">Faltas</button>
                     <button class="falta-tab-btn" id="tab-ee-prhfs">PRHFs</button>
-                    <button class="falta-tab-btn" id="tab-ee-comportamento">Comportamento</button>
+                    
+                    <!-- TAB SUBSTITUÍDA: De "Comportamento" para "Evolução PRO" -->
+                    <button class="falta-tab-btn" id="tab-ee-evolucao" style="color: var(--primary-green); border-color: var(--primary-green);"><i class="fa-solid fa-chart-line"></i> Evolução PRO</button>
                     <button class="falta-tab-btn" id="tab-ee-reunioes">Reuniões</button>
                 </div>
                 
@@ -261,6 +264,6 @@
         </div>
     </div>
 
-    <script type="module" src="./js/ee-app.js?v=17"></script>
+    <script type="module" src="./js/ee-app.js?v=20"></script>
 </body>
 </html>
