@@ -13,7 +13,15 @@ function getEmptyState(mensagem, icone = "fa-folder-open") {
 export function setupComunicacao() {
     window.carregarCanaisForumAluno = carregarCanaisForumAluno;
 
-    // Fórum - Voltar à lista
+    // BOTÃO DE CRIAR CHAT RENOMEADO E ATIVADO
+    const btnCreate = document.getElementById('btn-create-chat-aluno');
+    if(btnCreate) {
+        btnCreate.innerHTML = '<i class="fa-solid fa-plus"></i> Novo Chat';
+        btnCreate.addEventListener('click', () => {
+            document.getElementById('modal-criar-forum').style.display = 'flex';
+        });
+    }
+
     document.getElementById('btn-aluno-voltar-canais')?.addEventListener('click', () => {
         alunoForumAtivoId = null; if(chatUnsubscribeAluno) chatUnsubscribeAluno();
         document.getElementById('aluno-forum-chat-view').style.display = 'none';
@@ -21,7 +29,6 @@ export function setupComunicacao() {
         document.getElementById('aluno-forum-channel-list').style.display = 'block';
     });
 
-    // Fórum - Enviar Mensagem
     document.getElementById('btn-aluno-send-msg')?.addEventListener('click', async () => {
         if(!alunoForumAtivoId) return; 
         const inp = document.getElementById('aluno-input-forum-msg'); const t = inp.value.trim(); if(!t) return;
@@ -38,7 +45,6 @@ export function setupComunicacao() {
         } catch(e) {}
     });
 
-    // Notificações - Filtros
     document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(chip => {
         chip.addEventListener('click', (e) => { 
             document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(c => c.classList.remove('active')); 
@@ -48,7 +54,7 @@ export function setupComunicacao() {
         });
     });
 
-    // Notificações - Abrir e Fechar (Resolução do Botão Voltar Preso!)
+    // BOTÃO VOLTAR DAS NOTIFICAÇÕES (Volta ao separador onde estavas antes!)
     document.getElementById('btn-open-notificacoes')?.addEventListener('click', () => {
         document.querySelectorAll('.app-content > div:not(.modal-overlay)').forEach(d => d.style.display = 'none');
         document.getElementById('view-aluno-notificacoes').style.display = 'block';
@@ -71,20 +77,24 @@ function carregarCanaisForumAluno() {
     list.innerHTML = '<p class="text-muted center">A carregar conversas...</p>';
     
     try {
-        // Query solta para apanhar até os grupos antigos que não tinham data
+        // FILTRO COMPLETAMENTE ABERTO (Mostra as turmas, globais, e os antigos testes privados)
         const q = query(collection(window.db, "forums")); 
         onSnapshot(q, (snap) => {
-            let html = '';
-            let grupos = [];
+            let html = ''; let grupos = [];
             
             snap.forEach(d => {
                 const ch = d.data();
-                if (ch.isGlobal || !ch.participantes || ch.participantes.includes(window.myUserId)) {
+                if (ch.isGlobal || 
+                   (ch.turma && ch.turma === window.minhaTurma) || 
+                   (ch.academia && ch.academia === window.myAcademia) || 
+                   (!ch.participantes) || 
+                   (ch.participantes && ch.participantes.includes(window.myUserId)) ||
+                   (ch.tipo === 'disciplina' && ch.turma === window.minhaTurma)) {
                     grupos.push({ id: d.id, ...ch });
                 }
             });
 
-            // Ordena manualmente para evitar que o firebase esconda fóruns sem "dataCriacao"
+            // Ordena manualmente do mais recente para o mais antigo (Assim os teus testes aparecem)
             grupos.sort((a,b) => (b.dataCriacao || 0) - (a.dataCriacao || 0));
 
             grupos.forEach(ch => {
