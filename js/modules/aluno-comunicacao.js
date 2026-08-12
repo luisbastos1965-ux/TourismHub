@@ -38,12 +38,16 @@ export function setupComunicacao() {
         } catch(e) {}
     });
 
-    // Notificações - Filtros
+    // Notificações - Lógica de Filtros corrigida (Alternar classe "active")
     document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(chip => {
         chip.addEventListener('click', (e) => { 
+            // 1. Remove o active de todos os chips
             document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(c => c.classList.remove('active')); 
+            // 2. Adiciona o active apenas ao chip clicado
             e.target.classList.add('active'); 
+            // 3. Atualiza a variável global
             window.notifFilterCat = e.target.getAttribute('data-cat'); 
+            // 4. Recarrega as notificações
             carregarNotificacoesAluno(); 
         });
     });
@@ -61,13 +65,14 @@ function carregarCanaisForumAluno() {
     list.innerHTML = '<p class="text-muted center">A carregar conversas...</p>';
     
     try {
-        // Removido o filtro restrito do array-contains para recuperares os fóruns de teste antigos!
+        // Removido o filtro rígido para encontrares os teus fóruns de testes!
         const q = query(collection(window.db, "forums"), orderBy("dataCriacao", "desc"));
         onSnapshot(q, (snap) => {
             let html = '';
             snap.forEach(d => {
                 const ch = d.data(); const cid = d.id;
-                // Exibe se for global ou se o teu ID estiver nos participantes, OU se não houver array de participantes (antigos)
+                
+                // Só mostra se for Global OU se o Aluno estiver na lista de participantes OU se for um grupo antigo sem array de participantes
                 if (ch.isGlobal || !ch.participantes || ch.participantes.includes(window.myUserId)) {
                     const eGlobal = ch.isGlobal ? `<i class="fa-solid fa-earth-americas" style="color:var(--primary-green);" title="Escola Inteira"></i> ` : '';
                     const unread = (ch.unread && ch.unread[window.myUserId]) ? `<span style="background:var(--danger-red); color:white; font-size:0.7rem; font-weight:bold; padding:2px 8px; border-radius:12px;">Nova</span>` : '';
@@ -121,6 +126,7 @@ async function carregarNotificacoesAluno() {
         let h = ''; let nC = 0;
         snap.forEach(d => {
             const n = d.data();
+            // A verificação cruza a Categoria guardada na Firebase com a Categoria do Botão clicado
             if(window.notifFilterCat === 'all' || window.notifFilterCat === n.categoria) {
                 if(!n.lida) nC++;
                 const ic = n.categoria==='importante'?'fa-triangle-exclamation':'fa-bell'; 
@@ -131,7 +137,7 @@ async function carregarNotificacoesAluno() {
                       </div>`;
             }
         });
-        c.innerHTML = h === '' ? getEmptyState('Não tens notificações na categoria selecionada.', 'fa-bell-slash') : h;
+        c.innerHTML = h === '' ? getEmptyState('Não tens notificações nesta categoria.', 'fa-bell-slash') : h;
         const b = document.getElementById('badge-notificacoes');
         if(b) { if(nC > 0) { b.style.display = 'block'; b.innerText = nC; } else { b.style.display = 'none'; } }
     } catch(e) {}
