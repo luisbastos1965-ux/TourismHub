@@ -38,25 +38,31 @@ export function setupComunicacao() {
         } catch(e) {}
     });
 
-    // Notificações - Lógica de Filtros corrigida (Alternar classe "active")
+    // Notificações - Filtros
     document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(chip => {
         chip.addEventListener('click', (e) => { 
-            // 1. Remove o active de todos os chips
             document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(c => c.classList.remove('active')); 
-            // 2. Adiciona o active apenas ao chip clicado
             e.target.classList.add('active'); 
-            // 3. Atualiza a variável global
             window.notifFilterCat = e.target.getAttribute('data-cat'); 
-            // 4. Recarrega as notificações
             carregarNotificacoesAluno(); 
         });
     });
 
-    // Ao clicar no sino, abre as notificações
+    // Notificações - Abrir e Fechar (Resolução do Botão Voltar Preso!)
     document.getElementById('btn-open-notificacoes')?.addEventListener('click', () => {
         document.querySelectorAll('.app-content > div:not(.modal-overlay)').forEach(d => d.style.display = 'none');
         document.getElementById('view-aluno-notificacoes').style.display = 'block';
         carregarNotificacoesAluno();
+    });
+
+    document.getElementById('btn-voltar-notificacoes')?.addEventListener('click', () => {
+        document.getElementById('view-aluno-notificacoes').style.display = 'none';
+        const activeTab = document.querySelector('.bottom-nav .nav-item.active');
+        if(activeTab) {
+            document.getElementById(activeTab.getAttribute('data-target')).style.display = 'block';
+        } else {
+            document.getElementById('student-dashboard').style.display = 'block';
+        }
     });
 }
 
@@ -65,29 +71,36 @@ function carregarCanaisForumAluno() {
     list.innerHTML = '<p class="text-muted center">A carregar conversas...</p>';
     
     try {
-        // Removido o filtro rígido para encontrares os teus fóruns de testes!
-        const q = query(collection(window.db, "forums"), orderBy("dataCriacao", "desc"));
+        // Query solta para apanhar até os grupos antigos que não tinham data
+        const q = query(collection(window.db, "forums")); 
         onSnapshot(q, (snap) => {
             let html = '';
+            let grupos = [];
+            
             snap.forEach(d => {
-                const ch = d.data(); const cid = d.id;
-                
-                // Só mostra se for Global OU se o Aluno estiver na lista de participantes OU se for um grupo antigo sem array de participantes
+                const ch = d.data();
                 if (ch.isGlobal || !ch.participantes || ch.participantes.includes(window.myUserId)) {
-                    const eGlobal = ch.isGlobal ? `<i class="fa-solid fa-earth-americas" style="color:var(--primary-green);" title="Escola Inteira"></i> ` : '';
-                    const unread = (ch.unread && ch.unread[window.myUserId]) ? `<span style="background:var(--danger-red); color:white; font-size:0.7rem; font-weight:bold; padding:2px 8px; border-radius:12px;">Nova</span>` : '';
-                    const lM = ch.lastMessage ? `<p style="margin:5px 0 0 0; font-size:0.8rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ch.lastMessage.sender === window.myUserId ? 'Tu: ' : ''}${ch.lastMessage.text}</p>` : '';
-                    
-                    html += `<div class="card" style="margin-bottom:10px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; border: 1px solid #333;" onclick="window.abrirChatForumAluno('${cid}', '${ch.nome}')">
-                                <div style="flex:1; overflow:hidden;">
-                                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                                        <h4 style="margin:0; color:var(--text-light); font-size:1rem;">${eGlobal}${ch.nome}</h4>
-                                        ${unread}
-                                    </div>
-                                    ${lM}
-                                </div>
-                             </div>`;
+                    grupos.push({ id: d.id, ...ch });
                 }
+            });
+
+            // Ordena manualmente para evitar que o firebase esconda fóruns sem "dataCriacao"
+            grupos.sort((a,b) => (b.dataCriacao || 0) - (a.dataCriacao || 0));
+
+            grupos.forEach(ch => {
+                const eGlobal = ch.isGlobal ? `<i class="fa-solid fa-earth-americas" style="color:var(--primary-green);" title="Escola Inteira"></i> ` : '';
+                const unread = (ch.unread && ch.unread[window.myUserId]) ? `<span style="background:var(--danger-red); color:white; font-size:0.7rem; font-weight:bold; padding:2px 8px; border-radius:12px;">Nova</span>` : '';
+                const lM = ch.lastMessage ? `<p style="margin:5px 0 0 0; font-size:0.8rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ch.lastMessage.sender === window.myUserId ? 'Tu: ' : ''}${ch.lastMessage.text}</p>` : '';
+                
+                html += `<div class="card" style="margin-bottom:10px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; border: 1px solid #333;" onclick="window.abrirChatForumAluno('${ch.id}', '${ch.nome}')">
+                            <div style="flex:1; overflow:hidden;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <h4 style="margin:0; color:var(--text-light); font-size:1rem;">${eGlobal}${ch.nome}</h4>
+                                    ${unread}
+                                </div>
+                                ${lM}
+                            </div>
+                         </div>`;
             });
             list.innerHTML = html === '' ? getEmptyState('Ainda não tens grupos de estudo.', 'fa-comments') : html;
         });
@@ -126,7 +139,6 @@ async function carregarNotificacoesAluno() {
         let h = ''; let nC = 0;
         snap.forEach(d => {
             const n = d.data();
-            // A verificação cruza a Categoria guardada na Firebase com a Categoria do Botão clicado
             if(window.notifFilterCat === 'all' || window.notifFilterCat === n.categoria) {
                 if(!n.lida) nC++;
                 const ic = n.categoria==='importante'?'fa-triangle-exclamation':'fa-bell'; 
