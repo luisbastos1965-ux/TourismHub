@@ -2,7 +2,6 @@ import { collection, getDocs, getDoc, doc, query } from "https://www.gstatic.com
 
 let ahModo = 'dia', ahDOff = 0, ahSOff = 0;
 
-// OS 8 TEMPOS LETIVOS REAIS DA TUA ESCOLA!
 const BLOCOS_HORARIO = [
     { i: "08:30", f: "09:30", n: 1 }, 
     { i: "09:35", f: "10:35", n: 2 }, 
@@ -21,7 +20,6 @@ function getEmptyState(mensagem, icone = "fa-folder-open") {
             </div>`;
 }
 
-// Função Blindada contra Erros de Fuso Horário (Resolve a grelha vazia)
 function getLocalIsoDate(dObj) {
     const y = dObj.getFullYear();
     const m = String(dObj.getMonth() + 1).padStart(2, '0');
@@ -49,6 +47,9 @@ export function setupHorario() {
     ['aluno-filtro-agenda-testes', 'aluno-filtro-agenda-trabalhos', 'aluno-filtro-agenda-outros'].forEach(id => { 
         document.getElementById(id)?.addEventListener('change', carregarAgendaAlunoLista); 
     });
+    
+    // LIGAÇÃO CORRIGIDA: Filtro dos Materiais
+    document.getElementById('aluno-filtro-materiais-disc')?.addEventListener('change', carregarMateriaisAluno);
     
     document.getElementById('btn-aluno-horario-dia')?.addEventListener('click', () => { 
         document.getElementById('btn-aluno-horario-dia').classList.add('active'); 
@@ -127,19 +128,22 @@ async function carregarHorarioAluno() {
             const dSem = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][baseDate.getDay()];
             document.getElementById('aluno-horario-display').innerText = `${dSem}, ${baseDate.toLocaleDateString('pt-PT')}`;
             
+            // GRELHA DIÁRIA SEMPRE RENDERIZADA
             let html = '<div style="display:flex; flex-direction:column; gap:10px;">';
-            let temAulas = false;
             BLOCOS_HORARIO.forEach(b => {
                 const val = hor[`${dIso}_${b.n}`];
-                if(val) { temAulas = true; html += `<div class="card" style="border-left:4px solid var(--primary-green); display:flex; align-items:center; gap:15px; padding:12px;"><div style="text-align:center; min-width:50px;"><strong style="color:var(--text-light); display:block; font-size:1.1rem;">${b.i}</strong><span style="color:var(--text-muted); font-size:0.75rem;">${b.f}</span></div><div style="flex:1; border-left:1px solid #333; padding-left:15px;"><strong style="color:var(--primary-green); font-size:1.1rem;">${val}</strong></div></div>`; }
+                if(val) {
+                    html += `<div class="card" style="border-left:4px solid var(--primary-green); display:flex; align-items:center; gap:15px; padding:12px;"><div style="text-align:center; min-width:50px;"><strong style="color:var(--text-light); display:block; font-size:1.1rem;">${b.i}</strong><span style="color:var(--text-muted); font-size:0.75rem;">${b.f}</span></div><div style="flex:1; border-left:1px solid #333; padding-left:15px;"><strong style="color:var(--primary-green); font-size:1.1rem;">${val}</strong></div></div>`;
+                } else {
+                    html += `<div class="card" style="border-left:4px solid #333; display:flex; align-items:center; gap:15px; padding:12px; background:rgba(0,0,0,0.1);"><div style="text-align:center; min-width:50px;"><strong style="color:var(--text-muted); display:block; font-size:1.1rem;">${b.i}</strong><span style="color:#555; font-size:0.75rem;">${b.f}</span></div><div style="flex:1; border-left:1px solid #333; padding-left:15px;"><strong style="color:#555; font-size:1.1rem;">-</strong></div></div>`;
+                }
             });
-            c.innerHTML = temAulas ? html + '</div>' : getEmptyState('Sem aulas marcadas para este dia.', 'fa-mug-hot');
+            c.innerHTML = html + '</div>';
         
         } else {
-            // NOVO VISUAL DA SEMANA - Feed Mobile Agrupado (Ideal para ecrãs pequenos)
+            // GRELHA SEMANAL (Tabela Clássica com as Células Vazias)
             const curr = new Date(baseDate.setDate(baseDate.getDate() - baseDate.getDay() + 1 + (ahSOff*7)));
             const pDia = getLocalIsoDate(curr);
-            const nomesDias = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira'];
             const diasSemanaISO = [];
             
             for(let i=0; i<5; i++) {
@@ -151,34 +155,33 @@ async function carregarHorarioAluno() {
             
             document.getElementById('aluno-horario-display').innerText = `${pDia.split('-').reverse().slice(0,2).join('/')} a ${uDia.split('-').reverse().slice(0,2).join('/')}`;
 
-            let html = `<div style="display:flex; flex-direction:column; gap:20px; padding-bottom:20px;">`;
-            let teveQualquerAula = false;
-
-            for(let i=0; i<5; i++) {
-                let htmlDia = ''; let temAulaNoDia = false;
-                BLOCOS_HORARIO.forEach(b => {
+            let html = `<div style="overflow-x: auto; padding-bottom:20px;">
+                            <table style="width:100%; min-width: 500px; border-collapse: collapse; text-align:center; font-size:0.85rem; color:var(--text-light);">
+                                <thead>
+                                    <tr>
+                                        <th style="padding:10px; border-bottom:2px solid var(--primary-green); color:var(--text-muted);">Hora</th>
+                                        <th style="padding:10px; border-bottom:2px solid var(--primary-green);">Seg</th>
+                                        <th style="padding:10px; border-bottom:2px solid var(--primary-green);">Ter</th>
+                                        <th style="padding:10px; border-bottom:2px solid var(--primary-green);">Qua</th>
+                                        <th style="padding:10px; border-bottom:2px solid var(--primary-green);">Qui</th>
+                                        <th style="padding:10px; border-bottom:2px solid var(--primary-green);">Sex</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+            
+            BLOCOS_HORARIO.forEach(b => {
+                html += `<tr><td style="padding:10px; border-bottom:1px solid #333; color:var(--text-muted); font-weight:bold;">${b.i}<br><span style="font-size:0.7rem;">${b.f}</span></td>`;
+                for(let i=0; i<5; i++) {
                     const val = hor[`${diasSemanaISO[i]}_${b.n}`];
                     if(val) {
-                        temAulaNoDia = true; teveQualquerAula = true;
-                        htmlDia += `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:rgba(0,0,0,0.2); border-radius:6px; margin-bottom:5px; border-left: 2px solid var(--primary-green);">
-                                        <div style="display:flex; gap:10px; align-items:center;">
-                                            <span style="font-weight:bold; color:var(--text-light); font-size:0.9rem; min-width:45px;">${b.i}</span>
-                                            <span style="color:var(--primary-green); font-weight:bold;">${val}</span>
-                                        </div>
-                                    </div>`;
+                        html += `<td style="padding:10px; border-bottom:1px solid #333;"><div style="background:rgba(0,204,136,0.1); color:var(--primary-green); padding:5px; border-radius:6px; font-weight:bold; white-space:nowrap;">${val}</div></td>`;
+                    } else {
+                        html += `<td style="padding:10px; border-bottom:1px solid #333; color:#555;">-</td>`;
                     }
-                });
-                
-                if(temAulaNoDia) {
-                    html += `<div class="card" style="padding:15px; border:1px solid #333;">
-                                <h4 style="color:var(--text-muted); font-size:0.9rem; text-transform:uppercase; margin:0 0 10px 0;"><i class="fa-regular fa-calendar-days"></i> ${nomesDias[i]} (${diasSemanaISO[i].split('-').reverse().slice(0,2).join('/')})</h4>
-                                ${htmlDia}
-                             </div>`;
                 }
-            }
-
-            if(!teveQualquerAula) html = getEmptyState('A tua semana letiva está limpa.', 'fa-bed');
-            c.innerHTML = html + `</div>`;
+                html += `</tr>`;
+            });
+            c.innerHTML = html + `</tbody></table></div>`;
         }
     } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao desenhar horário.</p>'; }
 }
