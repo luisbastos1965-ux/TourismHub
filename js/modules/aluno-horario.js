@@ -1,4 +1,5 @@
 import { collection, getDocs, getDoc, doc, query } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { obterDisciplinasDoAno } from "./aluno-caderneta.js"; // IMPORTAÇÃO NOVA!
 
 let ahModo = 'dia', ahDOff = 0, ahSOff = 0;
 
@@ -48,7 +49,6 @@ export function setupHorario() {
         document.getElementById(id)?.addEventListener('change', carregarAgendaAlunoLista); 
     });
     
-    // LIGAÇÃO CORRIGIDA: Filtro dos Materiais
     document.getElementById('aluno-filtro-materiais-disc')?.addEventListener('change', carregarMateriaisAluno);
     
     document.getElementById('btn-aluno-horario-dia')?.addEventListener('click', () => { 
@@ -128,7 +128,6 @@ async function carregarHorarioAluno() {
             const dSem = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][baseDate.getDay()];
             document.getElementById('aluno-horario-display').innerText = `${dSem}, ${baseDate.toLocaleDateString('pt-PT')}`;
             
-            // GRELHA DIÁRIA SEMPRE RENDERIZADA
             let html = '<div style="display:flex; flex-direction:column; gap:10px;">';
             BLOCOS_HORARIO.forEach(b => {
                 const val = hor[`${dIso}_${b.n}`];
@@ -141,7 +140,6 @@ async function carregarHorarioAluno() {
             c.innerHTML = html + '</div>';
         
         } else {
-            // GRELHA SEMANAL (Tabela Clássica com as Células Vazias)
             const curr = new Date(baseDate.setDate(baseDate.getDate() - baseDate.getDay() + 1 + (ahSOff*7)));
             const pDia = getLocalIsoDate(curr);
             const diasSemanaISO = [];
@@ -193,17 +191,21 @@ export async function carregarMateriaisAluno() {
     
     try {
         const r = await getDocs(query(collection(window.db, "turmas", window.minhaTurma, "materiais"))); 
+        
+        // CORREÇÃO: Força sempre o carregamento de TODAS as disciplinas para o dropdown
+        const fS = document.getElementById('aluno-filtro-materiais-disc'); 
+        if (fS) { 
+            const currVal = fS.value;
+            let oH = '<option value="">Todas as Disciplinas</option>'; 
+            obterDisciplinasDoAno().forEach(dc => oH += `<option value="${dc}">${dc}</option>`); 
+            fS.innerHTML = oH; 
+            fS.value = currVal; // Mantém a seleção se o aluno tiver clicado noutra!
+        }
+        
         if(r.empty) { c.innerHTML = getEmptyState('Nenhum material publicado.', 'fa-book-open'); return; }
         
-        let sum = []; let dU = new Set(); 
-        r.forEach(d => { const dt = d.data(); sum.push({id: d.id, ...dt}); dU.add(dt.disciplina); });
-        
-        const fS = document.getElementById('aluno-filtro-materiais-disc'); 
-        if (fS && fS.options.length <= 1) { 
-            let oH = '<option value="">Todas as Disciplinas</option>'; 
-            Array.from(dU).sort().forEach(dc => oH += `<option value="${dc}">${dc}</option>`); 
-            fS.innerHTML = oH; 
-        }
+        let sum = []; 
+        r.forEach(d => { const dt = d.data(); sum.push({id: d.id, ...dt}); });
         
         const fA = fS ? fS.value : ""; 
         if(fA) sum = sum.filter(s => s.disciplina === fA); 
