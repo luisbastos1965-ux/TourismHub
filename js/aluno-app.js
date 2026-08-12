@@ -1187,7 +1187,8 @@ async function carregarMateriaisAluno() {
     if(!minhaTurma) return;
     
     try {
-        const r = await getDocs(query(collection(db, "turmas", minhaTurma, "sumarios"))); 
+        // Agora lê diretamente da nova coleção 'materiais'
+        const r = await getDocs(query(collection(db, "turmas", minhaTurma, "materiais"))); 
         if(r.empty) { c.innerHTML = getEmptyState('Nenhum material publicado.', 'fa-book-open'); return; }
         
         let sum = []; let dU = new Set(); 
