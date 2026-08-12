@@ -37,12 +37,11 @@ export function aplicarTemaAcademia(idHouse) {
 
 export function setupGamificacao(dados) {
     atualizarUI(dados.xp || 0);
-    carregarPassaporteEBadges(dados); // Corrige o "A gerar perfil..."
+    carregarPassaporteEBadges(dados); 
     carregarMetas();
     carregarRankingTurma();
     construirDashboardDinamico();
     
-    // Configurar Dropdowns das Metas
     const objSelect = document.getElementById('obj-disciplina');
     if(objSelect) {
         objSelect.innerHTML = '<option value="">Escolhe a Disciplina...</option>' + obterDisciplinasDoAno().map(dc => `<option value="${dc}">${dc}</option>`).join('');
@@ -58,7 +57,6 @@ export function setupGamificacao(dados) {
         else { sel.innerHTML = '<option value="1">1</option>'; }
     });
 
-    // Guardar Nova Meta
     document.getElementById('btn-add-objetivo')?.addEventListener('click', async (e) => {
         const di = document.getElementById('obj-disciplina').value; 
         const mo = document.getElementById('obj-modulo').value; 
@@ -87,7 +85,25 @@ const BADGES_DEFS = [
     { id: "b1", nome: "Primeiro Passo", icon: "fa-shoe-prints", reqXp: 100 },
     { id: "b2", nome: "Promessa", icon: "fa-star", reqXp: 1000 },
     { id: "b3", nome: "Veterano", icon: "fa-shield", reqXp: 5000 },
-    { id: "b4", nome: "Lenda", icon: "fa-building-columns", reqXp: 10000 }
+    { id: "b4", nome: "Lenda da Escola", icon: "fa-building-columns", reqXp: 10000 },
+    { id: "b5", nome: "Comunicador Nato", icon: "fa-microphone", reqCom: 100 },
+    { id: "b6", nome: "Voz da Razão", icon: "fa-comment-dots", reqCom: 500 },
+    { id: "b7", nome: "Mestre da Oratória", icon: "fa-bullhorn", reqCom: 1000 },
+    { id: "b8", nome: "Faísca Criativa", icon: "fa-lightbulb", reqCri: 100 },
+    { id: "b9", nome: "Mente Inovadora", icon: "fa-wand-magic-sparkles", reqCri: 500 },
+    { id: "b10", nome: "Visionário", icon: "fa-eye", reqCri: 1000 },
+    { id: "b11", nome: "Guia Local", icon: "fa-map-location-dot", reqLid: 100 },
+    { id: "b12", nome: "Líder Natural", icon: "fa-crown", reqLid: 500 },
+    { id: "b13", nome: "Capitão de Equipa", icon: "fa-anchor", reqLid: 1000 },
+    { id: "b14", nome: "Organizado", icon: "fa-list-check", reqOrg: 100 },
+    { id: "b15", nome: "Estratega", icon: "fa-chess-knight", reqOrg: 500 },
+    { id: "b16", nome: "Arquiteto", icon: "fa-compass-drafting", reqOrg: 1000 },
+    { id: "b17", nome: "Colega 5 Estrelas", icon: "fa-handshake-angle", reqXp: 1500 },
+    { id: "b18", nome: "Imparável", icon: "fa-fire-flame-curved", reqXp: 8000 },
+    { id: "b19", nome: "Coração de Ouro", icon: "fa-heart", reqXp: 3000 },
+    { id: "b20", nome: "Mestre do Turismo", icon: "fa-plane-departure", reqXp: 15000 },
+    { id: "b21", nome: "Embaixador VIP", icon: "fa-gem", reqXp: 20000 },
+    { id: "b22", nome: "Turma PRO", icon: "fa-trophy", reqXp: 25000 }
 ];
 
 function carregarPassaporteEBadges(data) {
@@ -104,7 +120,12 @@ function carregarPassaporteEBadges(data) {
     if(badCont) {
         let bHtml = '';
         BADGES_DEFS.forEach(b => {
-            let earned = ((data.xp || 0) >= b.reqXp);
+            let earned = false;
+            if(b.reqXp && (data.xp || 0) >= b.reqXp) earned = true;
+            if(b.reqCom && (data.xp_comunicacao || 0) >= b.reqCom) earned = true;
+            if(b.reqCri && (data.xp_criatividade || 0) >= b.reqCri) earned = true;
+            if(b.reqLid && (data.xp_lideranca || 0) >= b.reqLid) earned = true;
+            if(b.reqOrg && (data.xp_organizacao || 0) >= b.reqOrg) earned = true;
             const cl = earned ? 'earned' : ''; 
             bHtml += `<div class="badge-item ${cl}"><div class="badge-icon"><i class="fa-solid ${b.icon}"></i></div><div style="font-size:0.7rem; color:${earned ? 'var(--text-light)' : 'var(--text-muted)'};">${b.nome}</div></div>`;
         });
@@ -132,7 +153,6 @@ async function carregarRankingTurma() {
     const c = document.getElementById('ranking-turma-container'); 
     
     try {
-        // Agora procura TODOS OS ALUNOS DO CURSO/ESCOLA para as Academias
         const snap = await getDocs(query(collection(window.db, "utilizadores"), where("papel", "==", "aluno")));
         let alunosTurma = []; 
         let academiasXP = { estrategas: 0, embaixadores: 0, exploradores: 0, visionarios: 0 };
@@ -140,7 +160,7 @@ async function carregarRankingTurma() {
         snap.forEach(d => {
             const al = { id: d.id, ...d.data() };
             if(al.academia && academiasXP[al.academia] !== undefined) { academiasXP[al.academia] += (al.xp || 0); }
-            if(al.turma === window.minhaTurma) { alunosTurma.push(al); } // Top 10 só da turma dele
+            if(al.turma === window.minhaTurma) { alunosTurma.push(al); } 
         });
         
         alunosTurma.sort((a,b) => (b.xp || 0) - (a.xp || 0));
@@ -183,7 +203,6 @@ async function construirDashboardDinamico() {
 
         let tFaltas = 0, pAtivos = 0, mRep = 0, evs = [];
 
-        // LER FALTAS, NOTAS E PRHFS (Para a Chama e para os Alertas!)
         const fS = await getDocs(collection(window.db, "utilizadores", window.myUserId, "faltas")); 
         let semanasComFaltas = new Set();
         fS.forEach(d => { 
@@ -198,7 +217,6 @@ async function construirDashboardDinamico() {
         const pS = await getDocs(collection(window.db, "utilizadores", window.myUserId, "prhfs")); 
         pS.forEach(d => { if(d.data().status !== 'concluida') pAtivos++; });
 
-        // CALCULAR STREAK
         let semanasSemFaltas = 0;
         if(window.minhaTurma) {
             const tSnap = await getDoc(doc(window.db, "turmas", window.minhaTurma));
@@ -213,7 +231,6 @@ async function construirDashboardDinamico() {
         let mult = 1.0 + (semanasSemFaltas * 0.2); if(mult > 2.0) mult = 2.0;
         await updateDoc(doc(window.db, "utilizadores", window.myUserId), { multiplicadorXP: mult });
 
-        // ESTILO CORRETO DA CHAMA APAGADA
         if(flameBox) {
             if(mult > 1.0) {
                 flameBox.innerHTML = `<i class="fa-solid fa-fire${mult >= 2.0 ? '-flame-curved' : ''}"></i> <span id="aluno-streak-multiplier">x${mult.toFixed(1)}${mult >= 2.0 ? ' MAX' : ''}</span>`;
@@ -228,7 +245,6 @@ async function construirDashboardDinamico() {
             }
         }
 
-        // DEVOLVER OS ALERTAS DE DIA TRANQUILO / PREPARA-TE
         if(alertCont) {
             if(window.minhaTurma) {
                 const evSnap = await getDocs(collection(window.db, "turmas", window.minhaTurma, "eventos")); 
