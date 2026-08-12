@@ -494,6 +494,7 @@ async function construirHomeAdaptativa() {
     try {
         let tFaltas = 0, evs = [], pAtivos = 0, pHoras = 0, mRep = 0;
         
+        // Contar Faltas, Notas Negativas e PRHFs
         const fS = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); 
         fS.forEach(d => { if(!d.data().justificada && !d.data().comprovativoEnviado) tFaltas++; });
         
@@ -503,6 +504,29 @@ async function construirHomeAdaptativa() {
         const pS = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); 
         pS.forEach(d => { if(d.data().status !== 'concluida') { pAtivos++; pHoras += Number(d.data().horasPresenciais || 0); } });
         
+        // NOVO: DINÂMICA REAL DO MULTIPLICADOR DE STREAK E CHAMA
+        const flameBox = document.getElementById('aluno-streak-flame');
+        const multiplierTxt = document.getElementById('aluno-streak-multiplier');
+        if(flameBox && multiplierTxt) {
+            if(tFaltas === 0) {
+                // Chama Acesa (Bónus Ativo)
+                multiplierTxt.innerText = "x1.2";
+                flameBox.style.color = "#ff9900";
+                flameBox.style.borderColor = "#ff9900";
+                flameBox.style.background = "rgba(255, 153, 0, 0.1)";
+                flameBox.style.boxShadow = "0 0 10px rgba(255, 153, 0, 0.2)";
+                flameBox.title = "Bónus de Assiduidade Ativo!";
+            } else {
+                // Chama Apagada (Bónus Perdido)
+                multiplierTxt.innerText = "x1.0";
+                flameBox.style.color = "var(--text-muted)";
+                flameBox.style.borderColor = "#333";
+                flameBox.style.background = "rgba(0, 0, 0, 0.2)";
+                flameBox.style.boxShadow = "none";
+                flameBox.title = "Bónus perdido devido a faltas injustificadas";
+            }
+        }
+
         if(minhaTurma) {
             const evSnap = await getDocs(collection(db, "turmas", minhaTurma, "eventos")); 
             const hj = new Date().toISOString().split('T')[0]; 
