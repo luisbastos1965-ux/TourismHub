@@ -46,7 +46,7 @@ export function setupCaderneta(dados) {
 function ativarTab(e) {
     document.querySelectorAll('.falta-tab-btn').forEach(b => b.classList.remove('active')); 
     e.target.classList.add('active');
-    document.getElementById('aluno-caderneta-content').innerHTML = '<p class="text-muted center">A carregar...</p>'; // Previne o bloqueio visual!
+    document.getElementById('aluno-caderneta-content').innerHTML = '<p class="text-muted center">A carregar...</p>'; 
 }
 
 async function carregarTimelineAluno() {
@@ -135,38 +135,31 @@ async function carregarReunioesAluno() {
             const cDet = document.getElementById('reuniao-detalhe-container');
             let dadosMomento = notasReunioes[momentoAtivo] || [];
             
-            if(dadosMomento.length === 0) {
-                const testes = [
-                    { disciplina: 'Português', data: '12 Out 2023', texto: 'Bom nível de oralidade e escrita. Continua o bom trabalho.', autor: 'Maria Silva' },
-                    { disciplina: 'Matemática', data: '12 Out 2023', texto: 'Dificuldades no cálculo mental. Precisa de mais atenção.', autor: 'João Costa' },
-                    { disciplina: 'Direção de Turma', data: '12 Out 2023', texto: 'Aluno integrado e participativo. Tem de melhorar a gestão do tempo e a assiduidade pontual.', autor: 'Ana Sousa', isDT: true }
-                ];
-                dadosMomento = testes;
-            }
-
-            let mHtml = '';
+            const disciplinasDoAno = obterDisciplinasDoAno();
+            let mHtml = `<div style="display:grid; gap:15px; margin-bottom:20px;">`;
             
-            // As Disciplinas Específicas (Caixas Verdes)
-            mHtml += `<h4 style="color:var(--text-muted); font-size:0.85rem; text-transform:uppercase; margin-bottom:15px;">Pareceres por Disciplina</h4><div style="display:grid; gap:15px; margin-bottom:20px;">`;
-            dadosMomento.forEach(o => {
-                if(o.disciplina === 'Direção de Turma' || o.isDT === true) return;
-                mHtml += `<div class="card" style="border-left:4px solid var(--primary-green); margin-bottom:0;">
-                            <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><strong style="color:var(--text-light); font-size:1rem;">${o.disciplina}</strong></div>
-                            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">${o.texto}</p>
-                            <div style="font-size:0.75rem; color:var(--text-muted); text-align:right;">Prof. ${o.autor} | ${o.data}</div>
+            // Renderizar caixa para TODAS AS DISCIPLINAS (Verde Escuro)
+            disciplinasDoAno.forEach(disc => {
+                const obsDisc = dadosMomento.find(d => d.disciplina === disc);
+                const texto = obsDisc ? obsDisc.texto : 'Sem comentário (SN)';
+                
+                mHtml += `<div class="card" style="border-left:4px solid var(--primary-green); margin-bottom:0; background:var(--bg-card); padding:15px; border-radius:8px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                                <strong style="color:var(--text-light); font-size:1.05rem;">${disc}</strong>
+                            </div>
+                            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0;">${texto}</p>
                           </div>`;
             });
             mHtml += `</div>`;
 
-            // O Parecer Global do DT (Caixa Amarela) no Final
+            // Renderizar Parecer Global do DT (Caixa Amarela no fundo)
             const avalGlobal = dadosMomento.find(d => d.disciplina === 'Direção de Turma' || d.isDT === true);
-            if(avalGlobal) {
-                mHtml += `<div class="card" style="border: 2px solid var(--warning-yellow); background: rgba(245, 158, 11, 0.05);">
-                            <h3 style="color:var(--warning-yellow); font-size:1.1rem; margin-bottom:10px;"><i class="fa-solid fa-clipboard-user"></i> Parecer Global do Diretor de Turma</h3>
-                            <p style="font-size:0.9rem; color:var(--text-light); line-height:1.5; margin-bottom:10px;">${avalGlobal.texto}</p>
-                            <div style="font-size:0.75rem; color:var(--text-muted); text-align:right;">Por Prof. ${avalGlobal.autor} | ${avalGlobal.data}</div>
-                          </div>`;
-            }
+            const textoGlobal = avalGlobal ? avalGlobal.texto : 'Sem observações globais registadas (SN).';
+            
+            mHtml += `<div class="card" style="border: 1px solid var(--warning-yellow); border-radius:8px; padding:15px; background: transparent;">
+                        <h3 style="color:var(--warning-yellow); font-size:1rem; margin-bottom:10px;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3>
+                        <p style="font-size:0.9rem; color:var(--text-light); line-height:1.5; margin-bottom:0;">${textoGlobal}</p>
+                      </div>`;
 
             cDet.innerHTML = mHtml;
         };
@@ -224,9 +217,17 @@ async function carregarNotasAluno() {
     } catch(e) {}
 }
 
+// LIGAÇÃO FORÇADA DE FECHO DA PAUTA
 window.abrirModalPautaGlobal = function() {
     const mod = document.getElementById('modal-pauta-global'); if(mod) mod.style.display = 'flex'; 
     const container = document.getElementById('pauta-global-content'); 
+    
+    // Forçar a ligação do X sempre que abre!
+    const btnClose = document.getElementById('btn-close-pauta');
+    if(btnClose) {
+        btnClose.onclick = () => { if(mod) mod.style.display = 'none'; };
+    }
+
     try { 
         const matriz = getMatriz(); let pHtml = ''; 
         for (const [nomeComponente, disciplinas] of Object.entries(matriz)) { 
