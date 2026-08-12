@@ -504,9 +504,13 @@ async function construirHomeAdaptativa() {
             return `${d.getFullYear()}-W${weekNum.toString().padStart(2, '0')}`;
         };
 
+        const hoje = new Date();
+        const hjIso = hoje.toISOString().split('T')[0]; 
+        const currentIsoWeek = getISOWeek(hjIso);
+
         let tFaltas = 0, evs = [], pAtivos = 0, pHoras = 0, mRep = 0;
         
-        // 1. LER AS FALTAS E GUARDAR AS SEMANAS EM QUE OCORRERAM
+        // 1. LER AS FALTAS DO ALUNO
         const fS = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); 
         let semanasComFaltas = new Set();
         fS.forEach(d => { 
@@ -527,37 +531,43 @@ async function construirHomeAdaptativa() {
         const pS = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); 
         pS.forEach(d => { if(d.data().status !== 'concluida') { pAtivos++; pHoras += Number(d.data().horasPresenciais || 0); } });
         
-        // 2. LER OS SUMÁRIOS (AULAS EFETIVAMENTE DADAS) E CALCULAR STREAK
+        // 2. CRUZAR COM O HORÁRIO REAL DA TURMA
         let semanasSemFaltas = 0;
         if(minhaTurma) {
-            const sumSnap = await getDocs(collection(db, "turmas", minhaTurma, "sumarios"));
-            let semanasComAulas = new Set();
-            sumSnap.forEach(d => {
-                const s = d.data();
-                if(s.data) { 
-                    const isoW = getISOWeek(s.data);
-                    if(isoW) semanasComAulas.add(isoW); 
+            const tSnap = await getDoc(doc(db, "turmas", minhaTurma));
+            if (tSnap.exists()) {
+                const horario = tSnap.data().horario || {};
+                let semanasComAulas = new Set();
+                
+                // Procurar que semanas tiveram aulas efetivamente marcadas no horário
+                for (let key in horario) {
+                    if (horario[key] && typeof horario[key] === 'string' && horario[key].trim() !== '') {
+                        const dateStr = key.split('_')[0]; // Extrai "YYYY-MM-DD" da chave
+                        const isoW = getISOWeek(dateStr);
+                        // Só nos interessam semanas passadas ou a atual (ignorar horário futuro para a streak)
+                        if (isoW && isoW <= currentIsoWeek) { 
+                            semanasComAulas.add(isoW);
+                        }
+                    }
                 }
-            });
 
-            // Ordenar as semanas letivas (da mais recente para a mais antiga)
-            const semanasOrdenadas = Array.from(semanasComAulas).sort((a, b) => b.localeCompare(a));
-            
-            // Contar a "Streak": Quantas semanas de aulas recentes estão limpas de faltas?
-            for (const semana of semanasOrdenadas) {
-                if (semanasComFaltas.has(semana)) {
-                    break; // Encontrou uma falta! Quebra a streak.
+                // Ordenar as semanas letivas da mais recente para a mais antiga
+                const semanasOrdenadas = Array.from(semanasComAulas).sort((a, b) => b.localeCompare(a));
+                
+                // Contar a Streak (Sem aulas = salta. Com aulas + Falta = Quebra)
+                for (const semana of semanasOrdenadas) {
+                    if (semanasComFaltas.has(semana)) {
+                        break; 
+                    }
+                    semanasSemFaltas++;
                 }
-                semanasSemFaltas++;
             }
         }
         
-        // 3. CÁLCULO DO MULTIPLICADOR DE XP
-        // Cada semana limpa dá +0.2 até ao máximo de 2.0 (O dobro de XP!)
+        // 3. CÁLCULO DO MULTIPLICADOR DE XP E ATUALIZAÇÃO NA BD
         let mult = 1.0 + (semanasSemFaltas * 0.2);
         if(mult > 2.0) mult = 2.0;
 
-        // Guarda magicamente este valor na Base de Dados para o Professor usar
         try { await updateDoc(doc(db, "utilizadores", myUserId), { multiplicadorXP: mult }); } catch(e){}
 
         // 4. ATUALIZAR O VISUAL DA CHAMA
@@ -565,7 +575,6 @@ async function construirHomeAdaptativa() {
         if(flameBox) {
             if(mult > 1.0) {
                 if(mult >= 2.0) {
-                    // CHAMA MÁXIMA
                     flameBox.innerHTML = `<i class="fa-solid fa-fire-flame-curved"></i> <span id="aluno-streak-multiplier">x2.0 MAX</span>`;
                     flameBox.style.color = "#ff4500";
                     flameBox.style.borderColor = "#ff4500";
@@ -573,7 +582,6 @@ async function construirHomeAdaptativa() {
                     flameBox.style.boxShadow = "0 0 15px rgba(255, 69, 0, 0.4)";
                     flameBox.title = "Chama Máxima! Parabéns pela consistência perfeita!";
                 } else {
-                    // CHAMA A CRESCER
                     flameBox.innerHTML = `<i class="fa-solid fa-fire"></i> <span id="aluno-streak-multiplier">x${mult.toFixed(1)}</span>`;
                     flameBox.style.color = "#ff9900";
                     flameBox.style.borderColor = "#ff9900";
@@ -582,7 +590,6 @@ async function construirHomeAdaptativa() {
                     flameBox.title = `Bónus de Assiduidade: ${semanasSemFaltas} semana(s) letiva(s) invicto!`;
                 }
             } else {
-                // CHAMA APAGADA
                 flameBox.innerHTML = `<i class="fa-solid fa-fire"></i> <span id="aluno-streak-multiplier">x1.0</span>`;
                 flameBox.style.color = "var(--text-muted)";
                 flameBox.style.borderColor = "#333";
@@ -592,11 +599,9 @@ async function construirHomeAdaptativa() {
             }
         }
 
-        // 5. EVENTOS E MENSAGENS DE ALERTA
+        // 5. RESTANTE LÓGICA DE EVENTOS (MANTIDA INTACTA)
         if(minhaTurma) {
             const evSnap = await getDocs(collection(db, "turmas", minhaTurma, "eventos")); 
-            const hoje = new Date();
-            const hjIso = hoje.toISOString().split('T')[0]; 
             let d7 = new Date(); d7.setDate(d7.getDate()+7); 
             const lIso = d7.toISOString().split('T')[0]; 
             
@@ -647,7 +652,6 @@ async function construirHomeAdaptativa() {
             }
         }
         
-        const hjIso = new Date().toISOString().split('T')[0]; 
         const hSnap = await getDoc(doc(db, "utilizadores", myUserId, "humor", hjIso));
         
         if(!hSnap.exists()) {
