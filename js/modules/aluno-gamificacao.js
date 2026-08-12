@@ -1,5 +1,5 @@
-// js/modules/aluno-gamificacao.js
-import { collection, doc, getDocs, getDoc, updateDoc, setDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { collection, doc, getDocs, getDoc, updateDoc, addDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getMatriz, obterDisciplinasDoAno } from "./aluno-caderneta.js";
 
 const ACADEMIAS_INFO = {
     'estrategas': { nome: 'Academia dos Estrategas', cor: '#10b981', icon: 'fa-chess-knight', desc: 'Mestres do planeamento.' },
@@ -14,7 +14,14 @@ export function getNivelProInfo(xpTotal) {
     if(xp < 700) return { nivel: 2, titulo: "Iniciante", progresso: ((xp-300)/400)*100 };
     if(xp < 1200) return { nivel: 3, titulo: "Explorador Júnior", progresso: ((xp-700)/500)*100 };
     if(xp < 2000) return { nivel: 4, titulo: "Assistente de Turismo", progresso: ((xp-1200)/800)*100 };
-    return { nivel: 5, titulo: "Profissional em Formação", progresso: 100 };
+    if(xp < 3000) return { nivel: 5, titulo: "Profissional em Formação", progresso: ((xp-2000)/1000)*100 };
+    if(xp < 4500) return { nivel: 6, titulo: "Técnico Júnior", progresso: ((xp-3000)/1500)*100 };
+    if(xp < 6000) return { nivel: 7, titulo: "Técnico Intermédio", progresso: ((xp-4500)/1500)*100 };
+    if(xp < 8000) return { nivel: 8, titulo: "Técnico Avançado", progresso: ((xp-6000)/2000)*100 };
+    if(xp < 10000) return { nivel: 9, titulo: "Técnico de Excelência", progresso: ((xp-8000)/2000)*100 };
+    if(xp < 15000) return { nivel: 10, titulo: "Especialista Bronze", progresso: ((xp-10000)/5000)*100 };
+    if(xp < 20000) return { nivel: 11, titulo: "Especialista Prata", progresso: ((xp-15000)/5000)*100 };
+    return { nivel: 12, titulo: "Embaixador Turístico", progresso: 100 };
 }
 
 export function aplicarTemaAcademia(idHouse) { 
@@ -30,21 +37,39 @@ export function aplicarTemaAcademia(idHouse) {
 
 export function setupGamificacao(dados) {
     atualizarUI(dados.xp || 0);
+    carregarPassaporteEBadges(dados); // Corrige o "A gerar perfil..."
     carregarMetas();
     carregarRankingTurma();
     construirDashboardDinamico();
     
-    // Configurar Modal Nova Meta
+    // Configurar Dropdowns das Metas
+    const objSelect = document.getElementById('obj-disciplina');
+    if(objSelect) {
+        objSelect.innerHTML = '<option value="">Escolhe a Disciplina...</option>' + obterDisciplinasDoAno().map(dc => `<option value="${dc}">${dc}</option>`).join('');
+    }
+    document.getElementById('obj-modulo')?.addEventListener('focus', () => {
+        const dV = document.getElementById('obj-disciplina').value; const sel = document.getElementById('obj-modulo');
+        if(!dV) { sel.innerHTML = ''; return; }
+        const m = getMatriz(); let dMs = null;
+        if(m.Sociocultural && m.Sociocultural[dV]) dMs = m.Sociocultural[dV]; 
+        else if(m.Científica && m.Científica[dV]) dMs = m.Científica[dV]; 
+        else if(m.Técnica && m.Técnica[dV]) dMs = m.Técnica[dV];
+        if(dMs) { sel.innerHTML = Object.keys(dMs).sort((a,b)=>parseInt(a)-parseInt(b)).map(k => `<option value="${k}">${k.toString().startsWith('UC')?k:`M${k}`}</option>`).join(''); } 
+        else { sel.innerHTML = '<option value="1">1</option>'; }
+    });
+
+    // Guardar Nova Meta
     document.getElementById('btn-add-objetivo')?.addEventListener('click', async (e) => {
         const di = document.getElementById('obj-disciplina').value; 
         const mo = document.getElementById('obj-modulo').value; 
         const no = document.getElementById('obj-nota-alvo').value;
-        if(!di || !mo || !no) return;
+        if(!di || !mo || !no || no < 10 || no > 20) { alert("Preenche os dados corretamente."); return; }
         
         const btn = e.currentTarget; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         try {
-            await addDoc(collection(window.db, "utilizadores", window.myUserId, "objetivos"), { tipo: 'nota', disciplina: di, modulo: mo, notaAlvo: no, desc: `Tirar ${no} a ${di} (M${mo})`, concluido: false, timestamp: Date.now() });
+            await addDoc(collection(window.db, "utilizadores", window.myUserId, "objetivos"), { tipo: 'nota', disciplina: di, modulo: mo, notaAlvo: no, desc: `Tirar ${no} ou mais a ${di} (M${mo})`, concluido: false, timestamp: Date.now() });
             carregarMetas();
+            document.getElementById('obj-disciplina').value = ''; document.getElementById('obj-modulo').innerHTML = ''; document.getElementById('obj-nota-alvo').value = '';
         } catch(err) {}
         btn.innerHTML = '<i class="fa-solid fa-plus"></i> Guardar Meta';
     });
@@ -56,6 +81,35 @@ function atualizarUI(xp) {
     const perfilNvlTxt = document.getElementById('perfil-nivel-txt'); if(perfilNvlTxt) perfilNvlTxt.innerText = `Nível ${profInfo.nivel} - ${profInfo.titulo}`;
     const totaisEl = document.getElementById('perfil-xp-totais'); const progEl = document.getElementById('perfil-xp-progress');
     if(totaisEl) totaisEl.innerText = xp; if(progEl) progEl.style.width = `${profInfo.progresso}%`; 
+}
+
+const BADGES_DEFS = [
+    { id: "b1", nome: "Primeiro Passo", icon: "fa-shoe-prints", reqXp: 100 },
+    { id: "b2", nome: "Promessa", icon: "fa-star", reqXp: 1000 },
+    { id: "b3", nome: "Veterano", icon: "fa-shield", reqXp: 5000 },
+    { id: "b4", nome: "Lenda", icon: "fa-building-columns", reqXp: 10000 }
+];
+
+function carregarPassaporteEBadges(data) {
+    const passCont = document.getElementById('barras-competencias-perfil');
+    if(passCont) {
+        const getLvl = (xp) => Math.floor((xp || 0) / 100) + 1; const getPerc = (xp) => ((xp || 0) % 100);
+        passCont.innerHTML = `
+        <div style="margin-bottom: 12px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-comments" style="color:#0ea5e9;"></i> Comunicação</span><strong style="color:var(--text-light);">Nvl ${getLvl(data.xp_comunicacao)}</strong></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${getPerc(data.xp_comunicacao)}%; background:#0ea5e9;"></div></div></div>
+        <div style="margin-bottom: 12px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-lightbulb" style="color:#8b5cf6;"></i> Criatividade</span><strong style="color:var(--text-light);">Nvl ${getLvl(data.xp_criatividade)}</strong></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${getPerc(data.xp_criatividade)}%; background:#8b5cf6;"></div></div></div>
+        <div style="margin-bottom: 12px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-compass" style="color:#f97316;"></i> Liderança</span><strong style="color:var(--text-light);">Nvl ${getLvl(data.xp_lideranca)}</strong></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${getPerc(data.xp_lideranca)}%; background:#f97316;"></div></div></div>
+        <div style="margin-bottom: 12px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-chess-knight" style="color:#10b981;"></i> Estratégia</span><strong style="color:var(--text-light);">Nvl ${getLvl(data.xp_organizacao)}</strong></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${getPerc(data.xp_organizacao)}%; background:#10b981;"></div></div></div>`;
+    }
+    const badCont = document.getElementById('badges-container');
+    if(badCont) {
+        let bHtml = '';
+        BADGES_DEFS.forEach(b => {
+            let earned = ((data.xp || 0) >= b.reqXp);
+            const cl = earned ? 'earned' : ''; 
+            bHtml += `<div class="badge-item ${cl}"><div class="badge-icon"><i class="fa-solid ${b.icon}"></i></div><div style="font-size:0.7rem; color:${earned ? 'var(--text-light)' : 'var(--text-muted)'};">${b.nome}</div></div>`;
+        });
+        badCont.innerHTML = bHtml;
+    }
 }
 
 async function carregarMetas() {
@@ -76,30 +130,30 @@ async function carregarMetas() {
 
 async function carregarRankingTurma() {
     const c = document.getElementById('ranking-turma-container'); 
-    if(!window.minhaTurma) return;
     
     try {
-        const snap = await getDocs(query(collection(window.db, "utilizadores"), where("papel", "==", "aluno"), where("turma", "==", window.minhaTurma)));
-        let alunos = []; let academiasXP = { estrategas: 0, embaixadores: 0, exploradores: 0, visionarios: 0 };
+        // Agora procura TODOS OS ALUNOS DO CURSO/ESCOLA para as Academias
+        const snap = await getDocs(query(collection(window.db, "utilizadores"), where("papel", "==", "aluno")));
+        let alunosTurma = []; 
+        let academiasXP = { estrategas: 0, embaixadores: 0, exploradores: 0, visionarios: 0 };
         
         snap.forEach(d => {
             const al = { id: d.id, ...d.data() };
-            if(al.academia) academiasXP[al.academia] += (al.xp || 0); 
-            alunos.push(al); 
+            if(al.academia && academiasXP[al.academia] !== undefined) { academiasXP[al.academia] += (al.xp || 0); }
+            if(al.turma === window.minhaTurma) { alunosTurma.push(al); } // Top 10 só da turma dele
         });
-        alunos.sort((a,b) => (b.xp || 0) - (a.xp || 0));
         
-        // Grelha Academias 2x2
-        let hAcad = `<div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px; background:rgba(0,0,0,0.2); padding:15px; border-radius:12px;">`;
+        alunosTurma.sort((a,b) => (b.xp || 0) - (a.xp || 0));
+        
+        let hAcad = `<div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px; text-align:center; background:rgba(0,0,0,0.2); padding:15px; border-radius:12px;">`;
         Object.keys(academiasXP).sort((a,b) => academiasXP[b] - academiasXP[a]).forEach((ac) => {
             const acData = ACADEMIAS_INFO[ac];
-            hAcad += `<div style="text-align:center;"><i class="fa-solid ${acData.icon}" style="font-size:1.5rem; color:${acData.cor}; margin-bottom:5px; display:block;"></i><strong style="color:var(--text-light); font-size:0.75rem;">${acData.nome.replace('Academia dos ','')}</strong><br><span style="color:var(--warning-yellow); font-size:0.9rem; font-weight:bold;">${academiasXP[ac]} XP</span></div>`;
+            hAcad += `<div><i class="fa-solid ${acData.icon}" style="font-size:1.8rem; color:${acData.cor}; margin-bottom:8px; display:block;"></i><strong style="color:var(--text-light); font-size:0.75rem;">${acData.nome.replace('Academia dos ','')}</strong><br><span style="color:var(--warning-yellow); font-size:0.9rem; font-weight:bold;">${academiasXP[ac]} XP</span></div>`;
         });
-        hAcad += `</div><h4 style="color:var(--text-muted); font-size:0.85rem; margin-bottom:10px;">🏆 Top Alunos</h4>`;
+        hAcad += `</div><h4 style="color:var(--text-muted); font-size:0.85rem; margin-bottom:10px;">🏆 Top 10 da Turma</h4>`;
         
-        // Ranking Alunos sem duplicar nome
         let hAl = '';
-        alunos.slice(0, 10).forEach((al, idx) => {
+        alunosTurma.slice(0, 10).forEach((al, idx) => {
             let cor = idx===0 ? '#ffd700' : (idx===1 ? '#c0c0c0' : (idx===2 ? '#cd7f32' : 'var(--text-muted)'));
             const pNome = (al.nome || "Aluno").split(' '); const nomeE = pNome.length > 1 ? `${pNome[0]} ${pNome[pNome.length - 1]}` : pNome[0];
             hAl += `<div style="display:flex; align-items:center; gap:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:8px; border-left:3px solid ${cor};">
@@ -113,40 +167,96 @@ async function carregarRankingTurma() {
 }
 
 async function construirDashboardDinamico() {
+    const alertCont = document.getElementById('hero-alert-section'); 
     const flameBox = document.getElementById('aluno-streak-flame');
-    if(!flameBox) return;
-
+    
     try {
         const getISOWeek = (dateStr) => {
+            if(!dateStr) return null;
             const d = new Date(dateStr); d.setHours(0,0,0,0); d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
             const w1 = new Date(d.getFullYear(), 0, 4);
             return `${d.getFullYear()}-W${1 + Math.round(((d.getTime() - w1.getTime()) / 86400000 - 3 + (w1.getDay() + 6) % 7) / 7)}`;
         };
-        const hj = new Date(); const anoLetivo = hj.getMonth() + 1 >= 9 ? hj.getFullYear() : hj.getFullYear() - 1;
+        const hj = new Date(); const hjIso = hj.toISOString().split('T')[0]; 
+        const anoLetivo = hj.getMonth() + 1 >= 9 ? hj.getFullYear() : hj.getFullYear() - 1;
         const inicioAnoIso = getISOWeek(`${anoLetivo}-09-01`);
 
+        let tFaltas = 0, pAtivos = 0, mRep = 0, evs = [];
+
+        // LER FALTAS, NOTAS E PRHFS (Para a Chama e para os Alertas!)
         const fS = await getDocs(collection(window.db, "utilizadores", window.myUserId, "faltas")); 
         let semanasComFaltas = new Set();
         fS.forEach(d => { 
-            const f = d.data(); if(!f.justificada) { const iso = getISOWeek(f.dataInicio || f.data); if(iso && iso >= inicioAnoIso) semanasComFaltas.add(iso); } 
+            const f = d.data(); if(!f.justificada && !f.comprovativoEnviado) { 
+                tFaltas++; const iso = getISOWeek(f.dataInicio || f.data); if(iso && iso >= inicioAnoIso) semanasComFaltas.add(iso); 
+            } 
         });
 
+        const nS = await getDocs(collection(window.db, "utilizadores", window.myUserId, "notas")); 
+        nS.forEach(d => { const n = d.data().nota; if(n === 'REP' || Number(n) < 10) mRep++; });
+
+        const pS = await getDocs(collection(window.db, "utilizadores", window.myUserId, "prhfs")); 
+        pS.forEach(d => { if(d.data().status !== 'concluida') pAtivos++; });
+
+        // CALCULAR STREAK
         let semanasSemFaltas = 0;
         if(window.minhaTurma) {
             const tSnap = await getDoc(doc(window.db, "turmas", window.minhaTurma));
             if (tSnap.exists()) {
                 const hor = tSnap.data().horario || {}; let sAulas = new Set();
-                for (let k in hor) { if (hor[k]) { const iw = getISOWeek(k.split('_')[0]); if (iw >= inicioAnoIso && iw <= getISOWeek(hj.toISOString())) sAulas.add(iw); } }
+                for (let k in hor) { if (hor[k]) { const iw = getISOWeek(k.split('_')[0]); if (iw >= inicioAnoIso && iw <= getISOWeek(hjIso)) sAulas.add(iw); } }
                 const sOrd = Array.from(sAulas).sort((a, b) => b.localeCompare(a));
                 for (const sem of sOrd) { if (semanasComFaltas.has(sem)) break; semanasSemFaltas++; }
             }
         }
         
-        let mult = Math.min(1.0 + (semanasSemFaltas * 0.2), 2.0);
+        let mult = 1.0 + (semanasSemFaltas * 0.2); if(mult > 2.0) mult = 2.0;
         await updateDoc(doc(window.db, "utilizadores", window.myUserId), { multiplicadorXP: mult });
 
-        if(mult >= 2.0) flameBox.innerHTML = `<i class="fa-solid fa-fire-flame-curved"></i> <span>x2.0 MAX</span>`;
-        else flameBox.innerHTML = `<i class="fa-solid fa-fire"></i> <span>x${mult.toFixed(1)}</span>`;
-        flameBox.style.color = mult > 1.0 ? "#ff9900" : "var(--text-muted)";
+        // ESTILO CORRETO DA CHAMA APAGADA
+        if(flameBox) {
+            if(mult > 1.0) {
+                flameBox.innerHTML = `<i class="fa-solid fa-fire${mult >= 2.0 ? '-flame-curved' : ''}"></i> <span id="aluno-streak-multiplier">x${mult.toFixed(1)}${mult >= 2.0 ? ' MAX' : ''}</span>`;
+                flameBox.style.color = mult >= 2.0 ? "#ff4500" : "#ff9900";
+                flameBox.style.borderColor = mult >= 2.0 ? "#ff4500" : "#ff9900";
+                flameBox.style.background = mult >= 2.0 ? "rgba(255, 69, 0, 0.15)" : "rgba(255, 153, 0, 0.1)";
+                flameBox.style.boxShadow = mult >= 2.0 ? "0 0 15px rgba(255, 69, 0, 0.4)" : "0 0 10px rgba(255, 153, 0, 0.2)";
+            } else {
+                flameBox.innerHTML = `<i class="fa-solid fa-fire"></i> <span id="aluno-streak-multiplier">x1.0</span>`;
+                flameBox.style.color = "var(--text-muted)"; flameBox.style.borderColor = "#333";
+                flameBox.style.background = "transparent"; flameBox.style.boxShadow = "none";
+            }
+        }
+
+        // DEVOLVER OS ALERTAS DE DIA TRANQUILO / PREPARA-TE
+        if(alertCont) {
+            if(window.minhaTurma) {
+                const evSnap = await getDocs(collection(window.db, "turmas", window.minhaTurma, "eventos")); 
+                let d7 = new Date(); d7.setDate(d7.getDate()+7); const lIso = d7.toISOString().split('T')[0]; 
+                evSnap.forEach(d => { const e = d.data(); if(e.data >= hjIso && e.data <= lIso && ['teste','avaliacao','entrega'].includes(e.tipo)) evs.push(e); }); 
+                evs.sort((a,b) => a.data.localeCompare(b.data));
+            }
+
+            let alertHtml = ''; 
+            if(tFaltas > 0 || pAtivos > 0 || mRep > 0) {
+                alertHtml += `<div class="card" style="background:linear-gradient(135deg,#ef4444,#b91c1c); color:white; border:none; border-radius:16px; margin-bottom:20px;">
+                                <h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-triangle-exclamation"></i> Ação Necessária</h3>
+                                <p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens pendências urgentes que prejudicam a tua avaliação.</p>
+                                <button class="primary-btn" style="background:white; color:#b91c1c; font-size:1.1rem; padding:15px; width:100%;" onclick="document.querySelector('.nav-item[data-target=\\'view-aluno-caderneta\\']').click()">Ver na Caderneta</button>
+                              </div>`;
+            } else if(evs.length > 0) {
+                const ev = evs[0]; const dF = ev.data.split('-').reverse().join('/');
+                alertHtml += `<div class="card" style="background:linear-gradient(135deg,#f59e0b,#d97706); color:white; border:none; border-radius:16px; margin-bottom:20px;">
+                                <h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-calendar-exclamation"></i> Prepara-te</h3>
+                                <p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens <strong>${ev.titulo}</strong> no dia ${dF}.</p>
+                              </div>`;
+            } else {
+                alertHtml += `<div class="card" style="background:linear-gradient(135deg,var(--primary-green),var(--primary-hover)); color:white; border:none; border-radius:16px; margin-bottom:20px;">
+                                <h3 style="margin-bottom:5px; font-size:1.6rem;"><i class="fa-solid fa-leaf"></i> Dia Tranquilo</h3>
+                                <p style="font-size:1.05rem; margin-bottom:0; opacity:0.9;">Não tens avaliações marcadas nem pendências.</p>
+                              </div>`;
+            }
+            alertCont.innerHTML = alertHtml;
+        }
     } catch(e){}
 }
