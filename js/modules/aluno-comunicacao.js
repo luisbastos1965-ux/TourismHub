@@ -1,4 +1,5 @@
-import { collection, getDocs, getDoc, doc, query, addDoc, updateDoc, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { collection, getDocs, getDoc, doc, query, addDoc, updateDoc, onSnapshot, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { obterDisciplinasDoAno } from "./aluno-caderneta.js"; // Importa disciplinas para criar os chats oficiais
 
 let alunoForumAtivoId = null;
 let chatUnsubscribeAluno = null;
@@ -13,15 +14,57 @@ function getEmptyState(mensagem, icone = "fa-folder-open") {
 export function setupComunicacao() {
     window.carregarCanaisForumAluno = carregarCanaisForumAluno;
 
-    // BOTÃO DE CRIAR CHAT RENOMEADO E ATIVADO
+    // BOTÃO NOVO CHAT + LÓGICA DO MODAL TOTALMENTE RECUPERADA!
     const btnCreate = document.getElementById('btn-create-chat-aluno');
     if(btnCreate) {
         btnCreate.innerHTML = '<i class="fa-solid fa-plus"></i> Novo Chat';
-        btnCreate.addEventListener('click', () => {
+        btnCreate.addEventListener('click', async () => {
             document.getElementById('modal-criar-forum').style.display = 'flex';
+            const cList = document.getElementById('lista-colegas-forum');
+            cList.innerHTML = '<p class="text-muted center" style="font-size:0.8rem;">A procurar colegas...</p>';
+            
+            if(window.minhaTurma) {
+                try {
+                    const snap = await getDocs(query(collection(window.db, "utilizadores"), where("turma", "==", window.minhaTurma), where("papel", "==", "aluno")));
+                    let html = '';
+                    snap.forEach(d => {
+                        const col = d.data();
+                        if(d.id !== window.myUserId) {
+                            html += `<label style="display:flex; align-items:center; gap:10px; padding:8px; border-bottom:1px solid #222; font-size:0.9rem; color:var(--text-light); cursor:pointer;">
+                                        <input type="checkbox" class="coleta-chk" value="${d.id}" style="margin:0;">
+                                        <img src="${col.fotoPerfil || `https://ui-avatars.com/api/?name=${col.nome}&background=00cc88&color=fff`}" style="width:25px; height:25px; border-radius:50%; object-fit:cover;">
+                                        ${col.nome}
+                                     </label>`;
+                        }
+                    });
+                    cList.innerHTML = html === '' ? '<p class="text-muted center" style="font-size:0.8rem;">Nenhum colega encontrado.</p>' : html;
+                } catch(e) { cList.innerHTML = '<p class="text-danger center">Erro a carregar colegas.</p>'; }
+            }
         });
     }
 
+    // BOTÕES DE AÇÃO DO MODAL
+    document.getElementById('btn-cancelar-novo-forum')?.addEventListener('click', () => { 
+        document.getElementById('modal-criar-forum').style.display = 'none'; 
+    });
+
+    document.getElementById('btn-confirm-novo-forum')?.addEventListener('click', async (e) => {
+        const nInput = document.getElementById('input-nome-novo-forum'); const nome = nInput.value.trim();
+        if(!nome) { alert("Dá um nome ao grupo!"); return; }
+        const selecionados = Array.from(document.querySelectorAll('.coleta-chk:checked')).map(cb => cb.value);
+        if(selecionados.length === 0) { alert("Seleciona pelo menos um colega."); return; }
+        
+        const participantes = [window.myUserId, ...selecionados];
+        const btn = e.currentTarget; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
+        
+        try {
+            await addDoc(collection(window.db, "forums"), { nome: nome, isGlobal: false, criador: window.myUserId, participantes: participantes, dataCriacao: Date.now(), lastMessage: null, unread: {} });
+            document.getElementById('modal-criar-forum').style.display = 'none'; nInput.value = ''; carregarCanaisForumAluno();
+        } catch(err) { alert("Erro ao criar."); }
+        btn.innerHTML = 'Criar Chat'; btn.disabled = false;
+    });
+
+    // CHAT - Voltar e Enviar Mensagem
     document.getElementById('btn-aluno-voltar-canais')?.addEventListener('click', () => {
         alunoForumAtivoId = null; if(chatUnsubscribeAluno) chatUnsubscribeAluno();
         document.getElementById('aluno-forum-chat-view').style.display = 'none';
@@ -45,6 +88,7 @@ export function setupComunicacao() {
         } catch(e) {}
     });
 
+    // NOTIFICAÇÕES
     document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(chip => {
         chip.addEventListener('click', (e) => { 
             document.querySelectorAll('#notificacoes-filtros .filter-chip').forEach(c => c.classList.remove('active')); 
@@ -54,7 +98,6 @@ export function setupComunicacao() {
         });
     });
 
-    // BOTÃO VOLTAR DAS NOTIFICAÇÕES (Volta ao separador onde estavas antes!)
     document.getElementById('btn-open-notificacoes')?.addEventListener('click', () => {
         document.querySelectorAll('.app-content > div:not(.modal-overlay)').forEach(d => d.style.display = 'none');
         document.getElementById('view-aluno-notificacoes').style.display = 'block';
@@ -77,42 +120,58 @@ function carregarCanaisForumAluno() {
     list.innerHTML = '<p class="text-muted center">A carregar conversas...</p>';
     
     try {
-        // FILTRO COMPLETAMENTE ABERTO (Mostra as turmas, globais, e os antigos testes privados)
         const q = query(collection(window.db, "forums")); 
         onSnapshot(q, (snap) => {
             let html = ''; let grupos = [];
             
+            // 1. INJEÇÃO DOS CHATS FIXOS/PERMANENTES NA LISTA
+            const mAcad = window.myAcademia ? window.myAcademia.charAt(0).toUpperCase() + window.myAcademia.slice(1) : 'Academia';
+            grupos.push({ id: `chat_dt_${window.minhaTurma}`, nome: "Diretor de Turma (Privado)", isGlobal: false, icone: "fa-user-tie", cor: "var(--warning-yellow)", isStatic: true });
+            grupos.push({ id: `chat_turma_${window.minhaTurma}`, nome: `Turma ${window.minhaTurma}`, isGlobal: false, icone: "fa-users", cor: "#0ea5e9", isStatic: true });
+            grupos.push({ id: `chat_acad_${window.myAcademia}`, nome: `Academia dos ${mAcad}`, isGlobal: false, icone: "fa-chess-knight", cor: "var(--primary-green)", isStatic: true });
+            
+            obterDisciplinasDoAno().forEach(d => {
+                grupos.push({ id: `chat_disc_${window.minhaTurma}_${d}`, nome: `${d} - Geral`, isGlobal: false, icone: "fa-book", cor: "#8b5cf6", isStatic: true });
+            });
+
+            // 2. ADICIONA OS GRUPOS QUE ESTÃO NA BASE DE DADOS
             snap.forEach(d => {
                 const ch = d.data();
-                if (ch.isGlobal || 
-                   (ch.turma && ch.turma === window.minhaTurma) || 
-                   (ch.academia && ch.academia === window.myAcademia) || 
-                   (!ch.participantes) || 
-                   (ch.participantes && ch.participantes.includes(window.myUserId)) ||
-                   (ch.tipo === 'disciplina' && ch.turma === window.minhaTurma)) {
-                    grupos.push({ id: d.id, ...ch });
+                if (ch.isGlobal || !ch.participantes || ch.participantes.includes(window.myUserId)) {
+                    // Evita duplicar os chats estáticos caso a base de dados os tenha registado
+                    const exists = grupos.findIndex(g => g.id === d.id);
+                    if (exists !== -1) {
+                        grupos[exists] = { ...grupos[exists], ...ch, isStatic: true }; // Atualiza com os dados (ex: unread messages)
+                    } else {
+                        grupos.push({ id: d.id, ...ch });
+                    }
                 }
             });
 
-            // Ordena manualmente do mais recente para o mais antigo (Assim os teus testes aparecem)
-            grupos.sort((a,b) => (b.dataCriacao || 0) - (a.dataCriacao || 0));
+            // Ordenar: Primeiro os Oficiais (Estáticos), depois os criados organizados por data
+            grupos.sort((a,b) => {
+                if (a.isStatic && !b.isStatic) return -1;
+                if (!a.isStatic && b.isStatic) return 1;
+                return (b.dataCriacao || 0) - (a.dataCriacao || 0);
+            });
 
             grupos.forEach(ch => {
-                const eGlobal = ch.isGlobal ? `<i class="fa-solid fa-earth-americas" style="color:var(--primary-green);" title="Escola Inteira"></i> ` : '';
+                const iconeDefault = ch.icone ? `<i class="fa-solid ${ch.icone}" style="color:${ch.cor}; font-size: 1.2rem; min-width: 25px; text-align:center;"></i>` : (ch.isGlobal ? `<i class="fa-solid fa-earth-americas" style="color:var(--primary-green);" title="Escola Inteira"></i>` : `<i class="fa-solid fa-comments" style="color:var(--text-muted);"></i>`);
                 const unread = (ch.unread && ch.unread[window.myUserId]) ? `<span style="background:var(--danger-red); color:white; font-size:0.7rem; font-weight:bold; padding:2px 8px; border-radius:12px;">Nova</span>` : '';
                 const lM = ch.lastMessage ? `<p style="margin:5px 0 0 0; font-size:0.8rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ch.lastMessage.sender === window.myUserId ? 'Tu: ' : ''}${ch.lastMessage.text}</p>` : '';
                 
-                html += `<div class="card" style="margin-bottom:10px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; border: 1px solid #333;" onclick="window.abrirChatForumAluno('${ch.id}', '${ch.nome}')">
+                html += `<div class="card" style="margin-bottom:10px; cursor:pointer; display:flex; align-items:center; gap: 15px; justify-content:space-between; border: 1px solid #333;" onclick="window.abrirChatForumAluno('${ch.id}', '${ch.nome}')">
+                            ${iconeDefault}
                             <div style="flex:1; overflow:hidden;">
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                                    <h4 style="margin:0; color:var(--text-light); font-size:1rem;">${eGlobal}${ch.nome}</h4>
+                                    <h4 style="margin:0; color:var(--text-light); font-size:1rem;">${ch.nome}</h4>
                                     ${unread}
                                 </div>
                                 ${lM}
                             </div>
                          </div>`;
             });
-            list.innerHTML = html === '' ? getEmptyState('Ainda não tens grupos de estudo.', 'fa-comments') : html;
+            list.innerHTML = html === '' ? getEmptyState('Ainda não tens chats ativos.', 'fa-comments') : html;
         });
     } catch(e) {}
 }
