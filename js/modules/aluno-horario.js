@@ -2,14 +2,16 @@ import { collection, getDocs, getDoc, doc, query } from "https://www.gstatic.com
 
 let ahModo = 'dia', ahDOff = 0, ahSOff = 0;
 
-// Configuração fácil dos tempos letivos da tua escola! (Ajusta os i e f à vontade)
+// OS 8 TEMPOS LETIVOS REAIS DA TUA ESCOLA!
 const BLOCOS_HORARIO = [
-    { i: "08:30", f: "10:00", n: 1 }, 
-    { i: "10:15", f: "11:45", n: 2 }, 
-    { i: "12:00", f: "13:30", n: 3 }, 
-    { i: "13:30", f: "15:00", n: 4 }, 
-    { i: "15:15", f: "16:45", n: 5 }, 
-    { i: "17:00", f: "18:30", n: 6 }
+    { i: "08:30", f: "09:30", n: 1 }, 
+    { i: "09:35", f: "10:35", n: 2 }, 
+    { i: "10:50", f: "11:50", n: 3 }, 
+    { i: "11:55", f: "12:55", n: 4 }, 
+    { i: "13:00", f: "14:00", n: 5 }, 
+    { i: "14:05", f: "15:05", n: 6 },
+    { i: "15:15", f: "16:15", n: 7 },
+    { i: "16:20", f: "17:20", n: 8 }
 ];
 
 function getEmptyState(mensagem, icone = "fa-folder-open") {
@@ -17,6 +19,14 @@ function getEmptyState(mensagem, icone = "fa-folder-open") {
                 <i class="fa-solid ${icone}" style="font-size: 3.5rem; margin-bottom: 15px; color: var(--text-muted);"></i>
                 <p style="font-size: 0.95rem; color: var(--text-muted);">${mensagem}</p>
             </div>`;
+}
+
+// Função Blindada contra Erros de Fuso Horário (Resolve a grelha vazia)
+function getLocalIsoDate(dObj) {
+    const y = dObj.getFullYear();
+    const m = String(dObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dObj.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
 }
 
 export function setupHorario() {
@@ -78,7 +88,7 @@ async function carregarAgendaAlunoLista() {
         
         if(evs.length === 0) { sC.innerHTML = getEmptyState('Nenhum evento com os filtros atuais.', 'fa-filter'); return; }
         
-        const hj = new Date().toISOString().split('T')[0]; 
+        const hj = getLocalIsoDate(new Date()); 
         const fut = evs.filter(e => (e.data || '') >= hj).sort((a,b) => (a.data || '').localeCompare(b.data || '')); 
         const pas = evs.filter(e => (e.data || '') < hj).sort((a,b) => (b.data || '').localeCompare(a.data || ''));
         const mA = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; 
@@ -112,7 +122,9 @@ async function carregarHorarioAluno() {
         if(ahModo === 'dia') {
             baseDate.setDate(baseDate.getDate() + ahDOff);
             while(baseDate.getDay()===0 || baseDate.getDay()===6) { ahDOff += (ahDOff>=0 ? 1 : -1); baseDate.setDate(new Date().getDate() + ahDOff); }
-            const dIso = baseDate.toISOString().split('T')[0]; const dSem = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][baseDate.getDay()];
+            
+            const dIso = getLocalIsoDate(baseDate); 
+            const dSem = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][baseDate.getDay()];
             document.getElementById('aluno-horario-display').innerText = `${dSem}, ${baseDate.toLocaleDateString('pt-PT')}`;
             
             let html = '<div style="display:flex; flex-direction:column; gap:10px;">';
@@ -122,18 +134,21 @@ async function carregarHorarioAluno() {
                 if(val) { temAulas = true; html += `<div class="card" style="border-left:4px solid var(--primary-green); display:flex; align-items:center; gap:15px; padding:12px;"><div style="text-align:center; min-width:50px;"><strong style="color:var(--text-light); display:block; font-size:1.1rem;">${b.i}</strong><span style="color:var(--text-muted); font-size:0.75rem;">${b.f}</span></div><div style="flex:1; border-left:1px solid #333; padding-left:15px;"><strong style="color:var(--primary-green); font-size:1.1rem;">${val}</strong></div></div>`; }
             });
             c.innerHTML = temAulas ? html + '</div>' : getEmptyState('Sem aulas marcadas para este dia.', 'fa-mug-hot');
+        
         } else {
-            // NOVO VISUAL DA SEMANA (Estilo Feed Mobile Agrupado por Dia)
+            // NOVO VISUAL DA SEMANA - Feed Mobile Agrupado (Ideal para ecrãs pequenos)
             const curr = new Date(baseDate.setDate(baseDate.getDate() - baseDate.getDay() + 1 + (ahSOff*7)));
-            const pDia = curr.toISOString().split('T')[0];
+            const pDia = getLocalIsoDate(curr);
             const nomesDias = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira'];
             const diasSemanaISO = [];
             
             for(let i=0; i<5; i++) {
                 const tempDate = new Date(curr); tempDate.setDate(curr.getDate() + i);
-                diasSemanaISO.push(tempDate.toISOString().split('T')[0]);
+                diasSemanaISO.push(getLocalIsoDate(tempDate));
             }
-            curr.setDate(curr.getDate() + 4); const uDia = curr.toISOString().split('T')[0];
+            curr.setDate(curr.getDate() + 4); 
+            const uDia = getLocalIsoDate(curr);
+            
             document.getElementById('aluno-horario-display').innerText = `${pDia.split('-').reverse().slice(0,2).join('/')} a ${uDia.split('-').reverse().slice(0,2).join('/')}`;
 
             let html = `<div style="display:flex; flex-direction:column; gap:20px; padding-bottom:20px;">`;
@@ -156,13 +171,13 @@ async function carregarHorarioAluno() {
                 
                 if(temAulaNoDia) {
                     html += `<div class="card" style="padding:15px; border:1px solid #333;">
-                                <h4 style="color:var(--text-muted); font-size:0.9rem; text-transform:uppercase; margin:0 0 10px 0;"><i class="fa-regular fa-calendar-days"></i> ${nomesDias[i]}</h4>
+                                <h4 style="color:var(--text-muted); font-size:0.9rem; text-transform:uppercase; margin:0 0 10px 0;"><i class="fa-regular fa-calendar-days"></i> ${nomesDias[i]} (${diasSemanaISO[i].split('-').reverse().slice(0,2).join('/')})</h4>
                                 ${htmlDia}
                              </div>`;
                 }
             }
 
-            if(!teveQualquerAula) html = getEmptyState('A tua semana está livre de aulas.', 'fa-bed');
+            if(!teveQualquerAula) html = getEmptyState('A tua semana letiva está limpa.', 'fa-bed');
             c.innerHTML = html + `</div>`;
         }
     } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao desenhar horário.</p>'; }
