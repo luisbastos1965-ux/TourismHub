@@ -2,7 +2,7 @@ import { collection, getDocs, getDoc, doc, query } from "https://www.gstatic.com
 
 let ahModo = 'dia', ahDOff = 0, ahSOff = 0;
 
-// Configuração fácil dos tempos de aula (Muda as horas aqui se precisares!)
+// Configuração fácil dos tempos letivos da tua escola! (Ajusta os i e f à vontade)
 const BLOCOS_HORARIO = [
     { i: "08:30", f: "10:00", n: 1 }, 
     { i: "10:15", f: "11:45", n: 2 }, 
@@ -123,9 +123,12 @@ async function carregarHorarioAluno() {
             });
             c.innerHTML = temAulas ? html + '</div>' : getEmptyState('Sem aulas marcadas para este dia.', 'fa-mug-hot');
         } else {
+            // NOVO VISUAL DA SEMANA (Estilo Feed Mobile Agrupado por Dia)
             const curr = new Date(baseDate.setDate(baseDate.getDate() - baseDate.getDay() + 1 + (ahSOff*7)));
             const pDia = curr.toISOString().split('T')[0];
+            const nomesDias = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira'];
             const diasSemanaISO = [];
+            
             for(let i=0; i<5; i++) {
                 const tempDate = new Date(curr); tempDate.setDate(curr.getDate() + i);
                 diasSemanaISO.push(tempDate.toISOString().split('T')[0]);
@@ -133,29 +136,34 @@ async function carregarHorarioAluno() {
             curr.setDate(curr.getDate() + 4); const uDia = curr.toISOString().split('T')[0];
             document.getElementById('aluno-horario-display').innerText = `${pDia.split('-').reverse().slice(0,2).join('/')} a ${uDia.split('-').reverse().slice(0,2).join('/')}`;
 
-            let html = `<div style="overflow-x: auto; padding-bottom:20px;">
-                            <table style="width:100%; min-width: 500px; border-collapse: collapse; text-align:center; font-size:0.85rem; color:var(--text-light);">
-                                <thead>
-                                    <tr>
-                                        <th style="padding:10px; border-bottom:2px solid var(--primary-green); color:var(--text-muted);">Hora</th>
-                                        <th style="padding:10px; border-bottom:2px solid var(--primary-green);">Seg</th>
-                                        <th style="padding:10px; border-bottom:2px solid var(--primary-green);">Ter</th>
-                                        <th style="padding:10px; border-bottom:2px solid var(--primary-green);">Qua</th>
-                                        <th style="padding:10px; border-bottom:2px solid var(--primary-green);">Qui</th>
-                                        <th style="padding:10px; border-bottom:2px solid var(--primary-green);">Sex</th>
-                                    </tr>
-                                </thead>
-                                <tbody>`;
-            
-            BLOCOS_HORARIO.forEach(b => {
-                html += `<tr><td style="padding:10px; border-bottom:1px solid #333; color:var(--text-muted); font-weight:bold;">${b.i}<br><span style="font-size:0.7rem;">${b.f}</span></td>`;
-                for(let i=0; i<5; i++) {
+            let html = `<div style="display:flex; flex-direction:column; gap:20px; padding-bottom:20px;">`;
+            let teveQualquerAula = false;
+
+            for(let i=0; i<5; i++) {
+                let htmlDia = ''; let temAulaNoDia = false;
+                BLOCOS_HORARIO.forEach(b => {
                     const val = hor[`${diasSemanaISO[i]}_${b.n}`];
-                    html += val ? `<td style="padding:10px; border-bottom:1px solid #333;"><div style="background:rgba(0,204,136,0.1); color:var(--primary-green); padding:5px; border-radius:6px; font-weight:bold; white-space:nowrap;">${val}</div></td>` : `<td style="padding:10px; border-bottom:1px solid #333; color:#444;">-</td>`;
+                    if(val) {
+                        temAulaNoDia = true; teveQualquerAula = true;
+                        htmlDia += `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:rgba(0,0,0,0.2); border-radius:6px; margin-bottom:5px; border-left: 2px solid var(--primary-green);">
+                                        <div style="display:flex; gap:10px; align-items:center;">
+                                            <span style="font-weight:bold; color:var(--text-light); font-size:0.9rem; min-width:45px;">${b.i}</span>
+                                            <span style="color:var(--primary-green); font-weight:bold;">${val}</span>
+                                        </div>
+                                    </div>`;
+                    }
+                });
+                
+                if(temAulaNoDia) {
+                    html += `<div class="card" style="padding:15px; border:1px solid #333;">
+                                <h4 style="color:var(--text-muted); font-size:0.9rem; text-transform:uppercase; margin:0 0 10px 0;"><i class="fa-regular fa-calendar-days"></i> ${nomesDias[i]}</h4>
+                                ${htmlDia}
+                             </div>`;
                 }
-                html += `</tr>`;
-            });
-            c.innerHTML = html + `</tbody></table></div>`;
+            }
+
+            if(!teveQualquerAula) html = getEmptyState('A tua semana está livre de aulas.', 'fa-bed');
+            c.innerHTML = html + `</div>`;
         }
     } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao desenhar horário.</p>'; }
 }
