@@ -492,11 +492,34 @@ async function construirHomeAdaptativa() {
     if(!alertCont || !emoCont) return;
     
     try {
+        // Função auxiliar local para descobrir a Semana ISO de uma data (Ex: "2023-W41")
+        const getISOWeek = (dateStr) => {
+            if(!dateStr) return null;
+            const d = new Date(dateStr);
+            if(isNaN(d.getTime())) return null;
+            d.setHours(0,0,0,0);
+            d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+            const week1 = new Date(d.getFullYear(), 0, 4);
+            const weekNum = 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+            return `${d.getFullYear()}-W${weekNum.toString().padStart(2, '0')}`;
+        };
+
         let tFaltas = 0, evs = [], pAtivos = 0, pHoras = 0, mRep = 0;
         
-        // Contar Faltas, Notas Negativas e PRHFs
+        // 1. LER AS FALTAS E GUARDAR AS SEMANAS EM QUE OCORRERAM
         const fS = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); 
-        fS.forEach(d => { if(!d.data().justificada && !d.data().comprovativoEnviado) tFaltas++; });
+        let semanasComFaltas = new Set();
+        fS.forEach(d => { 
+            const f = d.data();
+            if(!f.justificada && !f.comprovativoEnviado) { 
+                tFaltas++; 
+                const dataFalta = f.dataInicio || f.criadoEm || f.data;
+                if(dataFalta) {
+                    const isoW = getISOWeek(dataFalta);
+                    if(isoW) semanasComFaltas.add(isoW);
+                }
+            } 
+        });
         
         const nS = await getDocs(collection(db, "utilizadores", myUserId, "notas")); 
         nS.forEach(d => { const n = d.data().nota; if(n === 'REP' || Number(n) < 10) mRep++; });
@@ -504,38 +527,82 @@ async function construirHomeAdaptativa() {
         const pS = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); 
         pS.forEach(d => { if(d.data().status !== 'concluida') { pAtivos++; pHoras += Number(d.data().horasPresenciais || 0); } });
         
-        // NOVO: DINÂMICA REAL DO MULTIPLICADOR DE STREAK E CHAMA
+        // 2. LER OS SUMÁRIOS (AULAS EFETIVAMENTE DADAS) E CALCULAR STREAK
+        let semanasSemFaltas = 0;
+        if(minhaTurma) {
+            const sumSnap = await getDocs(collection(db, "turmas", minhaTurma, "sumarios"));
+            let semanasComAulas = new Set();
+            sumSnap.forEach(d => {
+                const s = d.data();
+                if(s.data) { 
+                    const isoW = getISOWeek(s.data);
+                    if(isoW) semanasComAulas.add(isoW); 
+                }
+            });
+
+            // Ordenar as semanas letivas (da mais recente para a mais antiga)
+            const semanasOrdenadas = Array.from(semanasComAulas).sort((a, b) => b.localeCompare(a));
+            
+            // Contar a "Streak": Quantas semanas de aulas recentes estão limpas de faltas?
+            for (const semana of semanasOrdenadas) {
+                if (semanasComFaltas.has(semana)) {
+                    break; // Encontrou uma falta! Quebra a streak.
+                }
+                semanasSemFaltas++;
+            }
+        }
+        
+        // 3. CÁLCULO DO MULTIPLICADOR DE XP
+        // Cada semana limpa dá +0.2 até ao máximo de 2.0 (O dobro de XP!)
+        let mult = 1.0 + (semanasSemFaltas * 0.2);
+        if(mult > 2.0) mult = 2.0;
+
+        // Guarda magicamente este valor na Base de Dados para o Professor usar
+        try { await updateDoc(doc(db, "utilizadores", myUserId), { multiplicadorXP: mult }); } catch(e){}
+
+        // 4. ATUALIZAR O VISUAL DA CHAMA
         const flameBox = document.getElementById('aluno-streak-flame');
-        const multiplierTxt = document.getElementById('aluno-streak-multiplier');
-        if(flameBox && multiplierTxt) {
-            if(tFaltas === 0) {
-                // Chama Acesa (Bónus Ativo)
-                multiplierTxt.innerText = "x1.2";
-                flameBox.style.color = "#ff9900";
-                flameBox.style.borderColor = "#ff9900";
-                flameBox.style.background = "rgba(255, 153, 0, 0.1)";
-                flameBox.style.boxShadow = "0 0 10px rgba(255, 153, 0, 0.2)";
-                flameBox.title = "Bónus de Assiduidade Ativo!";
+        if(flameBox) {
+            if(mult > 1.0) {
+                if(mult >= 2.0) {
+                    // CHAMA MÁXIMA
+                    flameBox.innerHTML = `<i class="fa-solid fa-fire-flame-curved"></i> <span id="aluno-streak-multiplier">x2.0 MAX</span>`;
+                    flameBox.style.color = "#ff4500";
+                    flameBox.style.borderColor = "#ff4500";
+                    flameBox.style.background = "rgba(255, 69, 0, 0.15)";
+                    flameBox.style.boxShadow = "0 0 15px rgba(255, 69, 0, 0.4)";
+                    flameBox.title = "Chama Máxima! Parabéns pela consistência perfeita!";
+                } else {
+                    // CHAMA A CRESCER
+                    flameBox.innerHTML = `<i class="fa-solid fa-fire"></i> <span id="aluno-streak-multiplier">x${mult.toFixed(1)}</span>`;
+                    flameBox.style.color = "#ff9900";
+                    flameBox.style.borderColor = "#ff9900";
+                    flameBox.style.background = "rgba(255, 153, 0, 0.1)";
+                    flameBox.style.boxShadow = "0 0 10px rgba(255, 153, 0, 0.2)";
+                    flameBox.title = `Bónus de Assiduidade: ${semanasSemFaltas} semana(s) letiva(s) invicto!`;
+                }
             } else {
-                // Chama Apagada (Bónus Perdido)
-                multiplierTxt.innerText = "x1.0";
+                // CHAMA APAGADA
+                flameBox.innerHTML = `<i class="fa-solid fa-fire"></i> <span id="aluno-streak-multiplier">x1.0</span>`;
                 flameBox.style.color = "var(--text-muted)";
                 flameBox.style.borderColor = "#333";
                 flameBox.style.background = "rgba(0, 0, 0, 0.2)";
                 flameBox.style.boxShadow = "none";
-                flameBox.title = "Bónus perdido devido a faltas injustificadas";
+                flameBox.title = "Bónus perdido devido a faltas injustificadas. Mantém-te assíduo para recuperar!";
             }
         }
 
+        // 5. EVENTOS E MENSAGENS DE ALERTA
         if(minhaTurma) {
             const evSnap = await getDocs(collection(db, "turmas", minhaTurma, "eventos")); 
-            const hj = new Date().toISOString().split('T')[0]; 
+            const hoje = new Date();
+            const hjIso = hoje.toISOString().split('T')[0]; 
             let d7 = new Date(); d7.setDate(d7.getDate()+7); 
             const lIso = d7.toISOString().split('T')[0]; 
             
             evSnap.forEach(d => { 
                 const e = d.data(); 
-                if(e.data >= hj && e.data <= lIso && ['teste','avaliacao','entrega'].includes(e.tipo)) evs.push(e); 
+                if(e.data >= hjIso && e.data <= lIso && ['teste','avaliacao','entrega'].includes(e.tipo)) evs.push(e); 
             }); 
             evs.sort((a,b) => a.data.localeCompare(b.data));
         }
