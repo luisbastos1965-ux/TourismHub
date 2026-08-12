@@ -508,9 +508,14 @@ async function construirHomeAdaptativa() {
         const hjIso = hoje.toISOString().split('T')[0]; 
         const currentIsoWeek = getISOWeek(hjIso);
 
+        // CALCULAR O INÍCIO DO ANO LETIVO (1 de Setembro)
+        const mesAtual = hoje.getMonth() + 1;
+        const anoLetivo = mesAtual >= 9 ? hoje.getFullYear() : hoje.getFullYear() - 1;
+        const inicioAnoIso = getISOWeek(`${anoLetivo}-09-01`);
+
         let tFaltas = 0, evs = [], pAtivos = 0, pHoras = 0, mRep = 0;
         
-        // 1. LER AS FALTAS DO ALUNO
+        // 1. LER AS FALTAS DO ALUNO (SÓ DO ANO LETIVO ATUAL)
         const fS = await getDocs(collection(db, "utilizadores", myUserId, "faltas")); 
         let semanasComFaltas = new Set();
         fS.forEach(d => { 
@@ -520,7 +525,7 @@ async function construirHomeAdaptativa() {
                 const dataFalta = f.dataInicio || f.criadoEm || f.data;
                 if(dataFalta) {
                     const isoW = getISOWeek(dataFalta);
-                    if(isoW) semanasComFaltas.add(isoW);
+                    if(isoW && isoW >= inicioAnoIso) semanasComFaltas.add(isoW);
                 }
             } 
         });
@@ -531,7 +536,7 @@ async function construirHomeAdaptativa() {
         const pS = await getDocs(collection(db, "utilizadores", myUserId, "prhfs")); 
         pS.forEach(d => { if(d.data().status !== 'concluida') { pAtivos++; pHoras += Number(d.data().horasPresenciais || 0); } });
         
-        // 2. CRUZAR COM O HORÁRIO REAL DA TURMA
+        // 2. CRUZAR COM O HORÁRIO REAL DA TURMA (SÓ DO ANO LETIVO ATUAL)
         let semanasSemFaltas = 0;
         if(minhaTurma) {
             const tSnap = await getDoc(doc(db, "turmas", minhaTurma));
@@ -539,32 +544,27 @@ async function construirHomeAdaptativa() {
                 const horario = tSnap.data().horario || {};
                 let semanasComAulas = new Set();
                 
-                // Procurar que semanas tiveram aulas efetivamente marcadas no horário
                 for (let key in horario) {
                     if (horario[key] && typeof horario[key] === 'string' && horario[key].trim() !== '') {
-                        const dateStr = key.split('_')[0]; // Extrai "YYYY-MM-DD" da chave
+                        const dateStr = key.split('_')[0];
                         const isoW = getISOWeek(dateStr);
-                        // Só nos interessam semanas passadas ou a atual (ignorar horário futuro para a streak)
-                        if (isoW && isoW <= currentIsoWeek) { 
+                        // Limite: Apenas semanas do ano letivo atual, até à semana de hoje
+                        if (isoW && isoW <= currentIsoWeek && isoW >= inicioAnoIso) { 
                             semanasComAulas.add(isoW);
                         }
                     }
                 }
 
-                // Ordenar as semanas letivas da mais recente para a mais antiga
                 const semanasOrdenadas = Array.from(semanasComAulas).sort((a, b) => b.localeCompare(a));
                 
-                // Contar a Streak (Sem aulas = salta. Com aulas + Falta = Quebra)
                 for (const semana of semanasOrdenadas) {
-                    if (semanasComFaltas.has(semana)) {
-                        break; 
-                    }
+                    if (semanasComFaltas.has(semana)) break; 
                     semanasSemFaltas++;
                 }
             }
         }
         
-        // 3. CÁLCULO DO MULTIPLICADOR DE XP E ATUALIZAÇÃO NA BD
+        // 3. CÁLCULO DO MULTIPLICADOR E ATUALIZAÇÃO NA BD
         let mult = 1.0 + (semanasSemFaltas * 0.2);
         if(mult > 2.0) mult = 2.0;
 
@@ -587,7 +587,7 @@ async function construirHomeAdaptativa() {
                     flameBox.style.borderColor = "#ff9900";
                     flameBox.style.background = "rgba(255, 153, 0, 0.1)";
                     flameBox.style.boxShadow = "0 0 10px rgba(255, 153, 0, 0.2)";
-                    flameBox.title = `Bónus de Assiduidade: ${semanasSemFaltas} semana(s) letiva(s) invicto!`;
+                    flameBox.title = `Bónus de Assiduidade: ${semanasSemFaltas} semana(s) letiva(s) invicto neste ano!`;
                 }
             } else {
                 flameBox.innerHTML = `<i class="fa-solid fa-fire"></i> <span id="aluno-streak-multiplier">x1.0</span>`;
@@ -599,7 +599,7 @@ async function construirHomeAdaptativa() {
             }
         }
 
-        // 5. RESTANTE LÓGICA DE EVENTOS (MANTIDA INTACTA)
+        // 5. RESTANTE LÓGICA DE EVENTOS
         if(minhaTurma) {
             const evSnap = await getDocs(collection(db, "turmas", minhaTurma, "eventos")); 
             let d7 = new Date(); d7.setDate(d7.getDate()+7); 
