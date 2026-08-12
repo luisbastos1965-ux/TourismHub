@@ -8,6 +8,7 @@ import { setupGamificacao, aplicarTemaAcademia } from "./modules/aluno-gamificac
 import { setupCaderneta } from "./modules/aluno-caderneta.js";
 import { setupHorario, carregarMateriaisAluno } from "./modules/aluno-horario.js";
 import { setupComunicacao } from "./modules/aluno-comunicacao.js";
+import { setupPassaporte } from "./modules/aluno-passaporte.js"; // <-- NOVO MÓDULO IMPORTADO
 
 // Partilhar variáveis globalmente para os módulos usarem
 window.db = db;
@@ -58,6 +59,7 @@ onAuthStateChanged(auth, async (user) => {
                 setupCaderneta(d);
                 setupHorario();
                 setupComunicacao();
+                setupPassaporte(); // <-- NOVO MÓDULO ATIVADO AQUI
 
                 // Verificar Academia
                 if (!window.myAcademia) {
