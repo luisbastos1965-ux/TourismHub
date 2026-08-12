@@ -111,7 +111,7 @@
                     <button class="lms-btn" id="btn-open-materiais" style="border-color:#0099ff; color:#0099ff; background: rgba(0, 153, 255, 0.05); display: flex;">
                         <i class="fa-solid fa-book-open"></i><span>Materiais</span>
                     </button>
-                    <button class="lms-btn" id="btn-abrir-passaporte" style="border-color:var(--warning-yellow); color:var(--warning-yellow); background: rgba(255, 204, 0, 0.05); display: none;">
+                    <button class="lms-btn" id="btn-abrir-passaporte" style="border-color:var(--warning-yellow); color:var(--warning-yellow); background: rgba(255, 204, 0, 0.05); display: flex;">
                         <i class="fa-solid fa-briefcase"></i><span id="btn-passaporte-texto">Estágio / PAP</span>
                     </button>
                 </div>
@@ -271,7 +271,7 @@
 
             <!-- VISTA FÓRUM -->
             <div id="view-aluno-forum" style="display: none; flex-direction:column;">
-                <button id="btn-create-chat-aluno" class="primary-btn" style="background:var(--bg-dark); border:2px dashed var(--primary-green); color:var(--primary-green); width: 100%; margin-bottom: 20px; font-size:1.1rem; padding:15px;"><i class="fa-solid fa-plus"></i> Novo Grupo de Estudo</button>
+                <button id="btn-create-chat-aluno" class="primary-btn" style="background:var(--bg-dark); border:2px dashed var(--primary-green); color:var(--primary-green); width: 100%; margin-bottom: 20px; font-size:1.1rem; padding:15px;"><i class="fa-solid fa-plus"></i> Novo Chat</button>
                 <div id="aluno-forum-channel-list"></div>
 
                 <div id="aluno-forum-chat-view" style="display:none; flex-direction:column; height:70vh; background:var(--bg-card); border-radius:12px; border:1px solid #333; overflow:hidden;">
@@ -290,77 +290,21 @@
             <!-- MODAL FÓRUM (Colegas) -->
             <div id="modal-criar-forum" class="modal-overlay">
                 <div class="action-sheet" style="max-width:400px; border-radius:12px; margin:20px; animation: none;">
-                    <h3 style="margin-bottom: 15px; color:var(--primary-green);"><i class="fa-solid fa-comments"></i> Novo Grupo</h3>
-                    <input type="text" id="input-nome-novo-forum" placeholder="Nome do Grupo (Ex: Trabalho)" style="width:100%; margin-bottom:15px;" class="input-padrao">
+                    <h3 style="margin-bottom: 15px; color:var(--primary-green);"><i class="fa-solid fa-comments"></i> Novo Chat</h3>
+                    <input type="text" id="input-nome-novo-forum" placeholder="Nome do Chat (Ex: Trabalho)" style="width:100%; margin-bottom:15px;" class="input-padrao">
                     <div id="lista-colegas-forum" style="max-height: 150px; overflow-y: auto; background: #111; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333;"></div>
-                    <div style="display:flex; gap:10px;"><button id="btn-cancelar-novo-forum" class="secondary-btn">Cancelar</button><button id="btn-confirm-novo-forum" class="primary-btn">Criar Grupo</button></div>
+                    <div style="display:flex; gap:10px;"><button id="btn-cancelar-novo-forum" class="secondary-btn">Cancelar</button><button id="btn-confirm-novo-forum" class="primary-btn">Criar Chat</button></div>
                 </div>
             </div>
 
             <!-- VISTA PASSAPORTE FCT/PAP -->
             <div id="view-aluno-passaporte" style="display: none;">
                 <div class="class-header" style="margin-bottom: 10px;"><button id="btn-voltar-passaporte" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
-                <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: var(--text-light);"><i class="fa-solid fa-briefcase"></i> Estágio / Projeto</h2>
+                <h2 style="font-size: 1.4rem; margin-bottom: 5px; color: var(--text-light);"><i class="fa-solid fa-passport"></i> Passaporte Profissional</h2>
+                <p style="color:var(--text-muted); font-size:0.85rem; margin:0 0 15px 0;">O teu percurso de Estágio e PAP</p>
                 
-                <div id="sec-aluno-fct" style="display: none;">
-                    <h3 style="color: var(--primary-green); font-size: 1rem; margin-bottom: 15px;"><i class="fa-solid fa-building"></i> FCT (Estágio)</h3>
-                    <div class="card">
-                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><strong>Horas Concluídas:</strong> <span style="color:var(--primary-green); font-weight:bold;" id="aluno-fct-horas">0 / 0h</span></div>
-                        <div class="progress-bar-bg" style="margin-bottom: 20px;"><div class="progress-bar-fill" id="aluno-fct-progress" style="width:0%;"></div></div>
-                        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid #333;">
-                            <label style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; display: block;">Atualizar as minhas horas:</label>
-                            <div style="display: flex; gap: 10px;"><input type="number" id="input-fct-horas" placeholder="Ex: 120" style="margin: 0; flex: 1;" class="input-padrao"><button id="btn-save-fct" class="primary-btn" style="width: auto; padding: 0 20px;"><i class="fa-solid fa-check"></i></button></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div id="sec-aluno-pap" style="margin-top: 25px; display: none;">
-                    <h3 style="color: var(--primary-green); font-size: 1rem; margin-bottom: 15px;"><i class="fa-solid fa-laptop-code"></i> PAP</h3>
-                    <div class="card">
-                        <div style="margin-bottom: 20px;">
-                            <label style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; display: block;">Tema do Projeto:</label>
-                            <div style="display: flex; gap: 10px;"><input type="text" id="input-pap-tema" placeholder="O teu tema..." style="margin: 0; flex: 1;" class="input-padrao"><button id="btn-save-pap-tema" class="primary-btn" style="width: auto; padding: 0 20px;"><i class="fa-solid fa-save"></i></button></div>
-                        </div>
-                        <div style="border-top: 1px dashed #333; padding-top: 15px;">
-                            <label style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; display: block;">Entrega de Documentos (Anteprojeto/Relatório):</label>
-                            <div style="display:flex; justify-content:space-between; align-items:center;"><label for="aluno-upload-pap" class="secondary-btn small-btn" style="margin:0; flex:1; text-align:center; border-style: dashed;"><i class="fa-solid fa-upload"></i> Anexar Ficheiro</label><input type="file" id="aluno-upload-pap" style="display:none;" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.zip"></div>
-                            <span id="aluno-pap-file-name" class="file-name-display" style="display:block; margin-top:10px; font-size:0.85rem; color:var(--success-green);"></span>
-                            <button id="btn-enviar-pap" class="primary-btn" style="display:none; width:100%; margin-top:10px;">Submeter à Escola</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- MODAL ACADEMIA QUIZ -->
-            <div id="modal-academia-quiz" class="modal-overlay" style="z-index: 9999; background: var(--bg-dark); align-items: stretch; padding: 0;">
-                <div style="width: 100%; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; justify-content: center; padding: 30px; position: relative;">
-                    <div id="quiz-step-intro" style="text-align: center; animation: fadeSlide 0.5s ease;">
-                        <i class="fa-solid fa-map-location-dot" style="font-size: 4rem; color: var(--primary-green); margin-bottom: 20px;"></i>
-                        <h1 style="font-size: 2rem; color: var(--text-light); margin-bottom: 15px;">Bem-vindo ao teu Percurso!</h1>
-                        <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 30px; line-height: 1.5;">O mundo do Turismo é feito de talentos diferentes. Para personalizarmos a tua aplicação, precisamos de saber qual é o teu perfil natural.</p>
-                        <button id="btn-start-quiz" class="primary-btn" style="font-size: 1.2rem; padding: 15px 30px;">Descobrir a minha Academia</button>
-                    </div>
-
-                    <div id="quiz-step-question" style="display: none; width: 100%;">
-                        <div style="font-size: 0.9rem; color: var(--text-muted); font-weight: bold; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;" id="quiz-progress-text">Pergunta 1 de 4</div>
-                        <div class="progress-bar-bg" style="height: 4px; margin-bottom: 30px;"><div class="progress-bar-fill" id="quiz-progress-bar" style="width: 25%; background: var(--primary-green);"></div></div>
-                        <h2 id="quiz-q-title" style="font-size: 1.3rem; color: var(--text-light); margin-bottom: 30px; line-height: 1.4;">Carregando pergunta...</h2>
-                        <div id="quiz-q-options" style="display: flex; flex-direction: column; gap: 12px;"></div>
-                    </div>
-
-                    <div id="quiz-step-loading" style="display: none; text-align: center;">
-                        <i class="fa-solid fa-compass fa-spin" style="font-size: 4rem; color: var(--primary-green); margin-bottom: 20px;"></i>
-                        <h2 style="color: var(--text-light);">A traçar o teu perfil...</h2>
-                    </div>
-
-                    <div id="quiz-step-result" style="display: none; text-align: center; animation: fadeSlide 0.8s ease;">
-                        <div id="quiz-result-icon" style="font-size: 5rem; margin-bottom: 20px;"></div>
-                        <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 5px;">O teu perfil enquadra-se na</p>
-                        <h1 id="quiz-result-title" style="font-size: 2.5rem; margin-bottom: 15px; font-weight: 800;">...</h1>
-                        <p id="quiz-result-desc" style="font-size: 1rem; color: var(--text-light); margin-bottom: 40px; line-height: 1.6; padding: 0 10px;"></p>
-                        <button id="btn-finish-quiz" class="primary-btn" style="font-size: 1.2rem; padding: 15px 30px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); border: none;">Entrar na Turma PRO</button>
-                    </div>
-                </div>
+                <!-- O MÓDULO JS VAI INJETAR O CONTEÚDO AQUI DENTRO -->
+                <div id="passaporte-dynamic-content"></div>
             </div>
             
             <!-- MODAIS DE ELIMINAÇÃO E PAUTA -->
@@ -400,6 +344,6 @@
         </nav>
     </div>
 
-    <script type="module" src="./js/aluno-app.js?v=43"></script>
+    <script type="module" src="./js/aluno-app.js?v=44"></script>
 </body>
 </html>
