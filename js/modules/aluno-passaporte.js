@@ -1,5 +1,8 @@
-import { doc, getDoc, updateDoc, arrayUnion, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { doc, getDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
+// ==========================================
+// UTILITÁRIOS (ALERTAS E MODAIS CUSTOMIZADOS)
+// ==========================================
 function mostrarAlerta(msg, erro = true) {
     const cor = erro ? 'var(--danger-red)' : 'var(--success-green)';
     const div = document.createElement('div');
@@ -8,6 +11,28 @@ function mostrarAlerta(msg, erro = true) {
     document.body.appendChild(div);
     requestAnimationFrame(() => div.style.opacity = '1');
     setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 300); }, 3000);
+}
+
+// Substitui os alertas/confirmações nativos e feios do navegador!
+function confirmarAcao(mensagem) {
+    return new Promise((resolve) => {
+        const bg = document.createElement('div');
+        bg.className = 'modal-overlay';
+        bg.style.display = 'flex';
+        bg.style.zIndex = '10000';
+        bg.innerHTML = `
+            <div class="action-sheet" style="max-width:350px; border-radius:12px; margin:20px; text-align: center; animation: fadeSlide 0.3s ease;">
+                <i class="fa-solid fa-circle-question" style="font-size: 3rem; color: var(--primary-green); margin-bottom: 15px;"></i>
+                <h3 style="margin-bottom: 20px; color: var(--text-light); font-size:1.1rem; line-height:1.4;">${mensagem}</h3>
+                <div style="display:flex; gap:10px;">
+                    <button id="btn-no" class="secondary-btn" style="flex:1;">Cancelar</button>
+                    <button id="btn-yes" class="primary-btn" style="flex:1;">Confirmar</button>
+                </div>
+            </div>`;
+        document.body.appendChild(bg);
+        bg.querySelector('#btn-no').onclick = () => { bg.remove(); resolve(false); };
+        bg.querySelector('#btn-yes').onclick = () => { bg.remove(); resolve(true); };
+    });
 }
 
 window.papTextosGlobais = {};
@@ -30,7 +55,7 @@ export function setupPassaporte() {
 
         document.querySelectorAll('.app-content > div:not(.modal-overlay)').forEach(d => d.style.display = 'none');
         document.getElementById('view-aluno-passaporte').style.display = 'block';
-        carregarPassaporteDashboard(dados, ano);
+        carregarPassaporteDashboard(dados, ano, (ano === 12 ? 'pap' : 'fct'));
     });
     
     document.getElementById('btn-voltar-passaporte')?.addEventListener('click', () => {
@@ -53,28 +78,41 @@ export function setupPassaporte() {
     window.editarHorasFCT = editarHorasFCT;
     window.abrirChatOrientadorPAP = abrirChatOrientadorPAP;
     
-    // Funções PAP Mobile
     window.mudarTopicoPAP = mudarTopicoPAP;
     window.guardarTopicoPAP = guardarTopicoPAP;
     window.compilarRelatorioPAP = compilarRelatorioPAP;
 }
 
-function carregarPassaporteDashboard(dados, ano) {
+// Adicionado o parâmetro "abaForcada" para não saltar de ecrã ao editar a FCT!
+async function carregarPassaporteDashboard(dados = null, ano = null, abaForcada = null) {
     const cont = document.getElementById('passaporte-dynamic-content');
     if (!cont) return;
+    
+    if (!dados) {
+        cont.innerHTML = '<p class="text-muted center">A carregar os teus dados...</p>';
+        try {
+            const mMatch = window.minhaTurma ? window.minhaTurma.match(/\d+/) : null;
+            ano = mMatch ? parseInt(mMatch[0]) : 12; 
+            const snap = await getDoc(doc(window.db, "utilizadores", window.myUserId));
+            dados = snap.exists() ? snap.data() : {};
+        } catch(e) { cont.innerHTML = '<p class="text-danger center">Erro ao carregar dados.</p>'; return; }
+    }
     
     window.papTextosGlobais = (dados.pap && dados.pap.textos) ? dados.pap.textos : {};
     window.cofreAtual = (dados.pap && dados.pap.cofre) ? dados.pap.cofre : [];
     window.historicoFCTAtual = (dados.fct && dados.fct.historicoHoras) ? dados.fct.historicoHoras : [];
 
     let html = '';
+    const activePAP = (abaForcada === 'pap' || (!abaForcada && ano === 12)) ? 'active primary-btn' : 'secondary-btn';
+    const activeFCT = (abaForcada === 'fct' || ano === 11) ? 'active primary-btn' : 'secondary-btn';
+
     if (ano === 12) {
         html += `<div style="display:flex; gap:10px; margin-bottom:20px;">
-                    <button class="primary-btn pass-tab-btn active" style="flex:1;" onclick="window.mudarAbaPassaporte('pap')">PAP</button>
-                    <button class="secondary-btn pass-tab-btn" style="flex:1;" onclick="window.mudarAbaPassaporte('fct')">FCT (Estágio)</button>
+                    <button class="${activePAP} pass-tab-btn" style="flex:1;" onclick="window.mudarAbaPassaporte('pap')">PAP</button>
+                    <button class="${activeFCT} pass-tab-btn" style="flex:1;" onclick="window.mudarAbaPassaporte('fct')">FCT (Estágio)</button>
                  </div>`;
-        html += `<div id="pass-content-pap">${renderPAP(dados)}</div>`;
-        html += `<div id="pass-content-fct" style="display:none;">${renderFCT(dados)}</div>`;
+        html += `<div id="pass-content-pap" style="display:${activePAP.includes('active') ? 'block' : 'none'};">${renderPAP(dados)}</div>`;
+        html += `<div id="pass-content-fct" style="display:${activeFCT.includes('active') ? 'block' : 'none'};">${renderFCT(dados)}</div>`;
     } else if (ano === 11) {
         html += `<div id="pass-content-fct">${renderFCT(dados)}</div>`;
     }
@@ -82,8 +120,13 @@ function carregarPassaporteDashboard(dados, ano) {
     cont.innerHTML = html;
     document.getElementById('upload-cofre-pap')?.addEventListener('change', processarUploadCofre);
     
-    if(ano === 12) window.mudarTopicoPAP();
+    if(ano === 12 && activePAP.includes('active')) window.mudarTopicoPAP();
 }
+
+// Expomos uma função global para forçar reload numa aba específica
+window.recarregarViewPassaporte = async function(abaForcada) {
+    await carregarPassaporteDashboard(null, null, abaForcada);
+};
 
 function mudarAbaPassaporte(aba) {
     document.querySelectorAll('.pass-tab-btn').forEach(b => {
@@ -95,6 +138,8 @@ function mudarAbaPassaporte(aba) {
     
     document.getElementById('pass-content-pap').style.display = aba === 'pap' ? 'block' : 'none';
     document.getElementById('pass-content-fct').style.display = aba === 'fct' ? 'block' : 'none';
+    
+    if (aba === 'pap') window.mudarTopicoPAP();
 }
 
 // ==========================================
@@ -131,7 +176,7 @@ function renderPAP(dados) {
     }
     obsHtml += `</div>`;
 
-    // 3. COFRE
+    // 3. COFRE (Com Visualizador e Apagar corrigidos!)
     let cofreHtml = `<div class="card" style="margin-bottom:20px; border:1px solid #333;">
                         <h4 style="color:var(--text-light); font-size:1rem; margin:0 0 15px 0;"><i class="fa-solid fa-vault"></i> Cofre do Projeto</h4>
                         <div style="display:flex; flex-direction:column; gap:10px;" id="lista-cofre-pap">`;
@@ -142,8 +187,7 @@ function renderPAP(dados) {
                                 <i class="fa-solid fa-file-lines" style="color:var(--primary-green); margin-right:5px;"></i> ${f.nome}
                             </div>
                             <div style="display:flex; align-items:center; gap:8px;">
-                                <button onclick="window.verFicheiroCofre(${idx})" class="secondary-btn small-btn" style="padding:6px; border:none; background:rgba(0,204,136,0.1); color:var(--primary-green);" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
-                                <button onclick="window.baixarFicheiroCofre(${idx})" class="secondary-btn small-btn" style="padding:6px; border:none; background:rgba(0,153,255,0.1); color:#0099ff;" title="Transferir"><i class="fa-solid fa-download"></i></button>
+                                <button onclick="window.verFicheiroCofre(${idx})" class="secondary-btn small-btn" style="padding:6px; border:none; background:rgba(0,204,136,0.1); color:var(--primary-green);" title="Visualizar/Transferir"><i class="fa-solid fa-eye"></i></button>
                                 <button onclick="window.removerFicheiroCofre(${idx})" class="secondary-btn small-btn" style="padding:6px; border:none; background:rgba(239,68,68,0.1); color:var(--danger-red);" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
                             </div>
                           </div>`;
@@ -158,12 +202,17 @@ function renderPAP(dados) {
                     </div>
                   </div>`;
 
-    // 4. CONSTRUTOR MOBILE
-    const TOPICOS_PAP = ['Introdução', 'Conceitos/Revisão Literária', 'Projeto: Motivação, Caracterização, Conceito e Descrição', 'Plano de Marketing: Público-Alvo, Marketing-Mix, Concorrência, Análise SWOT', 'Micro-Projeto', 'Conclusão'];
+    // 4. RELATÓRIO MOBILE E GUIA DE IA
+    const TOPICOS_PAP = [
+        'Introdução', 'Conceitos / Revisão Literária', 
+        'Projeto - Motivação', 'Projeto - Caracterização', 'Projeto - Conceito', 'Projeto - Descrição', 
+        'Plano Marketing - Público-Alvo', 'Plano Marketing - Marketing-Mix', 'Plano Marketing - Concorrência', 'Plano Marketing - Análise SWOT', 
+        'Micro-Projeto', 'Conclusão', 'Agradecimentos', 'Referências Bibliográficas'
+    ];
     
     let construtorHtml = `<div class="card" style="margin-bottom:20px; border-left:4px solid #f97316;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                                <h4 style="color:var(--text-light); font-size:1rem; margin:0;"><i class="fa-solid fa-mobile-screen"></i> Construtor Mobile</h4>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                <h4 style="color:var(--text-light); font-size:1rem; margin:0;"><i class="fa-solid fa-mobile-screen"></i> Relatório Mobile</h4>
                             </div>
                             
                             <select id="pap-topico-select" class="input-padrao" style="width:100%; margin-bottom:10px;" onchange="window.mudarTopicoPAP()">
@@ -181,25 +230,50 @@ function renderPAP(dados) {
                             <div id="pap-relatorio-compilado" style="display:none; margin-top:15px; padding:15px; background:rgba(0,0,0,0.2); border-radius:6px; font-size:0.85rem; color:var(--text-light); white-space:pre-wrap; border:1px solid #333;"></div>
                           </div>`;
 
-    return perfilHtml + obsHtml + cofreHtml + construtorHtml;
+    // 5. GUIA IA PROMPTS (A TUA IDEIA DE OURO!)
+    let aiHtml = `<div class="card" style="margin-bottom:20px; border-left:4px solid #3b82f6;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none';">
+                        <h4 style="color:var(--text-light); font-size:1rem; margin:0;"><i class="fa-solid fa-robot" style="color:#3b82f6;"></i> Guia PAP & Prompts IA</h4>
+                        <i class="fa-solid fa-chevron-down" style="color:var(--text-muted);"></i>
+                    </div>
+                    <div style="display:none; margin-top:15px;">
+                        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">A Inteligência Artificial é excelente a estruturar ideias, mas <strong>não deve escrever o projeto por ti!</strong> Copia e usa os exemplos abaixo no ChatGPT ou Gemini para desbloqueares a tua escrita:</p>
+                        
+                        <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
+                            <strong style="color:var(--text-light); font-size:0.85rem;">Para a Introdução / Motivação</strong>
+                            <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Atua como um professor especialista em Turismo. O tema da minha PAP é [O TEU TEMA]. Ajuda-me a escrever 3 argumentos fortes que justifiquem a importância deste projeto para a região, e dá-me sugestões do que abordar na minha introdução."</p>
+                        </div>
+                        
+                        <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
+                            <strong style="color:var(--text-light); font-size:0.85rem;">Para o Plano de Marketing (Ex: SWOT)</strong>
+                            <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Cria um esboço de uma Análise SWOT (Forças, Fraquezas, Oportunidades e Ameaças) para um roteiro turístico focado na natureza em [LOCAL]. Dá-me 2 exemplos para cada tópico."</p>
+                        </div>
+                        
+                        <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px;">
+                            <strong style="color:var(--text-light); font-size:0.85rem;">Para os Conceitos / Revisão Literária</strong>
+                            <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Quais são os principais conceitos e tendências atuais sobre Turismo Sustentável? Explica de forma estruturada em 4 tópicos com linguagem técnica, como se fosse para um projeto final de curso."</p>
+                        </div>
+                    </div>
+                  </div>`;
+
+    return perfilHtml + obsHtml + cofreHtml + construtorHtml + aiHtml;
 }
 
-// Interação com o Cofre
+// Funções do Cofre
 let ficheiroParaCofre = null;
-function processarUploadCofre(e) {
+async function processarUploadCofre(e) {
     const f = e.target.files[0]; if(!f) return;
     
-    // Limite de segurança de 800KB para proteger a base de dados
     if (f.size > 800 * 1024) {
         mostrarAlerta("O ficheiro é muito pesado! Por favor, reduz o tamanho para menos de 800KB.", true);
-        e.target.value = '';
-        return;
+        e.target.value = ''; return;
     }
 
     const r = new FileReader();
-    r.onload = () => { 
+    r.onload = async () => { 
         ficheiroParaCofre = { nome: f.name, base64: r.result };
-        if(confirm(`Queres enviar o ficheiro "${f.name}" para o Cofre?`)) { window.enviarFicheiroCofre(); }
+        const confirmou = await confirmarAcao(`Queres enviar o ficheiro "${f.name}" para o Cofre?`);
+        if(confirmou) window.enviarFicheiroCofre();
     };
     r.readAsDataURL(f);
 }
@@ -212,19 +286,33 @@ async function enviarFicheiroCofre() {
             "pap.cofre": arrayUnion({ nome: ficheiroParaCofre.nome, base64: ficheiroParaCofre.base64, data: dStr })
         });
         mostrarAlerta("Ficheiro guardado no cofre com sucesso!", false);
-        document.getElementById('btn-abrir-passaporte').click(); 
+        window.recarregarViewPassaporte('pap'); 
     } catch(e) { mostrarAlerta("Erro ao guardar ficheiro."); }
 }
 
+// O novo visualizador blindado
 function verFicheiroCofre(index) {
     const f = window.cofreAtual[index];
     if(!f) return;
     
-    if (f.base64.includes("application/pdf") || f.base64.startsWith("data:image")) {
-        const win = window.open();
-        win.document.write(`<iframe src="${f.base64}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+    // Mostra PDFs e Imagens num modal perfeito. Docx força download!
+    if (f.base64.startsWith("data:image") || f.base64.startsWith("data:application/pdf")) {
+        const bg = document.createElement('div');
+        bg.className = 'modal-overlay';
+        bg.style.display = 'flex';
+        bg.style.zIndex = '10000';
+        bg.innerHTML = `
+            <div class="action-sheet" style="width:95%; height:90%; max-width:800px; border-radius:12px; margin:20px; display:flex; flex-direction:column; padding:15px; animation: fadeSlide 0.3s ease;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 style="color:var(--text-light); font-size:1.1rem; margin:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${f.nome}</h3>
+                    <button id="btn-close-view" style="background:none; border:none; color:var(--text-muted); font-size:1.5rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <iframe src="${f.base64}" style="flex:1; width:100%; border:none; background:white; border-radius:8px;"></iframe>
+            </div>`;
+        document.body.appendChild(bg);
+        bg.querySelector('#btn-close-view').onclick = () => bg.remove();
     } else {
-        mostrarAlerta("Este formato não permite visualização direta. O download vai iniciar.", true);
+        mostrarAlerta("Formato não suportado pelo leitor web. A transferência iniciou-se.", false);
         window.baixarFicheiroCofre(index);
     }
 }
@@ -239,12 +327,14 @@ async function baixarFicheiroCofre(index) {
 }
 
 async function removerFicheiroCofre(index) {
-    if(!confirm("Tens a certeza que queres eliminar este ficheiro?")) return;
+    const confirmou = await confirmarAcao("Tens a certeza que queres eliminar este ficheiro permanentemente?");
+    if(!confirmou) return;
+    
     window.cofreAtual.splice(index, 1);
     try {
         await updateDoc(doc(window.db, "utilizadores", window.myUserId), { "pap.cofre": window.cofreAtual });
-        mostrarAlerta("Ficheiro eliminado.", false);
-        document.getElementById('btn-abrir-passaporte').click(); 
+        mostrarAlerta("Ficheiro eliminado com sucesso.", false);
+        window.recarregarViewPassaporte('pap'); 
     } catch(e) { mostrarAlerta("Erro ao eliminar ficheiro."); }
 }
 
@@ -315,7 +405,6 @@ function renderFCT(dados) {
     let formDisplay = fct.empresa ? 'none' : 'block';
     let viewDisplay = fct.empresa ? 'block' : 'none';
 
-    // 1. Entidade de Estágio
     html += `<div class="card" style="margin-bottom:20px; border-left:4px solid #0ea5e9;">
                 <h4 style="color:var(--text-light); font-size:1rem; margin:0 0 15px 0;">Entidade de Estágio</h4>
                 
@@ -361,7 +450,6 @@ function renderFCT(dados) {
                           </div>`;
     }
 
-    // 2. Registo de Horas
     html += `<div class="card" style="margin-bottom:20px;">
                 <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;">
                     <div>
@@ -388,15 +476,15 @@ function renderFCT(dados) {
         const historicoMap = window.historicoFCTAtual.map((r, i) => ({...r, originalIndex: i})).slice(-5).reverse();
         
         historicoMap.forEach(r => {
-            html += `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; background:rgba(0,0,0,0.2); padding:8px 12px; border-radius:4px; border-left:2px solid var(--primary-green);">
+            html += `<div id="linha-fct-${r.originalIndex}" style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; background:rgba(0,0,0,0.2); padding:8px 12px; border-radius:4px; border-left:2px solid var(--primary-green);">
                         <div style="flex:1;">
                             <span style="color:var(--text-light);">${r.data}</span><br>
                             <span style="color:var(--text-muted); font-size:0.75rem;">${r.inicio} às ${r.fim}</span>
                         </div>
                         <div style="display:flex; align-items:center; gap:10px;">
                             <strong style="color:var(--primary-green); font-size:0.9rem; margin-right:5px;">+${r.horas}h</strong>
-                            <button onclick="window.editarHorasFCT(${r.originalIndex})" style="background:none; border:none; color:var(--text-muted); cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="window.eliminarHorasFCT(${r.originalIndex})" style="background:none; border:none; color:var(--danger-red); cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                            <button onclick="window.editarHorasFCT(${r.originalIndex})" style="background:none; border:none; color:var(--text-muted); cursor:pointer;" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="window.eliminarHorasFCT(${r.originalIndex})" style="background:none; border:none; color:var(--danger-red); cursor:pointer;" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
                         </div>
                      </div>`;
         });
@@ -445,7 +533,7 @@ async function guardarFichaEntidade() {
         await updateDoc(doc(window.db, "utilizadores", window.myUserId), {
             "fct.empresa": emp, "fct.tutor": tut, "fct.telefone": tel, "fct.email": em
         });
-        document.getElementById('btn-abrir-passaporte').click(); 
+        window.recarregarViewPassaporte('fct');
     } catch(e) { mostrarAlerta("Erro ao guardar ficha."); btn.innerHTML = 'Guardar Ficha'; }
 }
 
@@ -476,13 +564,14 @@ async function registarHorasDia() {
             "fct.horasRealizadas": currentHoras + totalHoras,
             "fct.historicoHoras": arrayUnion({ data: dt.split('-').reverse().join('/'), dataIso: dt, inicio: hIn, fim: hOut, horas: totalHoras })
         });
-        document.getElementById('btn-abrir-passaporte').click(); 
         mostrarAlerta("Horas registadas com sucesso!", false);
+        window.recarregarViewPassaporte('fct');
     } catch(e) { mostrarAlerta("Erro ao registar horas."); btn.innerHTML = textoOriginal; btn.disabled = false; }
 }
 
 async function eliminarHorasFCT(index) {
-    if(!confirm("Tens a certeza que queres eliminar este registo de horas?")) return;
+    const confirmou = await confirmarAcao("Tens a certeza que queres eliminar este registo de horas?");
+    if(!confirmou) return;
     
     const registo = window.historicoFCTAtual[index];
     window.historicoFCTAtual.splice(index, 1);
@@ -496,18 +585,17 @@ async function eliminarHorasFCT(index) {
             "fct.horasRealizadas": currentHoras,
             "fct.historicoHoras": window.historicoFCTAtual
         });
-        document.getElementById('btn-abrir-passaporte').click();
         mostrarAlerta("Registo eliminado.", false);
+        window.recarregarViewPassaporte('fct');
     } catch(e) { mostrarAlerta("Erro ao eliminar registo."); }
 }
 
 async function editarHorasFCT(index) {
     const r = window.historicoFCTAtual[index];
-    if(r.dataIso) document.getElementById('fct-hora-data').value = r.dataIso;
-    document.getElementById('fct-hora-in').value = r.inicio;
-    document.getElementById('fct-hora-out').value = r.fim;
     
-    // Elimina silenciosamente o antigo para o aluno guardar a nova versão limpa
+    const confirmou = await confirmarAcao("O registo antigo será apagado. Deves alterar os campos que ficaram preenchidos e voltar a clicar em 'Registar Horas'. Queres editar?");
+    if(!confirmou) return;
+
     window.historicoFCTAtual.splice(index, 1);
     try {
         const snap = await getDoc(doc(window.db, "utilizadores", window.myUserId));
@@ -516,11 +604,10 @@ async function editarHorasFCT(index) {
             "fct.horasRealizadas": Math.max(0, currentHoras - r.horas),
             "fct.historicoHoras": window.historicoFCTAtual
         });
-        mostrarAlerta("Altera os dados nos campos e volta a clicar em Registar.", false);
-        // Oculta a linha antiga visualmente para não confundir
-        document.getElementById('btn-abrir-passaporte').click();
         
-        // Repõe os valores após o reload visual
+        await window.recarregarViewPassaporte('fct');
+        
+        // Repõe os valores após o reload visual da aba
         setTimeout(() => {
             if(r.dataIso) document.getElementById('fct-hora-data').value = r.dataIso;
             document.getElementById('fct-hora-in').value = r.inicio;
