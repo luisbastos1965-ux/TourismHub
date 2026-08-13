@@ -99,6 +99,7 @@ export function setupPassaporte() {
     window.toggleEditTemaPAP = toggleEditTemaPAP;
     window.mudarTopicoPAP = mudarTopicoPAP;
     window.guardarTopicoPAP = guardarTopicoPAP;
+    window.limparTopicoPAP = limparTopicoPAP;
     window.compilarRelatorioPAP = compilarRelatorioPAP;
     window.toggleTimer = toggleTimer;
     window.resetTimer = resetTimer;
@@ -188,7 +189,7 @@ function renderPAP(dados) {
     });
     html += `</div>`;
 
-    // TEMA DA PAP COM BLOQUEIO E EDIÇÃO
+    // TEMA DA PAP
     html += `<div class="card" style="margin-bottom:20px; border-left:4px solid var(--primary-green);">
                 <h4 style="color:var(--text-light); font-size:1rem; margin:0 0 10px 0;"><i class="fa-solid fa-lightbulb"></i> Tema do Projeto</h4>
                 <div style="display:flex; gap:10px; align-items:stretch;">
@@ -247,11 +248,11 @@ function renderPAP(dados) {
                 </div>
              </div>`;
 
-    // RELATÓRIO MOBILE DESAGREGADO
+    // RELATÓRIO MOBILE 
     const TOPICOS_PAP = [
         'Introdução', 'Conceitos / Revisão Literária', 
-        'Projeto - Motivação', 'Projeto - Caracterização', 'Projeto - Conceito e Descrição', 
-        'Plano de Marketing - Público-Alvo', 'Plano de Marketing - Marketing-Mix', 'Plano de Marketing - Concorrência', 'Plano de Marketing - Análise SWOT', 
+        'Projeto: Motivação', 'Projeto: Caracterização', 'Projeto: Conceito e Descrição', 
+        'Plano Marketing: Público-Alvo', 'Plano Marketing: Marketing-Mix', 'Plano Marketing: Concorrência', 'Plano Marketing: Análise SWOT', 
         'Micro-Projeto', 'Conclusão', 'Agradecimentos', 'Referências Bibliográficas'
     ];
     
@@ -265,14 +266,17 @@ function renderPAP(dados) {
                 </select>
                 <input type="text" id="pap-topico-custom" class="input-padrao" style="display:none; width:100%; margin-bottom:10px;" placeholder="Nome do novo tópico">
                 <textarea id="pap-topico-texto" class="input-padrao" style="width:100%; height:150px; margin-bottom:10px;" placeholder="Escreve aqui o texto para este tópico..."></textarea>
-                <div style="display:flex; gap:10px;">
-                    <button class="secondary-btn small-btn" style="flex:1;" onclick="window.guardarTopicoPAP()"><i class="fa-solid fa-save"></i> Guardar Tópico</button>
-                    <button class="primary-btn small-btn" style="flex:1; background:#f97316; color:#fff;" onclick="window.compilarRelatorioPAP()"><i class="fa-solid fa-file-lines"></i> Compilar Tudo</button>
+                
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <button class="secondary-btn small-btn" style="flex:1;" onclick="window.limparTopicoPAP()"><i class="fa-solid fa-eraser"></i> Limpar</button>
+                    <button class="secondary-btn small-btn" style="flex:1;" onclick="window.guardarTopicoPAP()"><i class="fa-solid fa-save"></i> Guardar</button>
                 </div>
+                <button class="primary-btn small-btn" style="width:100%; background:#f97316; color:#fff;" onclick="window.compilarRelatorioPAP()"><i class="fa-solid fa-file-lines"></i> Compilar Relatório</button>
+                
                 <div id="pap-relatorio-compilado" style="display:none; margin-top:15px; padding:20px; background:rgba(0,0,0,0.3); border-radius:8px; font-size:0.9rem; color:var(--text-light); white-space:pre-wrap; border:1px solid #333; line-height: 1.6;"></div>
              </div>`;
 
-    // GUIA IA PROMPTS (MUITO MAIS ROBUSTO E ADAPTADO AO TEMA)
+    // GUIA IA PROMPTS 
     const pTema = temaStr ? temaStr : "[Insere aqui o Teu Tema]";
     html += `<div class="card" style="margin-bottom:20px; border-left:4px solid #3b82f6;">
                 <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'; this.querySelector('i.fa-chevron-down').classList.toggle('fa-flip-vertical');">
@@ -284,7 +288,7 @@ function renderPAP(dados) {
                     
                     <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
                         <strong style="color:var(--text-light); font-size:0.85rem;">1. Introdução e Motivação</strong>
-                        <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Atua como um professor especialista em Turismo. O tema da minha PAP é '${pTema}'. Escreve-me uma fundamentação rigorosa que justifique a importância deste projeto para o desenvolvimento turístico regional e descreve uma motivação pessoal forte para a escolha deste tema."</p>
+                        <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Atua como um professor especialista em Turismo e Gestão. O tema da minha PAP é '${pTema}'. Escreve-me uma fundamentação rigorosa que justifique a importância deste projeto para o desenvolvimento turístico regional e descreve uma motivação pessoal forte para a escolha deste tema."</p>
                     </div>
 
                     <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
@@ -324,7 +328,7 @@ function renderPAP(dados) {
                 </div>
              </div>`;
 
-    // SIMULADOR DE DEFESA
+    // SIMULADOR DE DEFESA 
     html += `<div class="card" style="margin-bottom:20px; border-left:4px solid #ef4444;">
                 <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'; this.querySelector('i.fa-chevron-down').classList.toggle('fa-flip-vertical');">
                     <h4 style="color:var(--text-light); font-size:1rem; margin:0;"><i class="fa-solid fa-stopwatch" style="color:#ef4444;"></i> Simulador de Defesa (Pitch)</h4>
@@ -334,8 +338,8 @@ function renderPAP(dados) {
                     <div style="text-align:center; padding:20px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:15px; border:1px solid #333;">
                         <div id="pap-timer-display" style="font-size:3rem; font-family:monospace; color:var(--primary-green); font-weight:bold; margin-bottom:15px; line-height:1;">15:00</div>
                         <div style="display:flex; gap:10px; justify-content:center;">
-                            <button class="primary-btn small-btn" id="btn-timer-start" style="width:auto; min-width:100px;" onclick="window.toggleTimer()"><i class="fa-solid fa-play"></i> Iniciar</button>
-                            <button class="secondary-btn small-btn" style="width:auto; min-width:100px;" onclick="window.resetTimer()"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+                            <button class="primary-btn small-btn" id="btn-timer-start" style="width:auto; min-width:110px;" onclick="window.toggleTimer()"><i class="fa-solid fa-play"></i> Iniciar</button>
+                            <button class="secondary-btn small-btn" style="width:auto; min-width:110px;" onclick="window.resetTimer()"><i class="fa-solid fa-rotate-left"></i> Reset</button>
                         </div>
                     </div>
                     
@@ -417,30 +421,23 @@ async function enviarFicheiroCofre() {
 function verFicheiroCofre(index) {
     const f = window.cofreAtual[index]; if(!f) return;
     
-    let isPdf = f.base64.startsWith("data:application/pdf");
-    let isImage = f.base64.startsWith("data:image");
-    
-    if (isPdf || isImage) {
-        const mime = isPdf ? 'application/pdf' : f.base64.split(';')[0].split(':')[1];
-        let blobUrl = base64ToBlobUrl(f.base64, mime);
-        
+    // Se for Imagem exibe nativamente. Se for Documento faz Download direto.
+    if (f.base64.startsWith("data:image")) {
         const bg = document.createElement('div');
         bg.className = 'modal-overlay';
         bg.style.display = 'flex'; bg.style.zIndex = '10000';
         bg.innerHTML = `
-            <div class="action-sheet" style="width:95%; height:90%; max-width:800px; border-radius:12px; margin:20px; display:flex; flex-direction:column; padding:15px; animation: fadeSlide 0.3s ease;">
+            <div class="action-sheet" style="width:95%; height:auto; max-width:800px; border-radius:12px; margin:20px; display:flex; flex-direction:column; padding:15px; animation: fadeSlide 0.3s ease;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <h3 style="color:var(--text-light); font-size:1.1rem; margin:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${f.nome}</h3>
                     <button id="btn-close-view" style="background:none; border:none; color:var(--text-muted); font-size:1.5rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
                 </div>
-                ${isPdf 
-                    ? `<object data="${blobUrl}" type="application/pdf" style="flex:1; width:100%; border:none; background:white; border-radius:8px;"><p style="text-align:center; padding:20px; color:#333;">O teu telemóvel não suporta visualização direta de PDFs aqui. <br><br><a href="${blobUrl}" download="${f.nome}" style="background:var(--primary-green); color:#fff; padding:10px 20px; border-radius:8px; display:inline-block; text-decoration:none;">Transferir PDF</a></p></object>` 
-                    : `<img src="${blobUrl}" style="width:100%; max-height: 70vh; object-fit: contain; border-radius:8px;">`}
+                <img src="${f.base64}" style="width:100%; max-height: 70vh; object-fit: contain; border-radius:8px;">
             </div>`;
         document.body.appendChild(bg);
         bg.querySelector('#btn-close-view').onclick = () => bg.remove();
     } else {
-        mostrarAlerta("A preparar a transferência do documento (Word/PPT)...", false);
+        mostrarAlerta("A iniciar a transferência do documento...", false);
         window.baixarFicheiroCofre(index);
     }
 }
@@ -463,7 +460,7 @@ async function removerFicheiroCofre(index) {
 }
 
 async function abrirChatOrientadorPAP(orientadorNome) {
-    if(!orientadorNome || orientadorNome === 'A definir') { mostrarAlerta("Ainda não tens orientador atribuído."); return; }
+    if(!orientadorNome || orientadorNome === 'A definir') { mostrarAlerta("Ainda não tens orientador atribuído pela Coordenação."); return; }
     const chatId = `chat_pap_${window.myUserId}`; const chatNome = `Orientador: ${orientadorNome}`;
     try {
         const chatRef = doc(window.db, "forums", chatId); const chatSnap = await getDoc(chatRef);
@@ -473,6 +470,7 @@ async function abrirChatOrientadorPAP(orientadorNome) {
     } catch(e) { mostrarAlerta("Erro ao iniciar conversa."); }
 }
 
+// Construtor Mobile PAP
 function mudarTopicoPAP() {
     const sel = document.getElementById('pap-topico-select').value;
     const customInput = document.getElementById('pap-topico-custom');
@@ -494,11 +492,32 @@ async function guardarTopicoPAP() {
     } catch(e) { mostrarAlerta("Erro ao guardar o texto."); }
 }
 
+async function limparTopicoPAP() {
+    let sel = document.getElementById('pap-topico-select').value;
+    if(sel === 'novo') {
+        sel = document.getElementById('pap-topico-custom').value.trim();
+        if(!sel) return;
+    }
+    
+    const confirmou = await confirmarAcao(`Queres apagar o texto guardado no tópico "${sel}"?`);
+    if(!confirmou) return;
+
+    document.getElementById('pap-topico-texto').value = '';
+    delete window.papTextosGlobais[sel];
+    
+    try {
+        await updateDoc(doc(window.db, "utilizadores", window.myUserId), { "pap.textos": window.papTextosGlobais });
+        mostrarAlerta(`Texto eliminado!`, false);
+    } catch(e) { mostrarAlerta("Erro ao limpar o texto."); }
+}
+
 function compilarRelatorioPAP() {
     const caixa = document.getElementById('pap-relatorio-compilado');
     let relatorioFinal = "";
     for (const [topico, texto] of Object.entries(window.papTextosGlobais)) {
-        if(texto.trim() !== '') { relatorioFinal += `======= [ ${topico.toUpperCase()} ] =======\n\n${texto}\n\n\n`; }
+        if(texto.trim() !== '') { 
+            relatorioFinal += `======= [ ${topico.toUpperCase()} ] =======\n\n${texto}\n\n\n`; 
+        }
     }
     if(relatorioFinal === "") { mostrarAlerta("Ainda não escreveste texto em nenhum tópico."); return; }
     caixa.innerHTML = `<div style="text-align:center; margin-bottom:15px;"><strong style="font-size:1.1rem; color:var(--primary-green);">O Teu Relatório Completo</strong><br><span style="color:var(--text-muted); font-size:0.75rem;">(Copia tudo e cola no teu Word!)</span></div>${relatorioFinal}`;
@@ -512,13 +531,18 @@ function updateTimerDisplay() {
     const display = document.getElementById('pap-timer-display');
     if(display) {
         display.innerText = `${m}:${s}`;
-        if(papTimeLeft <= 60) display.style.color = 'var(--danger-red)';
+        if(papTimeLeft <= 60 && papTimeLeft > 0) display.style.color = 'var(--warning-yellow)';
+        else if(papTimeLeft === 0) display.style.color = 'var(--danger-red)';
         else display.style.color = 'var(--primary-green)';
     }
 }
 
 function toggleTimer() {
     const btn = document.getElementById('btn-timer-start');
+    if (papTimeLeft === 0) {
+        resetTimer();
+        return;
+    }
     if (papTimerInterval) {
         clearInterval(papTimerInterval); papTimerInterval = null;
         if(btn) btn.innerHTML = '<i class="fa-solid fa-play"></i> Continuar';
@@ -526,7 +550,13 @@ function toggleTimer() {
         if(btn) btn.innerHTML = '<i class="fa-solid fa-pause"></i> Pausa';
         papTimerInterval = setInterval(() => {
             papTimeLeft--;
-            if(papTimeLeft <= 0) { clearInterval(papTimerInterval); papTimerInterval = null; papTimeLeft = 0; }
+            if(papTimeLeft <= 0) { 
+                clearInterval(papTimerInterval); 
+                papTimerInterval = null; 
+                papTimeLeft = 0; 
+                mostrarAlerta("Tempo Esgotado! Termina a tua apresentação.", true);
+                if(btn) btn.innerHTML = '<i class="fa-solid fa-rotate-left"></i> Reiniciar';
+            }
             updateTimerDisplay();
         }, 1000);
     }
@@ -542,13 +572,13 @@ function resetTimer() {
 }
 
 // ==========================================
-// MÓDULO 2: FCT (ESTÁGIO) E BANCO DE HORAS
+// MÓDULO 2: FCT (ESTÁGIO) & BANCO DE HORAS
 // ==========================================
 function renderFCT(dados) {
     const fct = dados.fct || {};
     let html = '';
 
-    // 1. Checklist Burocrática (Visual Simétrico)
+    // 1. Checklist Burocrática
     const burocracia = fct.burocracia || {};
     const docsBurocracia = [
         { id: 'protocolo', nome: 'Protocolo de Estágio' },
