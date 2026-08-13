@@ -8,11 +8,7 @@ import { state, ACADEMIAS_INFO, ordemDisciplinasGlobal, nomeCurto, getDisciplina
 export function iniciarCarrossel() {
     const track = document.getElementById('stats-carousel-container'); if(!track) return;
     if(state.carouselInterval) clearInterval(state.carouselInterval);
-    const startScroll = () => {
-        state.carouselInterval = setInterval(() => {
-            if(track.scrollWidth > track.clientWidth) { track.scrollLeft += 1; if(track.scrollLeft >= (track.scrollWidth - track.clientWidth) - 1) track.scrollLeft = 0; }
-        }, 30);
-    };
+    const startScroll = () => { state.carouselInterval = setInterval(() => { if(track.scrollWidth > track.clientWidth) { track.scrollLeft += 1; if(track.scrollLeft >= (track.scrollWidth - track.clientWidth) - 1) track.scrollLeft = 0; } }, 30); };
     track.addEventListener('mouseenter', () => clearInterval(state.carouselInterval)); track.addEventListener('mouseleave', startScroll);
     track.addEventListener('touchstart', () => clearInterval(state.carouselInterval)); track.addEventListener('touchend', startScroll);
     startScroll();
@@ -30,15 +26,9 @@ export async function carregarRadarProfessor() {
     
     const papContainerId = 'dyn-pap-dashboard';
     let papCont = document.getElementById(papContainerId);
-    if (!papCont) {
-        papCont = document.createElement('div');
-        papCont.id = papContainerId;
-        document.getElementById('view-prof-dashboard').prepend(papCont);
-    }
+    if (!papCont) { papCont = document.createElement('div'); papCont.id = papContainerId; document.getElementById('view-prof-dashboard').prepend(papCont); }
 
-    // -----------------------------------------------------
-    // VISÕES ESPECIAIS (Orientador e Coordenador)
-    // -----------------------------------------------------
+    // MODO ORIENTADOR
     if (state.activeRole === 'orientador_pap') {
         if(cardAssistente) cardAssistente.style.display = 'none';
         if(divCarrossel) divCarrossel.style.display = 'none';
@@ -99,6 +89,7 @@ export async function carregarRadarProfessor() {
         return; 
     }
 
+    // MODO COORDENADOR
     if (state.activeRole === 'coordenador') {
         if(cardAssistente) cardAssistente.style.display = 'none';
         if(divCarrossel) divCarrossel.style.display = 'none';
@@ -157,9 +148,7 @@ export async function carregarRadarProfessor() {
         return; 
     }
 
-    // -----------------------------------------------------
-    // VISÃO: PROFESSOR BASE / DT (DADOS 100% REAIS)
-    // -----------------------------------------------------
+    // MODO PROFESSOR BASE / DT
     papCont.style.display = 'none';
     if(cardAssistente) cardAssistente.style.display = 'block';
     if(divCarrossel) divCarrossel.style.display = 'block';
@@ -180,103 +169,45 @@ export async function carregarRadarProfessor() {
         const hjD = new Date(); const hjStr = `${hjD.getFullYear()}-${String(hjD.getMonth()+1).padStart(2,'0')}-${String(hjD.getDate()).padStart(2,'0')}`;
 
         for (const t of state.turmasProfessor) {
-            try { 
-                const tSnap = await getDoc(doc(db, "turmas", t)); 
-                if(tSnap.exists() && tSnap.data().horario) { 
-                    const hT = tSnap.data().horario; 
-                    for (const b of bK) { 
-                        const disc = hT[`${hjStr}_${b}`]; 
-                        if (disc && state.disciplinasProfessor.includes(disc)) profAulasHoje.push({ bloco: b, turma: t, disciplina: disc, hora: bT[b] }); 
-                    } 
-                } 
-            } catch(e) {}
-            
+            try { const tSnap = await getDoc(doc(db, "turmas", t)); if(tSnap.exists() && tSnap.data().horario) { const hT = tSnap.data().horario; for (const b of bK) { const disc = hT[`${hjStr}_${b}`]; if (disc && state.disciplinasProfessor.includes(disc)) profAulasHoje.push({ bloco: b, turma: t, disciplina: disc, hora: bT[b] }); } } } catch(e) {}
             try {
-                const snapAl = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); 
-                snapAl.forEach(d => totalAlunos++);
-                
+                const snapAl = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); snapAl.forEach(d => totalAlunos++);
                 for (const docAluno of snapAl.docs) {
-                    const pSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "prhfs")); 
-                    pSnap.forEach(p => { if (p.data().status !== 'concluida' && state.disciplinasProfessor.includes(p.data().disciplina)) prhfsAtivos++; });
-                    
-                    const fSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "faltas")); 
-                    fSnap.forEach(f => { if (state.disciplinasProfessor.includes(f.data().disciplina)) totalFaltasProf += Number(f.data().horas || 0); });
-                    
-                    const oSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "ocorrencias")); 
-                    oSnap.forEach(o => { if(o.data().autor === state.myUserName) totalOcorrencias++; });
+                    const pSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "prhfs")); pSnap.forEach(p => { if (p.data().status !== 'concluida' && state.disciplinasProfessor.includes(p.data().disciplina)) prhfsAtivos++; });
+                    const fSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "faltas")); fSnap.forEach(f => { if (state.disciplinasProfessor.includes(f.data().disciplina)) totalFaltasProf += Number(f.data().horas || 0); });
+                    const oSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "ocorrencias")); oSnap.forEach(o => { if(o.data().autor === state.myUserName) totalOcorrencias++; });
                 }
             } catch(e) {}
-            
-            try { 
-                const snapEv = await getDocs(collection(db, "turmas", t, "eventos")); 
-                snapEv.forEach(d => eventosGlobais.push({ turma: t, ...d.data() })); 
-            } catch(e) {}
+            try { const snapEv = await getDocs(collection(db, "turmas", t, "eventos")); snapEv.forEach(d => eventosGlobais.push({ turma: t, ...d.data() })); } catch(e) {}
         }
 
-        let avaliacoesEmFalta = 0;
-        const hjStrFull = hjD.toISOString().split('T')[0]; 
+        let avaliacoesEmFalta = 0; const hjStrFull = hjD.toISOString().split('T')[0]; 
         const avaliacoesPassadas = eventosGlobais.filter(e => e.tipo === 'avaliacao' && e.data < hjStrFull && e.professor === state.myUserName);
         avaliacoesEmFalta = avaliacoesPassadas.length; 
 
         let resumo = `A gerir ${totalAlunos} alunos em ${state.turmasProfessor.length} turmas. `;
-        if (prhfsAtivos > 0) resumo += `<br><span style="color:var(--warning-yellow); font-weight:bold;">Atenção: Existem ${prhfsAtivos} PRHFs a decorrer na tua matéria.</span>`; 
-        else resumo += `<br><span style="color:var(--success-green);">Excelente! Tudo em dia com as recuperações.</span>`;
+        if (prhfsAtivos > 0) resumo += `<br><span style="color:var(--warning-yellow); font-weight:bold;">Atenção: Existem ${prhfsAtivos} PRHFs a decorrer na tua matéria.</span>`; else resumo += `<br><span style="color:var(--success-green);">Excelente! Tudo em dia com as recuperações.</span>`;
         if (avaliacoesEmFalta > 0) resumo += `<br><span style="color:var(--danger-red); font-size:0.85rem;"><i class="fa-solid fa-star"></i> Tens avaliações por lançar no sistema.</span>`;
         aText.innerHTML = resumo;
 
-        const carouselTrack = document.getElementById('stats-carousel-container');
-        const statsHtmlBlock = `
-            <div class="stat-card"><h2 style="color: var(--primary-green); margin-bottom: 5px;">${state.turmasProfessor.length}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Turmas</span></div>
-            <div class="stat-card"><h2 style="color: #0099ff; margin-bottom: 5px;">${totalAlunos}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Alunos</span></div>
-            <div class="stat-card"><h2 style="color: var(--danger-red); margin-bottom: 5px;">${totalFaltasProf}h</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Faltas Dadas</span></div>
-            <div class="stat-card"><h2 style="color: var(--warning-yellow); margin-bottom: 5px;">${prhfsAtivos}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">PRHFs Ativos</span></div>
-            <div class="stat-card"><h2 style="color: #b82bf2; margin-bottom: 5px;">${totalOcorrencias}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Ocorrências</span></div>
-            <div class="stat-card"><h2 style="color: #ffaa00; margin-bottom: 5px;">${avaliacoesEmFalta}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">A Lançar</span></div>`;
-        carouselTrack.innerHTML = statsHtmlBlock + statsHtmlBlock; iniciarCarrossel();
-
-        let modHtml = '<div style="display:flex; flex-direction:column; gap:8px;">';
-        for (const t of state.turmasProfessor) {
-            for (const d of state.disciplinasProfessor) {
-                let modsAvaliados = new Set();
-                try {
-                    const snapAl = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
-                    for(const docAl of snapAl.docs) {
-                        const nS = await getDocs(collection(db, "utilizadores", docAl.id, "notas"));
-                        nS.forEach(n => { if(n.data().disciplina === d) modsAvaliados.add(n.data().modulo); });
-                    }
-                } catch(e) {}
-
-                const totalMods = modsAvaliados.size;
-                modHtml += `
-                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;">
-                    <div><strong style="color:white; font-size:0.9rem;">${t} - ${d}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Estado Atual da Turma</span></div>
-                    <div style="text-align:right;"><strong style="color:var(--primary-green); font-size:1.1rem;">${totalMods}</strong><br><span style="color:var(--text-muted); font-size:0.7rem; text-transform:uppercase;">Módulos Concluídos</span></div>
-                </div>`;
-            }
-        }
-        modHtml += '</div>'; 
-        document.getElementById('dashboard-modulos-container').innerHTML = modHtml;
-
+        // HORÁRIO HOJE E PRÓXIMOS EVENTOS (Com Botão ICS)
         if(profAulasHoje.length > 0) {
-            try { 
-                profAulasHoje.sort((a,b) => { if(!a.hora || !b.hora) return 0; const getMin = (hx) => parseInt(hx.split(':')[0])*60 + parseInt(hx.split(':')[1]); return getMin(a.hora) - getMin(b.hora); }); 
-                let hHtml = ''; profAulasHoje.forEach(aula => { hHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid #0099ff;"><div><strong style="color:white; font-size:0.9rem;">${aula.disciplina}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${aula.turma}</span></div><span style="color:#0099ff; font-weight:bold; font-size:0.85rem;">${aula.hora}</span></div>`; }); 
-                hCont.innerHTML = hHtml; 
-            } catch(sortErr) { hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Sem aulas marcadas.</p>'; }
+            try { profAulasHoje.sort((a,b) => { if(!a.hora || !b.hora) return 0; const getMin = (hx) => parseInt(hx.split(':')[0])*60 + parseInt(hx.split(':')[1]); return getMin(a.hora) - getMin(b.hora); }); let hHtml = ''; profAulasHoje.forEach(aula => { hHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid #0099ff;"><div><strong style="color:white; font-size:0.9rem;">${aula.disciplina}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${aula.turma}</span></div><span style="color:#0099ff; font-weight:bold; font-size:0.85rem;">${aula.hora}</span></div>`; }); hCont.innerHTML = hHtml; } catch(sortErr) { hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Sem aulas marcadas.</p>'; }
         } else { hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Não tens aulas no sistema hoje.</p>'; }
 
         const fut = eventosGlobais.filter(e => e.data && e.data >= hjStrFull).sort((a,b) => a.data.localeCompare(b.data)).slice(0, 3);
         if (fut.length > 0) { 
-            let ah = ''; fut.forEach(e => { const datePrint = e.data ? e.data.split('-').reverse().join('/') : 'Brevemente'; const timePrint = e.periodo === 'hora' ? ` às ${e.hora}` : (e.periodo === 'manha' ? ' (Manhã)' : (e.periodo === 'tarde' ? ' (Tarde)' : '')); ah += `<div style="display:flex; justify-content:space-between; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid var(--warning-yellow);"><div><strong style="color:white; font-size:0.9rem;">${e.titulo}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${e.turma}</span></div><span style="color:var(--warning-yellow); font-size:0.8rem;">${datePrint}${timePrint}</span></div>`; }); 
+            let ah = ''; fut.forEach(e => { 
+                const datePrint = e.data ? e.data.split('-').reverse().join('/') : 'Brevemente'; 
+                const timePrint = e.periodo === 'hora' ? ` às ${e.hora}` : (e.periodo === 'manha' ? ' (Manhã)' : (e.periodo === 'tarde' ? ' (Tarde)' : '')); 
+                ah += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid var(--warning-yellow);"><div><strong style="color:white; font-size:0.9rem;">${e.titulo}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${e.turma}</span></div><div style="text-align:right;"><span style="color:var(--warning-yellow); font-size:0.8rem; display:block;">${datePrint}${timePrint}</span><button class="btn-download-ics" data-tit="${e.titulo}" data-data="${e.data}" data-hora="${e.hora || '09:00'}" style="background:none; border:none; color:#0099ff; cursor:pointer; font-size:0.75rem; padding:0; margin-top:5px;"><i class="fa-solid fa-calendar-plus"></i> Sincronizar</button></div></div>`; 
+            }); 
             eCont.innerHTML = ah; 
         } else { eCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Agenda livre.</p>'; }
         
     } catch (e) { aText.innerHTML = "Problema na ligação. Por favor, tenta novamente."; }
 }
 
-// ==========================================
-// GESTÃO DA TURMA (Lista, Pauta, Faltas)
-// ==========================================
 export async function analisarEAtualizarTurma(turmaId) {
     const listC = document.getElementById('lista-alunos-turma'); listC.innerHTML = '<p class="text-muted center">A ler dados dos alunos...</p>';
     document.getElementById('assistente-aula-texto').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A analisar a turma...';
@@ -401,9 +332,6 @@ export async function renderizarFaltasTurma() {
     } catch(e) { cont.innerHTML = '<tr><td colspan="5" class="center text-danger">Erro de ligação.</td></tr>'; }
 }
 
-// ==========================================
-// PERFIL 360º DO ALUNO & GAMIFICAÇÃO
-// ==========================================
 export function desenharGraficoAluno(modo) {
     const ctx = document.getElementById('chartEvolucaoAluno').getContext('2d');
     if(state.chartEvolucao) state.chartEvolucao.destroy();
@@ -434,20 +362,28 @@ export async function abrirPerfil360Aluno(alunoId) {
         const pS = await getDocs(collection(db, "utilizadores", alunoId, "prhfs")); pS.forEach(p => { if(p.data().status !== 'concluida' && matVerificar.includes(p.data().disciplina)) pCount++; });
         const nS = await getDocs(collection(db, "utilizadores", alunoId, "notas")); nS.forEach(n => { if(matVerificar.includes(n.data().disciplina)) { state.notasAlunoRAM.push({ disciplina: n.data().disciplina, moduloReal: Number(n.data().modulo), valor: isNaN(n.data().nota) ? 0 : Number(n.data().nota) }); } });
 
+        document.getElementById('area-sintese-prof').style.display = 'block';
         if (isDT) { 
-            document.getElementById('area-obs-dt').style.display = 'block'; 
             document.getElementById('btn-justificar-faltas').style.display = fCount > 0 ? 'block' : 'none'; 
+            document.getElementById('p-aluno-obs-dt').previousElementSibling.innerHTML = '<h4 id="titulo-sintese-area" style="font-size:0.9rem; color:white; margin:0;">Síntese Global (DT)</h4><button id="btn-abrir-copiloto" class="secondary-btn small-btn" style="padding:4px 10px; color:#3b82f6; border-color:#3b82f6; font-size:0.75rem;"><i class="fa-solid fa-wand-magic-sparkles"></i> Gerador IA</button>';
+            document.getElementById('p-aluno-obs-dt').previousElementSibling.style = "display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;";
+            
             const rS = await getDoc(doc(db, "utilizadores", alunoId, "reunioes", "1_avaliacao")); 
             if (rS.exists() && rS.data().global) { document.getElementById('p-aluno-obs-dt').value = rS.data().global; } else { document.getElementById('p-aluno-obs-dt').value = ''; } 
         } else { 
-            document.getElementById('area-obs-dt').style.display = 'none'; 
             document.getElementById('btn-justificar-faltas').style.display = 'none'; 
+            document.getElementById('p-aluno-obs-dt').previousElementSibling.innerHTML = `<h4 id="titulo-sintese-area" style="font-size:0.9rem; color:white; margin:0;">Síntese da Disciplina (${state.disciplinasProfessor[0] || 'Geral'})</h4><button id="btn-abrir-copiloto" class="secondary-btn small-btn" style="padding:4px 10px; color:#3b82f6; border-color:#3b82f6; font-size:0.75rem;"><i class="fa-solid fa-wand-magic-sparkles"></i> Gerador IA</button>`;
+            document.getElementById('p-aluno-obs-dt').previousElementSibling.style = "display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;";
+            
+            const disc = state.disciplinasProfessor[0] || 'geral';
+            const rS = await getDoc(doc(db, "utilizadores", alunoId, "reunioes", "sintese_" + disc)); 
+            if (rS.exists() && rS.data().texto) { document.getElementById('p-aluno-obs-dt').value = rS.data().texto; } else { document.getElementById('p-aluno-obs-dt').value = ''; }
         }
-
+        
         // --- BLINDAGEM DO COORDENADOR ---
         const blocoPosNeg = document.getElementById('btn-dar-positiva')?.closest('div');
         if (state.activeRole === 'coordenador') {
-            document.getElementById('area-obs-dt').style.display = 'none';
+            document.getElementById('area-sintese-prof').style.display = 'none';
             document.getElementById('btn-justificar-faltas').style.display = 'none';
             if(blocoPosNeg) blocoPosNeg.style.display = 'none';
         } else {
@@ -458,21 +394,15 @@ export async function abrirPerfil360Aluno(alunoId) {
 
     document.getElementById('p-aluno-faltas').innerText = fCount; document.getElementById('p-aluno-prhfs').innerText = pCount; document.getElementById('p-aluno-notas').innerText = state.notasAlunoRAM.length;
     document.getElementById('btn-graph-disc').classList.add('active'); document.getElementById('btn-graph-global').classList.remove('active');
-    desenharGraficoAluno('disc');
-    document.getElementById('modal-perfil-aluno').style.display = 'flex';
+    desenharGraficoAluno('disc'); document.getElementById('modal-perfil-aluno').style.display = 'flex';
 }
 
-// ==========================================
-// TAREFAS E FÓRUNS (Sem alterações estruturais profundas)
-// ==========================================
 export async function carregarTarefasProf() {
     const isPRHFTab = document.getElementById('tab-tarefas-prhf').classList.contains('active');
     
     const canSeePassaporteTab = (state.activeRole === 'diretor_turma' || state.activeRole === 'orientador_pap' || state.activeRole === 'coordenador');
     document.getElementById('tab-tarefas-passaporte').style.display = canSeePassaporteTab ? 'inline-block' : 'none';
-    if (!canSeePassaporteTab && !isPRHFTab) {
-        document.getElementById('tab-tarefas-prhf').click(); return;
-    }
+    if (!canSeePassaporteTab && !isPRHFTab) { document.getElementById('tab-tarefas-prhf').click(); return; }
 
     if (isPRHFTab) {
         const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
@@ -678,7 +608,6 @@ export function abrirChatForum(turma, disciplina, nomeCustom) {
 window.exportarCSV = function(tableId, filename) {
     const table = document.getElementById(tableId);
     if (!table) return alert("Tabela não encontrada.");
-    
     let csv = [];
     for (let i = 0; i < table.rows.length; i++) {
         let row = [], cols = table.rows[i].querySelectorAll("td, th");
@@ -689,13 +618,7 @@ window.exportarCSV = function(tableId, filename) {
         }
         csv.push(row.join(","));
     }
-
     const csvFile = new Blob(["\uFEFF" + csv.join("\n")], { type: "text/csv;charset=utf-8;" });
-    const downloadLink = document.createElement("a");
-    downloadLink.download = filename;
-    downloadLink.href = window.URL.createObjectURL(csvFile);
-    downloadLink.style.display = "none";
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    document.body.removeChild(downloadLink);
+    const downloadLink = document.createElement("a"); downloadLink.download = filename; downloadLink.href = window.URL.createObjectURL(csvFile);
+    downloadLink.style.display = "none"; document.body.appendChild(downloadLink); downloadLink.click(); document.body.removeChild(downloadLink);
 };
