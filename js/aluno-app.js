@@ -54,6 +54,20 @@ onAuthStateChanged(auth, async (user) => {
                     if(perfilImg) perfilImg.src = `https://ui-avatars.com/api/?name=${window.myUserName}&background=00cc88&color=fff&size=100`; 
                 }
 
+                // Lógica de Visibilidade do Botão FCT/PAP
+                const mStr = window.minhaTurma || "";
+                const mMatch = mStr.match(/\d+/);
+                const turmaAno = mMatch ? parseInt(mMatch[0]) : (d.ano || 10);
+                
+                const btnPassaporte = document.getElementById('btn-abrir-passaporte');
+                if (btnPassaporte) {
+                    if (turmaAno === 10) {
+                        btnPassaporte.style.display = 'none';
+                    } else {
+                        btnPassaporte.style.display = 'flex';
+                    }
+                }
+                
                 // Iniciar Módulos
                 setupGamificacao(d);
                 setupCaderneta(d);
