@@ -59,12 +59,23 @@ onAuthStateChanged(auth, async (user) => {
                 const mMatch = mStr.match(/\d+/);
                 const turmaAno = mMatch ? parseInt(mMatch[0]) : (d.ano || 10);
                 
+                // Simula o bloqueio (que depois será alterado pelo Professor na BD)
+                const fctBloqueada = d.fctBloqueada !== false; 
+                
                 const btnPassaporte = document.getElementById('btn-abrir-passaporte');
                 if (btnPassaporte) {
                     if (turmaAno === 10) {
-                        btnPassaporte.style.display = 'none';
+                        btnPassaporte.style.setProperty('display', 'none', 'important');
+                    } else if (turmaAno === 11 && fctBloqueada) {
+                        btnPassaporte.style.display = 'flex';
+                        btnPassaporte.style.filter = 'grayscale(100%)';
+                        btnPassaporte.style.opacity = '0.5';
+                        btnPassaporte.style.cursor = 'not-allowed';
                     } else {
                         btnPassaporte.style.display = 'flex';
+                        btnPassaporte.style.filter = 'none';
+                        btnPassaporte.style.opacity = '1';
+                        btnPassaporte.style.cursor = 'pointer';
                     }
                 }
                 
