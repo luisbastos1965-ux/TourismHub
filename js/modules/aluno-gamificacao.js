@@ -44,7 +44,7 @@ export function setupGamificacao(dados) {
     
     const objSelect = document.getElementById('obj-disciplina');
     if(objSelect) {
-        objSelect.innerHTML = '<option value="">Escolhe a Disciplina...</option>' + obterDisciplinasDoAno().map(dc => `<option value="${dc}">${dc}</option>`).join('');
+        objSelect.innerHTML = '<option value="">Disciplina</option>' + obterDisciplinasDoAno().map(dc => `<option value="${dc}">${dc}</option>`).join('');
     }
     document.getElementById('obj-modulo')?.addEventListener('focus', () => {
         const dV = document.getElementById('obj-disciplina').value; const sel = document.getElementById('obj-modulo');
