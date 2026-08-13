@@ -1,7 +1,7 @@
 import { doc, getDoc, updateDoc, arrayUnion, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // ==========================================
-// UTILITÁRIOS (MODAIS CUSTOMIZADOS)
+// UTILITÁRIOS E MODAIS
 // ==========================================
 function mostrarAlerta(msg, erro = true) {
     const cor = erro ? 'var(--danger-red)' : 'var(--success-green)';
@@ -17,8 +17,7 @@ function confirmarAcao(mensagem) {
     return new Promise((resolve) => {
         const bg = document.createElement('div');
         bg.className = 'modal-overlay';
-        bg.style.display = 'flex';
-        bg.style.zIndex = '10000';
+        bg.style.display = 'flex'; bg.style.zIndex = '10000';
         bg.innerHTML = `
             <div class="action-sheet" style="max-width:350px; border-radius:12px; margin:20px; text-align: center; animation: fadeSlide 0.3s ease; padding: 25px 20px;">
                 <i class="fa-solid fa-circle-question" style="font-size: 3rem; color: var(--primary-green); margin-bottom: 20px;"></i>
@@ -34,9 +33,24 @@ function confirmarAcao(mensagem) {
     });
 }
 
+function base64ToBlobUrl(base64, mimeType) {
+    try {
+        const byteString = atob(base64.split(',')[1]);
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) { ia[i] = byteString.charCodeAt(i); }
+        const blob = new Blob([ab], { type: mimeType });
+        return URL.createObjectURL(blob);
+    } catch(e) { return base64; }
+}
+
 window.papTextosGlobais = {};
 window.cofreAtual = [];
 window.historicoFCTAtual = [];
+
+// Variáveis do Cronómetro da PAP
+let papTimerInterval = null;
+let papTimeLeft = 15 * 60; 
 
 export function setupPassaporte() {
     document.getElementById('btn-abrir-passaporte')?.addEventListener('click', async (e) => {
@@ -48,7 +62,7 @@ export function setupPassaporte() {
 
         if (ano === 11 && fctBloqueada) {
             e.preventDefault();
-            mostrarAlerta("O acesso à FCT aguarda desbloqueio pelo Coordenador.", true);
+            mostrarAlerta("O acesso à FCT aguarda desbloqueio pela Coordenação.", true);
             return;
         }
 
@@ -58,6 +72,7 @@ export function setupPassaporte() {
     });
     
     document.getElementById('btn-voltar-passaporte')?.addEventListener('click', () => {
+        if(papTimerInterval) clearInterval(papTimerInterval);
         const activeTab = document.querySelector('.bottom-nav .nav-item.active');
         if(activeTab) { activeTab.click(); } else {
             document.getElementById('student-dashboard').style.display = 'block';
@@ -78,10 +93,14 @@ export function setupPassaporte() {
     window.abrirModalHistoricoFCT = abrirModalHistoricoFCT;
     window.abrirChatOrientadorPAP = abrirChatOrientadorPAP;
     window.guardarTemaPAP = guardarTemaPAP;
+    window.submeterDocBurocracia = submeterDocBurocracia;
     
+    // PAP Mobile & Simulador
     window.mudarTopicoPAP = mudarTopicoPAP;
     window.guardarTopicoPAP = guardarTopicoPAP;
     window.compilarRelatorioPAP = compilarRelatorioPAP;
+    window.toggleTimer = toggleTimer;
+    window.resetTimer = resetTimer;
 }
 
 async function carregarPassaporteDashboard(dados = null, ano = null, abaForcada = null) {
@@ -119,8 +138,8 @@ async function carregarPassaporteDashboard(dados = null, ano = null, abaForcada 
 
     cont.innerHTML = html;
     document.getElementById('upload-cofre-pap')?.addEventListener('change', processarUploadCofre);
-    
     if(ano === 12 && activePAP.includes('active')) window.mudarTopicoPAP();
+    resetTimer(); // Reinicia o relógio visualmente
 }
 
 window.recarregarViewPassaporte = async function(abaForcada) {
@@ -128,6 +147,7 @@ window.recarregarViewPassaporte = async function(abaForcada) {
 };
 
 function mudarAbaPassaporte(aba) {
+    if(papTimerInterval) clearInterval(papTimerInterval);
     document.querySelectorAll('.pass-tab-btn').forEach(b => {
         b.classList.remove('primary-btn'); b.classList.add('secondary-btn'); b.classList.remove('active');
     });
@@ -138,7 +158,7 @@ function mudarAbaPassaporte(aba) {
     document.getElementById('pass-content-pap').style.display = aba === 'pap' ? 'block' : 'none';
     document.getElementById('pass-content-fct').style.display = aba === 'fct' ? 'block' : 'none';
     
-    if (aba === 'pap') window.mudarTopicoPAP();
+    if (aba === 'pap') { window.mudarTopicoPAP(); resetTimer(); }
 }
 
 // ==========================================
@@ -148,161 +168,180 @@ function renderPAP(dados) {
     const pap = dados.pap || {};
     const fases = ['Tema', 'Aprovação', 'Desenv.', 'Relatório', 'Apresentação'];
     const faseAtual = pap.faseAtual || 0;
+    const temaStr = pap.tema || '';
+    const orientador = pap.orientadorNome || 'A definir';
     
-    let stepsHtml = `<div style="display:flex; justify-content:space-between; position:relative; margin-bottom:30px;">
-                        <div style="position:absolute; top:15px; left:0; right:0; height:3px; background:#333; z-index:1;"></div>
-                        <div style="position:absolute; top:15px; left:0; width:${(faseAtual/(fases.length-1))*100}%; height:3px; background:var(--primary-green); z-index:1; transition:0.5s;"></div>`;
-    
+    let html = '';
+
+    // PROGRESSO
+    html += `<div style="display:flex; justify-content:space-between; position:relative; margin-bottom:30px;">
+                <div style="position:absolute; top:15px; left:0; right:0; height:3px; background:#333; z-index:1;"></div>
+                <div style="position:absolute; top:15px; left:0; width:${(faseAtual/(fases.length-1))*100}%; height:3px; background:var(--primary-green); z-index:1; transition:0.5s;"></div>`;
     fases.forEach((f, i) => {
         const isDone = i <= faseAtual; const color = isDone ? 'var(--primary-green)' : '#333';
-        stepsHtml += `<div style="position:relative; z-index:2; text-align:center; width:20%;">
-                        <div style="width:30px; height:30px; background:var(--bg-dark); border:3px solid ${color}; border-radius:50%; margin:0 auto 5px auto; display:flex; align-items:center; justify-content:center;">
-                            ${isDone ? `<i class="fa-solid fa-check" style="color:${color}; font-size:0.7rem;"></i>` : ''}
-                        </div>
-                        <span style="font-size:0.65rem; color:var(--text-muted); text-transform:uppercase;">${f}</span>
-                      </div>`;
+        html += `<div style="position:relative; z-index:2; text-align:center; width:20%;">
+                    <div style="width:30px; height:30px; background:var(--bg-dark); border:3px solid ${color}; border-radius:50%; margin:0 auto 5px auto; display:flex; align-items:center; justify-content:center;">
+                        ${isDone ? `<i class="fa-solid fa-check" style="color:${color}; font-size:0.7rem;"></i>` : ''}
+                    </div><span style="font-size:0.65rem; color:var(--text-muted); text-transform:uppercase;">${f}</span>
+                 </div>`;
     });
-    stepsHtml += `</div>`;
+    html += `</div>`;
 
-    // 1. TEMA DA PAP (Alinhamentos corrigidos)
-    const temaStr = pap.tema || '';
-    let temaHtml = `<div class="card" style="margin-bottom:20px; border-left:4px solid var(--primary-green);">
-                        <h4 style="color:var(--text-light); font-size:1rem; margin:0 0 10px 0;"><i class="fa-solid fa-lightbulb"></i> Tema do Projeto</h4>
-                        <div style="display:flex; gap:10px; align-items:stretch;">
-                            <input type="text" id="input-pap-tema" class="input-padrao" placeholder="Escreve aqui o teu tema..." value="${temaStr}" style="flex:1; margin:0; height:42px;">
-                            <button onclick="window.guardarTemaPAP()" class="primary-btn small-btn" style="width:50px; margin:0; height:42px; display:flex; align-items:center; justify-content:center; padding:0;"><i class="fa-solid fa-save"></i></button>
-                        </div>
-                    </div>`;
+    // TEMA DA PAP
+    html += `<div class="card" style="margin-bottom:20px; border-left:4px solid var(--primary-green);">
+                <h4 style="color:var(--text-light); font-size:1rem; margin:0 0 10px 0;"><i class="fa-solid fa-lightbulb"></i> Tema do Projeto</h4>
+                <div style="display:flex; gap:10px; align-items:stretch;">
+                    <input type="text" id="input-pap-tema" class="input-padrao" placeholder="Escreve aqui o teu tema..." value="${temaStr}" style="flex:1; margin:0; height:42px;">
+                    <button onclick="window.guardarTemaPAP()" class="primary-btn small-btn" style="width:50px; margin:0; height:42px; display:flex; align-items:center; justify-content:center; padding:0;"><i class="fa-solid fa-save"></i></button>
+                </div>
+             </div>`;
 
-    // 2. PROF ORIENTADOR
-    const orientador = pap.orientadorNome || 'A definir';
-    let perfilHtml = `<div class="card" style="border-left:4px solid var(--accent-purple); margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; gap:15px;">
-                        <div style="display:flex; align-items:center; gap:15px;">
-                            <div style="width:50px; height:50px; border-radius:50%; background:#444; display:flex; align-items:center; justify-content:center; font-size:1.5rem;"><i class="fa-solid fa-user-tie"></i></div>
-                            <div>
-                                <span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">Prof. Orientador</span>
-                                <h4 style="margin:0; color:var(--text-light); font-size:1.1rem;">${orientador}</h4>
-                            </div>
-                        </div>
-                        <button class="primary-btn small-btn" style="width:45px; height:45px; border-radius:50%; background:var(--accent-purple); color:white; padding:0; display:flex; align-items:center; justify-content:center;" onclick="window.abrirChatOrientadorPAP('${orientador}')" title="Mensagem Direta"><i class="fa-solid fa-envelope" style="font-size:1.2rem;"></i></button>
-                      </div>`;
+    // PROF ORIENTADOR
+    html += `<div class="card" style="border-left:4px solid var(--accent-purple); margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; gap:15px;">
+                <div style="display:flex; align-items:center; gap:15px;">
+                    <div style="width:50px; height:50px; border-radius:50%; background:#444; display:flex; align-items:center; justify-content:center; font-size:1.5rem;"><i class="fa-solid fa-user-tie"></i></div>
+                    <div>
+                        <span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">Prof. Orientador</span>
+                        <h4 style="margin:0; color:var(--text-light); font-size:1.1rem;">${orientador}</h4>
+                    </div>
+                </div>
+                <button class="primary-btn small-btn" style="width:45px; height:45px; border-radius:50%; background:var(--accent-purple); color:white; padding:0; display:flex; align-items:center; justify-content:center;" onclick="window.abrirChatOrientadorPAP('${orientador}')" title="Mensagem Direta"><i class="fa-solid fa-envelope" style="font-size:1.2rem;"></i></button>
+             </div>`;
 
-    // 3. OBSERVATÓRIO
-    let obsHtml = `<div class="card" style="margin-bottom:20px;">
-                        <h4 style="color:var(--warning-yellow); font-size:1rem; margin:0 0 15px 0;"><i class="fa-solid fa-eye"></i> Observatório do Orientador</h4>`;
+    // OBSERVATÓRIO
+    html += `<div class="card" style="margin-bottom:20px;">
+                <h4 style="color:var(--warning-yellow); font-size:1rem; margin:0 0 15px 0;"><i class="fa-solid fa-eye"></i> Observatório do Orientador</h4>`;
     if(pap.observatorio && pap.observatorio.length > 0) {
         pap.observatorio.forEach(o => {
-            obsHtml += `<div style="border-left:3px solid var(--warning-yellow); padding:10px 15px; background:rgba(245, 158, 11, 0.05); margin-bottom:10px; border-radius:6px;">
-                            <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); margin-bottom:5px;"><span>Prof. ${o.autor}</span><span>${o.data}</span></div>
-                            <p style="font-size:0.9rem; color:var(--text-light); margin:0;">${o.texto}</p>
-                        </div>`;
+            html += `<div style="border-left:3px solid var(--warning-yellow); padding:10px 15px; background:rgba(245, 158, 11, 0.05); margin-bottom:10px; border-radius:6px;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); margin-bottom:5px;"><span>Prof. ${o.autor}</span><span>${o.data}</span></div>
+                        <p style="font-size:0.9rem; color:var(--text-light); margin:0;">${o.texto}</p>
+                     </div>`;
         });
-    } else {
-        obsHtml += `<p style="font-size:0.85rem; color:var(--text-muted); margin:0;">Ainda não tens retificações do teu orientador.</p>`;
-    }
-    obsHtml += `</div>`;
+    } else { html += `<p style="font-size:0.85rem; color:var(--text-muted); margin:0;">Ainda não tens retificações do teu orientador.</p>`; }
+    html += `</div>`;
 
-    // 4. COFRE
-    let cofreHtml = `<div class="card" style="margin-bottom:20px; border:1px solid #333;">
-                        <h4 style="color:var(--text-light); font-size:1rem; margin:0 0 15px 0;"><i class="fa-solid fa-vault"></i> Cofre do Projeto</h4>
-                        <div style="display:flex; flex-direction:column; gap:10px;" id="lista-cofre-pap">`;
+    // COFRE
+    html += `<div class="card" style="margin-bottom:20px; border:1px solid #333;">
+                <h4 style="color:var(--text-light); font-size:1rem; margin:0 0 15px 0;"><i class="fa-solid fa-vault"></i> Cofre do Projeto</h4>
+                <div style="display:flex; flex-direction:column; gap:10px;" id="lista-cofre-pap">`;
     if(window.cofreAtual.length > 0) {
         window.cofreAtual.forEach((f, idx) => {
-            cofreHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.2); border-radius:6px; border-left: 2px solid var(--primary-green);">
-                            <div style="font-size:0.85rem; color:var(--text-light); flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; cursor:pointer;" onclick="window.verFicheiroCofre(${idx})">
-                                <i class="fa-solid fa-file-lines" style="color:var(--primary-green); margin-right:5px;"></i> <strong style="text-decoration:underline;">${f.nome}</strong>
-                            </div>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <button onclick="window.verFicheiroCofre(${idx})" class="secondary-btn small-btn" style="padding:8px 12px; color:var(--primary-green);" title="Visualizar / Transferir"><i class="fa-solid fa-eye"></i></button>
-                                <button onclick="window.removerFicheiroCofre(${idx})" class="secondary-btn small-btn" style="padding:8px 12px; color:var(--danger-red);" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
-                            </div>
-                          </div>`;
+            html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.2); border-radius:6px; border-left: 2px solid var(--primary-green);">
+                        <div style="font-size:0.85rem; color:var(--text-light); flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; cursor:pointer;" onclick="window.verFicheiroCofre(${idx})">
+                            <i class="fa-solid fa-file-lines" style="color:var(--primary-green); margin-right:5px;"></i> <strong style="text-decoration:underline;">${f.nome}</strong>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <button onclick="window.verFicheiroCofre(${idx})" class="secondary-btn small-btn" style="padding:8px 12px; color:var(--primary-green);" title="Visualizar / Transferir"><i class="fa-solid fa-eye"></i></button>
+                            <button onclick="window.removerFicheiroCofre(${idx})" class="secondary-btn small-btn" style="padding:8px 12px; color:var(--danger-red);" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                     </div>`;
         });
-    } else {
-        cofreHtml += `<p style="font-size:0.85rem; color:var(--text-muted); margin:0;">O teu cofre está vazio.</p>`;
-    }
-    cofreHtml += `  </div>
-                    <div style="margin-top:15px;">
-                        <label for="upload-cofre-pap" class="primary-btn small-btn" style="display:inline-block; cursor:pointer;"><i class="fa-solid fa-upload"></i> Submeter Documento</label>
-                        <input type="file" id="upload-cofre-pap" style="display:none;" accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg">
-                    </div>
-                  </div>`;
+    } else { html += `<p style="font-size:0.85rem; color:var(--text-muted); margin:0;">O teu cofre está vazio.</p>`; }
+    html += `   </div>
+                <div style="margin-top:15px;">
+                    <label for="upload-cofre-pap" class="primary-btn small-btn" style="display:inline-block; cursor:pointer;"><i class="fa-solid fa-upload"></i> Submeter Documento</label>
+                    <input type="file" id="upload-cofre-pap" style="display:none;" accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg">
+                </div>
+             </div>`;
 
-    // 5. RELATÓRIO MOBILE
-    const TOPICOS_PAP = [
-        'Introdução', 'Conceitos / Revisão Literária', 
-        'Projeto: Motivação, Caracterização, Conceito e Descrição', 
-        'Plano de Marketing: Público-Alvo, Marketing-Mix, Concorrência, Análise SWOT', 
-        'Micro-Projeto', 'Conclusão', 'Agradecimentos', 'Referências Bibliográficas'
-    ];
-    
-    let construtorHtml = `<div class="card" style="margin-bottom:20px; border-left:4px solid #f97316;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                                <h4 style="color:var(--text-light); font-size:1rem; margin:0;"><i class="fa-solid fa-mobile-screen"></i> Relatório Mobile</h4>
-                            </div>
-                            
-                            <select id="pap-topico-select" class="input-padrao" style="width:100%; margin-bottom:10px;" onchange="window.mudarTopicoPAP()">
-                                ${TOPICOS_PAP.map(t => `<option value="${t}">${t}</option>`).join('')}
-                                <option value="novo">+ Adicionar Tópico Personalizado</option>
-                            </select>
-                            
-                            <input type="text" id="pap-topico-custom" class="input-padrao" style="display:none; width:100%; margin-bottom:10px;" placeholder="Nome do novo tópico">
-                            <textarea id="pap-topico-texto" class="input-padrao" style="width:100%; height:150px; margin-bottom:10px;" placeholder="Escreve aqui o texto para este tópico..."></textarea>
-                            
-                            <div style="display:flex; gap:10px;">
-                                <button class="secondary-btn small-btn" style="flex:1;" onclick="window.guardarTopicoPAP()"><i class="fa-solid fa-save"></i> Guardar Tópico</button>
-                                <button class="primary-btn small-btn" style="flex:1; background:#f97316; color:#fff;" onclick="window.compilarRelatorioPAP()"><i class="fa-solid fa-file-lines"></i> Compilar Tudo</button>
-                            </div>
-                            <div id="pap-relatorio-compilado" style="display:none; margin-top:15px; padding:20px; background:rgba(0,0,0,0.3); border-radius:8px; font-size:0.9rem; color:var(--text-light); white-space:pre-wrap; border:1px solid #333; line-height: 1.6;"></div>
-                          </div>`;
+    // RELATÓRIO MOBILE
+    const TOPICOS_PAP = ['Introdução', 'Conceitos / Revisão Literária', 'Projeto: Motivação, Caracterização, Conceito e Descrição', 'Plano de Marketing: Público-Alvo, Marketing-Mix, Concorrência, Análise SWOT', 'Micro-Projeto', 'Conclusão', 'Agradecimentos', 'Referências Bibliográficas'];
+    html += `<div class="card" style="margin-bottom:20px; border-left:4px solid #f97316;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h4 style="color:var(--text-light); font-size:1rem; margin:0;"><i class="fa-solid fa-mobile-screen"></i> Relatório Mobile</h4>
+                </div>
+                <select id="pap-topico-select" class="input-padrao" style="width:100%; margin-bottom:10px;" onchange="window.mudarTopicoPAP()">
+                    ${TOPICOS_PAP.map(t => `<option value="${t}">${t}</option>`).join('')}
+                    <option value="novo">+ Adicionar Tópico Personalizado</option>
+                </select>
+                <input type="text" id="pap-topico-custom" class="input-padrao" style="display:none; width:100%; margin-bottom:10px;" placeholder="Nome do novo tópico">
+                <textarea id="pap-topico-texto" class="input-padrao" style="width:100%; height:150px; margin-bottom:10px;" placeholder="Escreve aqui o texto para este tópico..."></textarea>
+                <div style="display:flex; gap:10px;">
+                    <button class="secondary-btn small-btn" style="flex:1;" onclick="window.guardarTopicoPAP()"><i class="fa-solid fa-save"></i> Guardar Tópico</button>
+                    <button class="primary-btn small-btn" style="flex:1; background:#f97316; color:#fff;" onclick="window.compilarRelatorioPAP()"><i class="fa-solid fa-file-lines"></i> Compilar Tudo</button>
+                </div>
+                <div id="pap-relatorio-compilado" style="display:none; margin-top:15px; padding:20px; background:rgba(0,0,0,0.3); border-radius:8px; font-size:0.9rem; color:var(--text-light); white-space:pre-wrap; border:1px solid #333; line-height: 1.6;"></div>
+             </div>`;
 
-    // 6. GUIA IA PROMPTS (MUITO MAIS ROBUSTO E ADAPTADO AO TEMA)
+    // GUIA IA PROMPTS
     const pTema = temaStr ? temaStr : "[Insere aqui o Teu Tema]";
-    let aiHtml = `<div class="card" style="margin-bottom:20px; border-left:4px solid #3b82f6;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'; this.querySelector('i.fa-chevron-down').classList.toggle('fa-flip-vertical');">
-                        <h4 style="color:var(--text-light); font-size:1rem; margin:0;"><i class="fa-solid fa-robot" style="color:#3b82f6;"></i> Guia PAP & Prompts IA</h4>
-                        <i class="fa-solid fa-chevron-down" style="color:var(--text-muted); transition:0.3s;"></i>
+    html += `<div class="card" style="margin-bottom:20px; border-left:4px solid #3b82f6;">
+                <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'; this.querySelector('i.fa-chevron-down').classList.toggle('fa-flip-vertical');">
+                    <h4 style="color:var(--text-light); font-size:1rem; margin:0;"><i class="fa-solid fa-robot" style="color:#3b82f6;"></i> Guia PAP & Prompts IA</h4>
+                    <i class="fa-solid fa-chevron-down" style="color:var(--text-muted); transition:0.3s;"></i>
+                </div>
+                <div style="display:none; margin-top:15px;">
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">A IA ajuda-te a estruturar o relatório, mas <strong>não escreve o projeto por ti!</strong> Copia e cola os textos abaixo para obteres orientação técnica focada no teu tema:</p>
+                    <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
+                        <strong style="color:var(--text-light); font-size:0.85rem;">Introdução e Relevância</strong>
+                        <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Atua como um professor especialista em Turismo e Gestão. O tema da minha PAP é '${pTema}'. Escreve-me uma fundamentação rigorosa (3 parágrafos) que justifique a importância deste projeto para o desenvolvimento regional, abordando a sustentabilidade e as atuais tendências do mercado turístico."</p>
                     </div>
-                    <div style="display:none; margin-top:15px;">
-                        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">A Inteligência Artificial (ChatGPT/Gemini) ajuda-te a estruturar o relatório, mas <strong>não o escreve por ti!</strong> Copia e cola os textos azuis abaixo para obteres orientação técnica específica para o teu tema:</p>
-                        
-                        <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
-                            <strong style="color:var(--text-light); font-size:0.85rem;">Introdução e Relevância</strong>
-                            <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Atua como um professor especialista em Turismo e Gestão. O tema da minha PAP é '${pTema}'. Escreve-me uma fundamentação rigorosa (3 parágrafos) que justifique a importância deste projeto para o desenvolvimento regional, abordando a sustentabilidade e as atuais tendências do mercado turístico."</p>
-                        </div>
+                    <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
+                        <strong style="color:var(--text-light); font-size:0.85rem;">Conceitos e Revisão Literária</strong>
+                        <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Sugere-me um índice detalhado para a Revisão Literária de um projeto sobre '${pTema}'. Inclui os conceitos fundamentais, a evolução do setor e a importância económica desta atividade (como o impacto no PIB e na fixação de população)."</p>
+                    </div>
+                    <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
+                        <strong style="color:var(--text-light); font-size:0.85rem;">Marketing-Mix (Os 4 P's)</strong>
+                        <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Cria uma proposta técnica de Marketing-Mix (Produto, Preço, Distribuição, Promoção) para '${pTema}'. Detalha as experiências turísticas, sugere uma estratégia de preços, canais de distribuição (reservas diretas vs OTAs) e promoção digital."</p>
+                    </div>
+                    <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px;">
+                        <strong style="color:var(--text-light); font-size:0.85rem;">Análise SWOT</strong>
+                        <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Elabora uma Análise SWOT (Forças, Fraquezas, Oportunidades, Ameaças) realista para um projeto focado em '${pTema}'. Dá 3 exemplos para cada quadrante e justifica-os."</p>
+                    </div>
+                </div>
+             </div>`;
 
-                        <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
-                            <strong style="color:var(--text-light); font-size:0.85rem;">Conceitos e Revisão Literária</strong>
-                            <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Sugere-me um índice detalhado para a Revisão Literária de um projeto sobre '${pTema}'. Inclui os conceitos fundamentais, a evolução do setor e a importância económica desta atividade (como o impacto no PIB e na fixação de população)."</p>
-                        </div>
-
-                        <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
-                            <strong style="color:var(--text-light); font-size:0.85rem;">Modelo de Negócio e Organograma</strong>
-                            <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Para o meu projeto '${pTema}', ajuda-me a definir a Missão, Visão e 3 Valores centrais focados na autenticidade. De seguida, estrutura um Organograma adequado, descrevendo as funções dos departamentos principais (ex: Receção, Alojamento, Restauração ou Animação)."</p>
-                        </div>
-                        
-                        <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
-                            <strong style="color:var(--text-light); font-size:0.85rem;">Marketing-Mix (Os 4 P's)</strong>
-                            <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Cria uma proposta técnica de Marketing-Mix (Produto, Preço, Distribuição, Promoção) para '${pTema}'. O serviço é de segmento médio-alto. Detalha as experiências turísticas, sugere uma estratégia de preços, canais de distribuição (reservas diretas vs OTAs) e promoção digital."</p>
-                        </div>
-
-                        <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px;">
-                            <strong style="color:var(--text-light); font-size:0.85rem;">Análise SWOT e Concorrência</strong>
-                            <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Elabora uma Análise SWOT (Forças, Fraquezas, Oportunidades, Ameaças) realista para um projeto focado em '${pTema}'. Inclui como Força a exclusividade da oferta, e como Fraqueza a eventual sazonalidade. Dá 3 exemplos para cada quadrante."</p>
+    // SIMULADOR DE DEFESA (A TUA NOVIDADE!)
+    html += `<div class="card" style="margin-bottom:20px; border-left:4px solid #ef4444;">
+                <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'; this.querySelector('i.fa-chevron-down').classList.toggle('fa-flip-vertical');">
+                    <h4 style="color:var(--text-light); font-size:1rem; margin:0;"><i class="fa-solid fa-stopwatch" style="color:#ef4444;"></i> Simulador de Defesa (Pitch)</h4>
+                    <i class="fa-solid fa-chevron-down" style="color:var(--text-muted); transition:0.3s;"></i>
+                </div>
+                <div style="display:none; margin-top:15px;">
+                    <div style="text-align:center; padding:20px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:15px; border:1px solid #333;">
+                        <div id="pap-timer-display" style="font-size:3rem; font-family:monospace; color:var(--primary-green); font-weight:bold; margin-bottom:15px; line-height:1;">15:00</div>
+                        <div style="display:flex; gap:10px; justify-content:center;">
+                            <button class="primary-btn small-btn" id="btn-timer-start" style="width:80px;" onclick="window.toggleTimer()"><i class="fa-solid fa-play"></i> Iniciar</button>
+                            <button class="secondary-btn small-btn" style="width:80px;" onclick="window.resetTimer()"><i class="fa-solid fa-rotate-left"></i> Reset</button>
                         </div>
                     </div>
-                  </div>`;
+                    
+                    <h5 style="color:var(--text-light); margin-bottom:10px; font-size:0.9rem;">Dicas de Apresentação:</h5>
+                    <ul style="font-size:0.8rem; color:var(--text-muted); padding-left:20px; margin-bottom:15px; line-height:1.5;">
+                        <li><strong>Postura:</strong> Mantém o contacto visual com o júri, não leias os slides.</li>
+                        <li><strong>Respiração:</strong> Faz pausas de 2 segundos ao mudar de slide para controlares os nervos.</li>
+                        <li><strong>Foco:</strong> Dedica a maior parte do tempo à Viabilidade e Inovação do projeto.</li>
+                    </ul>
 
-    return stepsHtml + temaHtml + perfilHtml + obsHtml + cofreHtml + construtorHtml + aiHtml;
+                    <h5 style="color:var(--warning-yellow); margin-bottom:10px; font-size:0.9rem;">Grelha de Avaliação do Júri:</h5>
+                    <div style="background:rgba(255, 204, 0, 0.05); border-left:3px solid var(--warning-yellow); padding:10px; border-radius:6px; font-size:0.8rem; color:var(--text-light);">
+                        <p style="margin:0 0 5px 0;"><strong>Avaliação do Projeto:</strong></p>
+                        <ul style="margin:0 0 10px 0; padding-left:15px; color:var(--text-muted);">
+                            <li>Qualidade técnica e Inovação</li>
+                            <li>Viabilidade e sustentabilidade</li>
+                            <li>Impacto no turismo e território</li>
+                        </ul>
+                        <p style="margin:0 0 5px 0;"><strong>Avaliação da Apresentação:</strong></p>
+                        <ul style="margin:0; padding-left:15px; color:var(--text-muted);">
+                            <li>Qualidade dos recursos visuais (PPT)</li>
+                            <li>Domínio da linguagem técnica</li>
+                            <li>Segurança a responder às questões</li>
+                        </ul>
+                    </div>
+                </div>
+             </div>`;
+
+    return html;
 }
 
+// Funções da PAP
 async function guardarTemaPAP() {
     const t = document.getElementById('input-pap-tema').value.trim();
     if(!t) { mostrarAlerta("Escreve um tema primeiro!"); return; }
     try {
         await updateDoc(doc(window.db, "utilizadores", window.myUserId), { "pap.tema": t });
-        mostrarAlerta("Tema guardado!", false);
-        window.recarregarViewPassaporte('pap');
+        mostrarAlerta("Tema guardado!", false); window.recarregarViewPassaporte('pap');
     } catch(e) { mostrarAlerta("Erro ao guardar tema."); }
 }
 
@@ -329,33 +368,31 @@ async function enviarFicheiroCofre() {
         await updateDoc(doc(window.db, "utilizadores", window.myUserId), {
             "pap.cofre": arrayUnion({ nome: ficheiroParaCofre.nome, base64: ficheiroParaCofre.base64, data: dStr })
         });
-        mostrarAlerta("Documento submetido no Cofre!", false);
-        window.recarregarViewPassaporte('pap'); 
+        mostrarAlerta("Documento submetido no Cofre!", false); window.recarregarViewPassaporte('pap'); 
     } catch(e) { mostrarAlerta("Erro ao guardar ficheiro."); }
 }
 
-// Visualizador Limpo (Abre imagens num modal, Força Download seguro de Pdfs e Docs)
 function verFicheiroCofre(index) {
-    const f = window.cofreAtual[index];
-    if(!f) return;
-    
-    if (f.base64.startsWith("data:image")) {
+    const f = window.cofreAtual[index]; if(!f) return;
+    let srcUrl = f.base64;
+    if (f.base64.startsWith("data:application/pdf")) { srcUrl = base64ToBlobUrl(f.base64, 'application/pdf'); }
+
+    if (f.base64.startsWith("data:image") || f.base64.startsWith("data:application/pdf")) {
         const bg = document.createElement('div');
         bg.className = 'modal-overlay';
         bg.style.display = 'flex'; bg.style.zIndex = '10000';
         bg.innerHTML = `
-            <div class="action-sheet" style="width:95%; height:auto; max-width:800px; border-radius:12px; margin:20px; display:flex; flex-direction:column; padding:15px; animation: fadeSlide 0.3s ease;">
+            <div class="action-sheet" style="width:95%; height:90%; max-width:800px; border-radius:12px; margin:20px; display:flex; flex-direction:column; padding:15px; animation: fadeSlide 0.3s ease;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <h3 style="color:var(--text-light); font-size:1.1rem; margin:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${f.nome}</h3>
                     <button id="btn-close-view" style="background:none; border:none; color:var(--text-muted); font-size:1.5rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
                 </div>
-                <img src="${f.base64}" style="width:100%; max-height: 70vh; object-fit: contain; border-radius:8px;">
+                <iframe src="${srcUrl}" style="flex:1; width:100%; border:none; background:white; border-radius:8px;"></iframe>
             </div>`;
         document.body.appendChild(bg);
         bg.querySelector('#btn-close-view').onclick = () => bg.remove();
     } else {
-        // Documentos de texto / PDF são forçados a fazer download
-        mostrarAlerta("A preparar o documento para transferência segura...", false);
+        mostrarAlerta("Este formato não permite leitura web direta. O download vai iniciar.", false);
         window.baixarFicheiroCofre(index);
     }
 }
@@ -370,28 +407,19 @@ async function baixarFicheiroCofre(index) {
 async function removerFicheiroCofre(index) {
     const confirmou = await confirmarAcao("Tens a certeza absoluta que queres eliminar este documento do Cofre?");
     if(!confirmou) return;
-    
     window.cofreAtual.splice(index, 1);
     try {
         await updateDoc(doc(window.db, "utilizadores", window.myUserId), { "pap.cofre": window.cofreAtual });
-        mostrarAlerta("Documento eliminado.", false);
-        window.recarregarViewPassaporte('pap'); 
+        mostrarAlerta("Documento eliminado.", false); window.recarregarViewPassaporte('pap'); 
     } catch(e) { mostrarAlerta("Erro ao eliminar documento."); }
 }
 
 async function abrirChatOrientadorPAP(orientadorNome) {
-    if(!orientadorNome || orientadorNome === 'A definir') {
-        mostrarAlerta("Ainda não tens orientador atribuído pela Coordenação."); return;
-    }
-    const chatId = `chat_pap_${window.myUserId}`;
-    const chatNome = `Orientador: ${orientadorNome}`;
-    
+    if(!orientadorNome || orientadorNome === 'A definir') { mostrarAlerta("Ainda não tens orientador atribuído."); return; }
+    const chatId = `chat_pap_${window.myUserId}`; const chatNome = `Orientador: ${orientadorNome}`;
     try {
-        const chatRef = doc(window.db, "forums", chatId);
-        const chatSnap = await getDoc(chatRef);
-        if(!chatSnap.exists()) {
-            await setDoc(chatRef, { nome: chatNome, isGlobal: false, criador: window.myUserId, participantes: [window.myUserId], dataCriacao: Date.now(), lastMessage: null, unread: {}, type: 'fixo' });
-        }
+        const chatRef = doc(window.db, "forums", chatId); const chatSnap = await getDoc(chatRef);
+        if(!chatSnap.exists()) { await setDoc(chatRef, { nome: chatNome, isGlobal: false, criador: window.myUserId, participantes: [window.myUserId], dataCriacao: Date.now(), lastMessage: null, unread: {}, type: 'fixo' }); }
         document.querySelector('.nav-item[data-target="view-aluno-forum"]').click();
         setTimeout(() => { window.abrirChatForumAluno(chatId, chatNome); }, 300);
     } catch(e) { mostrarAlerta("Erro ao iniciar conversa."); }
@@ -401,12 +429,8 @@ function mudarTopicoPAP() {
     const sel = document.getElementById('pap-topico-select').value;
     const customInput = document.getElementById('pap-topico-custom');
     const txtArea = document.getElementById('pap-topico-texto');
-    
-    if(sel === 'novo') {
-        customInput.style.display = 'block'; txtArea.value = '';
-    } else {
-        customInput.style.display = 'none'; txtArea.value = window.papTextosGlobais[sel] || '';
-    }
+    if(sel === 'novo') { customInput.style.display = 'block'; txtArea.value = ''; } 
+    else { customInput.style.display = 'none'; txtArea.value = window.papTextosGlobais[sel] || ''; }
 }
 
 async function guardarTopicoPAP() {
@@ -415,9 +439,7 @@ async function guardarTopicoPAP() {
         sel = document.getElementById('pap-topico-custom').value.trim();
         if(!sel) { mostrarAlerta("Dá um nome ao teu novo tópico."); return; }
     }
-    const texto = document.getElementById('pap-topico-texto').value;
-    window.papTextosGlobais[sel] = texto;
-    
+    window.papTextosGlobais[sel] = document.getElementById('pap-topico-texto').value;
     try {
         await updateDoc(doc(window.db, "utilizadores", window.myUserId), { "pap.textos": window.papTextosGlobais });
         mostrarAlerta(`Tópico guardado com sucesso!`, false);
@@ -428,13 +450,47 @@ function compilarRelatorioPAP() {
     const caixa = document.getElementById('pap-relatorio-compilado');
     let relatorioFinal = "";
     for (const [topico, texto] of Object.entries(window.papTextosGlobais)) {
-        if(texto.trim() !== '') { 
-            relatorioFinal += `======= [ ${topico.toUpperCase()} ] =======\n\n${texto}\n\n\n`; 
-        }
+        if(texto.trim() !== '') { relatorioFinal += `======= [ ${topico.toUpperCase()} ] =======\n\n${texto}\n\n\n`; }
     }
     if(relatorioFinal === "") { mostrarAlerta("Ainda não escreveste texto em nenhum tópico."); return; }
     caixa.innerHTML = `<div style="text-align:center; margin-bottom:15px;"><strong style="font-size:1.1rem; color:var(--primary-green);">O Teu Relatório Completo</strong><br><span style="color:var(--text-muted); font-size:0.75rem;">(Copia tudo e cola no teu Word!)</span></div>${relatorioFinal}`;
     caixa.style.display = 'block';
+}
+
+// Simulador de Defesa Funções
+function updateTimerDisplay() {
+    const m = Math.floor(papTimeLeft / 60).toString().padStart(2, '0');
+    const s = (papTimeLeft % 60).toString().padStart(2, '0');
+    const display = document.getElementById('pap-timer-display');
+    if(display) {
+        display.innerText = `${m}:${s}`;
+        if(papTimeLeft <= 60) display.style.color = 'var(--danger-red)';
+        else display.style.color = 'var(--primary-green)';
+    }
+}
+
+function toggleTimer() {
+    const btn = document.getElementById('btn-timer-start');
+    if (papTimerInterval) {
+        clearInterval(papTimerInterval); papTimerInterval = null;
+        if(btn) btn.innerHTML = '<i class="fa-solid fa-play"></i> Continuar';
+    } else {
+        if(btn) btn.innerHTML = '<i class="fa-solid fa-pause"></i> Pausa';
+        papTimerInterval = setInterval(() => {
+            papTimeLeft--;
+            if(papTimeLeft <= 0) { clearInterval(papTimerInterval); papTimerInterval = null; papTimeLeft = 0; }
+            updateTimerDisplay();
+        }, 1000);
+    }
+}
+
+function resetTimer() {
+    if(papTimerInterval) clearInterval(papTimerInterval);
+    papTimerInterval = null;
+    papTimeLeft = 15 * 60;
+    const btn = document.getElementById('btn-timer-start');
+    if(btn) btn.innerHTML = '<i class="fa-solid fa-play"></i> Iniciar';
+    updateTimerDisplay();
 }
 
 // ==========================================
@@ -444,12 +500,51 @@ function renderFCT(dados) {
     const fct = dados.fct || {};
     let html = '';
 
+    // 1. Checklist Burocrática (A TUA NOVIDADE!)
+    const burocracia = fct.burocracia || {};
+    const docsBurocracia = [
+        { id: 'protocolo', nome: 'Protocolo de Estágio' },
+        { id: 'plano', nome: 'Plano de Estágio' },
+        { id: 'folhas', nome: 'Folhas de Registo de Horas' },
+        { id: 'registos', nome: 'Registos de Visita do Tutor' },
+        { id: 'avaliacao', nome: 'Avaliação e Autoavaliação' }
+    ];
+
+    html += `<div class="card" style="margin-bottom:20px; border-left:4px solid #8b5cf6;">
+                <h4 style="color:var(--text-light); font-size:1rem; margin:0 0 15px 0;"><i class="fa-solid fa-folder-open" style="color:#8b5cf6;"></i> Documentação Oficial</h4>
+                <div style="display:flex; flex-direction:column; gap:10px;">`;
+    
+    docsBurocracia.forEach(doc => {
+        const estado = burocracia[doc.id] || 0;
+        let actionHtml = '';
+        let iconHtml = '';
+        
+        if (estado === 0) {
+            actionHtml = `<button onclick="window.submeterDocBurocracia('${doc.id}')" class="primary-btn small-btn" style="padding:6px 12px; font-size:0.75rem;">Entreguei</button>`;
+            iconHtml = `<i class="fa-solid fa-circle-xmark" style="color:#555;"></i>`;
+        } else if (estado === 1) {
+            actionHtml = `<span style="background:var(--warning-yellow); color:#000; padding:4px 8px; border-radius:12px; font-size:0.7rem; font-weight:bold;">Em Análise</span>`;
+            iconHtml = `<i class="fa-solid fa-clock" style="color:var(--warning-yellow);"></i>`;
+        } else if (estado === 2) {
+            actionHtml = `<span style="background:rgba(0,204,136,0.1); color:var(--primary-green); padding:4px 8px; border-radius:12px; font-size:0.7rem; font-weight:bold;">Validado</span>`;
+            iconHtml = `<i class="fa-solid fa-circle-check" style="color:var(--primary-green);"></i>`;
+        }
+
+        html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px solid #333;">
+                    <div style="font-size:0.85rem; color:var(--text-light); display:flex; align-items:center; gap:10px;">
+                        ${iconHtml} ${doc.nome}
+                    </div>
+                    <div>${actionHtml}</div>
+                 </div>`;
+    });
+    html += `</div></div>`;
+
+    // 2. Entidade de Estágio
     let formDisplay = fct.empresa ? 'none' : 'block';
     let viewDisplay = fct.empresa ? 'block' : 'none';
 
     html += `<div class="card" style="margin-bottom:20px; border-left:4px solid #0ea5e9;">
                 <h4 style="color:var(--text-light); font-size:1rem; margin:0 0 15px 0;">Entidade de Estágio</h4>
-                
                 <div id="fct-entidade-view" style="display:${viewDisplay};">
                     <div style="background:rgba(0,0,0,0.2); padding:15px; border-radius:8px; margin-bottom:15px;">
                         <strong style="color:var(--text-light); font-size:1.1rem; display:block; margin-bottom:10px;">${fct.empresa}</strong>
@@ -461,7 +556,6 @@ function renderFCT(dados) {
                     </div>
                     <button class="secondary-btn small-btn" style="width:100%;" onclick="document.getElementById('fct-entidade-view').style.display='none'; document.getElementById('fct-entidade-form').style.display='block';">Editar Dados</button>
                 </div>
-
                 <div id="fct-entidade-form" style="display:${formDisplay};">
                     <input type="text" id="fct-empresa" class="input-padrao" placeholder="Nome da Entidade / Hotel" value="${fct.empresa || ''}" style="width:100%; margin-bottom:10px;">
                     <input type="text" id="fct-tutor" class="input-padrao" placeholder="Nome do Tutor na Entidade" value="${fct.tutor || ''}" style="width:100%; margin-bottom:10px;">
@@ -477,9 +571,9 @@ function renderFCT(dados) {
     const bancoHoras = fct.bancoHoras || 0;
     const horasTotais = fct.horasTotal || 400; 
     const percHoras = Math.min((horasRealizadas / horasTotais) * 100, 100);
-    
     const horasFalta = Math.max(0, horasTotais - horasRealizadas);
     const diasFalta = Math.ceil(horasFalta / 7);
+    
     let estimativaHtml = horasFalta > 0 
         ? `<div style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-calendar-check" style="color:var(--primary-green);"></i> Estimativa: Faltam ~${diasFalta} dias úteis (a 7h/dia)</div>`
         : `<div style="margin-top:10px; font-size:0.85rem; color:var(--success-green); display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-flag-checkered"></i> Estágio Concluído!</div>`;
@@ -580,6 +674,7 @@ function renderFCT(dados) {
     return html;
 }
 
+// Funções da FCT
 async function guardarFichaEntidade() {
     const emp = document.getElementById('fct-empresa').value.trim();
     const tut = document.getElementById('fct-tutor').value.trim();
@@ -611,14 +706,9 @@ async function registarHorasDia() {
 
     let totalHorasFeitas = Math.floor(minDiff / 60);
     if (totalHorasFeitas < 1) { mostrarAlerta("Tens de estagiar pelo menos 1 hora para registar o dia."); return; }
-    
-    if (validarIn > totalHorasFeitas) {
-        mostrarAlerta(`As horas a validar (${validarIn}h) não podem ser superiores às horas que efetivamente estiveste na entidade (${totalHorasFeitas}h)!`); 
-        return;
-    }
+    if (validarIn > totalHorasFeitas) { mostrarAlerta(`As horas a validar (${validarIn}h) não podem ser superiores às horas que efetivamente estiveste na entidade (${totalHorasFeitas}h)!`); return; }
 
     let bancoFinal = totalHorasFeitas - validarIn;
-
     const btn = event.currentTarget; const textoOriginal = btn.innerHTML;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
 
@@ -665,8 +755,7 @@ async function eliminarHorasFCT(index) {
 
 async function editarHorasFCT(index) {
     const r = window.historicoFCTAtual[index];
-    
-    const confirmou = await confirmarAcao("O registo antigo será apagado. Preenche as novas horas nas caixas acima e clica em 'Registar Horas'. Continuar?");
+    const confirmou = await confirmarAcao("Vais editar este registo. O registo antigo será apagado. Deves alterar os campos e voltar a clicar em 'Registar Horas'. Continuar?");
     if(!confirmou) return;
 
     window.historicoFCTAtual.splice(index, 1);
@@ -721,8 +810,7 @@ function abrirModalHistoricoFCT() {
     modalHtml += `</div>`;
 
     const bg = document.createElement('div');
-    bg.id = 'modal-view-hist';
-    bg.className = 'modal-overlay';
+    bg.id = 'modal-view-hist'; bg.className = 'modal-overlay';
     bg.style.display = 'flex'; bg.style.zIndex = '9999';
     bg.innerHTML = `
         <div class="action-sheet" style="width:95%; max-width:600px; max-height:85vh; border-radius:12px; margin:20px; display:flex; flex-direction:column; padding:20px; animation: fadeSlide 0.3s ease;">
@@ -734,6 +822,16 @@ function abrirModalHistoricoFCT() {
         </div>`;
     document.body.appendChild(bg);
     bg.querySelector('#btn-close-hist').onclick = () => bg.remove();
+}
+
+async function submeterDocBurocracia(docId) {
+    const confirmou = await confirmarAcao("Tens a certeza que queres indicar este documento como entregue à escola?");
+    if(!confirmou) return;
+    try {
+        await updateDoc(doc(window.db, "utilizadores", window.myUserId), { [`fct.burocracia.${docId}`]: 1 });
+        mostrarAlerta("Documento submetido para validação!", false);
+        window.recarregarViewPassaporte('fct');
+    } catch(e) { mostrarAlerta("Erro ao submeter documento."); }
 }
 
 function gerarTextoDiario() {
