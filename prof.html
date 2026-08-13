@@ -33,9 +33,12 @@
         select.input-padrao option { background: var(--bg-dark); color: white; }
         
         .dt-badge { background: var(--warning-yellow); color: black; font-size: 0.6rem; padding: 2px 6px; border-radius: 8px; font-weight: bold; margin-left: 8px; vertical-align: middle; display: none; }
+
+        #offline-badge { display:none; position:absolute; top:15px; left:50%; transform:translateX(-50%); background:var(--danger-red); color:white; font-size:0.75rem; padding:4px 10px; border-radius:12px; font-weight:bold; z-index:9000; box-shadow:0 2px 10px rgba(255,0,0,0.3); }
     </style>
 </head>
 <body>
+    <div id="offline-badge"><i class="fa-solid fa-wifi" style="text-decoration:line-through;"></i> Modo Offline Ativo</div>
     <div id="app-content">
         <!-- HEADER COM CONTEXT SWITCHING -->
         <header id="header-prof" class="app-header" style="position: relative;">
@@ -116,7 +119,7 @@
                 </div>
 
                 <div id="turma-ativa-container" style="display: none;">
-                    <div class="card" style="background: linear-gradient(135deg, rgba(0, 204, 136, 0.1), rgba(0, 0, 0, 0.2)); border: 1px solid var(--primary-green); margin-bottom: 20px; position:relative;">
+                    <div class="card" style="background: linear-gradient(135deg, rgba(0, 204, 136, 0.1), rgba(0, 0, 0, 0.2)); border: 1px solid var(--primary-green); margin-bottom: 20px; position: relative;">
                         <button id="btn-abrir-aviso-global" class="primary-btn small-btn" style="position:absolute; top:15px; right:15px; background:var(--warning-yellow); color:black; padding:5px 10px; border:none; display:none;" title="Aviso Global"><i class="fa-solid fa-bullhorn"></i></button>
                         <h3 style="font-size: 1.1rem; margin-bottom: 10px; color: var(--primary-green);"><i class="fa-solid fa-robot"></i> Assistente da Turma <span id="badge-dt-turma" class="dt-badge">DT</span></h3>
                         <div id="assistente-aula-texto" style="font-size: 0.9rem; color: var(--text-light); line-height: 1.5; padding-right:40px;">A analisar dados da turma...</div>
@@ -240,7 +243,7 @@
 
             <!-- VISTA: PROJETOS FCT/PAP (EXCLUSIVA COORDENADOR) -->
             <div id="view-coord-projetos" style="display: none;">
-                <div class="card" style="background: linear-gradient(135deg, rgba(147, 51, 234, 0.15), rgba(0, 0, 0, 0.3)); border: 1px solid #9333ea; margin-bottom: 20px; position:relative;">
+                <div class="card" style="background: linear-gradient(135deg, rgba(147, 51, 234, 0.15), rgba(0, 0, 0, 0.3)); border: 1px solid #9333ea; margin-bottom: 20px; position: relative;">
                     <button id="btn-abrir-aviso-global-coord" class="primary-btn small-btn" style="position:absolute; top:15px; right:15px; background:var(--warning-yellow); color:black; padding:5px 10px; border:none;" title="Aviso Global"><i class="fa-solid fa-bullhorn"></i></button>
                     <h3 style="font-size: 1.1rem; margin-bottom: 5px; color: #9333ea;"><i class="fa-solid fa-briefcase"></i> Gestão de Estágios e PAPs</h3>
                     <p style="font-size: 0.85rem; color: var(--text-light); padding-right:40px;">Visão global de todos os alunos de 11º e 12º ano do curso.</p>
@@ -316,6 +319,19 @@
                 </div>
             </div>
 
+            <!-- MODAL COPILOTO IA -->
+            <div id="modal-copiloto-ia" class="modal-overlay" style="z-index: 3000;">
+                <div class="action-sheet" style="max-width: 450px; padding: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                        <h3 style="color: #3b82f6; margin:0;"><i class="fa-solid fa-robot"></i> Copiloto IA</h3>
+                        <button class="fechar-modal" data-target="modal-copiloto-ia" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">Copia o texto abaixo e cola no teu ChatGPT ou Gemini. A IA usará as regras exatas da escola e os dados do aluno para criar uma síntese construtiva.</p>
+                    <textarea id="prompt-ia-text" class="input-padrao" style="width:100%; min-height:180px; margin-bottom:15px; font-family:monospace; font-size:0.8rem; color:#3b82f6; background:rgba(59,130,246,0.1); border-color:#3b82f6;" readonly></textarea>
+                    <button id="btn-copiar-prompt" class="primary-btn" style="width:100%; background:#3b82f6;"><i class="fa-regular fa-copy"></i> Copiar Prompt</button>
+                </div>
+            </div>
+
             <!-- MODAIS DE AÇÃO / ROLES -->
             <div id="modal-radar-conflitos" class="modal-overlay" style="z-index: 2000;">
                 <div class="action-sheet" style="max-width: 500px; max-height: 85vh; padding: 20px; display: flex; flex-direction: column;">
@@ -387,7 +403,15 @@
                             <button class="btn-ocorrencia-premium btn-neg" id="btn-dar-negativa"><i class="fa-solid fa-triangle-exclamation" style="font-size: 1.5rem; color: var(--danger-red); margin-bottom: 5px;"></i><br><strong style="color: white; font-size: 0.85rem;">Negativa</strong></button>
                         </div>
                         <button id="btn-justificar-faltas" class="secondary-btn" style="width:100%; margin-bottom:20px; border-color:#00d2ff; color:#00d2ff; display:none;"><i class="fa-solid fa-clipboard-check"></i> Justificar Todas as Faltas</button>
-                        <div id="area-obs-dt" style="display:none;"><h4 style="font-size:0.9rem; color:white; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Apreciação do DT</h4><textarea id="p-aluno-obs-dt" class="input-padrao" placeholder="Observações e notas da reunião..." style="min-height:80px; width:100%; margin-bottom:10px;"></textarea><button id="btn-salvar-obs-dt" class="primary-btn small-btn" style="width:100%;">Gravar Apreciação</button></div>
+                        
+                        <div id="area-sintese-prof" style="display:none;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">
+                                <h4 id="titulo-sintese-area" style="font-size:0.9rem; color:white; margin:0;">Síntese da Disciplina</h4>
+                                <button id="btn-abrir-copiloto" class="secondary-btn small-btn" style="padding:4px 10px; color:#3b82f6; border-color:#3b82f6; font-size:0.75rem;"><i class="fa-solid fa-wand-magic-sparkles"></i> Gerador IA</button>
+                            </div>
+                            <textarea id="p-aluno-obs-dt" class="input-padrao" placeholder="Aspetos positivos, pontos a melhorar, estratégias..." style="min-height:100px; width:100%; margin-bottom:10px;"></textarea>
+                            <button id="btn-salvar-obs-dt" class="primary-btn small-btn" style="width:100%;">Gravar Síntese</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -474,6 +498,22 @@
         </nav>
     </div>
 
+    <!-- Registo do Service Worker para Modo Offline PWA -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW falhou: ', err));
+            });
+        }
+        window.addEventListener('offline', () => {
+            const badge = document.getElementById('offline-badge');
+            if (badge) badge.style.display = 'block';
+        });
+        window.addEventListener('online', () => {
+            const badge = document.getElementById('offline-badge');
+            if (badge) badge.style.display = 'none';
+        });
+    </script>
     <script type="module" src="./js/prof-app.js"></script>
 </body>
 </html>
