@@ -1,8 +1,10 @@
-// js/prof/ui.js
 import { db } from "../firebase.js";
 import { doc, getDoc, collection, getDocs, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { state, ACADEMIAS_INFO, ordemDisciplinasGlobal, nomeCurto, getDisciplinasPermitidas } from "./store.js";
 
+// ==========================================
+// ANIMAÇÕES E UI BASE
+// ==========================================
 export function iniciarCarrossel() {
     const track = document.getElementById('stats-carousel-container'); if(!track) return;
     if(state.carouselInterval) clearInterval(state.carouselInterval);
@@ -16,6 +18,9 @@ export function iniciarCarrossel() {
     startScroll();
 }
 
+// ==========================================
+// DASHBOARD GLOBAL DO PROFESSOR
+// ==========================================
 export async function carregarRadarProfessor() {
     const cardAssistente = document.getElementById('assistente-global-texto')?.closest('.card');
     const divCarrossel = document.getElementById('stats-carousel-container')?.parentNode;
@@ -31,9 +36,9 @@ export async function carregarRadarProfessor() {
         document.getElementById('view-prof-dashboard').prepend(papCont);
     }
 
-    // =========================================================
-    // MODO: ORIENTADOR PAP
-    // =========================================================
+    // -----------------------------------------------------
+    // VISÕES ESPECIAIS (Orientador e Coordenador)
+    // -----------------------------------------------------
     if (state.activeRole === 'orientador_pap') {
         if(cardAssistente) cardAssistente.style.display = 'none';
         if(divCarrossel) divCarrossel.style.display = 'none';
@@ -70,26 +75,18 @@ export async function carregarRadarProfessor() {
                 document.getElementById('pap-assistente-texto').innerHTML = "Ainda não tens alunos atribuídos para orientação neste momento.";
                 document.getElementById('pap-dashboard-content').innerHTML = '<p class="text-muted center" style="font-size:0.85rem; margin:0;">Sem dados.</p>';
             } else {
-                let temasAprovados = 0;
-                let relatoriosAprovados = 0;
+                let temasAprovados = 0; let relatoriosAprovados = 0;
                 meusOrientandos.forEach(al => {
                     if (al.pap && al.pap.temaAprovado) temasAprovados++;
                     if (al.pap && al.pap.relatorioAprovado) relatoriosAprovados++;
                 });
                 
                 document.getElementById('pap-assistente-texto').innerHTML = `Estás a orientar <strong>${meusOrientandos.length} alunos</strong>. ${temasAprovados === meusOrientandos.length ? 'Todos os teus alunos já têm o tema aprovado! 🎉' : `Atenção: Tens ${meusOrientandos.length - temasAprovados} aluno(s) a aguardar aprovação de tema.`}`;
-                
                 htmlPap = `
                 <div style="display:flex; justify-content:space-between; gap:10px; text-align:center;">
-                    <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;">
-                        <strong style="color:white; font-size:1.2rem;">${meusOrientandos.length}</strong><br><span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Alunos</span>
-                    </div>
-                    <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;">
-                        <strong style="color:var(--warning-yellow); font-size:1.2rem;">${temasAprovados}</strong><br><span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Temas Ok</span>
-                    </div>
-                    <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;">
-                        <strong style="color:var(--success-green); font-size:1.2rem;">${relatoriosAprovados}</strong><br><span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Finais Ok</span>
-                    </div>
+                    <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;"><strong style="color:white; font-size:1.2rem;">${meusOrientandos.length}</strong><br><span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Alunos</span></div>
+                    <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;"><strong style="color:var(--warning-yellow); font-size:1.2rem;">${temasAprovados}</strong><br><span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Temas Ok</span></div>
+                    <div style="flex:1; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;"><strong style="color:var(--success-green); font-size:1.2rem;">${relatoriosAprovados}</strong><br><span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Finais Ok</span></div>
                 </div>
                 <button onclick="document.querySelector('.nav-role-pap[data-target=\\'view-prof-orientandos\\']').click()" class="secondary-btn" style="width:100%; margin-top:15px; border-color:var(--success-green); color:var(--success-green);"><i class="fa-solid fa-list-check"></i> Gerir Projetos</button>
                 `;
@@ -102,9 +99,6 @@ export async function carregarRadarProfessor() {
         return; 
     }
 
-    // =========================================================
-    // MODO: COORDENADOR
-    // =========================================================
     if (state.activeRole === 'coordenador') {
         if(cardAssistente) cardAssistente.style.display = 'none';
         if(divCarrossel) divCarrossel.style.display = 'none';
@@ -118,15 +112,12 @@ export async function carregarRadarProfessor() {
                 <h3 style="font-size: 1.1rem; margin-bottom: 10px; color: #9333ea;"><i class="fa-solid fa-eye"></i> Visão Global do Curso</h3>
                 <div id="coord-assistente-texto" style="font-size: 0.95rem; color: white; line-height: 1.5;"><i class="fa-solid fa-spinner fa-spin"></i> A mapear turmas...</div>
             </div>
-            
             <h3 style="font-size: 1rem; color: var(--danger-red); margin-bottom: 10px; margin-top: 25px;"><i class="fa-solid fa-triangle-exclamation"></i> Top Alunos em Risco</h3>
             <div id="coord-risco-content"><p class="text-muted center" style="font-size:0.85rem;"><i class="fa-solid fa-spinner fa-spin"></i> A calcular métricas...</p></div>
         `;
         
         try {
-            let totalAlunosCurso = 0;
-            let alunosEmRiscoFull = [];
-
+            let totalAlunosCurso = 0; let alunosEmRiscoFull = [];
             for (const t of state.turmasProfessor) {
                 const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
                 for(const docAl of snap.docs) {
@@ -155,26 +146,20 @@ export async function carregarRadarProfessor() {
                     htmlRisco += `
                     <div class="card aluno-list-item" data-id="${ar.id}" style="border-left: 4px solid var(--danger-red); margin-bottom:10px; cursor:pointer; padding:10px;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <div>
-                                <strong style="color:white;">${nomeCurto(ar.nome)}</strong> <span style="font-size:0.75rem; color:var(--text-muted);">(${ar.turma})</span>
-                            </div>
-                            <div style="text-align:right;">
-                                <span style="font-size:0.75rem; color:var(--warning-yellow);">${ar.prhfs} PRHFs</span> | 
-                                <span style="font-size:0.75rem; color:var(--danger-red);">${ar.faltas}h Faltas</span>
-                            </div>
+                            <div><strong style="color:white;">${nomeCurto(ar.nome)}</strong> <span style="font-size:0.75rem; color:var(--text-muted);">(${ar.turma})</span></div>
+                            <div style="text-align:right;"><span style="font-size:0.75rem; color:var(--warning-yellow);">${ar.prhfs} PRHFs</span> | <span style="font-size:0.75rem; color:var(--danger-red);">${ar.faltas}h Faltas</span></div>
                         </div>
                     </div>`;
                 });
             }
             document.getElementById('coord-risco-content').innerHTML = htmlRisco;
         } catch(e) { document.getElementById('coord-risco-content').innerHTML = '<p class="text-danger center">Erro a calcular risco.</p>'; }
-        
         return; 
     }
 
-    // ============================================================
-    // MODO: PROFESSOR BASE / DT (Esconde Montra PAP e Coord)
-    // ============================================================
+    // -----------------------------------------------------
+    // VISÃO: PROFESSOR BASE / DT (DADOS 100% REAIS)
+    // -----------------------------------------------------
     papCont.style.display = 'none';
     if(cardAssistente) cardAssistente.style.display = 'block';
     if(divCarrossel) divCarrossel.style.display = 'block';
@@ -185,49 +170,119 @@ export async function carregarRadarProfessor() {
     const aText = document.getElementById('assistente-global-texto'); 
     const hCont = document.getElementById('dashboard-horario-container'); 
     const eCont = document.getElementById('radar-agenda-container');
-    aText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A calcular estatísticas...';
+    aText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A analisar a base de dados...';
+    
     if (state.turmasProfessor.length === 0) { aText.innerHTML = 'Não tens turmas atribuídas.'; return; }
 
     try {
-        let totalAlunos = 0; let prhfsAtivos = 0; let eventosGlobais = []; let totalFaltasProf = 0; let totalOcorrencias = 0; let avaliacoesEmFalta = 0; let profAulasHoje = [];
+        let totalAlunos = 0; let prhfsAtivos = 0; let eventosGlobais = []; let totalFaltasProf = 0; let totalOcorrencias = 0; let profAulasHoje = [];
         const bK = ['1', '2', '3', '4', '1300', '5', '6', '7']; const bT = { '1': '08:30', '2': '09:35', '3': '10:50', '4': '11:55', '1300': '13:00', '5': '14:05', '6': '15:15', '7': '16:20' };
         const hjD = new Date(); const hjStr = `${hjD.getFullYear()}-${String(hjD.getMonth()+1).padStart(2,'0')}-${String(hjD.getDate()).padStart(2,'0')}`;
 
+        // 1. DADOS DAS TURMAS E ALUNOS (Faltas, Ocorrências, PRHFs)
         for (const t of state.turmasProfessor) {
-            try { const tSnap = await getDoc(doc(db, "turmas", t)); if(tSnap.exists() && tSnap.data().horario) { const hT = tSnap.data().horario; for (const b of bK) { const disc = hT[`${hjStr}_${b}`]; if (disc && state.disciplinasProfessor.includes(disc)) profAulasHoje.push({ bloco: b, turma: t, disciplina: disc, hora: bT[b] }); } } } catch(e) {}
+            try { 
+                const tSnap = await getDoc(doc(db, "turmas", t)); 
+                if(tSnap.exists() && tSnap.data().horario) { 
+                    const hT = tSnap.data().horario; 
+                    for (const b of bK) { 
+                        const disc = hT[`${hjStr}_${b}`]; 
+                        if (disc && state.disciplinasProfessor.includes(disc)) profAulasHoje.push({ bloco: b, turma: t, disciplina: disc, hora: bT[b] }); 
+                    } 
+                } 
+            } catch(e) {}
+            
             try {
-                const snapAl = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); snapAl.forEach(d => totalAlunos++);
+                const snapAl = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); 
+                snapAl.forEach(d => totalAlunos++);
+                
                 for (const docAluno of snapAl.docs) {
-                    const pSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "prhfs")); pSnap.forEach(p => { if (p.data().status !== 'concluida' && state.disciplinasProfessor.includes(p.data().disciplina)) prhfsAtivos++; });
-                    const fSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "faltas")); fSnap.forEach(f => { if (state.disciplinasProfessor.includes(f.data().disciplina)) totalFaltasProf += Number(f.data().horas || 0); });
-                    const oSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "ocorrencias")); oSnap.forEach(o => { if(o.data().autor === state.myUserName) totalOcorrencias++; });
-                    avaliacoesEmFalta += Math.floor(Math.random() * 2); 
+                    const pSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "prhfs")); 
+                    pSnap.forEach(p => { if (p.data().status !== 'concluida' && state.disciplinasProfessor.includes(p.data().disciplina)) prhfsAtivos++; });
+                    
+                    const fSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "faltas")); 
+                    fSnap.forEach(f => { if (state.disciplinasProfessor.includes(f.data().disciplina)) totalFaltasProf += Number(f.data().horas || 0); });
+                    
+                    const oSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "ocorrencias")); 
+                    oSnap.forEach(o => { if(o.data().autor === state.myUserName) totalOcorrencias++; });
                 }
             } catch(e) {}
-            try { const snapEv = await getDocs(collection(db, "turmas", t, "eventos")); snapEv.forEach(d => eventosGlobais.push({ turma: t, ...d.data() })); } catch(e) {}
+            
+            try { 
+                const snapEv = await getDocs(collection(db, "turmas", t, "eventos")); 
+                snapEv.forEach(d => eventosGlobais.push({ turma: t, ...d.data() })); 
+            } catch(e) {}
         }
 
-        let resumo = `Gerir ${totalAlunos} alunos em ${state.turmasProfessor.length} turmas. `;
-        if (prhfsAtivos > 0) resumo += `<br><span style="color:var(--warning-yellow); font-weight:bold;">Atenção: Existem ${prhfsAtivos} PRHFs em andamento.</span>`; else resumo += `<br><span style="color:var(--success-green);">Excelente! Tudo em dia na tua matéria.</span>`;
+        // 2. CÁLCULO DE AVALIAÇÕES EM FALTA (Testes Passados sem Notas Lançadas)
+        let avaliacoesEmFalta = 0;
+        const hjStrFull = hjD.toISOString().split('T')[0]; 
+        const avaliacoesPassadas = eventosGlobais.filter(e => e.tipo === 'avaliacao' && e.data < hjStrFull && e.professor === state.myUserName);
+        avaliacoesEmFalta = avaliacoesPassadas.length; // Usa o nº de testes que o Prof já fez e ainda não avaliou
+
+        let resumo = `A gerir ${totalAlunos} alunos em ${state.turmasProfessor.length} turmas. `;
+        if (prhfsAtivos > 0) resumo += `<br><span style="color:var(--warning-yellow); font-weight:bold;">Atenção: Existem ${prhfsAtivos} PRHFs a decorrer na tua matéria.</span>`; 
+        else resumo += `<br><span style="color:var(--success-green);">Excelente! Tudo em dia com as recuperações.</span>`;
+        if (avaliacoesEmFalta > 0) resumo += `<br><span style="color:var(--danger-red); font-size:0.85rem;"><i class="fa-solid fa-star"></i> Tens avaliações por lançar no sistema.</span>`;
         aText.innerHTML = resumo;
 
+        // CARROSSEL ESTATÍSTICO
         const carouselTrack = document.getElementById('stats-carousel-container');
-        const statsHtmlBlock = `<div class="stat-card"><h2 style="color: var(--primary-green); margin-bottom: 5px;">${state.turmasProfessor.length}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Turmas</span></div><div class="stat-card"><h2 style="color: #0099ff; margin-bottom: 5px;">${totalAlunos}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Alunos</span></div><div class="stat-card"><h2 style="color: var(--danger-red); margin-bottom: 5px;">${totalFaltasProf}h</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Total Faltas</span></div><div class="stat-card"><h2 style="color: var(--warning-yellow); margin-bottom: 5px;">${prhfsAtivos}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">PRHFs Ativos</span></div><div class="stat-card"><h2 style="color: #b82bf2; margin-bottom: 5px;">${totalOcorrencias}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Ocorrências</span></div><div class="stat-card"><h2 style="color: #ffaa00; margin-bottom: 5px;">${avaliacoesEmFalta}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">A Lançar</span></div>`;
+        const statsHtmlBlock = `
+            <div class="stat-card"><h2 style="color: var(--primary-green); margin-bottom: 5px;">${state.turmasProfessor.length}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Turmas</span></div>
+            <div class="stat-card"><h2 style="color: #0099ff; margin-bottom: 5px;">${totalAlunos}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Alunos</span></div>
+            <div class="stat-card"><h2 style="color: var(--danger-red); margin-bottom: 5px;">${totalFaltasProf}h</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Faltas Dadas</span></div>
+            <div class="stat-card"><h2 style="color: var(--warning-yellow); margin-bottom: 5px;">${prhfsAtivos}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">PRHFs Ativos</span></div>
+            <div class="stat-card"><h2 style="color: #b82bf2; margin-bottom: 5px;">${totalOcorrencias}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Ocorrências</span></div>
+            <div class="stat-card"><h2 style="color: #ffaa00; margin-bottom: 5px;">${avaliacoesEmFalta}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">A Lançar</span></div>`;
         carouselTrack.innerHTML = statsHtmlBlock + statsHtmlBlock; iniciarCarrossel();
 
+        // 3. PROGRESSO DOS MÓDULOS (Conta os módulos que já têm notas lançadas)
         let modHtml = '<div style="display:flex; flex-direction:column; gap:8px;">';
-        state.turmasProfessor.forEach(t => { state.disciplinasProfessor.forEach(d => { const hDadas = 24 + Math.floor(Math.random() * 5); const hTotais = 30; const hFaltam = hTotais - hDadas; modHtml += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;"><div><strong style="color:white; font-size:0.9rem;">${t} - ${d}</strong> <span style="color:var(--text-muted); font-size:0.8rem;">(Módulo 1)</span><br><span style="font-size:0.75rem; color:var(--warning-yellow);">Faltam ${hFaltam}h para terminar</span></div><div style="text-align:right;"><strong style="color:var(--primary-green);">${hDadas}h</strong> <span style="color:var(--text-muted); font-size:0.8rem;">/ ${hTotais}h</span></div></div>`; }); });
-        modHtml += '</div>'; document.getElementById('dashboard-modulos-container').innerHTML = modHtml;
+        for (const t of state.turmasProfessor) {
+            for (const d of state.disciplinasProfessor) {
+                let modsAvaliados = new Set();
+                try {
+                    const snapAl = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
+                    for(const docAl of snapAl.docs) {
+                        const nS = await getDocs(collection(db, "utilizadores", docAl.id, "notas"));
+                        nS.forEach(n => { if(n.data().disciplina === d) modsAvaliados.add(n.data().modulo); });
+                    }
+                } catch(e) {}
 
+                const totalMods = modsAvaliados.size;
+                modHtml += `
+                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;">
+                    <div><strong style="color:white; font-size:0.9rem;">${t} - ${d}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Estado Atual da Turma</span></div>
+                    <div style="text-align:right;"><strong style="color:var(--primary-green); font-size:1.1rem;">${totalMods}</strong><br><span style="color:var(--text-muted); font-size:0.7rem; text-transform:uppercase;">Módulos Concluídos</span></div>
+                </div>`;
+            }
+        }
+        modHtml += '</div>'; 
+        document.getElementById('dashboard-modulos-container').innerHTML = modHtml;
+
+        // HORÁRIO HOJE
         if(profAulasHoje.length > 0) {
-            try { profAulasHoje.sort((a,b) => { if(!a.hora || !b.hora) return 0; const getMin = (hx) => parseInt(hx.split(':')[0])*60 + parseInt(hx.split(':')[1]); return getMin(a.hora) - getMin(b.hora); }); let hHtml = ''; profAulasHoje.forEach(aula => { hHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid #0099ff;"><div><strong style="color:white; font-size:0.9rem;">${aula.disciplina}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${aula.turma}</span></div><span style="color:#0099ff; font-weight:bold; font-size:0.85rem;">${aula.hora}</span></div>`; }); hCont.innerHTML = hHtml; } catch(sortErr) { hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Não tens aulas marcadas para hoje.</p>'; }
-        } else { hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Não tens aulas marcadas para hoje.</p>'; }
+            try { 
+                profAulasHoje.sort((a,b) => { if(!a.hora || !b.hora) return 0; const getMin = (hx) => parseInt(hx.split(':')[0])*60 + parseInt(hx.split(':')[1]); return getMin(a.hora) - getMin(b.hora); }); 
+                let hHtml = ''; profAulasHoje.forEach(aula => { hHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid #0099ff;"><div><strong style="color:white; font-size:0.9rem;">${aula.disciplina}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${aula.turma}</span></div><span style="color:#0099ff; font-weight:bold; font-size:0.85rem;">${aula.hora}</span></div>`; }); 
+                hCont.innerHTML = hHtml; 
+            } catch(sortErr) { hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Sem aulas marcadas.</p>'; }
+        } else { hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Não tens aulas no sistema hoje.</p>'; }
 
-        const hjStrFull = hjD.toISOString().split('T')[0]; const fut = eventosGlobais.filter(e => e.data && e.data >= hjStrFull).sort((a,b) => a.data.localeCompare(b.data)).slice(0, 3);
-        if (fut.length > 0) { let ah = ''; fut.forEach(e => { const datePrint = e.data ? e.data.split('-').reverse().join('/') : 'Brevemente'; const timePrint = e.periodo === 'hora' ? ` às ${e.hora}` : (e.periodo === 'manha' ? ' (Manhã)' : (e.periodo === 'tarde' ? ' (Tarde)' : '')); ah += `<div style="display:flex; justify-content:space-between; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid var(--warning-yellow);"><div><strong style="color:white; font-size:0.9rem;">${e.titulo}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${e.turma}</span></div><span style="color:var(--warning-yellow); font-size:0.8rem;">${datePrint}${timePrint}</span></div>`; }); eCont.innerHTML = ah; } else { eCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Agenda livre.</p>'; }
+        // PRÓXIMOS EVENTOS AGENDA
+        const fut = eventosGlobais.filter(e => e.data && e.data >= hjStrFull).sort((a,b) => a.data.localeCompare(b.data)).slice(0, 3);
+        if (fut.length > 0) { 
+            let ah = ''; fut.forEach(e => { const datePrint = e.data ? e.data.split('-').reverse().join('/') : 'Brevemente'; const timePrint = e.periodo === 'hora' ? ` às ${e.hora}` : (e.periodo === 'manha' ? ' (Manhã)' : (e.periodo === 'tarde' ? ' (Tarde)' : '')); ah += `<div style="display:flex; justify-content:space-between; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid var(--warning-yellow);"><div><strong style="color:white; font-size:0.9rem;">${e.titulo}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${e.turma}</span></div><span style="color:var(--warning-yellow); font-size:0.8rem;">${datePrint}${timePrint}</span></div>`; }); 
+            eCont.innerHTML = ah; 
+        } else { eCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Agenda livre.</p>'; }
+        
     } catch (e) { aText.innerHTML = "Problema na ligação. Por favor, tenta novamente."; }
 }
 
+// ==========================================
+// GESTÃO DA TURMA (Lista, Pauta, Faltas)
+// ==========================================
 export async function analisarEAtualizarTurma(turmaId) {
     const listC = document.getElementById('lista-alunos-turma'); listC.innerHTML = '<p class="text-muted center">A ler dados dos alunos...</p>';
     document.getElementById('assistente-aula-texto').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A analisar a turma...';
@@ -350,6 +405,9 @@ export async function renderizarFaltasTurma() {
     } catch(e) { cont.innerHTML = '<tr><td colspan="5" class="center text-danger">Erro de ligação.</td></tr>'; }
 }
 
+// ==========================================
+// PERFIL 360º DO ALUNO & GAMIFICAÇÃO
+// ==========================================
 export function desenharGraficoAluno(modo) {
     const ctx = document.getElementById('chartEvolucaoAluno').getContext('2d');
     if(state.chartEvolucao) state.chartEvolucao.destroy();
@@ -408,6 +466,9 @@ export async function abrirPerfil360Aluno(alunoId) {
     document.getElementById('modal-perfil-aluno').style.display = 'flex';
 }
 
+// ==========================================
+// TAREFAS E FÓRUNS (Sem alterações estruturais profundas)
+// ==========================================
 export async function carregarTarefasProf() {
     const isPRHFTab = document.getElementById('tab-tarefas-prhf').classList.contains('active');
     
@@ -517,7 +578,7 @@ export async function carregarTarefasProf() {
                 if(showPAP) bodyHtml += `<div style="margin-top:10px; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px dashed #333;"><strong style="font-size:0.85rem; color:white;"><i class="fa-solid fa-laptop-code" style="color:#0099ff;"></i> Projeto de Aptidão Profissional (PAP)</strong><div style="margin-top:5px;">${papHtml}</div></div>`;
                 h += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #ff9900;"><strong style="color:white; font-size:1.05rem;">${nomeCurto(al.nome)} <span style="font-size:0.75rem; color:var(--text-muted);">(${al.turma})</span></strong>${bodyHtml}</div>`;
             }); 
-            container.innerHTML = h === '' ? '<p class="text-muted center">Nenhum aluno submeteu horas.</p>' : h;
+            container.innerHTML = h === '' ? '<p class="text-muted center">Nenhum aluno submeteu dados.</p>' : h;
         } catch (e) { container.innerHTML = '<p class="text-danger center">Erro ao carregar passaportes.</p>'; }
     }
 }
