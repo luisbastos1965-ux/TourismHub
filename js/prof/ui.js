@@ -179,7 +179,6 @@ export async function carregarRadarProfessor() {
         const bK = ['1', '2', '3', '4', '1300', '5', '6', '7']; const bT = { '1': '08:30', '2': '09:35', '3': '10:50', '4': '11:55', '1300': '13:00', '5': '14:05', '6': '15:15', '7': '16:20' };
         const hjD = new Date(); const hjStr = `${hjD.getFullYear()}-${String(hjD.getMonth()+1).padStart(2,'0')}-${String(hjD.getDate()).padStart(2,'0')}`;
 
-        // 1. DADOS DAS TURMAS E ALUNOS (Faltas, Ocorrências, PRHFs)
         for (const t of state.turmasProfessor) {
             try { 
                 const tSnap = await getDoc(doc(db, "turmas", t)); 
@@ -214,11 +213,10 @@ export async function carregarRadarProfessor() {
             } catch(e) {}
         }
 
-        // 2. CÁLCULO DE AVALIAÇÕES EM FALTA (Testes Passados sem Notas Lançadas)
         let avaliacoesEmFalta = 0;
         const hjStrFull = hjD.toISOString().split('T')[0]; 
         const avaliacoesPassadas = eventosGlobais.filter(e => e.tipo === 'avaliacao' && e.data < hjStrFull && e.professor === state.myUserName);
-        avaliacoesEmFalta = avaliacoesPassadas.length; // Usa o nº de testes que o Prof já fez e ainda não avaliou
+        avaliacoesEmFalta = avaliacoesPassadas.length; 
 
         let resumo = `A gerir ${totalAlunos} alunos em ${state.turmasProfessor.length} turmas. `;
         if (prhfsAtivos > 0) resumo += `<br><span style="color:var(--warning-yellow); font-weight:bold;">Atenção: Existem ${prhfsAtivos} PRHFs a decorrer na tua matéria.</span>`; 
@@ -226,7 +224,6 @@ export async function carregarRadarProfessor() {
         if (avaliacoesEmFalta > 0) resumo += `<br><span style="color:var(--danger-red); font-size:0.85rem;"><i class="fa-solid fa-star"></i> Tens avaliações por lançar no sistema.</span>`;
         aText.innerHTML = resumo;
 
-        // CARROSSEL ESTATÍSTICO
         const carouselTrack = document.getElementById('stats-carousel-container');
         const statsHtmlBlock = `
             <div class="stat-card"><h2 style="color: var(--primary-green); margin-bottom: 5px;">${state.turmasProfessor.length}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Turmas</span></div>
@@ -237,7 +234,6 @@ export async function carregarRadarProfessor() {
             <div class="stat-card"><h2 style="color: #ffaa00; margin-bottom: 5px;">${avaliacoesEmFalta}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">A Lançar</span></div>`;
         carouselTrack.innerHTML = statsHtmlBlock + statsHtmlBlock; iniciarCarrossel();
 
-        // 3. PROGRESSO DOS MÓDULOS (Conta os módulos que já têm notas lançadas)
         let modHtml = '<div style="display:flex; flex-direction:column; gap:8px;">';
         for (const t of state.turmasProfessor) {
             for (const d of state.disciplinasProfessor) {
@@ -261,7 +257,6 @@ export async function carregarRadarProfessor() {
         modHtml += '</div>'; 
         document.getElementById('dashboard-modulos-container').innerHTML = modHtml;
 
-        // HORÁRIO HOJE
         if(profAulasHoje.length > 0) {
             try { 
                 profAulasHoje.sort((a,b) => { if(!a.hora || !b.hora) return 0; const getMin = (hx) => parseInt(hx.split(':')[0])*60 + parseInt(hx.split(':')[1]); return getMin(a.hora) - getMin(b.hora); }); 
@@ -270,7 +265,6 @@ export async function carregarRadarProfessor() {
             } catch(sortErr) { hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Sem aulas marcadas.</p>'; }
         } else { hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Não tens aulas no sistema hoje.</p>'; }
 
-        // PRÓXIMOS EVENTOS AGENDA
         const fut = eventosGlobais.filter(e => e.data && e.data >= hjStrFull).sort((a,b) => a.data.localeCompare(b.data)).slice(0, 3);
         if (fut.length > 0) { 
             let ah = ''; fut.forEach(e => { const datePrint = e.data ? e.data.split('-').reverse().join('/') : 'Brevemente'; const timePrint = e.periodo === 'hora' ? ` às ${e.hora}` : (e.periodo === 'manha' ? ' (Manhã)' : (e.periodo === 'tarde' ? ' (Tarde)' : '')); ah += `<div style="display:flex; justify-content:space-between; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid var(--warning-yellow);"><div><strong style="color:white; font-size:0.9rem;">${e.titulo}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${e.turma}</span></div><span style="color:var(--warning-yellow); font-size:0.8rem;">${datePrint}${timePrint}</span></div>`; }); 
@@ -293,6 +287,8 @@ export async function analisarEAtualizarTurma(turmaId) {
     const btnPauta = document.getElementById('btn-ver-pauta');
     const btnFaltasGlobal = document.getElementById('btn-ver-faltas-turma');
     const lmsGrid = document.querySelector('.lms-action-grid');
+    const btnAvisoGlobal = document.getElementById('btn-abrir-aviso-global');
+    if (btnAvisoGlobal) btnAvisoGlobal.style.display = isDT ? 'block' : 'none';
     
     if (state.activeRole === 'professor') {
         btnPauta.style.display = 'none';
@@ -675,3 +671,31 @@ export function abrirChatForum(turma, disciplina, nomeCustom) {
         msgCont.innerHTML = h; setTimeout(() => { msgCont.scrollTop = msgCont.scrollHeight; }, 100);
     });
 }
+
+// ==========================================
+// EXPORTAÇÃO DE DADOS (BOTÃO MÁGICO)
+// ==========================================
+window.exportarCSV = function(tableId, filename) {
+    const table = document.getElementById(tableId);
+    if (!table) return alert("Tabela não encontrada.");
+    
+    let csv = [];
+    for (let i = 0; i < table.rows.length; i++) {
+        let row = [], cols = table.rows[i].querySelectorAll("td, th");
+        for (let j = 0; j < cols.length; j++) {
+            let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, " ").trim();
+            data = data.replace(/"/g, '""');
+            row.push(`"${data}"`);
+        }
+        csv.push(row.join(","));
+    }
+
+    const csvFile = new Blob(["\uFEFF" + csv.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const downloadLink = document.createElement("a");
+    downloadLink.download = filename;
+    downloadLink.href = window.URL.createObjectURL(csvFile);
+    downloadLink.style.display = "none";
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+};
