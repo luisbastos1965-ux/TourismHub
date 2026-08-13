@@ -179,17 +179,46 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('#tab-tarefas-passaporte')) { document.querySelectorAll('.falta-tab-btn').forEach(b => b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('sec-tarefas-prhf').style.display = 'none'; document.getElementById('sec-tarefas-passaporte').style.display = 'block'; carregarTarefasProf(); return; }
     if (e.target.closest('#btn-nova-sessao-pap')) { prepararModalNovaSessao(); return; }
 
-    // BLOCOS TURMA E DT
-    if (e.target.closest('#btn-ver-pauta')) { renderizarPautaTurma(); return; }
-    if (e.target.closest('#btn-ver-faltas-turma')) { renderizarFaltasTurma(); return; }
-    if (e.target.closest('#btn-radar-conflitos')) { gerarRadarConflitos(); return; }
+    // COPILOTO IA (GERADOR DE FEEDBACK / SÍNTESES)
+    if (e.target.closest('#btn-abrir-copiloto')) {
+        const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
+        const alunoNome = document.getElementById('p-aluno-nome').innerText;
+        const faltas = document.getElementById('p-aluno-faltas').innerText;
+        const modFeitos = document.getElementById('p-aluno-notas').innerText;
+        const textareaPrompt = document.getElementById('prompt-ia-text');
+        
+        let promptText = "";
+        if (isDT) {
+            promptText = `Atua como Diretor de Turma. Faz uma Síntese Global para o aluno ${alunoNome}. Baseia-te nos dados (Tem ${faltas}h de faltas e concluiu ${modFeitos} módulos). Regras obrigatórias: Ser objetivo e claro; Indicar pontos fortes no empenho; Referir os aspetos a melhorar no comportamento/aprendizagem; Apresentar estratégias concretas de progressão; Incluir a lista de módulos não concluídos (se aplicável). Tom: Institucional e construtivo.`;
+        } else {
+            promptText = `Atua como professor da disciplina de ${state.disciplinasProfessor[0] || 'Técnicas'}. Escreve uma síntese de avaliação para o aluno ${alunoNome}. A síntese deve cumprir as regras da direção: Ser objetiva e construtiva; 1. Elogiar pontos fortes. 2. Apontar aspetos a melhorar na disciplina. 3. Dar estratégias claras de progressão. (Nota: O aluno concluiu ${modFeitos} módulos e tem ${faltas}h de faltas na globalidade). Tom: Profissional e direto ao assunto.`;
+        }
+        textareaPrompt.value = promptText;
+        document.getElementById('modal-copiloto-ia').style.display = 'flex';
+        return;
+    }
     
-    // AÇÕES DO COORDENADOR (ESTÁGIOS) E PAP
-    if (e.target.closest('.btn-validar-fct')) { validarFCT(e.target.closest('.btn-validar-fct').getAttribute('data-id'), e.target.closest('.btn-validar-fct')); return; }
-    if (e.target.closest('.btn-aprovar-tema')) { aprovarTemaPAP(e.target.closest('.btn-aprovar-tema').getAttribute('data-id'), e.target.closest('.btn-aprovar-tema')); return; }
-    if (e.target.closest('.btn-rejeitar-tema')) { document.getElementById('rej-pap-aluno-id').value = e.target.closest('.btn-rejeitar-tema').getAttribute('data-id'); document.getElementById('rej-pap-motivo').value = ''; document.getElementById('modal-rejeitar-tema-pap').style.display = 'flex'; return; }
-    if (e.target.closest('#btn-confirmar-rejeicao-pap')) { const motivo = document.getElementById('rej-pap-motivo').value.trim(); if(!motivo) return alert("Indica o motivo."); rejeitarTemaPAPExecutar(document.getElementById('rej-pap-aluno-id').value, motivo, e.target.closest('#btn-confirmar-rejeicao-pap')); return; }
-    if (e.target.closest('.btn-aprovar-relatorio')) { aprovarRelatorioPAP(e.target.closest('.btn-aprovar-relatorio').getAttribute('data-id'), e.target.closest('.btn-aprovar-relatorio')); return; }
+    if (e.target.closest('#btn-copiar-prompt')) {
+        const copyText = document.getElementById('prompt-ia-text');
+        copyText.select();
+        document.execCommand("copy");
+        const btn = e.target.closest('#btn-copiar-prompt');
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Copiado!';
+        setTimeout(() => { btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copiar Prompt'; document.getElementById('modal-copiloto-ia').style.display = 'none'; }, 1500);
+        return;
+    }
+
+    // EXPORTAÇÃO ICS E CALENDÁRIO
+    if (e.target.closest('.btn-download-ics')) {
+        const btn = e.target.closest('.btn-download-ics');
+        const tit = btn.getAttribute('data-tit'); const dat = btn.getAttribute('data-data'); const hor = btn.getAttribute('data-hora') || "09:00";
+        const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${tit}\nDTSTART:${dat.replace(/-/g,'')}T${hor.replace(':','')}00Z\nDTEND:${dat.replace(/-/g,'')}T${(parseInt(hor.split(':')[0])+1).toString().padStart(2,'0')}${hor.split(':')[1]}00Z\nDESCRIPTION:Evento agendado via TurmaPRO\nEND:VEVENT\nEND:VCALENDAR`;
+        const blob = new Blob([icsContent], { type: 'text/calendar' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `${tit.replace(/\s+/g,'_')}.ics`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        return;
+    }
 
     // AVISOS GLOBAIS (MEGA-FÓRUM)
     if (e.target.closest('#btn-abrir-aviso-global') || e.target.closest('#btn-abrir-aviso-global-coord')) {
@@ -220,7 +249,6 @@ document.body.addEventListener('click', async (e) => {
         
         try {
             let turmasAlvo = destino === 'todas' ? state.turmasProfessor : [destino];
-            
             for (const t of turmasAlvo) {
                 await addDoc(collection(db, "turmas", t, "avisos"), {
                     titulo: titulo,
@@ -243,6 +271,18 @@ document.body.addEventListener('click', async (e) => {
         }
         return;
     }
+
+    // BLOCOS TURMA E DT
+    if (e.target.closest('#btn-ver-pauta')) { renderizarPautaTurma(); return; }
+    if (e.target.closest('#btn-ver-faltas-turma')) { renderizarFaltasTurma(); return; }
+    if (e.target.closest('#btn-radar-conflitos')) { gerarRadarConflitos(); return; }
+    
+    // AÇÕES DO COORDENADOR (ESTÁGIOS) E PAP
+    if (e.target.closest('.btn-validar-fct')) { validarFCT(e.target.closest('.btn-validar-fct').getAttribute('data-id'), e.target.closest('.btn-validar-fct')); return; }
+    if (e.target.closest('.btn-aprovar-tema')) { aprovarTemaPAP(e.target.closest('.btn-aprovar-tema').getAttribute('data-id'), e.target.closest('.btn-aprovar-tema')); return; }
+    if (e.target.closest('.btn-rejeitar-tema')) { document.getElementById('rej-pap-aluno-id').value = e.target.closest('.btn-rejeitar-tema').getAttribute('data-id'); document.getElementById('rej-pap-motivo').value = ''; document.getElementById('modal-rejeitar-tema-pap').style.display = 'flex'; return; }
+    if (e.target.closest('#btn-confirmar-rejeicao-pap')) { const motivo = document.getElementById('rej-pap-motivo').value.trim(); if(!motivo) return alert("Indica o motivo."); rejeitarTemaPAPExecutar(document.getElementById('rej-pap-aluno-id').value, motivo, e.target.closest('#btn-confirmar-rejeicao-pap')); return; }
+    if (e.target.closest('.btn-aprovar-relatorio')) { aprovarRelatorioPAP(e.target.closest('.btn-aprovar-relatorio').getAttribute('data-id'), e.target.closest('.btn-aprovar-relatorio')); return; }
 
     // CIDADANIA
     if (e.target.closest('#btn-ver-cidadania')) {
@@ -361,11 +401,27 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('#btn-modal-agenda')) { if (!state.selectedTurma) return alert("Seleciona turma primeiro."); const permitidas = getDisciplinasPermitidas(); const sd = document.getElementById('agendar-disciplina'); sd.innerHTML = permitidas.map(dc => `<option value="${dc}">${dc}</option>`).join(''); sd.style.display = permitidas.length > 1 ? 'block' : 'none'; document.getElementById('evento-titulo').value = ''; document.getElementById('evento-data').value = ''; document.getElementById('evento-hora').value = ''; document.getElementById('evento-hora').style.display = 'none'; document.getElementById('evento-periodo').value = 'dia'; document.getElementById('modal-agendar-evento').style.display = 'flex'; return; }
     if (e.target.closest('#btn-gravar-evento')) { const t = document.getElementById('evento-titulo').value.trim(); const d = document.getElementById('evento-data').value; const tp = document.getElementById('evento-tipo').value; const p = document.getElementById('evento-periodo').value; const h = document.getElementById('evento-hora').value; const sd = document.getElementById('agendar-disciplina'); const disc = sd.style.display === 'block' ? sd.value : (state.disciplinasProfessor[0] || "Geral"); if (!t || !d) return alert("Preenche Título e Data."); if (p === 'hora' && !h) return alert("Preenche a hora exata do evento."); const b = e.target.closest('#btn-gravar-evento'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await addDoc(collection(db, "turmas", state.selectedTurma, "eventos"), { titulo: `[${disc}] ${t}`, data: d, tipo: tp, periodo: p, hora: h, professor: state.myUserName }); b.innerHTML = '<i class="fa-solid fa-check"></i> Agendado'; setTimeout(() => { b.innerHTML = 'Agendar'; b.disabled = false; document.getElementById('modal-agendar-evento').style.display = 'none'; carregarRadarProfessor(); analisarEAtualizarTurma(state.selectedTurma); }, 1500); } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 1500); } return; }
     
-    // OCORRENCIAS / REUNIÕES / JUSTIFICAÇÕES
+    // OCORRENCIAS / REUNIÕES / JUSTIFICAÇÕES E SÍNTESES
     if (e.target.closest('#btn-dar-positiva')) { if (!state.alunoSelecionadoId) return; document.getElementById('oco-tipo').value = 'positiva'; document.getElementById('oco-titulo').innerHTML = '<i class="fa-solid fa-star" style="color:var(--success-green);"></i> Ocorrência Positiva'; document.getElementById('oco-motivo').value = ''; document.getElementById('btn-gravar-ocorrencia').style.background = 'var(--success-green)'; document.getElementById('modal-ocorrencia').style.display = 'flex'; return; }
     if (e.target.closest('#btn-dar-negativa')) { if (!state.alunoSelecionadoId) return; document.getElementById('oco-tipo').value = 'negativa'; document.getElementById('oco-titulo').innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color:var(--danger-red);"></i> Ocorrência Negativa'; document.getElementById('oco-motivo').value = ''; document.getElementById('btn-gravar-ocorrencia').style.background = 'var(--danger-red)'; document.getElementById('modal-ocorrencia').style.display = 'flex'; return; }
     if (e.target.closest('#btn-gravar-ocorrencia')) { const tipo = document.getElementById('oco-tipo').value; const motivo = document.getElementById('oco-motivo').value.trim(); if (!motivo) return alert("Preenche o motivo!"); const b = e.target.closest('#btn-gravar-ocorrencia'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { if (tipo === 'positiva') { const uS = await getDoc(doc(db, "utilizadores", state.alunoSelecionadoId)); let axp = uS.exists() && uS.data().xp ? uS.data().xp : 0; await addDoc(collection(db, "utilizadores", state.alunoSelecionadoId, "ocorrencias"), { titulo: "Reconhecimento Positivo", descricao: motivo, tipo: "positiva", autor: state.myUserName, timestamp: Date.now(), data: new Date().toLocaleDateString('pt-PT') }); await updateDoc(doc(db, "utilizadores", state.alunoSelecionadoId), { xp: axp + 50 }); } else { await addDoc(collection(db, "utilizadores", state.alunoSelecionadoId, "ocorrencias"), { titulo: "Registo de Aula", descricao: motivo, tipo: "negativa", autor: state.myUserName, timestamp: Date.now(), data: new Date().toLocaleDateString('pt-PT') }); } b.innerHTML = '<i class="fa-solid fa-check"></i> Gravado'; setTimeout(() => { b.innerHTML = 'Confirmar Registo'; b.disabled = false; document.getElementById('modal-ocorrencia').style.display = 'none'; document.getElementById('modal-perfil-aluno').style.display = 'none'; analisarEAtualizarTurma(state.selectedTurma); }, 1500); } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 1500); } return; }
     if (e.target.closest('#btn-justificar-faltas')) { if (!state.alunoSelecionadoId) return; document.getElementById('modal-confirm-justificar').style.display = 'flex'; return; }
     if (e.target.closest('#btn-executar-justificar')) { const b = e.target.closest('#btn-executar-justificar'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { const fS = await getDocs(query(collection(db, "utilizadores", state.alunoSelecionadoId, "faltas"), where("justificada", "==", false))); for (const f of fS.docs) { await updateDoc(doc(db, "utilizadores", state.alunoSelecionadoId, "faltas", f.id), { justificada: true, justificadaPor: state.myUserName }); } b.innerHTML = '<i class="fa-solid fa-check"></i> Faltas Justificadas'; setTimeout(() => { b.innerHTML = 'Sim, Justificar'; b.disabled = false; document.getElementById('modal-confirm-justificar').style.display = 'none'; abrirPerfil360Aluno(state.alunoSelecionadoId); analisarEAtualizarTurma(state.selectedTurma); }, 2000); } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 2000); } return; }
-    if (e.target.closest('#btn-salvar-obs-dt')) { if (!state.alunoSelecionadoId) return; const txt = document.getElementById('p-aluno-obs-dt').value.trim(); const b = e.target.closest('#btn-salvar-obs-dt'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await setDoc(doc(db, "utilizadores", state.alunoSelecionadoId, "reunioes", "1_avaliacao"), { global: txt }, { merge: true }); b.innerHTML = '<i class="fa-solid fa-check"></i> Gravado'; b.style.backgroundColor = "var(--success-green)"; setTimeout(() => { b.innerHTML = 'Gravar Apreciação'; b.disabled = false; b.style.backgroundColor = "var(--primary-green)"; }, 2000); } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 2000); } return; }
+    if (e.target.closest('#btn-salvar-obs-dt')) { 
+        if (!state.alunoSelecionadoId) return; 
+        const txt = document.getElementById('p-aluno-obs-dt').value.trim(); 
+        const b = e.target.closest('#btn-salvar-obs-dt'); 
+        b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; 
+        try { 
+            const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
+            if (isDT) {
+                await setDoc(doc(db, "utilizadores", state.alunoSelecionadoId, "reunioes", "1_avaliacao"), { global: txt }, { merge: true }); 
+            } else {
+                const disc = state.disciplinasProfessor[0] || 'geral';
+                await setDoc(doc(db, "utilizadores", state.alunoSelecionadoId, "reunioes", "sintese_" + disc), { texto: txt }, { merge: true });
+            }
+            b.innerHTML = '<i class="fa-solid fa-check"></i> Gravado'; b.style.backgroundColor = "var(--success-green)"; 
+            setTimeout(() => { b.innerHTML = 'Gravar Síntese'; b.disabled = false; b.style.backgroundColor = "var(--primary-green)"; }, 2000); 
+        } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 2000); } return; 
+    }
 });
