@@ -92,10 +92,11 @@ export function setupPassaporte() {
     window.editarHorasFCT = editarHorasFCT;
     window.abrirModalHistoricoFCT = abrirModalHistoricoFCT;
     window.abrirChatOrientadorPAP = abrirChatOrientadorPAP;
-    window.guardarTemaPAP = guardarTemaPAP;
     window.submeterDocBurocracia = submeterDocBurocracia;
     
-    // PAP Mobile & Simulador
+    // PAP
+    window.guardarTemaPAP = guardarTemaPAP;
+    window.toggleEditTemaPAP = toggleEditTemaPAP;
     window.mudarTopicoPAP = mudarTopicoPAP;
     window.guardarTopicoPAP = guardarTopicoPAP;
     window.compilarRelatorioPAP = compilarRelatorioPAP;
@@ -139,7 +140,7 @@ async function carregarPassaporteDashboard(dados = null, ano = null, abaForcada 
     cont.innerHTML = html;
     document.getElementById('upload-cofre-pap')?.addEventListener('change', processarUploadCofre);
     if(ano === 12 && activePAP.includes('active')) window.mudarTopicoPAP();
-    resetTimer(); // Reinicia o relógio visualmente
+    resetTimer(); 
 }
 
 window.recarregarViewPassaporte = async function(abaForcada) {
@@ -187,12 +188,13 @@ function renderPAP(dados) {
     });
     html += `</div>`;
 
-    // TEMA DA PAP
+    // TEMA DA PAP COM BLOQUEIO E EDIÇÃO
     html += `<div class="card" style="margin-bottom:20px; border-left:4px solid var(--primary-green);">
                 <h4 style="color:var(--text-light); font-size:1rem; margin:0 0 10px 0;"><i class="fa-solid fa-lightbulb"></i> Tema do Projeto</h4>
                 <div style="display:flex; gap:10px; align-items:stretch;">
-                    <input type="text" id="input-pap-tema" class="input-padrao" placeholder="Escreve aqui o teu tema..." value="${temaStr}" style="flex:1; margin:0; height:42px;">
-                    <button onclick="window.guardarTemaPAP()" class="primary-btn small-btn" style="width:50px; margin:0; height:42px; display:flex; align-items:center; justify-content:center; padding:0;"><i class="fa-solid fa-save"></i></button>
+                    <input type="text" id="input-pap-tema" class="input-padrao" placeholder="Escreve aqui o teu tema..." value="${temaStr}" ${temaStr ? 'disabled' : ''} style="flex:1; margin:0; height:42px; ${temaStr ? 'opacity:0.7; cursor:not-allowed;' : ''}">
+                    <button id="btn-edit-tema" onclick="window.toggleEditTemaPAP()" class="secondary-btn small-btn" style="width:50px; margin:0; height:42px; display:${temaStr ? 'flex' : 'none'}; align-items:center; justify-content:center; padding:0;"><i class="fa-solid fa-pen"></i></button>
+                    <button id="btn-save-tema" onclick="window.guardarTemaPAP()" class="primary-btn small-btn" style="width:50px; margin:0; height:42px; display:${temaStr ? 'none' : 'flex'}; align-items:center; justify-content:center; padding:0;"><i class="fa-solid fa-save"></i></button>
                 </div>
              </div>`;
 
@@ -245,8 +247,14 @@ function renderPAP(dados) {
                 </div>
              </div>`;
 
-    // RELATÓRIO MOBILE
-    const TOPICOS_PAP = ['Introdução', 'Conceitos / Revisão Literária', 'Projeto: Motivação, Caracterização, Conceito e Descrição', 'Plano de Marketing: Público-Alvo, Marketing-Mix, Concorrência, Análise SWOT', 'Micro-Projeto', 'Conclusão', 'Agradecimentos', 'Referências Bibliográficas'];
+    // RELATÓRIO MOBILE DESAGREGADO
+    const TOPICOS_PAP = [
+        'Introdução', 'Conceitos / Revisão Literária', 
+        'Projeto - Motivação', 'Projeto - Caracterização', 'Projeto - Conceito e Descrição', 
+        'Plano de Marketing - Público-Alvo', 'Plano de Marketing - Marketing-Mix', 'Plano de Marketing - Concorrência', 'Plano de Marketing - Análise SWOT', 
+        'Micro-Projeto', 'Conclusão', 'Agradecimentos', 'Referências Bibliográficas'
+    ];
+    
     html += `<div class="card" style="margin-bottom:20px; border-left:4px solid #f97316;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <h4 style="color:var(--text-light); font-size:1rem; margin:0;"><i class="fa-solid fa-mobile-screen"></i> Relatório Mobile</h4>
@@ -264,7 +272,7 @@ function renderPAP(dados) {
                 <div id="pap-relatorio-compilado" style="display:none; margin-top:15px; padding:20px; background:rgba(0,0,0,0.3); border-radius:8px; font-size:0.9rem; color:var(--text-light); white-space:pre-wrap; border:1px solid #333; line-height: 1.6;"></div>
              </div>`;
 
-    // GUIA IA PROMPTS
+    // GUIA IA PROMPTS (MUITO MAIS ROBUSTO E ADAPTADO AO TEMA)
     const pTema = temaStr ? temaStr : "[Insere aqui o Teu Tema]";
     html += `<div class="card" style="margin-bottom:20px; border-left:4px solid #3b82f6;">
                 <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'; this.querySelector('i.fa-chevron-down').classList.toggle('fa-flip-vertical');">
@@ -272,27 +280,51 @@ function renderPAP(dados) {
                     <i class="fa-solid fa-chevron-down" style="color:var(--text-muted); transition:0.3s;"></i>
                 </div>
                 <div style="display:none; margin-top:15px;">
-                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">A IA ajuda-te a estruturar o relatório, mas <strong>não escreve o projeto por ti!</strong> Copia e cola os textos abaixo para obteres orientação técnica focada no teu tema:</p>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">A Inteligência Artificial (ChatGPT/Gemini) ajuda-te a estruturar ideias perante a exigência do Júri, mas <strong>não escreve o projeto por ti!</strong> Copia e cola os textos azuis abaixo para obteres orientação técnica focada no teu tema:</p>
+                    
                     <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
-                        <strong style="color:var(--text-light); font-size:0.85rem;">Introdução e Relevância</strong>
-                        <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Atua como um professor especialista em Turismo e Gestão. O tema da minha PAP é '${pTema}'. Escreve-me uma fundamentação rigorosa (3 parágrafos) que justifique a importância deste projeto para o desenvolvimento regional, abordando a sustentabilidade e as atuais tendências do mercado turístico."</p>
+                        <strong style="color:var(--text-light); font-size:0.85rem;">1. Introdução e Motivação</strong>
+                        <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Atua como um professor especialista em Turismo. O tema da minha PAP é '${pTema}'. Escreve-me uma fundamentação rigorosa que justifique a importância deste projeto para o desenvolvimento turístico regional e descreve uma motivação pessoal forte para a escolha deste tema."</p>
                     </div>
+
                     <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
-                        <strong style="color:var(--text-light); font-size:0.85rem;">Conceitos e Revisão Literária</strong>
-                        <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Sugere-me um índice detalhado para a Revisão Literária de um projeto sobre '${pTema}'. Inclui os conceitos fundamentais, a evolução do setor e a importância económica desta atividade (como o impacto no PIB e na fixação de população)."</p>
+                        <strong style="color:var(--text-light); font-size:0.85rem;">2. Revisão Literária e Conceitos</strong>
+                        <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Indica-me os 4 principais conceitos teóricos sobre turismo e gestão que eu devo abordar na revisão literária de um projeto focado em '${pTema}'. Dá-me uma breve explicação académica de cada um para eu perceber a sua evolução."</p>
                     </div>
+
                     <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
-                        <strong style="color:var(--text-light); font-size:0.85rem;">Marketing-Mix (Os 4 P's)</strong>
-                        <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Cria uma proposta técnica de Marketing-Mix (Produto, Preço, Distribuição, Promoção) para '${pTema}'. Detalha as experiências turísticas, sugere uma estratégia de preços, canais de distribuição (reservas diretas vs OTAs) e promoção digital."</p>
+                        <strong style="color:var(--text-light); font-size:0.85rem;">3. Marketing-Mix (Os 4 P's)</strong>
+                        <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Cria uma proposta técnica de Marketing-Mix (Produto, Preço, Distribuição, Promoção) para o projeto '${pTema}'. Detalha os serviços turísticos, sugere uma estratégia de preços, canais de venda (reservas diretas vs OTAs) e uma campanha promocional digital."</p>
                     </div>
+
+                    <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
+                        <strong style="color:var(--text-light); font-size:0.85rem;">4. Público-Alvo e Concorrência</strong>
+                        <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Define o perfil do turista ideal (idades, interesses, origens) para '${pTema}'. De seguida, ajuda-me a identificar 3 tipos de concorrentes diretos ou indiretos que eu possa ter na minha região e como me posso diferenciar deles."</p>
+                    </div>
+
+                    <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
+                        <strong style="color:var(--text-light); font-size:0.85rem;">5. Análise SWOT</strong>
+                        <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Elabora uma Análise SWOT (Forças, Fraquezas, Oportunidades, Ameaças) realista para '${pTema}'. Usa como 'Força' a inovação do serviço e como 'Fraqueza' a eventual sazonalidade ou os custos iniciais. Dá 3 exemplos para cada quadrante."</p>
+                    </div>
+                    
+                    <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
+                        <strong style="color:var(--text-light); font-size:0.85rem;">6. Viabilidade, Orçamento e Sustentabilidade</strong>
+                        <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Que tipo de custos iniciais e despesas fixas devo considerar para avaliar a viabilidade económica de '${pTema}'? Para além da vertente financeira, dá-me 3 medidas práticas de sustentabilidade ambiental que eu possa implementar no meu modelo de negócio."</p>
+                    </div>
+
+                    <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
+                        <strong style="color:var(--text-light); font-size:0.85rem;">7. Micro-Projeto</strong>
+                        <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"A minha PAP sobre '${pTema}' exige um 'Micro-Projeto' complementar (uma pequena ação prática, evento ou teste). Sugere-me 3 ideias criativas e exequíveis que eu possa realizar na escola ou na comunidade local para demonstrar o valor do meu projeto."</p>
+                    </div>
+
                     <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px;">
-                        <strong style="color:var(--text-light); font-size:0.85rem;">Análise SWOT</strong>
-                        <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Elabora uma Análise SWOT (Forças, Fraquezas, Oportunidades, Ameaças) realista para um projeto focado em '${pTema}'. Dá 3 exemplos para cada quadrante e justifica-os."</p>
+                        <strong style="color:var(--text-light); font-size:0.85rem;">8. Conclusão e Impacto no Território</strong>
+                        <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Quais devem ser os 3 pontos finais a destacar na conclusão de um projeto sobre '${pTema}' para demonstrar o impacto social, económico e turístico positivo no território, deixando o júri com uma excelente impressão da viabilidade?"</p>
                     </div>
                 </div>
              </div>`;
 
-    // SIMULADOR DE DEFESA (A TUA NOVIDADE!)
+    // SIMULADOR DE DEFESA
     html += `<div class="card" style="margin-bottom:20px; border-left:4px solid #ef4444;">
                 <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'; this.querySelector('i.fa-chevron-down').classList.toggle('fa-flip-vertical');">
                     <h4 style="color:var(--text-light); font-size:1rem; margin:0;"><i class="fa-solid fa-stopwatch" style="color:#ef4444;"></i> Simulador de Defesa (Pitch)</h4>
@@ -302,8 +334,8 @@ function renderPAP(dados) {
                     <div style="text-align:center; padding:20px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:15px; border:1px solid #333;">
                         <div id="pap-timer-display" style="font-size:3rem; font-family:monospace; color:var(--primary-green); font-weight:bold; margin-bottom:15px; line-height:1;">15:00</div>
                         <div style="display:flex; gap:10px; justify-content:center;">
-                            <button class="primary-btn small-btn" id="btn-timer-start" style="width:80px;" onclick="window.toggleTimer()"><i class="fa-solid fa-play"></i> Iniciar</button>
-                            <button class="secondary-btn small-btn" style="width:80px;" onclick="window.resetTimer()"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+                            <button class="primary-btn small-btn" id="btn-timer-start" style="width:auto; min-width:100px;" onclick="window.toggleTimer()"><i class="fa-solid fa-play"></i> Iniciar</button>
+                            <button class="secondary-btn small-btn" style="width:auto; min-width:100px;" onclick="window.resetTimer()"><i class="fa-solid fa-rotate-left"></i> Reset</button>
                         </div>
                     </div>
                     
@@ -318,15 +350,15 @@ function renderPAP(dados) {
                     <div style="background:rgba(255, 204, 0, 0.05); border-left:3px solid var(--warning-yellow); padding:10px; border-radius:6px; font-size:0.8rem; color:var(--text-light);">
                         <p style="margin:0 0 5px 0;"><strong>Avaliação do Projeto:</strong></p>
                         <ul style="margin:0 0 10px 0; padding-left:15px; color:var(--text-muted);">
-                            <li>Qualidade técnica e Inovação</li>
-                            <li>Viabilidade e sustentabilidade</li>
-                            <li>Impacto no turismo e território</li>
+                            <li>Qualidade técnica e Grau de Inovação</li>
+                            <li>Utilidade e Viabilidade de implementação</li>
+                            <li>Impacto económico, ambiental e social</li>
                         </ul>
                         <p style="margin:0 0 5px 0;"><strong>Avaliação da Apresentação:</strong></p>
                         <ul style="margin:0; padding-left:15px; color:var(--text-muted);">
-                            <li>Qualidade dos recursos visuais (PPT)</li>
-                            <li>Domínio da linguagem técnica</li>
-                            <li>Segurança a responder às questões</li>
+                            <li>Qualidade da apresentação e recursos utilizados</li>
+                            <li>Utilização da linguagem técnica do Turismo</li>
+                            <li>Argumentação e segurança nas respostas</li>
                         </ul>
                     </div>
                 </div>
@@ -336,6 +368,16 @@ function renderPAP(dados) {
 }
 
 // Funções da PAP
+window.toggleEditTemaPAP = function() {
+    const inp = document.getElementById('input-pap-tema');
+    inp.disabled = false;
+    inp.style.opacity = '1';
+    inp.style.cursor = 'text';
+    inp.focus();
+    document.getElementById('btn-edit-tema').style.display = 'none';
+    document.getElementById('btn-save-tema').style.display = 'flex';
+};
+
 async function guardarTemaPAP() {
     const t = document.getElementById('input-pap-tema').value.trim();
     if(!t) { mostrarAlerta("Escreve um tema primeiro!"); return; }
@@ -374,10 +416,14 @@ async function enviarFicheiroCofre() {
 
 function verFicheiroCofre(index) {
     const f = window.cofreAtual[index]; if(!f) return;
-    let srcUrl = f.base64;
-    if (f.base64.startsWith("data:application/pdf")) { srcUrl = base64ToBlobUrl(f.base64, 'application/pdf'); }
-
-    if (f.base64.startsWith("data:image") || f.base64.startsWith("data:application/pdf")) {
+    
+    let isPdf = f.base64.startsWith("data:application/pdf");
+    let isImage = f.base64.startsWith("data:image");
+    
+    if (isPdf || isImage) {
+        const mime = isPdf ? 'application/pdf' : f.base64.split(';')[0].split(':')[1];
+        let blobUrl = base64ToBlobUrl(f.base64, mime);
+        
         const bg = document.createElement('div');
         bg.className = 'modal-overlay';
         bg.style.display = 'flex'; bg.style.zIndex = '10000';
@@ -387,12 +433,14 @@ function verFicheiroCofre(index) {
                     <h3 style="color:var(--text-light); font-size:1.1rem; margin:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${f.nome}</h3>
                     <button id="btn-close-view" style="background:none; border:none; color:var(--text-muted); font-size:1.5rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
                 </div>
-                <iframe src="${srcUrl}" style="flex:1; width:100%; border:none; background:white; border-radius:8px;"></iframe>
+                ${isPdf 
+                    ? `<object data="${blobUrl}" type="application/pdf" style="flex:1; width:100%; border:none; background:white; border-radius:8px;"><p style="text-align:center; padding:20px; color:#333;">O teu telemóvel não suporta visualização direta de PDFs aqui. <br><br><a href="${blobUrl}" download="${f.nome}" style="background:var(--primary-green); color:#fff; padding:10px 20px; border-radius:8px; display:inline-block; text-decoration:none;">Transferir PDF</a></p></object>` 
+                    : `<img src="${blobUrl}" style="width:100%; max-height: 70vh; object-fit: contain; border-radius:8px;">`}
             </div>`;
         document.body.appendChild(bg);
         bg.querySelector('#btn-close-view').onclick = () => bg.remove();
     } else {
-        mostrarAlerta("Este formato não permite leitura web direta. O download vai iniciar.", false);
+        mostrarAlerta("A preparar a transferência do documento (Word/PPT)...", false);
         window.baixarFicheiroCofre(index);
     }
 }
@@ -494,13 +542,13 @@ function resetTimer() {
 }
 
 // ==========================================
-// MÓDULO 2: FCT (ESTÁGIO) & BANCO DE HORAS
+// MÓDULO 2: FCT (ESTÁGIO) E BANCO DE HORAS
 // ==========================================
 function renderFCT(dados) {
     const fct = dados.fct || {};
     let html = '';
 
-    // 1. Checklist Burocrática (A TUA NOVIDADE!)
+    // 1. Checklist Burocrática (Visual Simétrico)
     const burocracia = fct.burocracia || {};
     const docsBurocracia = [
         { id: 'protocolo', nome: 'Protocolo de Estágio' },
@@ -516,17 +564,16 @@ function renderFCT(dados) {
     
     docsBurocracia.forEach(doc => {
         const estado = burocracia[doc.id] || 0;
-        let actionHtml = '';
-        let iconHtml = '';
+        let actionHtml = ''; let iconHtml = '';
         
         if (estado === 0) {
-            actionHtml = `<button onclick="window.submeterDocBurocracia('${doc.id}')" class="primary-btn small-btn" style="padding:6px 12px; font-size:0.75rem;">Entreguei</button>`;
+            actionHtml = `<button onclick="window.submeterDocBurocracia('${doc.id}')" class="primary-btn small-btn" style="padding:6px 12px; font-size:0.75rem; width:100px; text-align:center;">Entreguei</button>`;
             iconHtml = `<i class="fa-solid fa-circle-xmark" style="color:#555;"></i>`;
         } else if (estado === 1) {
-            actionHtml = `<span style="background:var(--warning-yellow); color:#000; padding:4px 8px; border-radius:12px; font-size:0.7rem; font-weight:bold;">Em Análise</span>`;
+            actionHtml = `<div style="background:var(--warning-yellow); color:#000; padding:6px 12px; border-radius:6px; font-size:0.75rem; font-weight:bold; width:100px; text-align:center; display:flex; align-items:center; justify-content:center;">Em Análise</div>`;
             iconHtml = `<i class="fa-solid fa-clock" style="color:var(--warning-yellow);"></i>`;
         } else if (estado === 2) {
-            actionHtml = `<span style="background:rgba(0,204,136,0.1); color:var(--primary-green); padding:4px 8px; border-radius:12px; font-size:0.7rem; font-weight:bold;">Validado</span>`;
+            actionHtml = `<div style="background:rgba(0,204,136,0.1); color:var(--primary-green); border:1px solid var(--primary-green); padding:6px 12px; border-radius:6px; font-size:0.75rem; font-weight:bold; width:100px; text-align:center; display:flex; align-items:center; justify-content:center;">Validado</div>`;
             iconHtml = `<i class="fa-solid fa-circle-check" style="color:var(--primary-green);"></i>`;
         }
 
@@ -638,7 +685,6 @@ function renderFCT(dados) {
         if (historicoMap.length > 4) {
             html += `<button onclick="window.abrirModalHistoricoFCT()" class="secondary-btn" style="width:100%; border:1px solid #333; margin-top:5px; color:var(--text-muted);">Ver Histórico Completo (${historicoMap.length})</button>`;
         }
-        
         html += `</div>`;
     }
     html += `</div>`;
@@ -674,19 +720,17 @@ function renderFCT(dados) {
     return html;
 }
 
-// Funções da FCT
 async function guardarFichaEntidade() {
     const emp = document.getElementById('fct-empresa').value.trim();
     const tut = document.getElementById('fct-tutor').value.trim();
     const tel = document.getElementById('fct-telefone').value.trim();
     const em = document.getElementById('fct-email').value.trim();
-    const btn = event.currentTarget; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
     try {
         await updateDoc(doc(window.db, "utilizadores", window.myUserId), {
             "fct.empresa": emp, "fct.tutor": tut, "fct.telefone": tel, "fct.email": em
         });
         window.recarregarViewPassaporte('fct');
-    } catch(e) { mostrarAlerta("Erro ao guardar ficha."); btn.innerHTML = 'Guardar Ficha'; }
+    } catch(e) { mostrarAlerta("Erro ao guardar ficha."); }
 }
 
 async function registarHorasDia() {
@@ -706,7 +750,7 @@ async function registarHorasDia() {
 
     let totalHorasFeitas = Math.floor(minDiff / 60);
     if (totalHorasFeitas < 1) { mostrarAlerta("Tens de estagiar pelo menos 1 hora para registar o dia."); return; }
-    if (validarIn > totalHorasFeitas) { mostrarAlerta(`As horas a validar (${validarIn}h) não podem ser superiores às horas que efetivamente estiveste na entidade (${totalHorasFeitas}h)!`); return; }
+    if (validarIn > totalHorasFeitas) { mostrarAlerta(`As horas a validar (${validarIn}h) não podem ser superiores às horas efetuadas (${totalHorasFeitas}h)!`); return; }
 
     let bancoFinal = totalHorasFeitas - validarIn;
     const btn = event.currentTarget; const textoOriginal = btn.innerHTML;
@@ -722,9 +766,7 @@ async function registarHorasDia() {
             "fct.bancoHoras": currentBanco + bancoFinal,
             "fct.historicoHoras": arrayUnion({ data: dt.split('-').reverse().join('/'), dataIso: dt, inicio: hIn, fim: hOut, horasTotal: totalHorasFeitas, horasValidadas: validarIn, horasBanco: bancoFinal })
         });
-        
-        mostrarAlerta("Horas registadas com sucesso!", false);
-        window.recarregarViewPassaporte('fct');
+        mostrarAlerta("Horas registadas com sucesso!", false); window.recarregarViewPassaporte('fct');
     } catch(e) { mostrarAlerta("Erro ao registar horas."); btn.innerHTML = textoOriginal; btn.disabled = false; }
 }
 
@@ -739,7 +781,6 @@ async function eliminarHorasFCT(index) {
         const snap = await getDoc(doc(window.db, "utilizadores", window.myUserId));
         let currentHoras = snap.data().fct?.horasRealizadas || 0;
         let currentBanco = snap.data().fct?.bancoHoras || 0;
-        
         const hValid = registo.horasValidadas || registo.horas || 0;
         const hBanco = registo.horasBanco || 0;
 
@@ -748,8 +789,7 @@ async function eliminarHorasFCT(index) {
             "fct.bancoHoras": Math.max(0, currentBanco - hBanco),
             "fct.historicoHoras": window.historicoFCTAtual
         });
-        mostrarAlerta("Registo eliminado.", false);
-        window.recarregarViewPassaporte('fct');
+        mostrarAlerta("Registo eliminado.", false); window.recarregarViewPassaporte('fct');
     } catch(e) { mostrarAlerta("Erro ao eliminar registo."); }
 }
 
@@ -829,8 +869,7 @@ async function submeterDocBurocracia(docId) {
     if(!confirmou) return;
     try {
         await updateDoc(doc(window.db, "utilizadores", window.myUserId), { [`fct.burocracia.${docId}`]: 1 });
-        mostrarAlerta("Documento submetido para validação!", false);
-        window.recarregarViewPassaporte('fct');
+        mostrarAlerta("Documento submetido para validação!", false); window.recarregarViewPassaporte('fct');
     } catch(e) { mostrarAlerta("Erro ao submeter documento."); }
 }
 
