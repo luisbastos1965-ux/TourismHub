@@ -34,18 +34,6 @@ function confirmarAcao(mensagem) {
     });
 }
 
-// Para converter o Base64 num PDF visível no ecrã!
-function base64ToBlobUrl(base64, mimeType) {
-    try {
-        const byteString = atob(base64.split(',')[1]);
-        const ab = new ArrayBuffer(byteString.length);
-        const ia = new Uint8Array(ab);
-        for (let i = 0; i < byteString.length; i++) { ia[i] = byteString.charCodeAt(i); }
-        const blob = new Blob([ab], { type: mimeType });
-        return URL.createObjectURL(blob);
-    } catch(e) { return base64; }
-}
-
 window.papTextosGlobais = {};
 window.cofreAtual = [];
 window.historicoFCTAtual = [];
@@ -91,7 +79,6 @@ export function setupPassaporte() {
     window.abrirChatOrientadorPAP = abrirChatOrientadorPAP;
     window.guardarTemaPAP = guardarTemaPAP;
     
-    // Funções PAP Mobile
     window.mudarTopicoPAP = mudarTopicoPAP;
     window.guardarTopicoPAP = guardarTopicoPAP;
     window.compilarRelatorioPAP = compilarRelatorioPAP;
@@ -177,17 +164,17 @@ function renderPAP(dados) {
     });
     stepsHtml += `</div>`;
 
-    // CAIXA TEMA
+    // 1. TEMA DA PAP (Alinhamentos corrigidos)
     const temaStr = pap.tema || '';
     let temaHtml = `<div class="card" style="margin-bottom:20px; border-left:4px solid var(--primary-green);">
                         <h4 style="color:var(--text-light); font-size:1rem; margin:0 0 10px 0;"><i class="fa-solid fa-lightbulb"></i> Tema do Projeto</h4>
-                        <div style="display:flex; gap:10px;">
-                            <input type="text" id="input-pap-tema" class="input-padrao" placeholder="Escreve aqui o teu tema..." value="${temaStr}" style="flex:1;">
-                            <button onclick="window.guardarTemaPAP()" class="primary-btn small-btn" style="width:50px;"><i class="fa-solid fa-save"></i></button>
+                        <div style="display:flex; gap:10px; align-items:stretch;">
+                            <input type="text" id="input-pap-tema" class="input-padrao" placeholder="Escreve aqui o teu tema..." value="${temaStr}" style="flex:1; margin:0; height:42px;">
+                            <button onclick="window.guardarTemaPAP()" class="primary-btn small-btn" style="width:50px; margin:0; height:42px; display:flex; align-items:center; justify-content:center; padding:0;"><i class="fa-solid fa-save"></i></button>
                         </div>
                     </div>`;
 
-    // 1. PROF ORIENTADOR
+    // 2. PROF ORIENTADOR
     const orientador = pap.orientadorNome || 'A definir';
     let perfilHtml = `<div class="card" style="border-left:4px solid var(--accent-purple); margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; gap:15px;">
                         <div style="display:flex; align-items:center; gap:15px;">
@@ -197,10 +184,10 @@ function renderPAP(dados) {
                                 <h4 style="margin:0; color:var(--text-light); font-size:1.1rem;">${orientador}</h4>
                             </div>
                         </div>
-                        <button class="primary-btn small-btn" style="width:45px; height:45px; border-radius:50%; background:var(--accent-purple); color:white; padding:0;" onclick="window.abrirChatOrientadorPAP('${orientador}')" title="Mensagem Direta"><i class="fa-solid fa-envelope"></i></button>
+                        <button class="primary-btn small-btn" style="width:45px; height:45px; border-radius:50%; background:var(--accent-purple); color:white; padding:0; display:flex; align-items:center; justify-content:center;" onclick="window.abrirChatOrientadorPAP('${orientador}')" title="Mensagem Direta"><i class="fa-solid fa-envelope" style="font-size:1.2rem;"></i></button>
                       </div>`;
 
-    // 2. OBSERVATÓRIO
+    // 3. OBSERVATÓRIO
     let obsHtml = `<div class="card" style="margin-bottom:20px;">
                         <h4 style="color:var(--warning-yellow); font-size:1rem; margin:0 0 15px 0;"><i class="fa-solid fa-eye"></i> Observatório do Orientador</h4>`;
     if(pap.observatorio && pap.observatorio.length > 0) {
@@ -215,7 +202,7 @@ function renderPAP(dados) {
     }
     obsHtml += `</div>`;
 
-    // 3. COFRE
+    // 4. COFRE
     let cofreHtml = `<div class="card" style="margin-bottom:20px; border:1px solid #333;">
                         <h4 style="color:var(--text-light); font-size:1rem; margin:0 0 15px 0;"><i class="fa-solid fa-vault"></i> Cofre do Projeto</h4>
                         <div style="display:flex; flex-direction:column; gap:10px;" id="lista-cofre-pap">`;
@@ -226,7 +213,7 @@ function renderPAP(dados) {
                                 <i class="fa-solid fa-file-lines" style="color:var(--primary-green); margin-right:5px;"></i> <strong style="text-decoration:underline;">${f.nome}</strong>
                             </div>
                             <div style="display:flex; align-items:center; gap:8px;">
-                                <button onclick="window.verFicheiroCofre(${idx})" class="secondary-btn small-btn" style="padding:8px 12px; color:var(--primary-green);" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
+                                <button onclick="window.verFicheiroCofre(${idx})" class="secondary-btn small-btn" style="padding:8px 12px; color:var(--primary-green);" title="Visualizar / Transferir"><i class="fa-solid fa-eye"></i></button>
                                 <button onclick="window.removerFicheiroCofre(${idx})" class="secondary-btn small-btn" style="padding:8px 12px; color:var(--danger-red);" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
                             </div>
                           </div>`;
@@ -241,7 +228,7 @@ function renderPAP(dados) {
                     </div>
                   </div>`;
 
-    // 4. RELATÓRIO MOBILE
+    // 5. RELATÓRIO MOBILE
     const TOPICOS_PAP = [
         'Introdução', 'Conceitos / Revisão Literária', 
         'Projeto: Motivação, Caracterização, Conceito e Descrição', 
@@ -269,39 +256,39 @@ function renderPAP(dados) {
                             <div id="pap-relatorio-compilado" style="display:none; margin-top:15px; padding:20px; background:rgba(0,0,0,0.3); border-radius:8px; font-size:0.9rem; color:var(--text-light); white-space:pre-wrap; border:1px solid #333; line-height: 1.6;"></div>
                           </div>`;
 
-    // 5. GUIA IA PROMPTS (Personalizado com o Tema!)
-    const pTema = temaStr || "[O TEU TEMA]";
+    // 6. GUIA IA PROMPTS (MUITO MAIS ROBUSTO E ADAPTADO AO TEMA)
+    const pTema = temaStr ? temaStr : "[Insere aqui o Teu Tema]";
     let aiHtml = `<div class="card" style="margin-bottom:20px; border-left:4px solid #3b82f6;">
                     <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'; this.querySelector('i.fa-chevron-down').classList.toggle('fa-flip-vertical');">
                         <h4 style="color:var(--text-light); font-size:1rem; margin:0;"><i class="fa-solid fa-robot" style="color:#3b82f6;"></i> Guia PAP & Prompts IA</h4>
                         <i class="fa-solid fa-chevron-down" style="color:var(--text-muted); transition:0.3s;"></i>
                     </div>
                     <div style="display:none; margin-top:15px;">
-                        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">A Inteligência Artificial (ChatGPT, Gemini, Claude) ajuda a estruturar ideias, mas <strong>não escreve o projeto por ti!</strong> Copia e cola os textos azuis abaixo para ganhares inspiração direcionada ao teu tema:</p>
+                        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">A Inteligência Artificial (ChatGPT/Gemini) ajuda-te a estruturar o relatório, mas <strong>não o escreve por ti!</strong> Copia e cola os textos azuis abaixo para obteres orientação técnica específica para o teu tema:</p>
                         
                         <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
-                            <strong style="color:var(--text-light); font-size:0.85rem;">Introdução & Motivação</strong>
-                            <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Atua como um professor especialista em Turismo. O tema do meu projeto final é '${pTema}'. Escreve-me 3 argumentos fortes que justifiquem a relevância turística deste projeto para a minha região."</p>
+                            <strong style="color:var(--text-light); font-size:0.85rem;">Introdução e Relevância</strong>
+                            <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Atua como um professor especialista em Turismo e Gestão. O tema da minha PAP é '${pTema}'. Escreve-me uma fundamentação rigorosa (3 parágrafos) que justifique a importância deste projeto para o desenvolvimento regional, abordando a sustentabilidade e as atuais tendências do mercado turístico."</p>
                         </div>
 
                         <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
                             <strong style="color:var(--text-light); font-size:0.85rem;">Conceitos e Revisão Literária</strong>
-                            <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Indica-me os 5 principais conceitos teóricos sobre turismo e gestão que eu devo abordar na revisão literária de um projeto focado em '${pTema}'. Dá-me uma breve explicação académica de cada um."</p>
+                            <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Sugere-me um índice detalhado para a Revisão Literária de um projeto sobre '${pTema}'. Inclui os conceitos fundamentais, a evolução do setor e a importância económica desta atividade (como o impacto no PIB e na fixação de população)."</p>
+                        </div>
+
+                        <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
+                            <strong style="color:var(--text-light); font-size:0.85rem;">Modelo de Negócio e Organograma</strong>
+                            <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Para o meu projeto '${pTema}', ajuda-me a definir a Missão, Visão e 3 Valores centrais focados na autenticidade. De seguida, estrutura um Organograma adequado, descrevendo as funções dos departamentos principais (ex: Receção, Alojamento, Restauração ou Animação)."</p>
                         </div>
                         
                         <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
-                            <strong style="color:var(--text-light); font-size:0.85rem;">Plano de Marketing (Análise SWOT)</strong>
-                            <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Cria um esboço de uma matriz SWOT (Forças, Fraquezas, Oportunidades e Ameaças) realista para um projeto de '${pTema}'. Dá-me 3 exemplos práticos para cada quadrante."</p>
-                        </div>
-
-                        <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:10px;">
-                            <strong style="color:var(--text-light); font-size:0.85rem;">Plano de Marketing (Público e Mix)</strong>
-                            <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Define o perfil do público-alvo ideal (idades, interesses, origens) para '${pTema}'. Depois, sugere-me uma estratégia de Marketing-Mix (Produto, Preço, Distribuição, Comunicação) inovadora para atrair esses clientes."</p>
+                            <strong style="color:var(--text-light); font-size:0.85rem;">Marketing-Mix (Os 4 P's)</strong>
+                            <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Cria uma proposta técnica de Marketing-Mix (Produto, Preço, Distribuição, Promoção) para '${pTema}'. O serviço é de segmento médio-alto. Detalha as experiências turísticas, sugere uma estratégia de preços, canais de distribuição (reservas diretas vs OTAs) e promoção digital."</p>
                         </div>
 
                         <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px;">
-                            <strong style="color:var(--text-light); font-size:0.85rem;">Conclusão</strong>
-                            <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Quais devem ser os 3 pontos principais a destacar na conclusão de um projeto sobre '${pTema}' para demonstrar viabilidade e deixar o júri impressionado?"</p>
+                            <strong style="color:var(--text-light); font-size:0.85rem;">Análise SWOT e Concorrência</strong>
+                            <p style="font-size:0.8rem; color:#3b82f6; margin:5px 0 0 0; font-family:monospace; line-height:1.4;">"Elabora uma Análise SWOT (Forças, Fraquezas, Oportunidades, Ameaças) realista para um projeto focado em '${pTema}'. Inclui como Força a exclusividade da oferta, e como Fraqueza a eventual sazonalidade. Dá 3 exemplos para cada quadrante."</p>
                         </div>
                     </div>
                   </div>`;
@@ -347,32 +334,28 @@ async function enviarFicheiroCofre() {
     } catch(e) { mostrarAlerta("Erro ao guardar ficheiro."); }
 }
 
+// Visualizador Limpo (Abre imagens num modal, Força Download seguro de Pdfs e Docs)
 function verFicheiroCofre(index) {
     const f = window.cofreAtual[index];
     if(!f) return;
     
-    let srcUrl = f.base64;
-    // Conversão mágica do Base64 em PDF real!
-    if (f.base64.startsWith("data:application/pdf")) {
-        srcUrl = base64ToBlobUrl(f.base64, 'application/pdf');
-    }
-
-    if (f.base64.startsWith("data:image") || f.base64.startsWith("data:application/pdf")) {
+    if (f.base64.startsWith("data:image")) {
         const bg = document.createElement('div');
         bg.className = 'modal-overlay';
         bg.style.display = 'flex'; bg.style.zIndex = '10000';
         bg.innerHTML = `
-            <div class="action-sheet" style="width:95%; height:90%; max-width:800px; border-radius:12px; margin:20px; display:flex; flex-direction:column; padding:15px; animation: fadeSlide 0.3s ease;">
+            <div class="action-sheet" style="width:95%; height:auto; max-width:800px; border-radius:12px; margin:20px; display:flex; flex-direction:column; padding:15px; animation: fadeSlide 0.3s ease;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <h3 style="color:var(--text-light); font-size:1.1rem; margin:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${f.nome}</h3>
                     <button id="btn-close-view" style="background:none; border:none; color:var(--text-muted); font-size:1.5rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
                 </div>
-                <iframe src="${srcUrl}" style="flex:1; width:100%; border:none; background:white; border-radius:8px;"></iframe>
+                <img src="${f.base64}" style="width:100%; max-height: 70vh; object-fit: contain; border-radius:8px;">
             </div>`;
         document.body.appendChild(bg);
         bg.querySelector('#btn-close-view').onclick = () => bg.remove();
     } else {
-        mostrarAlerta("Este formato (Word/PowerPoint) não permite leitura web direta. O download vai iniciar.", false);
+        // Documentos de texto / PDF são forçados a fazer download
+        mostrarAlerta("A preparar o documento para transferência segura...", false);
         window.baixarFicheiroCofre(index);
     }
 }
@@ -446,7 +429,6 @@ function compilarRelatorioPAP() {
     let relatorioFinal = "";
     for (const [topico, texto] of Object.entries(window.papTextosGlobais)) {
         if(texto.trim() !== '') { 
-            // Formatação limpa e separada para o relatório
             relatorioFinal += `======= [ ${topico.toUpperCase()} ] =======\n\n${texto}\n\n\n`; 
         }
     }
@@ -502,7 +484,6 @@ function renderFCT(dados) {
         ? `<div style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-calendar-check" style="color:var(--primary-green);"></i> Estimativa: Faltam ~${diasFalta} dias úteis (a 7h/dia)</div>`
         : `<div style="margin-top:10px; font-size:0.85rem; color:var(--success-green); display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-flag-checkered"></i> Estágio Concluído!</div>`;
 
-    // 2. Registo de Horas & Banco de Horas
     html += `<div class="card" style="margin-bottom:20px;">
                 <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;">
                     <div>
@@ -518,15 +499,19 @@ function renderFCT(dados) {
                 ${estimativaHtml}
                 
                 <div style="margin-top:20px; padding-top:15px; border-top:1px dashed #333;">
-                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;"><i class="fa-solid fa-circle-info" style="color:#0ea5e9;"></i> <strong>Regra:</strong> Aulas + Estágio não podem ultrapassar as 7h. As horas que trabalhares a mais num dia ficam guardadas no teu Banco de Horas!</p>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 6px;">
+                        <div style="margin-bottom: 5px;"><i class="fa-solid fa-circle-info" style="color:#0ea5e9;"></i> <strong>Regra:</strong> Aulas + Estágio não podem ultrapassar as 7h diárias.</div>
+                        <div><i class="fa-solid fa-piggy-bank" style="color:#0ea5e9;"></i> <strong>Info:</strong> As horas que trabalhares a mais num dia ficam guardadas no teu Banco de Horas!</div>
+                    </div>
+                    
                     <div style="display: flex; gap: 8px; margin-bottom: 10px;">
                         <div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Data</label><input type="date" id="fct-hora-data" class="input-padrao" style="width:100%; padding:10px 8px; font-size:0.85rem;"></div>
                         <div style="width:80px;"><label style="font-size:0.75rem; color:var(--text-muted);">Entrada</label><input type="time" id="fct-hora-in" class="input-padrao" style="width:100%; padding:10px 5px; font-size:0.85rem;"></div>
                         <div style="width:80px;"><label style="font-size:0.75rem; color:var(--text-muted);">Saída</label><input type="time" id="fct-hora-out" class="input-padrao" style="width:100%; padding:10px 5px; font-size:0.85rem;"></div>
                     </div>
-                    <div style="display: flex; gap: 8px; align-items:center; margin-bottom: 15px;">
-                        <label style="font-size:0.85rem; color:var(--text-light); flex:1;">Horas a validar na FCT hoje (Máx 7):</label>
-                        <input type="number" id="fct-hora-validar" class="input-padrao" placeholder="Ex: 4" style="width:80px; padding:10px 8px;" min="1" max="7">
+                    <div style="display: flex; gap: 8px; align-items:center; margin-bottom: 15px; justify-content: space-between;">
+                        <label style="font-size:0.85rem; color:var(--text-light); margin:0;">Horas a validar na FCT hoje (Máx 7):</label>
+                        <input type="number" id="fct-hora-validar" class="input-padrao" placeholder="Ex: 4" style="width:80px; padding:8px; margin:0; text-align:center;" min="1" max="7">
                     </div>
                     <button class="primary-btn small-btn" style="width: 100%; background:var(--primary-green);" onclick="window.registarHorasDia()"><i class="fa-solid fa-clock"></i> Registar Horas</button>
                 </div>`;
@@ -535,9 +520,8 @@ function renderFCT(dados) {
         html += `<div style="margin-top:20px; display:flex; flex-direction:column; gap:8px;">`;
         const historicoMap = window.historicoFCTAtual.map((r, i) => ({...r, originalIndex: i})).reverse();
         
-        // MOSTRA APENAS OS 4 MAIS RECENTES EM CAIXAS GRANDES
         historicoMap.slice(0, 4).forEach(r => {
-            const hValid = r.horasValidadas || r.horas || 0; // fallback para antigos
+            const hValid = r.horasValidadas || r.horas || 0; 
             const hBanco = r.horasBanco || 0;
             const hTot = r.horasTotal || hValid;
 
@@ -681,7 +665,8 @@ async function eliminarHorasFCT(index) {
 
 async function editarHorasFCT(index) {
     const r = window.historicoFCTAtual[index];
-    const confirmou = await confirmarAcao("Vais editar este registo. O registo antigo será apagado. Deves alterar os campos e voltar a clicar em 'Registar Horas'. Continuar?");
+    
+    const confirmou = await confirmarAcao("O registo antigo será apagado. Preenche as novas horas nas caixas acima e clica em 'Registar Horas'. Continuar?");
     if(!confirmou) return;
 
     window.historicoFCTAtual.splice(index, 1);
@@ -710,7 +695,6 @@ async function editarHorasFCT(index) {
     } catch(e) { mostrarAlerta("Erro a preparar edição."); }
 }
 
-// Modal Ver Mais do FCT
 function abrirModalHistoricoFCT() {
     const historicoMap = window.historicoFCTAtual.map((r, i) => ({...r, originalIndex: i})).reverse();
     let modalHtml = `<div style="display:flex; flex-direction:column; gap:8px;">`;
@@ -759,7 +743,7 @@ function gerarTextoDiario() {
     
     if(chks.length === 0 && notas === '') { mostrarAlerta("Seleciona tarefas ou escreve uma nota!"); return; }
 
-    let textoGerado = "Nesta semana, no âmbito do estágio na Entidade de Estágio, as minhas principais funções foram: ";
+    let textoGerado = "Nesta semana de estágio na Entidade de Estágio, as minhas tarefas focaram-se em: ";
     let arrTarefas = [];
     chks.forEach(c => arrTarefas.push(c.value.toLowerCase()));
     
@@ -768,8 +752,8 @@ function gerarTextoDiario() {
         else { const ult = arrTarefas.pop(); textoGerado += arrTarefas.join(", ") + " e " + ult + ". "; }
     } else { textoGerado = "Nesta semana, foquei-me no acompanhamento de atividades operacionais da empresa. "; }
 
-    textoGerado += "O trabalho permitiu-me aplicar conhecimentos técnicos em contexto real e melhorar a minha postura profissional. ";
-    if(notas !== '') { textoGerado += `Adicionalmente: ${notas}. `; }
+    textoGerado += "As atividades permitiram consolidar conhecimentos técnicos e reforçar a minha adaptação ao contexto real de trabalho, resultando numa semana muito produtiva.";
+    if(notas !== '') { textoGerado += ` Destaco ainda que: ${notas}.`; }
 
     caixaResultado.innerHTML = `<strong>Texto Base para o teu Relatório:</strong><br><br>${textoGerado}`;
     caixaResultado.style.display = 'block';
