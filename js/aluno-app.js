@@ -71,11 +71,13 @@ onAuthStateChanged(auth, async (user) => {
                         btnPassaporte.style.filter = 'grayscale(100%)';
                         btnPassaporte.style.opacity = '0.5';
                         btnPassaporte.style.cursor = 'not-allowed';
+                        btnPassaporte.style.pointerEvents = 'none';
                     } else {
                         btnPassaporte.style.display = 'flex';
                         btnPassaporte.style.filter = 'none';
                         btnPassaporte.style.opacity = '1';
                         btnPassaporte.style.cursor = 'pointer';
+                        btnPassaporte.style.pointerEvents = 'auto';
                     }
                 }
                 
