@@ -191,6 +191,59 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('#btn-confirmar-rejeicao-pap')) { const motivo = document.getElementById('rej-pap-motivo').value.trim(); if(!motivo) return alert("Indica o motivo."); rejeitarTemaPAPExecutar(document.getElementById('rej-pap-aluno-id').value, motivo, e.target.closest('#btn-confirmar-rejeicao-pap')); return; }
     if (e.target.closest('.btn-aprovar-relatorio')) { aprovarRelatorioPAP(e.target.closest('.btn-aprovar-relatorio').getAttribute('data-id'), e.target.closest('.btn-aprovar-relatorio')); return; }
 
+    // AVISOS GLOBAIS (MEGA-FÓRUM)
+    if (e.target.closest('#btn-abrir-aviso-global') || e.target.closest('#btn-abrir-aviso-global-coord')) {
+        let options = '';
+        if (state.activeRole === 'coordenador') {
+            options = '<option value="todas">Todas as minhas turmas</option>' + state.turmasProfessor.map(t => `<option value="${t}">Turma ${t}</option>`).join('');
+        } else {
+            options = `<option value="${state.selectedTurma}">Turma ${state.selectedTurma}</option>`;
+        }
+        document.getElementById('aviso-destino-turma').innerHTML = options;
+        document.getElementById('aviso-titulo').value = '';
+        document.getElementById('aviso-mensagem').value = '';
+        document.getElementById('modal-aviso-global').style.display = 'flex';
+        return;
+    }
+    
+    if (e.target.closest('#btn-enviar-aviso-global')) {
+        const destino = document.getElementById('aviso-destino-turma').value;
+        const titulo = document.getElementById('aviso-titulo').value.trim();
+        const mensagem = document.getElementById('aviso-mensagem').value.trim();
+        
+        if (!titulo || !mensagem) return alert("Preenche o título e a mensagem do aviso.");
+        
+        const btn = e.target.closest('#btn-enviar-aviso-global');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+        
+        try {
+            let turmasAlvo = destino === 'todas' ? state.turmasProfessor : [destino];
+            
+            for (const t of turmasAlvo) {
+                await addDoc(collection(db, "turmas", t, "avisos"), {
+                    titulo: titulo,
+                    mensagem: mensagem,
+                    autor: state.myUserName,
+                    papel: state.activeRole,
+                    timestamp: Date.now()
+                });
+            }
+            
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Enviado';
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                document.getElementById('modal-aviso-global').style.display = 'none';
+            }, 1500);
+        } catch (err) {
+            btn.innerHTML = 'Erro!';
+            setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000);
+        }
+        return;
+    }
+
     // CIDADANIA
     if (e.target.closest('#btn-ver-cidadania')) {
         if(!state.selectedTurma) return alert("Seleciona uma turma primeiro.");
