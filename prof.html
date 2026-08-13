@@ -116,9 +116,10 @@
                 </div>
 
                 <div id="turma-ativa-container" style="display: none;">
-                    <div class="card" style="background: linear-gradient(135deg, rgba(0, 204, 136, 0.1), rgba(0, 0, 0, 0.2)); border: 1px solid var(--primary-green); margin-bottom: 20px;">
+                    <div class="card" style="background: linear-gradient(135deg, rgba(0, 204, 136, 0.1), rgba(0, 0, 0, 0.2)); border: 1px solid var(--primary-green); margin-bottom: 20px; position:relative;">
+                        <button id="btn-abrir-aviso-global" class="primary-btn small-btn" style="position:absolute; top:15px; right:15px; background:var(--warning-yellow); color:black; padding:5px 10px; border:none; display:none;" title="Aviso Global"><i class="fa-solid fa-bullhorn"></i></button>
                         <h3 style="font-size: 1.1rem; margin-bottom: 10px; color: var(--primary-green);"><i class="fa-solid fa-robot"></i> Assistente da Turma <span id="badge-dt-turma" class="dt-badge">DT</span></h3>
-                        <div id="assistente-aula-texto" style="font-size: 0.9rem; color: var(--text-light); line-height: 1.5;">A analisar dados da turma...</div>
+                        <div id="assistente-aula-texto" style="font-size: 0.9rem; color: var(--text-light); line-height: 1.5; padding-right:40px;">A analisar dados da turma...</div>
                     </div>
 
                     <div style="display:flex; gap:10px; margin-bottom: 20px; flex-wrap: wrap;">
@@ -239,9 +240,10 @@
 
             <!-- VISTA: PROJETOS FCT/PAP (EXCLUSIVA COORDENADOR) -->
             <div id="view-coord-projetos" style="display: none;">
-                <div class="card" style="background: linear-gradient(135deg, rgba(147, 51, 234, 0.15), rgba(0, 0, 0, 0.3)); border: 1px solid #9333ea; margin-bottom: 20px;">
+                <div class="card" style="background: linear-gradient(135deg, rgba(147, 51, 234, 0.15), rgba(0, 0, 0, 0.3)); border: 1px solid #9333ea; margin-bottom: 20px; position:relative;">
+                    <button id="btn-abrir-aviso-global-coord" class="primary-btn small-btn" style="position:absolute; top:15px; right:15px; background:var(--warning-yellow); color:black; padding:5px 10px; border:none;" title="Aviso Global"><i class="fa-solid fa-bullhorn"></i></button>
                     <h3 style="font-size: 1.1rem; margin-bottom: 5px; color: #9333ea;"><i class="fa-solid fa-briefcase"></i> Gestão de Estágios e PAPs</h3>
-                    <p style="font-size: 0.85rem; color: var(--text-light);">Visão global de todos os alunos de 11º e 12º ano do curso.</p>
+                    <p style="font-size: 0.85rem; color: var(--text-light); padding-right:40px;">Visão global de todos os alunos de 11º e 12º ano do curso.</p>
                 </div>
 
                 <div class="falta-tabs" style="margin-bottom: 15px;">
@@ -294,6 +296,26 @@
                 </div>
             </div>
 
+            <!-- MODAL AVISO GLOBAL (O ALTIFALANTE) -->
+            <div id="modal-aviso-global" class="modal-overlay" style="z-index: 3000;">
+                <div class="action-sheet" style="max-width: 400px; padding: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                        <h3 style="color: var(--warning-yellow); margin:0;"><i class="fa-solid fa-bullhorn"></i> Emitir Aviso Global</h3>
+                        <button class="fechar-modal" data-target="modal-aviso-global" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">A mensagem será enviada como notificação prioritária para os alunos selecionados.</p>
+                    
+                    <select id="aviso-destino-turma" class="input-padrao" style="width:100%; margin-bottom:10px;">
+                        <!-- Preenchido dinamicamente -->
+                    </select>
+                    
+                    <input type="text" id="aviso-titulo" class="input-padrao" placeholder="Título (Ex: Reunião Cancelada)" style="width:100%; margin-bottom:10px;">
+                    <textarea id="aviso-mensagem" class="input-padrao" placeholder="Escreve aqui o teu aviso..." style="width:100%; min-height:80px; margin-bottom:15px;"></textarea>
+                    
+                    <button id="btn-enviar-aviso-global" class="primary-btn" style="width:100%; background:var(--warning-yellow); color:black;"><i class="fa-solid fa-paper-plane"></i> Enviar Aviso</button>
+                </div>
+            </div>
+
             <!-- MODAIS DE AÇÃO / ROLES -->
             <div id="modal-radar-conflitos" class="modal-overlay" style="z-index: 2000;">
                 <div class="action-sheet" style="max-width: 500px; max-height: 85vh; padding: 20px; display: flex; flex-direction: column;">
@@ -307,8 +329,34 @@
             </div>
 
             <div id="modal-cidadania" class="modal-overlay" style="z-index: 2000;"><div class="action-sheet" style="max-width: 600px; max-height: 90vh; padding: 20px; display: flex; flex-direction: column;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color: #b82bf2; margin:0;"><i class="fa-solid fa-users-rectangle"></i> Projeto de Cidadania</h3><button class="fechar-modal" data-target="modal-cidadania" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><div id="dt-cidadania-tabs" class="falta-tabs" style="display:none; margin-bottom:15px;"><button class="falta-tab-btn active" id="btn-cid-global">Visão DT</button><button class="falta-tab-btn" id="btn-cid-minha">Meu Contributo</button></div><div style="flex:1; overflow-y:auto; padding-right: 5px;" id="cidadania-dinamico-content"><p class="text-muted center">A ler projeto...</p></div></div></div>
-            <div id="modal-pauta-turma" class="modal-overlay" style="z-index: 2000;"><div class="action-sheet" style="max-width: 600px; max-height: 85vh; padding: 20px; display: flex; flex-direction: column;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color: var(--warning-yellow); margin:0;"><i class="fa-solid fa-list-ol"></i> Pauta da Turma</h3><button class="fechar-modal" data-target="modal-pauta-turma" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><select id="pauta-disc-select" class="input-padrao" style="margin-bottom:15px; display:none;"></select><div style="overflow-x:auto; flex:1;"><table class="grid-tabela" id="tabela-pauta-conteudo"></table></div></div></div>
-            <div id="modal-faltas-turma" class="modal-overlay" style="z-index: 2000;"><div class="action-sheet" style="max-width: 600px; max-height: 85vh; padding: 20px; display: flex; flex-direction: column;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color: var(--danger-red); margin:0;"><i class="fa-solid fa-clipboard-user"></i> Mapa de Faltas</h3><button class="fechar-modal" data-target="modal-faltas-turma" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><select id="faltas-disc-select" class="input-padrao" style="margin-bottom:15px; display:none;"></select><div style="overflow-x:auto; flex:1;"><table class="grid-tabela" id="tabela-faltas-conteudo"></table></div></div></div>
+            
+            <div id="modal-pauta-turma" class="modal-overlay" style="z-index: 2000;">
+                <div class="action-sheet" style="max-width: 600px; max-height: 85vh; padding: 20px; display: flex; flex-direction: column;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                        <h3 style="color: var(--warning-yellow); margin:0;"><i class="fa-solid fa-list-ol"></i> Pauta da Turma</h3>
+                        <div style="display:flex; gap:10px;">
+                            <button class="secondary-btn small-btn" onclick="window.exportarCSV('tabela-pauta-conteudo', 'Pauta_Turma.csv')" style="border-color:#0099ff; color:#0099ff;"><i class="fa-solid fa-file-csv"></i> Exportar</button>
+                            <button class="fechar-modal" data-target="modal-pauta-turma" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                    </div>
+                    <select id="pauta-disc-select" class="input-padrao" style="margin-bottom:15px; display:none;"></select>
+                    <div style="overflow-x:auto; flex:1;"><table class="grid-tabela" id="tabela-pauta-conteudo"></table></div>
+                </div>
+            </div>
+            
+            <div id="modal-faltas-turma" class="modal-overlay" style="z-index: 2000;">
+                <div class="action-sheet" style="max-width: 600px; max-height: 85vh; padding: 20px; display: flex; flex-direction: column;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                        <h3 style="color: var(--danger-red); margin:0;"><i class="fa-solid fa-clipboard-user"></i> Mapa de Faltas</h3>
+                        <div style="display:flex; gap:10px;">
+                            <button class="secondary-btn small-btn" onclick="window.exportarCSV('tabela-faltas-conteudo', 'Faltas_Turma.csv')" style="border-color:#0099ff; color:#0099ff;"><i class="fa-solid fa-file-csv"></i> Exportar</button>
+                            <button class="fechar-modal" data-target="modal-faltas-turma" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                    </div>
+                    <select id="faltas-disc-select" class="input-padrao" style="margin-bottom:15px; display:none;"></select>
+                    <div style="overflow-x:auto; flex:1;"><table class="grid-tabela" id="tabela-faltas-conteudo"></table></div>
+                </div>
+            </div>
 
             <!-- MODAL: PERFIL DO ALUNO 360 -->
             <div id="modal-perfil-aluno" class="modal-overlay" style="z-index: 2000;">
