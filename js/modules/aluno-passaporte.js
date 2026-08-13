@@ -1,7 +1,20 @@
 import { doc, getDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
+function mostrarAlerta(msg, erro = true) {
+    const cor = erro ? 'var(--danger-red)' : 'var(--success-green)';
+    const div = document.createElement('div');
+    div.style.cssText = `position:fixed; top:20px; left:50%; transform:translateX(-50%); background:${cor}; color:white; padding:12px 24px; border-radius:30px; font-size:0.9rem; font-weight:bold; box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:10000; display:flex; align-items:center; gap:10px; opacity:0; transition: opacity 0.3s ease;`;
+    div.innerHTML = `<i class="fa-solid ${erro ? 'fa-triangle-exclamation' : 'fa-check'}"></i> ${msg}`;
+    document.body.appendChild(div);
+    requestAnimationFrame(() => div.style.opacity = '1');
+    setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 300); }, 3000);
+}
+
+// Para o Construtor Mobile da PAP
+window.papTextosGlobais = {};
+
 export function setupPassaporte() {
-    document.getElementById('btn-abrir-passaporte')?.addEventListener('click', () => {
+    document.getElementById('btn-abrir-passaporte')?.addEventListener('click', async (e) => {
         document.querySelectorAll('.app-content > div:not(.modal-overlay)').forEach(d => d.style.display = 'none');
         document.getElementById('view-aluno-passaporte').style.display = 'block';
         carregarPassaporteDashboard();
@@ -9,9 +22,7 @@ export function setupPassaporte() {
     
     document.getElementById('btn-voltar-passaporte')?.addEventListener('click', () => {
         const activeTab = document.querySelector('.bottom-nav .nav-item.active');
-        if(activeTab) {
-            activeTab.click();
-        } else {
+        if(activeTab) { activeTab.click(); } else {
             document.getElementById('student-dashboard').style.display = 'block';
             document.getElementById('view-aluno-passaporte').style.display = 'none';
         }
@@ -22,6 +33,12 @@ export function setupPassaporte() {
     window.guardarFichaEntidade = guardarFichaEntidade;
     window.enviarFicheiroCofre = enviarFicheiroCofre;
     window.registarHorasDia = registarHorasDia;
+    window.baixarFicheiroCofre = baixarFicheiroCofre;
+    
+    // Funções PAP Mobile
+    window.mudarTopicoPAP = mudarTopicoPAP;
+    window.guardarTopicoPAP = guardarTopicoPAP;
+    window.compilarRelatorioPAP = compilarRelatorioPAP;
 }
 
 async function carregarPassaporteDashboard() {
@@ -37,6 +54,8 @@ async function carregarPassaporteDashboard() {
         const snap = await getDoc(doc(window.db, "utilizadores", window.myUserId));
         const dados = snap.exists() ? snap.data() : {};
         
+        window.papTextosGlobais = (dados.pap && dados.pap.textos) ? dados.pap.textos : {};
+
         let html = '';
 
         if (ano === 12) {
@@ -45,13 +64,16 @@ async function carregarPassaporteDashboard() {
                         <button class="secondary-btn pass-tab-btn" style="flex:1;" onclick="window.mudarAbaPassaporte('fct')">FCT (Estágio)</button>
                      </div>`;
             html += `<div id="pass-content-pap">${renderPAP(dados)}</div>`;
-            html += `<div id="pass-content-fct" style="display:none;">${renderFCT(dados, false)}</div>`;
+            html += `<div id="pass-content-fct" style="display:none;">${renderFCT(dados)}</div>`;
         } else if (ano === 11) {
-            html += `<div id="pass-content-fct">${renderFCT(dados, true)}</div>`;
+            html += `<div id="pass-content-fct">${renderFCT(dados)}</div>`;
         }
 
         cont.innerHTML = html;
         document.getElementById('upload-cofre-pap')?.addEventListener('change', processarUploadCofre);
+        
+        // Inicializa o campo de texto do construtor
+        if(ano === 12) window.mudarTopicoPAP();
         
     } catch(e) { cont.innerHTML = '<p class="text-danger center">Erro ao carregar dados.</p>'; }
 }
@@ -73,7 +95,6 @@ function mudarAbaPassaporte(aba) {
 // ==========================================
 function renderPAP(dados) {
     const pap = dados.pap || {};
-    // Correção: "Desenvolvimento" mudado para "Desenv."
     const fases = ['Tema', 'Aprovação', 'Desenv.', 'Relatório', 'Apresentação'];
     const faseAtual = pap.faseAtual || 0;
     
@@ -92,7 +113,6 @@ function renderPAP(dados) {
     });
     stepsHtml += `</div>`;
 
-    // Orientador com Botão Direto de Mensagem
     const orientador = pap.orientadorNome || 'A definir';
     let perfilHtml = `<div class="card" style="border-left:4px solid var(--accent-purple); margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; gap:15px;">
                         <div style="display:flex; align-items:center; gap:15px;">
@@ -102,30 +122,46 @@ function renderPAP(dados) {
                                 <h4 style="margin:0; color:var(--text-light); font-size:1.1rem;">${orientador}</h4>
                             </div>
                         </div>
-                        <button class="primary-btn small-btn" style="width:40px; height:40px; border-radius:50%; background:var(--accent-purple); color:white; padding:0;" onclick="alert('Funcionalidade de Chat Direto com o Prof. Orientador em construção!')" title="Mensagem Direta"><i class="fa-solid fa-envelope"></i></button>
+                        <button class="primary-btn small-btn" style="width:40px; height:40px; border-radius:50%; background:var(--accent-purple); color:white; padding:0;" onclick="alert('Chat com o Orientador em construção!')" title="Mensagem Direta"><i class="fa-solid fa-envelope"></i></button>
                       </div>`;
 
-    // Checklist do Sucesso da PAP (O que falta ao aluno)
-    let checklistHtml = `<div class="card" style="margin-bottom:20px; border-left:4px solid var(--primary-green); background:rgba(0, 204, 136, 0.05);">
-                            <h4 style="color:var(--text-light); font-size:0.95rem; margin:0 0 10px 0;"><i class="fa-solid fa-list-check"></i> Checklist de Entregáveis</h4>
-                            <div style="display:flex; flex-direction:column; gap:8px; font-size:0.85rem; color:var(--text-muted);">
-                                <label style="display:flex; gap:8px; align-items:center;"><input type="checkbox" disabled ${faseAtual >= 1 ? 'checked' : ''}> Ficha de Inscrição e Tema</label>
-                                <label style="display:flex; gap:8px; align-items:center;"><input type="checkbox" disabled ${faseAtual >= 2 ? 'checked' : ''}> Anteprojeto e Orçamento</label>
-                                <label style="display:flex; gap:8px; align-items:center;"><input type="checkbox" disabled ${faseAtual >= 3 ? 'checked' : ''}> Produto / Serviço Criado</label>
-                                <label style="display:flex; gap:8px; align-items:center;"><input type="checkbox" disabled ${faseAtual >= 3 ? 'checked' : ''}> Relatório Final (Impresso/Digital)</label>
-                                <label style="display:flex; gap:8px; align-items:center;"><input type="checkbox" disabled ${faseAtual >= 4 ? 'checked' : ''}> Apresentação Multimédia (PPT)</label>
+    // NOVO: CONSTRUTOR DE RELATÓRIO MOBILE
+    const TOPICOS_PAP = ['Introdução', 'Conceitos/Revisão Literária', 'Projeto (Motivação, Caracterização)', 'Plano de Marketing (SWOT, etc)', 'Micro-Projeto', 'Conclusão', 'Agradecimentos', 'Referências Bibliográficas'];
+    
+    let construtorHtml = `<div class="card" style="margin-bottom:20px; border-left:4px solid #f97316;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <h4 style="color:var(--text-light); font-size:1rem; margin:0;"><i class="fa-solid fa-mobile-screen"></i> Construtor Mobile</h4>
                             </div>
-                         </div>`;
+                            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px;">Sem PC? Escreve o teu relatório por partes diretamente aqui.</p>
+                            
+                            <select id="pap-topico-select" class="input-padrao" style="width:100%; margin-bottom:10px;" onchange="window.mudarTopicoPAP()">
+                                ${TOPICOS_PAP.map(t => `<option value="${t}">${t}</option>`).join('')}
+                                <option value="novo">+ Adicionar Tópico Personalizado</option>
+                            </select>
+                            
+                            <input type="text" id="pap-topico-custom" class="input-padrao" style="display:none; width:100%; margin-bottom:10px;" placeholder="Nome do novo tópico">
+                            
+                            <textarea id="pap-topico-texto" class="input-padrao" style="width:100%; height:150px; margin-bottom:10px;" placeholder="Escreve aqui o texto para este tópico..."></textarea>
+                            
+                            <div style="display:flex; gap:10px;">
+                                <button class="secondary-btn small-btn" style="flex:1;" onclick="window.guardarTopicoPAP()"><i class="fa-solid fa-save"></i> Guardar Tópico</button>
+                                <button class="primary-btn small-btn" style="flex:1; background:#f97316; color:#fff;" onclick="window.compilarRelatorioPAP()"><i class="fa-solid fa-file-lines"></i> Compilar Tudo</button>
+                            </div>
+                            <div id="pap-relatorio-compilado" style="display:none; margin-top:15px; padding:15px; background:rgba(0,0,0,0.2); border-radius:6px; font-size:0.85rem; color:var(--text-light); white-space:pre-wrap; border:1px solid #333;"></div>
+                          </div>`;
 
-    // Cofre
+    // Cofre com botão de download forçado
     let cofreHtml = `<div class="card" style="margin-bottom:20px; border:1px solid #333;">
                         <h4 style="color:var(--text-light); font-size:1rem; margin:0 0 15px 0;"><i class="fa-solid fa-vault"></i> Cofre do Projeto</h4>
                         <div style="display:flex; flex-direction:column; gap:10px;" id="lista-cofre-pap">`;
     if(pap.cofre && pap.cofre.length > 0) {
-        pap.cofre.forEach(f => {
+        pap.cofre.forEach((f, idx) => {
             cofreHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.2); border-radius:6px;">
-                            <span style="font-size:0.85rem; color:var(--text-light);"><i class="fa-solid fa-file-lines" style="color:var(--primary-green);"></i> ${f.nome}</span>
-                            <span style="font-size:0.7rem; color:var(--text-muted);">${f.data}</span>
+                            <span style="font-size:0.85rem; color:var(--text-light); flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;"><i class="fa-solid fa-file-lines" style="color:var(--primary-green);"></i> ${f.nome}</span>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <span style="font-size:0.7rem; color:var(--text-muted);">${f.data}</span>
+                                <button onclick="window.baixarFicheiroCofre(${idx})" class="secondary-btn small-btn" style="padding:6px; border:none; background:rgba(0,204,136,0.1); color:var(--primary-green);"><i class="fa-solid fa-download"></i></button>
+                            </div>
                           </div>`;
         });
     } else {
@@ -152,10 +188,64 @@ function renderPAP(dados) {
     }
     obsHtml += `</div>`;
 
-    return stepsHtml + perfilHtml + checklistHtml + cofreHtml + obsHtml;
+    return stepsHtml + perfilHtml + construtorHtml + cofreHtml + obsHtml;
 }
 
+// Lógica do Construtor Mobile
+function mudarTopicoPAP() {
+    const sel = document.getElementById('pap-topico-select').value;
+    const customInput = document.getElementById('pap-topico-custom');
+    const txtArea = document.getElementById('pap-topico-texto');
+    
+    if(sel === 'novo') {
+        customInput.style.display = 'block';
+        txtArea.value = '';
+    } else {
+        customInput.style.display = 'none';
+        txtArea.value = window.papTextosGlobais[sel] || '';
+    }
+}
+
+async function guardarTopicoPAP() {
+    let sel = document.getElementById('pap-topico-select').value;
+    if(sel === 'novo') {
+        sel = document.getElementById('pap-topico-custom').value.trim();
+        if(!sel) { mostrarAlerta("Dá um nome ao teu novo tópico."); return; }
+    }
+    
+    const texto = document.getElementById('pap-topico-texto').value;
+    window.papTextosGlobais[sel] = texto; // Guarda na memória local
+    
+    try {
+        await updateDoc(doc(window.db, "utilizadores", window.myUserId), {
+            "pap.textos": window.papTextosGlobais
+        });
+        mostrarAlerta(`Tópico "${sel}" guardado!`, false);
+    } catch(e) { mostrarAlerta("Erro ao guardar o texto."); }
+}
+
+function compilarRelatorioPAP() {
+    const caixa = document.getElementById('pap-relatorio-compilado');
+    let relatorioFinal = "";
+    
+    for (const [topico, texto] of Object.entries(window.papTextosGlobais)) {
+        if(texto.trim() !== '') {
+            relatorioFinal += `--- ${topico.toUpperCase()} ---\n${texto}\n\n`;
+        }
+    }
+    
+    if(relatorioFinal === "") {
+        mostrarAlerta("Ainda não tens texto guardado em nenhum tópico."); return;
+    }
+    
+    caixa.innerHTML = `<strong>O Teu Relatório:</strong><br><br>${relatorioFinal}<span style="color:var(--text-muted); font-size:0.75rem;">(Copia este texto para o Word no teu PC quando puderes!)</span>`;
+    caixa.style.display = 'block';
+}
+
+// Funções do Cofre
+let ficheirosCofreMemoria = []; // Guarda em memória para facilitar o download
 let ficheiroParaCofre = null;
+
 function processarUploadCofre(e) {
     const f = e.target.files[0]; if(!f) return;
     const r = new FileReader();
@@ -173,34 +263,38 @@ async function enviarFicheiroCofre() {
         await updateDoc(doc(window.db, "utilizadores", window.myUserId), {
             "pap.cofre": arrayUnion({ nome: ficheiroParaCofre.nome, base64: ficheiroParaCofre.base64, data: dStr })
         });
-        alert("Ficheiro guardado no cofre com sucesso!"); carregarPassaporteDashboard();
-    } catch(e) { alert("Erro ao guardar ficheiro."); }
+        mostrarAlerta("Ficheiro guardado no cofre com sucesso!", false);
+        document.getElementById('btn-abrir-passaporte').click(); 
+    } catch(e) { mostrarAlerta("Erro ao guardar ficheiro."); }
+}
+
+async function baixarFicheiroCofre(index) {
+    try {
+        const snap = await getDoc(doc(window.db, "utilizadores", window.myUserId));
+        const cofre = snap.data().pap?.cofre || [];
+        if(cofre[index]) {
+            const a = document.createElement("a");
+            a.href = cofre[index].base64;
+            a.download = cofre[index].nome;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    } catch(e) { mostrarAlerta("Erro ao processar o download."); }
 }
 
 // ==========================================
-// MÓDULO 2: FCT (ESTÁGIO) & REGISTOS
+// MÓDULO 2: FCT (ESTÁGIO)
 // ==========================================
-function renderFCT(dados, is11th) {
-    // FORÇADO A TRUE para poderes ver o bloqueio a funcionar como pediste!
-    const isLocked = is11th; 
-    
-    if (isLocked) {
-        return `<div class="card" style="text-align:center; padding:40px 20px; border:2px dashed var(--primary-green); background:rgba(0,204,136,0.05);">
-                    <i class="fa-solid fa-hourglass-half" style="font-size:3rem; color:var(--primary-green); margin-bottom:15px;"></i>
-                    <h3 style="color:var(--text-light); margin-bottom:10px;">O Estágio aproxima-se!</h3>
-                    <p style="color:var(--text-muted); font-size:0.9rem;">No 11º Ano, o teu estágio (FCT) arranca na reta final do ano letivo. Até lá, foca-te em garantir as melhores notas nas tuas disciplinas técnicas para teres vaga nas melhores empresas de Turismo!</p>
-                </div>`;
-    }
-
+function renderFCT(dados) {
     const fct = dados.fct || {};
     let html = '';
 
-    // 1. Entidade de Acolhimento
     let formDisplay = fct.empresa ? 'none' : 'block';
     let viewDisplay = fct.empresa ? 'block' : 'none';
 
     html += `<div class="card" style="margin-bottom:20px; border-left:4px solid #0ea5e9;">
-                <h4 style="color:var(--text-light); font-size:1rem; margin:0 0 15px 0;">Entidade de Acolhimento</h4>
+                <h4 style="color:var(--text-light); font-size:1rem; margin:0 0 15px 0;">Entidade de Estágio</h4>
                 
                 <div id="fct-entidade-view" style="display:${viewDisplay};">
                     <div style="background:rgba(0,0,0,0.2); padding:15px; border-radius:8px; margin-bottom:15px;">
@@ -215,8 +309,8 @@ function renderFCT(dados, is11th) {
                 </div>
 
                 <div id="fct-entidade-form" style="display:${formDisplay};">
-                    <input type="text" id="fct-empresa" class="input-padrao" placeholder="Nome da Empresa / Hotel" value="${fct.empresa || ''}" style="width:100%; margin-bottom:10px;">
-                    <input type="text" id="fct-tutor" class="input-padrao" placeholder="Nome do Tutor na Empresa" value="${fct.tutor || ''}" style="width:100%; margin-bottom:10px;">
+                    <input type="text" id="fct-empresa" class="input-padrao" placeholder="Nome da Entidade / Hotel" value="${fct.empresa || ''}" style="width:100%; margin-bottom:10px;">
+                    <input type="text" id="fct-tutor" class="input-padrao" placeholder="Nome do Tutor na Entidade" value="${fct.tutor || ''}" style="width:100%; margin-bottom:10px;">
                     <div style="display:flex; gap:10px; margin-bottom:10px;">
                         <input type="tel" id="fct-telefone" class="input-padrao" placeholder="Telefone (Opcional)" value="${fct.telefone || ''}" style="flex:1;">
                         <input type="email" id="fct-email" class="input-padrao" placeholder="Email (Opcional)" value="${fct.email || ''}" style="flex:1;">
@@ -225,7 +319,6 @@ function renderFCT(dados, is11th) {
                 </div>
              </div>`;
 
-    // 2. Registo Diário de Horas (Com cálculo de horas, arredondamento e limite 7h)
     const horasRealizadas = fct.horasRealizadas || 0;
     const horasTotais = fct.horasTotal || 400; 
     const percHoras = Math.min((horasRealizadas / horasTotais) * 100, 100);
@@ -248,23 +341,21 @@ function renderFCT(dados, is11th) {
                         <input type="time" id="fct-hora-in" class="input-padrao" style="width:80px; padding:10px 5px; font-size:0.85rem;">
                         <input type="time" id="fct-hora-out" class="input-padrao" style="width:80px; padding:10px 5px; font-size:0.85rem;">
                     </div>
-                    <button class="primary-btn small-btn" style="width: 100%;" onclick="window.registarHorasDia()"><i class="fa-solid fa-business-time"></i> Registar Dia de FCT</button>
+                    <button class="primary-btn small-btn" style="width: 100%; background:var(--primary-green);" onclick="window.registarHorasDia()"><i class="fa-solid fa-clock"></i> Registar Horas</button>
                 </div>`;
                 
     if (hist.length > 0) {
         html += `<div style="margin-top:15px; display:flex; flex-direction:column; gap:5px;">`;
-        // Mostra os últimos 3 registos
         hist.slice(-3).reverse().forEach(r => {
-            html += `<div style="display:flex; justify-content:space-between; font-size:0.8rem; background:rgba(0,0,0,0.2); padding:8px; border-radius:4px; border-left:2px solid var(--primary-green);">
-                        <span style="color:var(--text-light);">${r.data} <span style="color:var(--text-muted);">(${r.inicio} às ${r.fim})</span></span>
-                        <strong style="color:var(--primary-green);">+${r.horas}h</strong>
+            html += `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; background:rgba(0,0,0,0.2); padding:8px 12px; border-radius:4px; border-left:2px solid var(--primary-green);">
+                        <span style="color:var(--text-light);">${r.data} <span style="color:var(--text-muted); margin-left:5px;">(${r.inicio} às ${r.fim})</span></span>
+                        <strong style="color:var(--primary-green); font-size:0.9rem;">+${r.horas}h</strong>
                      </div>`;
         });
         html += `</div>`;
     }
     html += `</div>`;
 
-    // 3. Resumo Semanal (Gerador Robusto com check-boxes alinhadas e Turismo completo)
     const TAREFAS_TURISMO = [
         "Atendimento de Front-Office", "Gestão de Reservas (Check-in/out)", 
         "Apoio a Eventos e Banquetes", "Serviço de F&B (Restaurante/Bar)", 
@@ -277,17 +368,18 @@ function renderFCT(dados, is11th) {
                 <h4 style="color:var(--warning-yellow); font-size:1rem; margin:0 0 10px 0;">Resumo Semanal (Relatório)</h4>
                 <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px;">Seleciona as tarefas em que estiveste envolvido esta semana para gerar a base do teu relatório.</p>
                 
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px; background:rgba(0,0,0,0.15); padding:15px; border-radius:8px;">`;
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:15px; background:rgba(0,0,0,0.15); padding:15px; border-radius:8px;">`;
     
     TAREFAS_TURISMO.forEach((t) => {
-        html += `<label style="display:flex; align-items:flex-start; gap:8px; font-size:0.8rem; color:var(--text-light); cursor:pointer;">
-                    <input type="checkbox" class="tarefa-fct-chk" value="${t}" style="margin-top:2px;"> <span style="line-height:1.3;">${t}</span>
+        html += `<label style="display:flex; align-items:center; justify-content:flex-start; gap:10px; font-size:0.8rem; color:var(--text-light); cursor:pointer; margin:0;">
+                    <input type="checkbox" class="tarefa-fct-chk" value="${t}" style="margin:0; width:16px; height:16px; flex-shrink:0;"> 
+                    <span style="line-height:1.2; text-align:left;">${t}</span>
                  </label>`;
     });
 
     html += `   </div>
                 <textarea id="fct-notas-extra" class="input-padrao" placeholder="Gostarias de acrescentar algo? (Ex: Fui elogiado na resolução de um problema...)" style="width:100%; height:60px; margin-bottom:10px;"></textarea>
-                <button class="primary-btn small-btn" style="width:100%; background:var(--warning-yellow); color:#000; margin-bottom:10px;" onclick="window.gerarTextoDiario()">Construir Texto Profissional</button>
+                <button class="primary-btn small-btn" style="width:100%; background:var(--warning-yellow); color:#000; margin-bottom:10px;" onclick="window.gerarTextoDiario()">Escrever Relatório</button>
                 
                 <div id="resultado-gerador-fct" style="display:none; padding:15px; background:rgba(0,0,0,0.2); border-left:3px solid var(--warning-yellow); border-radius:6px; font-size:0.85rem; color:var(--text-light); line-height:1.6;"></div>
              </div>`;
@@ -295,7 +387,6 @@ function renderFCT(dados, is11th) {
     return html;
 }
 
-// Funções Auxiliares FCT
 async function guardarFichaEntidade() {
     const emp = document.getElementById('fct-empresa').value.trim();
     const tut = document.getElementById('fct-tutor').value.trim();
@@ -306,8 +397,8 @@ async function guardarFichaEntidade() {
         await updateDoc(doc(window.db, "utilizadores", window.myUserId), {
             "fct.empresa": emp, "fct.tutor": tut, "fct.telefone": tel, "fct.email": em
         });
-        carregarPassaporteDashboard();
-    } catch(e) { alert("Erro ao guardar ficha."); btn.innerHTML = 'Guardar Ficha'; }
+        document.getElementById('btn-abrir-passaporte').click(); 
+    } catch(e) { mostrarAlerta("Erro ao guardar ficha."); btn.innerHTML = 'Guardar Ficha'; }
 }
 
 async function registarHorasDia() {
@@ -315,45 +406,35 @@ async function registarHorasDia() {
     const hIn = document.getElementById('fct-hora-in').value;
     const hOut = document.getElementById('fct-hora-out').value;
 
-    if(!dt || !hIn || !hOut) { alert("Preenche a data e as horas de entrada e saída!"); return; }
+    if(!dt || !hIn || !hOut) { mostrarAlerta("Preenche a data e as horas de entrada e saída!"); return; }
 
     const [hInStr, mInStr] = hIn.split(':').map(Number);
     const [hOutStr, mOutStr] = hOut.split(':').map(Number);
     
     let minDiff = (hOutStr * 60 + mOutStr) - (hInStr * 60 + mInStr);
-    if(minDiff <= 0) { alert("A hora de saída tem de ser posterior à hora de entrada!"); return; }
+    if(minDiff <= 0) { mostrarAlerta("A hora de saída tem de ser posterior à hora de entrada!"); return; }
 
-    // Arredondar para baixo (Ex: 3h59m -> 3h)
     let totalHoras = Math.floor(minDiff / 60);
-
-    if (totalHoras < 1) { alert("Tens de estagiar pelo menos 1 hora para registar o dia."); return; }
+    if (totalHoras < 1) { mostrarAlerta("Tens de estagiar pelo menos 1 hora para registar o dia."); return; }
     
-    // Regra das 7 horas limite
     if (totalHoras > 7) {
-        alert(`Atenção: A calculadora deu ${totalHoras}h, mas de acordo com as regras escolares (Aulas + FCT), o limite máximo permitido são 7 horas diárias. O registo será ajustado para 7h.`);
+        mostrarAlerta("O registo será ajustado para o máximo permitido de 7h diárias.");
         totalHoras = 7;
     }
 
-    const btn = event.currentTarget; 
-    const textoOriginal = btn.innerHTML;
+    const btn = event.currentTarget; const textoOriginal = btn.innerHTML;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
 
     try {
         const snap = await getDoc(doc(window.db, "utilizadores", window.myUserId));
         const currentHoras = snap.data().fct?.horasRealizadas || 0;
-        const novoTotal = currentHoras + totalHoras;
-
         await updateDoc(doc(window.db, "utilizadores", window.myUserId), {
-            "fct.horasRealizadas": novoTotal,
+            "fct.horasRealizadas": currentHoras + totalHoras,
             "fct.historicoHoras": arrayUnion({ data: dt.split('-').reverse().join('/'), inicio: hIn, fim: hOut, horas: totalHoras })
         });
-        
-        carregarPassaporteDashboard();
-    } catch(e) { 
-        alert("Erro ao registar horas."); 
-        btn.innerHTML = textoOriginal; 
-        btn.disabled = false;
-    }
+        document.getElementById('btn-abrir-passaporte').click(); 
+        mostrarAlerta("Horas registadas com sucesso!", false);
+    } catch(e) { mostrarAlerta("Erro ao registar horas."); btn.innerHTML = textoOriginal; btn.disabled = false; }
 }
 
 function gerarTextoDiario() {
@@ -361,23 +442,21 @@ function gerarTextoDiario() {
     const notas = document.getElementById('fct-notas-extra').value.trim();
     const caixaResultado = document.getElementById('resultado-gerador-fct');
     
-    if(chks.length === 0 && notas === '') { alert("Seleciona tarefas ou escreve uma nota!"); return; }
+    if(chks.length === 0 && notas === '') { mostrarAlerta("Seleciona tarefas ou escreve uma nota!"); return; }
 
-    let textoGerado = "Durante esta semana de estágio na entidade de acolhimento, o meu plano de trabalhos incidiu principalmente nas seguintes áreas de intervenção técnica: ";
+    let textoGerado = "Nesta semana de estágio, as minhas tarefas focaram-se em: ";
     let arrTarefas = [];
     chks.forEach(c => arrTarefas.push(c.value.toLowerCase()));
     
     if(arrTarefas.length > 0) {
         if(arrTarefas.length === 1) { textoGerado += arrTarefas[0] + ". "; } 
         else { const ult = arrTarefas.pop(); textoGerado += arrTarefas.join(", ") + " e " + ult + ". "; }
-    } else { textoGerado = "Ao longo da semana, foquei-me no acompanhamento e execução de diversas atividades estruturais da empresa. "; }
+    } else { textoGerado = "Nesta semana, foquei-me em atividades operacionais. "; }
 
-    textoGerado += "A execução destas tarefas exigiu um elevado sentido de responsabilidade, capacidade de comunicação clara e adaptação constante ao ritmo exigente de uma operação turística. Sinto que tive a oportunidade de colocar em prática os conhecimentos teóricos adquiridos em contexto de sala de aula, lidando diretamente com desafios reais do setor. ";
-
-    if(notas !== '') { textoGerado += `Como ponto de destaque adicional desta semana, aponto que: ${notas}. `; }
+    if(notas !== '') { textoGerado += `${notas}. `; }
     
-    textoGerado += "Em suma, foi um período extremamente produtivo, onde consegui desenvolver ativamente novas competências técnicas e reforçar a minha postura e empatia profissional no contacto diário com clientes e com a restante equipa.";
+    textoGerado += "As atividades permitiram consolidar conhecimentos técnicos e reforçar a minha adaptação ao contexto real de trabalho, resultando numa semana muito produtiva.";
 
-    caixaResultado.innerHTML = `<strong>Texto Base para o teu Relatório:</strong><br><br>${textoGerado}<br><br><span style="color:var(--text-muted); font-size:0.75rem;">(Dica: Copia este texto, cola no teu Word e ajusta as palavras conforme o teu estilo pessoal!)</span>`;
+    caixaResultado.innerHTML = `<strong>Texto Base para o teu Relatório:</strong><br><br>${textoGerado}`;
     caixaResultado.style.display = 'block';
 }
