@@ -83,9 +83,11 @@ onAuthStateChanged(auth, async (user) => {
                     document.getElementById('perfil-disciplinas-lista').innerText = state.disciplinasProfessor.length > 0 ? state.disciplinasProfessor.join(' • ') : 'Nenhuma disciplina configurada.';
                     document.getElementById('perfil-papeis-lista').innerText = state.myRoles.map(r => r.toUpperCase().replace('_', ' ')).join(' • ');
                     
-                    if (state.profData.fotoPerfil) {
-                        document.getElementById('header-avatar-circle').innerHTML = `<img src="${state.profData.fotoPerfil}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-                        document.getElementById('prof-avatar-img').src = state.profData.fotoPerfil;
+                        // Gerar avatar dinâmico caso não exista foto de perfil
+                        const fotoUrl = state.profData.fotoPerfil || `https://ui-avatars.com/api/?name=${state.myUserName.split(' ')[0]}&background=333&color=fff`;
+                        
+                        document.getElementById('header-avatar-circle').innerHTML = `<img src="${fotoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+                        document.getElementById('prof-avatar-img').src = fotoUrl;
                     }
                     
                     let maxAno = 10; state.turmasProfessor.forEach(t => { let ano = parseInt(t.match(/\d+/)?.[0]) || 10; if(ano > maxAno) maxAno = ano; });
