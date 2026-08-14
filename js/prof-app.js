@@ -11,6 +11,17 @@ import { carregarRadarProfessor, analisarEAtualizarTurma, renderizarPautaTurma, 
 import { carregarEcraOrientandos, carregarEcraDiario, prepararModalNovaSessao } from "./prof/roles/pap-diario.js";
 import { carregarEcraProjetosCoord } from "./prof/roles/coord-dashboard.js";
 
+// MATRIZ DE CONFIGURAÇÕES DE SALAS
+const CONFIG_SALAS = {
+    'sala4': { colunas: 4, linhas: 3, formato: 'dupla' },
+    'sala7': { colunas: 3, linhas: 6, formato: 'dupla' },
+    'sala8': { colunas: 3, linhas: 6, formato: 'dupla' },
+    'sala11': { colunas: 3, linhas: 4, formato: 'mista_centro_individual' },
+    'sala12': { colunas: 3, linhas: 4, formato: 'dupla' },
+    'sala13': { colunas: 4, linhas: 4, formato: 'dupla' },
+    'labCTE': { colunas: 4, linhas: 5, formato: 'individual' }
+};
+
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         state.myUserId = user.email.split('@')[0];
@@ -178,7 +189,65 @@ document.getElementById('lancar-sumario-turma')?.addEventListener('change', (e) 
 
 document.getElementById('forum-turma-select')?.addEventListener('change', async (e) => { const t = e.target.value; const cCont = document.getElementById('lista-alunos-forum'); if (!t) { cCont.innerHTML = '<p class="text-muted center" style="font-size:0.8rem;">Seleciona uma turma primeiro.</p>'; return; } cCont.innerHTML = '<p class="text-muted center" style="font-size:0.8rem;"><i class="fa-solid fa-spinner fa-spin"></i> A carregar alunos...</p>'; try { const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); let cH = ''; cS.forEach(d => { cH += `<label style="display:flex; align-items:center; gap:10px; color:white; font-size:0.9rem; padding:8px 0; cursor:pointer;"><input type="checkbox" class="forum-aluno-check" value="${d.id}" checked style="width:18px;height:18px;accent-color:var(--primary-green);"> ${nomeCurto(d.data().nome)}</label>`; }); cCont.innerHTML = cH === '' ? '<p class="text-muted center" style="font-size:0.8rem;">Turma vazia.</p>' : cH; } catch(err) { cCont.innerHTML = '<p class="text-danger center">Erro.</p>'; } });
 
+// ----------------------------------------------------
+// NOVO: LÓGICA DA PLANTA DA SALA
+// ----------------------------------------------------
+document.getElementById('planta-sala-select')?.addEventListener('change', (e) => {
+    const salaId = e.target.value;
+    const cont = document.getElementById('planta-gerada-container');
+    const btnGerar = document.getElementById('btn-gerar-planta');
+    
+    if (!salaId) { 
+        cont.style.display = 'none'; 
+        btnGerar.disabled = true;
+        btnGerar.style.opacity = '0.5';
+        return; 
+    }
+    
+    btnGerar.disabled = false;
+    btnGerar.style.opacity = '1';
+    cont.style.display = 'block';
+    const config = CONFIG_SALAS[salaId];
+    
+    // Desenha o Quadro Virado para Cima
+    let html = `<div style="background:#555; color:white; text-align:center; padding:5px; border-radius:4px; margin-bottom:20px; font-weight:bold; font-size:0.8rem; border:2px solid #888;">QUADRO DA SALA</div>`;
+    
+    // Desenhar Grelha Baseada na Matriz
+    html += `<div style="display:flex; flex-direction:column; gap:15px; align-items:center;">`;
+    
+    for (let l = 0; l < config.linhas; l++) {
+        html += `<div style="display:flex; gap:20px;">`; // Fila
+        for (let c = 0; c < config.colunas; c++) {
+            
+            // Regra especial para Sala 11 (Centro Individual)
+            if (config.formato === 'mista_centro_individual') {
+                if (c === 1) { // Fila do meio
+                    html += `<div class="mesa-planta" data-mesa="${l}-${c}" style="width:60px; height:60px; background:#1c1f26; border:1px dashed #555; border-radius:8px; display:flex; justify-content:center; align-items:center; text-align:center; font-size:0.75rem; color:var(--text-muted);">Vazio</div>`;
+                } else { // Filas laterais (duplas)
+                    html += `<div style="display:flex; gap:2px; background:#111; padding:4px; border-radius:8px; border:1px solid #333;">
+                        <div class="mesa-planta" data-mesa="${l}-${c}-A" style="width:60px; height:60px; background:#1c1f26; border:1px dashed #555; border-radius:6px; display:flex; justify-content:center; align-items:center; text-align:center; font-size:0.75rem; color:var(--text-muted);">Vazio</div>
+                        <div class="mesa-planta" data-mesa="${l}-${c}-B" style="width:60px; height:60px; background:#1c1f26; border:1px dashed #555; border-radius:6px; display:flex; justify-content:center; align-items:center; text-align:center; font-size:0.75rem; color:var(--text-muted);">Vazio</div>
+                    </div>`;
+                }
+            } 
+            else if (config.formato === 'dupla') {
+                html += `<div style="display:flex; gap:2px; background:#111; padding:4px; border-radius:8px; border:1px solid #333;">
+                    <div class="mesa-planta" data-mesa="${l}-${c}-A" style="width:60px; height:60px; background:#1c1f26; border:1px dashed #555; border-radius:6px; display:flex; justify-content:center; align-items:center; text-align:center; font-size:0.75rem; color:var(--text-muted);">Vazio</div>
+                    <div class="mesa-planta" data-mesa="${l}-${c}-B" style="width:60px; height:60px; background:#1c1f26; border:1px dashed #555; border-radius:6px; display:flex; justify-content:center; align-items:center; text-align:center; font-size:0.75rem; color:var(--text-muted);">Vazio</div>
+                </div>`;
+            }
+            else { // Individual (CTE)
+                html += `<div class="mesa-planta" data-mesa="${l}-${c}" style="width:60px; height:60px; background:#1c1f26; border:1px dashed #555; border-radius:8px; display:flex; justify-content:center; align-items:center; text-align:center; font-size:0.75rem; color:var(--text-muted);">Vazio</div>`;
+            }
+        }
+        html += `</div>`;
+    }
+    html += `</div>`;
+    cont.innerHTML = html;
+    document.getElementById('btn-exportar-planta').style.display = 'none';
+});
 
+// CLIQUE GERAL PARA TODA A PÁGINA
 document.body.addEventListener('click', async (e) => {
     
     // NAVEGAÇÃO
@@ -260,6 +329,59 @@ document.body.addEventListener('click', async (e) => {
         return;
     }
 
+    // ABRIR MODAL PLANTA
+    if (e.target.closest('#btn-ver-planta')) {
+        if (!state.selectedTurma) return alert("Seleciona uma turma primeiro.");
+        document.getElementById('planta-sala-select').value = '';
+        document.getElementById('planta-gerada-container').style.display = 'none';
+        document.getElementById('planta-instrucoes-ia').value = '';
+        const btnGerar = document.getElementById('btn-gerar-planta');
+        btnGerar.disabled = true; btnGerar.style.opacity = '0.5';
+        document.getElementById('modal-planta-sala').style.display = 'flex';
+        return;
+    }
+
+    // BOTÃO GERAR PLANTA DA SALA
+    if (e.target.closest('#btn-gerar-planta')) {
+        const salaId = document.getElementById('planta-sala-select').value;
+        if(!salaId) return;
+        
+        const btn = document.getElementById('btn-gerar-planta');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A calcular...';
+        
+        // Simular o delay da Inteligência Artificial a pensar
+        setTimeout(() => {
+            const mesas = document.querySelectorAll('.mesa-planta');
+            // Embaralhar alunos da turma atual para a demo
+            let alunosBaralhados = [...state.alunosTurmaRAM].sort(() => 0.5 - Math.random());
+            
+            // Limpar tudo
+            mesas.forEach(m => {
+                m.innerText = 'Vazio'; 
+                m.style.color = 'var(--text-muted)'; 
+                m.style.borderColor = '#555';
+                m.style.background = '#1c1f26';
+            });
+            
+            // Preencher com a IA (Simulada)
+            let i = 0;
+            mesas.forEach(m => {
+                if (i < alunosBaralhados.length) {
+                    const primeiroNome = alunosBaralhados[i].nome.split(' ')[0];
+                    m.innerText = primeiroNome;
+                    m.style.color = 'white';
+                    m.style.borderColor = 'var(--primary-green)';
+                    m.style.background = 'rgba(0, 204, 136, 0.15)';
+                    i++;
+                }
+            });
+            
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Refazer Disposição';
+            document.getElementById('btn-exportar-planta').style.display = 'block';
+        }, 1200);
+        return;
+    }
+
     // COPILOTO IA
     if (e.target.closest('#btn-abrir-copiloto')) {
         const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
@@ -285,8 +407,6 @@ document.body.addEventListener('click', async (e) => {
         if (!textoOriginal) return alert("Escreve primeiro alguns tópicos para a IA formatar.");
         
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-        
-        // Simulação de IA (Como não tens backend OpenAI integrado, formata o texto localmente com RegEx para tópicos limpos)
         setTimeout(() => {
             const linhas = textoOriginal.split('\n').filter(l => l.trim() !== '');
             let textoFormatado = "Sumário da Aula:\n";
