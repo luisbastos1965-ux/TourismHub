@@ -33,11 +33,10 @@ export function filtrarDisciplinasDoAno(turmaStr, disciplinasArray) {
     
     return disciplinasArray.filter(disc => {
         const dUpper = disc.toUpperCase().trim();
-        // Se a disciplina existe na matriz, só a mostramos se for dada neste ano
         if (ESTRUTURA_MODULAR[dUpper]) {
             return ESTRUTURA_MODULAR[dUpper][ano] !== undefined;
         }
-        return true; // Mantemos as disciplinas desconhecidas por segurança
+        return true; 
     });
 }
 
@@ -49,7 +48,6 @@ export function atualizarDropdownModulos(turmaStr, disciplina, selectElement) {
     let html = '<option value="">Mod...</option>';
     
     if (ESTRUTURA_MODULAR[disc]) {
-        // Percorrer os anos do 10º até ao ano atual da turma
         for (let y = 10; y <= ano; y++) {
             if (ESTRUTURA_MODULAR[disc][y]) {
                 ESTRUTURA_MODULAR[disc][y].forEach(m => {
@@ -61,7 +59,6 @@ export function atualizarDropdownModulos(turmaStr, disciplina, selectElement) {
             }
         }
     } else {
-        // Fallback genérico caso falhe a sigla
         for(let i=1; i<=15; i++) {
             html += `<option value="${i}">Módulo ${i}</option>`;
         }
@@ -90,26 +87,29 @@ export async function carregarRadarProfessor() {
     const cardModulos = document.getElementById('dashboard-modulos-container')?.closest('.card');
     const cardHorario = document.getElementById('dashboard-horario-container')?.closest('.card');
     const cardEventos = document.getElementById('radar-agenda-container')?.closest('.card');
+    const cardAlertas = document.getElementById('dashboard-alertas-container')?.closest('.card');
     
     const papContainerId = 'dyn-pap-dashboard'; let papCont = document.getElementById(papContainerId);
     if (!papCont) { papCont = document.createElement('div'); papCont.id = papContainerId; document.getElementById('view-prof-dashboard').prepend(papCont); }
 
     if (state.activeRole === 'orientador_pap' || state.activeRole === 'coordenador') {
-        if(cardAssistente) cardAssistente.style.display = 'none'; if(divCarrossel) divCarrossel.style.display = 'none'; if(cardModulos) cardModulos.style.display = 'none'; if(cardHorario) cardHorario.style.display = 'none'; if(cardEventos) cardEventos.style.display = 'none';
+        if(cardAssistente) cardAssistente.style.display = 'none'; if(divCarrossel) divCarrossel.style.display = 'none'; if(cardModulos) cardModulos.style.display = 'none'; if(cardHorario) cardHorario.style.display = 'none'; if(cardEventos) cardEventos.style.display = 'none'; if(cardAlertas) cardAlertas.style.display = 'none';
         papCont.style.display = 'block'; papCont.innerHTML = `<p class="text-muted center" style="padding: 20px;">A carregar vista de coordenação especial...</p>`;
         return; 
     }
 
     papCont.style.display = 'none';
-    if(cardAssistente) cardAssistente.style.display = 'block'; if(divCarrossel) divCarrossel.style.display = 'block'; if(cardModulos) cardModulos.style.display = 'block'; if(cardHorario) cardHorario.style.display = 'block'; if(cardEventos) cardEventos.style.display = 'block';
+    if(cardAssistente) cardAssistente.style.display = 'block'; if(divCarrossel) divCarrossel.style.display = 'block'; if(cardModulos) cardModulos.style.display = 'block'; if(cardHorario) cardHorario.style.display = 'block'; if(cardEventos) cardEventos.style.display = 'block'; if(cardAlertas) cardAlertas.style.display = 'block';
 
-    const aText = document.getElementById('assistente-global-texto'); const hCont = document.getElementById('dashboard-horario-container'); const eCont = document.getElementById('radar-agenda-container');
+    const aText = document.getElementById('assistente-global-texto'); const hCont = document.getElementById('dashboard-horario-container'); const eCont = document.getElementById('radar-agenda-container'); const alCont = document.getElementById('dashboard-alertas-container');
     aText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A analisar a base de dados...';
     
     if (!state.turmasProfessor || state.turmasProfessor.length === 0) { aText.innerHTML = 'Não tens turmas atribuídas no teu perfil.'; return; }
 
     try {
         let totalAlunos = 0; let prhfsAtivos = 0; let eventosGlobais = []; let totalFaltasProf = 0; let totalOcorrencias = 0; let profAulasHoje = [];
+        let listaAlertas = []; // NOVO ARRAY PARA ALERTAS
+
         const bK = ['1', '2', '3', '4', '1300', '5', '6', '7']; const bT = { '1': '08:30', '2': '09:35', '3': '10:50', '4': '11:55', '1300': '13:00', '5': '14:05', '6': '15:15', '7': '16:20' };
         const hjD = new Date(); const hjStr = `${hjD.getFullYear()}-${String(hjD.getMonth()+1).padStart(2,'0')}-${String(hjD.getDate()).padStart(2,'0')}`;
 
@@ -119,9 +119,15 @@ export async function carregarRadarProfessor() {
                 const snapAl = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); 
                 for (const docAluno of snapAl.docs) {
                     totalAlunos++;
-                    try { const pSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "prhfs")); pSnap.forEach(p => { if (p.data().status !== 'concluida' && state.disciplinasProfessor.includes(p.data().disciplina)) prhfsAtivos++; }); } catch(err){}
-                    try { const fSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "faltas")); fSnap.forEach(f => { if (state.disciplinasProfessor.includes(f.data().disciplina)) totalFaltasProf += Number(f.data().horas || 0); }); } catch(err){}
+                    let faltasAluno = 0; let prhfsAluno = 0;
+                    
+                    try { const pSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "prhfs")); pSnap.forEach(p => { if (p.data().status !== 'concluida' && state.disciplinasProfessor.includes(p.data().disciplina)) { prhfsAtivos++; prhfsAluno++; } }); } catch(err){}
+                    try { const fSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "faltas")); fSnap.forEach(f => { if (state.disciplinasProfessor.includes(f.data().disciplina)) { const h = Number(f.data().horas || 0); totalFaltasProf += h; if(!f.data().justificada) faltasAluno += h;} }); } catch(err){}
                     try { const oSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "ocorrencias")); oSnap.forEach(o => { if(o.data().autor === state.myUserName) totalOcorrencias++; }); } catch(err){}
+                    
+                    // LÓGICA DE ALERTA INDIVIDUAL
+                    if (faltasAluno > 6) listaAlertas.push({ nome: docAluno.data().nome, turma: t, msg: `${faltasAluno}h de faltas injustificadas.`, tipo: 'falta' });
+                    if (prhfsAluno > 1) listaAlertas.push({ nome: docAluno.data().nome, turma: t, msg: `${prhfsAluno} PRHFs pendentes.`, tipo: 'prhf' });
                 }
             } catch(e) {}
             try { const snapEv = await getDocs(collection(db, "turmas", t, "eventos")); snapEv.forEach(d => eventosGlobais.push({ turma: t, ...d.data() })); } catch(e) {}
@@ -135,6 +141,21 @@ export async function carregarRadarProfessor() {
         if (prhfsAtivos > 0) resumo += `<br><span style="color:var(--warning-yellow); font-weight:bold;">Atenção: Existem ${prhfsAtivos} PRHFs a decorrer na tua matéria.</span>`; else resumo += `<br><span style="color:var(--success-green);">Excelente! Tudo em dia com as recuperações.</span>`;
         if (avaliacoesEmFalta > 0) resumo += `<br><span style="color:var(--danger-red); font-size:0.85rem;"><i class="fa-solid fa-star"></i> Tens avaliações por lançar no sistema.</span>`;
         aText.innerHTML = resumo;
+
+        // RENDER ALERTAS
+        let alertasHtml = '';
+        if (listaAlertas.length === 0) {
+            alertasHtml = '<div class="empty-state"><i class="fa-solid fa-check-circle empty-state-icon" style="color:var(--success-green);"></i><p class="empty-state-desc">Nenhum aluno em risco nas tuas turmas.</p></div>';
+        } else {
+            listaAlertas.forEach(a => {
+                const icon = a.tipo === 'falta' ? '<i class="fa-solid fa-user-xmark" style="color:var(--danger-red);"></i>' : '<i class="fa-solid fa-file-medical" style="color:var(--warning-yellow);"></i>';
+                alertasHtml += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border-left:3px solid var(--danger-red); margin-bottom:5px;">
+                    <div><strong style="color:white; font-size:0.9rem;">${nomeCurto(a.nome)}</strong> <span style="font-size:0.75rem; color:var(--text-muted);">(${a.turma})</span></div>
+                    <div style="font-size:0.8rem; color:var(--text-light); display:flex; align-items:center; gap:5px;">${icon} ${a.msg}</div>
+                </div>`;
+            });
+        }
+        if(alCont) alCont.innerHTML = alertasHtml;
 
         const carouselTrack = document.getElementById('stats-carousel-container');
         if(carouselTrack) {
@@ -318,7 +339,6 @@ export function desenharGraficoAluno(modo) {
 
     const selDisc = document.getElementById('perfil-disc-select')?.value || state.disciplinasProfessor[0];
 
-    // EIXO Y FORÇADO A ARRANCAR NOS 10 (MIN: 10)
     if(modo === 'disc') {
         let dadosFiltrados = state.notasAlunoRAM.filter(n => n.disciplina === selDisc && !isNaN(n.valor) && n.valor > 0); 
         dadosFiltrados.sort((a,b) => a.moduloReal - b.moduloReal);
@@ -339,7 +359,6 @@ export async function abrirPerfil360Aluno(alunoId) {
     document.getElementById('perfil-aluno-title-estat').innerText = isDT ? 'Estatísticas Globais' : 'Estatísticas na Tua Disciplina';
     const togDiv = document.getElementById('dt-graph-toggles'); if(isDT) togDiv.style.display = 'flex'; else togDiv.style.display = 'none';
 
-    // Popular Dropdown de Disciplina do Perfil, filtrado pelo ano!
     const discSelect = document.getElementById('perfil-disc-select');
     const disciplinasDoAno = filtrarDisciplinasDoAno(state.selectedTurma, isDT ? ordemDisciplinasGlobal : state.disciplinasProfessor);
     discSelect.innerHTML = disciplinasDoAno.map(dc => `<option value="${dc}">${dc}</option>`).join('');
@@ -380,7 +399,6 @@ export async function abrirPerfil360Aluno(alunoId) {
         const pS = await getDocs(collection(db, "utilizadores", alunoId, "prhfs")); pS.forEach(p => { if(p.data().status !== 'concluida' && disciplinasDoAno.includes(p.data().disciplina)) pCount++; });
         const nS = await getDocs(collection(db, "utilizadores", alunoId, "notas")); nS.forEach(n => { 
             if(disciplinasDoAno.includes(n.data().disciplina)) { 
-                // CORREÇÃO: Limpa texto indesejado para não dar Módulo NaN
                 const mFormatado = parseInt(String(n.data().modulo).replace(/\D/g, '')) || n.data().modulo;
                 state.notasAlunoRAM.push({ disciplina: n.data().disciplina, moduloReal: mFormatado, notaOriginal: n.data().nota, valor: isNaN(n.data().nota) ? 0 : Number(n.data().nota) }); 
             } 
@@ -401,7 +419,7 @@ export async function abrirPerfil360Aluno(alunoId) {
         
         discSelect.onchange(); 
 
-    } catch (e) { console.error(e); }
+    } catch (e) {}
 
     document.getElementById('p-aluno-faltas').innerText = fCount; document.getElementById('p-aluno-prhfs').innerText = pCount; document.getElementById('p-aluno-notas').innerText = state.notasAlunoRAM.length;
     document.getElementById('btn-graph-disc').classList.add('active'); document.getElementById('btn-graph-global').classList.remove('active');
@@ -419,7 +437,7 @@ export async function carregarTarefasProf() {
         if(isDT) { document.getElementById('btn-radar-conflitos').style.display = 'block'; document.getElementById('prhf-dt-toggles').style.display = 'flex'; } else { document.getElementById('btn-radar-conflitos').style.display = 'none'; document.getElementById('prhf-dt-toggles').style.display = 'none'; }
 
         const container = document.getElementById('lista-prhfs-professor'); container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A procurar PRHFs...</p>';
-        if (!state.turmasProfessor || state.turmasProfessor.length === 0) { container.innerHTML = '<p class="text-muted center">Sem turmas.</p>'; return; }
+        if (!state.turmasProfessor || state.turmasProfessor.length === 0) { container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-ban empty-state-icon"></i><p class="empty-state-desc">Sem turmas atribuídas.</p></div>'; return; }
         try {
             let todosAlunos = []; for (const t of state.turmasProfessor) { const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); snap.forEach(d => todosAlunos.push({ id: d.id, ...d.data() })); }
             let todosPrhfs = []; for (const al of todosAlunos) { const pSnap = await getDocs(collection(db, "utilizadores", al.id, "prhfs")); pSnap.forEach(p => todosPrhfs.push({ id: p.id, alunoId: al.id, alunoNome: al.nome, turma: al.turma, ...p.data() })); }
@@ -451,7 +469,7 @@ export async function carregarTarefasProf() {
             concluidosFiltrados.sort((a,b) => { const da = a.dataCriacao ? new Date(a.dataCriacao) : 0; const db = b.dataCriacao ? new Date(b.dataCriacao) : 0; return dFiltro === 'desc' ? db - da : da - db; });
 
             let histHtml = '';
-            if (concluidosFiltrados.length === 0) { histHtml += `<div class="empty-state"><i class="fa-solid fa-clock-rotate-left empty-state-icon"></i><p class="empty-state-desc">Nenhum plano registado no histórico.</p></div>`; } 
+            if (concluidosFiltrados.length === 0) { histHtml += `<div class="empty-state"><i class="fa-solid fa-clock-rotate-left empty-state-icon"></i><p class="empty-state-desc">Nenhum plano registado no histórico com estes filtros.</p></div>`; } 
             else { concluidosFiltrados.forEach(c => { const dataConcluida = c.dataCriacao ? new Date(c.dataCriacao).toLocaleDateString('pt-PT') : 'Antigo'; histHtml += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); border-left: 3px solid var(--success-green); padding:10px; border-radius:6px; margin-bottom:8px;"><div><strong style="color:white; font-size:0.95rem;">${nomeCurto(c.alunoNome)} <span style="font-size:0.75rem; color:var(--text-muted);">(${c.turma})</span></strong><br><span style="font-size:0.8rem; color:var(--success-green);">${c.disciplina} - Módulo ${c.modulo}</span></div><div style="text-align:right;"><span style="font-size:0.7rem; color:var(--text-muted);">Concluído</span><br><strong style="font-size:0.8rem; color:white;">${dataConcluida}</strong></div></div>`; }); }
             document.getElementById('lista-prhfs-historico').innerHTML = histHtml;
         } catch (e) { container.innerHTML = '<p class="text-danger center">Erro a carregar PRHFs.</p>'; }
@@ -482,10 +500,9 @@ export async function carregarTarefasProf() {
     }
 }
 
-// CORREÇÃO: FÓRUNS ORDENADOS E ESTRUTURADOS
 export async function carregarForunsProf() {
     const cont = document.getElementById('prof-forum-channel-list'); cont.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A ler canais...</p>';
-    if(!state.turmasProfessor || state.turmasProfessor.length === 0) { cont.innerHTML = '<p class="text-muted center">Não tens turmas.</p>'; return; }
+    if(!state.turmasProfessor || state.turmasProfessor.length === 0) { cont.innerHTML = '<div class="empty-state"><i class="fa-solid fa-comments empty-state-icon"></i><p class="empty-state-desc">Não tens turmas atribuídas para visualizar fóruns.</p></div>'; return; }
 
     if (state.activeRole === 'orientador_pap') {
         let html = '<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Rede de Orientação</h3><div class="canal-card" data-turma="Global" data-disc="Orientadores" data-nome="Equipa de Orientadores"><div class="canal-icon" style="color:var(--success-green); border-color:var(--success-green);"><i class="fa-solid fa-users-viewfinder"></i></div><div class="canal-info" style="flex:1;"><h4>Equipa de Orientadores</h4><p>Chat fechado de coordenação</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div><h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Os Meus Orientandos</h3>';
