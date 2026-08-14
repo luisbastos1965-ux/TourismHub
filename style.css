@@ -54,6 +54,7 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); b
 /* Novas Classes de Input Dinâmicas (Usadas no Prof e Aluno) */
 .input-padrao { background: var(--bg-dark); border: 1px solid #333; color: white; border-radius: 8px; padding: 10px; font-family: inherit; transition: border-color 0.2s ease, box-shadow 0.2s ease;}
 .input-padrao:focus { outline: none; border-color: var(--primary-green); box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);}
+textarea.input-padrao { width: 100% !important; max-width: 100% !important; box-sizing: border-box; display: block; }
 
 .text-muted { color: var(--text-muted); }
 
@@ -69,7 +70,9 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); b
 .xp-points { font-size: 1.2rem; font-weight: bold; color: white; }
 .xp-bar-bg { height: 12px; background-color: #111; border-radius: 6px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
 .xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary-green) 0%, var(--warning-yellow) 100%); transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); }
-.lms-action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-bottom: 25px; }
+
+/* Grelha 2x2 do LMS */
+.lms-action-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 25px; }
 .lms-btn { background: var(--bg-card); border: 1px solid #333; border-radius: 12px; padding: 20px 10px; display: flex; flex-direction: column; align-items: center; gap: 12px; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; }
 .lms-btn i { font-size: 2rem; transition: transform 0.2s ease;}
 .lms-btn:hover { transform: translateY(-3px); border-color: var(--primary-green); box-shadow: 0 6px 15px rgba(0,0,0,0.3);}
@@ -77,6 +80,7 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); b
 .lms-btn:active { transform: translateY(0) scale(0.98); }
 .lms-btn.study { border-color: #8a2be2; color: #8a2be2; }
 .lms-btn.forum { border-color: #0099ff; color: #0099ff; }
+
 .study-mode-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; text-align: center; }
 .timer-circle { width: 220px; height: 220px; border-radius: 50%; border: 8px solid #333; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 30px; position: relative; box-shadow: 0 0 30px rgba(138, 43, 226, 0.2); transition: border-color 0.5s; }
 .timer-circle.active { border-color: #8a2be2; box-shadow: 0 0 50px rgba(138, 43, 226, 0.5); }
@@ -125,10 +129,16 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); b
 .hub-card span { font-weight: bold; font-size: 0.95rem; }
 .disabled-hub-card { opacity: 0.3; pointer-events: none; filter: grayscale(100%); }
 
-/* Elementos Lista de Alunos (Usados na Metralhadora de Faltas e Turmas do Prof) */
+/* Elementos Lista de Alunos */
 .aluno-list-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 8px; border: 1px solid #333; transition: all 0.2s ease;}
 .aluno-list-item:hover { background: rgba(255,255,255,0.03); border-color: #444; transform: translateX(2px); }
 .chk-presente { width: 22px; height: 22px; accent-color: var(--primary-green); cursor: pointer; }
+
+/* Botões Positiva/Negativa Corrigidos */
+.btn-ocorrencia-premium { flex: 1; border-radius: 12px; padding: 15px; text-align: center; cursor: pointer; transition: 0.2s; border: 1px solid transparent; font-family: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.btn-ocorrencia-premium:active { transform: scale(0.95); }
+.btn-pos { background: linear-gradient(135deg, rgba(0,204,136,0.15), rgba(0,204,136,0.05)); border-color: var(--success-green); }
+.btn-neg { background: linear-gradient(135deg, rgba(255,77,77,0.15), rgba(255,77,77,0.05)); border-color: var(--danger-red); }
 
 /* =========================================
    AVALIAÇÕES E PAUTA
@@ -185,16 +195,22 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); b
 .progress-bar-fill { height: 100%; background-color: var(--primary-green); transition: width 0.3s; }
 
 /* =========================================
-   ESTATÍSTICAS, TABELAS & BADGES
+   ESTATÍSTICAS & CARROSSEL CORRIGIDO
 ========================================= */
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-bottom: 20px; }
-.stat-card { background-color: var(--bg-card); border: 1px solid #333; border-radius: 12px; padding: 20px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: 0.2s ease;}
+
+.stats-carousel::-webkit-scrollbar { display: none; }
+.stats-carousel { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 12px; padding-bottom: 10px; width: 100%; scrollbar-width: none; -ms-overflow-style: none; cursor: grab; }
+.stats-carousel:active { cursor: grabbing; }
+
+.stat-card { flex: 0 0 135px; background-color: var(--bg-card); border: 1px solid #333; border-radius: 12px; padding: 20px 10px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: 0.2s ease;}
 .stat-card:hover { border-color: #555; background: #1c1f26; }
 .stat-card i { font-size: 2rem; color: var(--primary-green); margin-bottom: 10px; }
 .stat-value { font-size: 1.8rem; font-weight: bold; color: white; line-height: 1.2; }
 .stat-label { font-size: 0.85rem; color: var(--text-muted); margin-top: 5px; }
 .stat-sub-info { font-size: 0.8rem; color: #777; margin-top: 5px; border-top: 1px dashed #333; padding-top: 5px; width: 100%;}
 
+/* TABELAS */
 .table-container { width: 100%; overflow-x: auto; background: var(--bg-card); border: 1px solid #333; border-radius: 12px; margin-bottom: 25px; }
 .styled-table { width: 100%; border-collapse: collapse; text-align: left; }
 .styled-table th, .styled-table td { padding: 12px 15px; border-bottom: 1px solid #333; font-size: 0.95rem; }
@@ -202,7 +218,6 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); b
 .styled-table tbody tr:hover { background-color: rgba(255,255,255,0.02); }
 .styled-table td.center { text-align: center; }
 
-/* Adicionado: Wrapper de Tabela com Coluna Fixa para Scroll Nativo e Fluído */
 .table-wrapper-scroll { width: 100%; overflow-x: auto; border-radius: 8px; border: 1px solid #333; background: var(--bg-dark); -webkit-overflow-scrolling: touch; }
 .grid-tabela { width: 100%; border-collapse: collapse; margin-top: 0; font-size: 0.85rem; min-width: 500px;}
 .grid-tabela th { background: #222; color: var(--primary-green); padding: 12px 10px; text-align: center; border-bottom: 2px solid #333; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
@@ -217,7 +232,6 @@ input:focus, select:focus { outline: none; border-color: var(--primary-green); b
 .badge-risco { background: rgba(255,77,77,0.2); color: var(--danger-red); padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; border: 1px solid var(--danger-red); }
 .badge-ok { background: rgba(40,167,69,0.2); color: var(--success-green); padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; border: 1px solid var(--success-green); }
 
-/* Filtros Horizontais (Chips) */
 .filter-chips-container { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 15px; scrollbar-width: none; }
 .filter-chips-container::-webkit-scrollbar { display: none; }
 .filter-chip { background: var(--bg-dark); border: 1px solid #333; color: var(--text-muted); padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; cursor: pointer; white-space: nowrap; transition: 0.2s; }
@@ -295,11 +309,9 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .action-sheet { background-color: var(--bg-card); width: 100%; border-radius: 20px 20px 0 0; padding: 25px; border-top: 1px solid #444; display: flex; flex-direction: column; gap: 12px; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); max-height: 90vh; overflow-y:auto; box-shadow: 0 -10px 40px rgba(0,0,0,0.5);}
 @keyframes slideUp { from { transform: translateY(100%); opacity: 0;} to { transform: translateY(0); opacity: 1;} }
 
-/* Adicionado: Classes de Separação Visual para os Grandes Modais do Prof */
 .modal-section { background: rgba(0,0,0,0.15); border: 1px solid #333; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
 .modal-section-title { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; border-bottom: 1px dashed #444; padding-bottom: 5px; }
 
-/* Adicionado: Empty States (Para quando não há turmas/alunos/projetos) */
 .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; text-align: center; opacity: 0.7; animation: fadeIn 0.5s ease; }
 .empty-state-icon { font-size: 3.5rem; color: var(--text-muted); margin-bottom: 15px; opacity: 0.5; }
 .empty-state-title { font-size: 1.1rem; color: white; margin-bottom: 5px; font-weight: 600; }
@@ -334,7 +346,6 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .notification-bell { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: none; border: none; color: white; font-size: 1.4rem; position: relative; cursor: pointer; padding: 0; margin: 0;}
 .notification-badge { position: absolute; top: -2px; right: -2px; background: var(--danger-red); color: white; font-size: 0.65rem; font-weight: bold; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg-card); }
 
-/* Dashboard - Cartões Estáticos com Espaço Nativo */
 .ee-summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 25px; }
 .ee-summary-card { background: var(--bg-dark); border: 1px solid #333; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; min-height: 125px; }
 .ee-card-extended { grid-column: 1 / -1; min-height: auto; }
@@ -345,7 +356,6 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .sub-media-label { font-size: 0.7rem; color: var(--text-muted); display: block; }
 .sub-media-value { font-size: 1.1rem; font-weight: bold; color: white; }
 
-/* Timeline e Os Novos Filtros de Pílula (Agenda) */
 .timeline { position: relative; padding-left: 25px; margin-top: 15px; }
 .timeline::before { content: ''; position: absolute; top: 0; left: 9px; width: 2px; height: 100%; background: #333; }
 .timeline-item { position: relative; margin-bottom: 20px; }
@@ -359,7 +369,6 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .agenda-filter-label:has(input:checked) { background: rgba(0, 204, 136, 0.1); border-color: var(--primary-green); color: white; }
 .agenda-filter-label input { display: none; }
 
-/* Hierarquia de Notas */
 .disciplina-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: var(--bg-dark); border: 1px solid #333; border-radius: 8px; cursor: pointer; margin-bottom: 5px; transition: 0.2s; }
 .disciplina-header:active { transform: scale(0.98); }
 .disciplina-title { font-weight: bold; font-size: 1.05rem; color: white; }
@@ -368,7 +377,6 @@ textarea.input-field { width: 100%; padding: 12px; background-color: var(--bg-da
 .modulo-row { display: flex; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid #222; }
 .modulo-row:last-child { border-bottom: none; }
 
-/* Horário Otimizado */
 .horario-list-item { display: flex; justify-content: space-between; align-items: center; background: var(--bg-dark); padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid var(--primary-green); }
 .horario-time-col { font-weight: bold; color: var(--text-muted); font-size: 0.95rem; }
 .horario-disc-col { text-align: right; }
