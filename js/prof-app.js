@@ -37,7 +37,9 @@ onAuthStateChanged(auth, async (user) => {
                 if (state.profData.papel && !state.myRoles.includes(state.profData.papel)) state.myRoles.push(state.profData.papel);
                 
                 if (state.myRoles.some(r => ['professor', 'diretor_turma', 'orientador_pap', 'coordenador'].includes(r))) {
-                    state.myUserName = state.profData.nome || state.myUserId;
+                    
+                    // CORREÇÃO: Procura o nome em vários campos possíveis para evitar falhas no Firebase
+                    state.myUserName = state.profData.nome || state.profData.nomeCompleto || state.profData.Nome || state.myUserId;
                     document.getElementById('header-user-name-prof').innerText = state.myUserName;
                     
                     const configuracaoPerfis = {
@@ -83,12 +85,12 @@ onAuthStateChanged(auth, async (user) => {
                     document.getElementById('perfil-disciplinas-lista').innerText = state.disciplinasProfessor.length > 0 ? state.disciplinasProfessor.join(' • ') : 'Nenhuma disciplina configurada.';
                     document.getElementById('perfil-papeis-lista').innerText = state.myRoles.map(r => r.toUpperCase().replace('_', ' ')).join(' • ');
                     
-                        // Gerar avatar dinâmico caso não exista foto de perfil
-                        const fotoUrl = state.profData.fotoPerfil || `https://ui-avatars.com/api/?name=${state.myUserName.split(' ')[0]}&background=333&color=fff`;
-                        
-                        document.getElementById('header-avatar-circle').innerHTML = `<img src="${fotoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-                        document.getElementById('prof-avatar-img').src = fotoUrl;
-                    }
+                    // CORREÇÃO: Avatar Dinâmico Seguro
+                    const nomeUrlSafe = encodeURIComponent(state.myUserName.split(' ')[0]);
+                    const fotoUrl = state.profData.fotoPerfil || `https://ui-avatars.com/api/?name=${nomeUrlSafe}&background=333&color=fff`;
+                    
+                    document.getElementById('header-avatar-circle').innerHTML = `<img src="${fotoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+                    document.getElementById('prof-avatar-img').src = fotoUrl;
                     
                     let maxAno = 10; state.turmasProfessor.forEach(t => { let ano = parseInt(t.match(/\d+/)?.[0]) || 10; if(ano > maxAno) maxAno = ano; });
                     const canSeePassaporte = (state.myRoles.includes('diretor_turma') || state.myRoles.includes('orientador_pap') || state.myRoles.includes('coordenador')) && maxAno >= 11;
