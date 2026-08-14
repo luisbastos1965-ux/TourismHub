@@ -147,21 +147,47 @@ document.getElementById('forum-turma-select')?.addEventListener('change', async 
     } catch(err) { cCont.innerHTML = '<p class="text-danger center">Erro.</p>'; } 
 });
 
+function esconderTodasAsVistas() { 
+    document.querySelectorAll('.app-content > div').forEach(v => v.style.display = 'none'); 
+}
+
 // CLIQUE GERAL PARA TODA A PÁGINA (AÇÕES SIMPLES)
 document.body.addEventListener('click', async (e) => {
     
+    // ==========================================
     // NAVEGAÇÃO BÁSICA
+    // ==========================================
     const nav = e.target.closest('.nav-item');
     if (nav) {
-        e.preventDefault(); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); nav.classList.add('active');
-        esconderTodasAsVistas(); const tId = nav.getAttribute('data-target'); document.getElementById(tId).style.display = (tId === 'view-prof-forum') ? 'flex' : 'block';
+        e.preventDefault();
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        nav.classList.add('active');
+        esconderTodasAsVistas();
+        
+        const tId = nav.getAttribute('data-target');
+        const targetView = document.getElementById(tId);
+        
+        if (targetView) {
+            targetView.style.display = (tId === 'view-prof-forum') ? 'flex' : 'block';
+        }
+        
+        // Dispara as funções de carregamento dependendo da vista selecionada
         if (tId === 'view-prof-dashboard') carregarRadarProfessor();
         if (tId === 'view-prof-turmas' && state.selectedTurma) analisarEAtualizarTurma(state.selectedTurma);
         if (tId === 'view-prof-tarefas') carregarTarefasProf();
         if (tId === 'view-prof-orientandos') carregarEcraOrientandos();
         if (tId === 'view-prof-diario') carregarEcraDiario();
         if (tId === 'view-coord-projetos') carregarEcraProjetosCoord();
-        if (tId === 'view-prof-forum') { if (state.chatUnsubscribe) { state.chatUnsubscribe(); state.chatUnsubscribe = null; } document.getElementById('prof-forum-chat-view').style.display = 'none'; document.getElementById('btn-create-chat-prof').style.display = 'block'; document.getElementById('prof-forum-channel-list').style.display = 'block'; carregarForunsProf(); }
+        if (tId === 'view-prof-forum') {
+            if (state.chatUnsubscribe) {
+                state.chatUnsubscribe();
+                state.chatUnsubscribe = null;
+            }
+            document.getElementById('prof-forum-chat-view').style.display = 'none';
+            document.getElementById('btn-create-chat-prof').style.display = 'block';
+            document.getElementById('prof-forum-channel-list').style.display = 'block';
+            carregarForunsProf();
+        }
         return; 
     }
 
@@ -240,7 +266,9 @@ document.body.addEventListener('click', async (e) => {
         return; 
     }
 
-    // AÇÕES RECORRENTES (Foram comprimidas para manteres visibilidade)
+    // ==========================================
+    // AÇÕES RECORRENTES MENORES (Minificadas por segurança de limite)
+    // ==========================================
     if (e.target.closest('#tab-coord-fct')) { document.getElementById('tab-coord-fct').classList.add('active'); document.getElementById('tab-coord-pap').classList.remove('active'); import('./prof/roles/coord-dashboard.js').then(module => { module.coordTabAtiva = 'fct'; module.carregarEcraProjetosCoord(); }); return; }
     if (e.target.closest('#tab-coord-pap')) { document.getElementById('tab-coord-pap').classList.add('active'); document.getElementById('tab-coord-fct').classList.remove('active'); import('./prof/roles/coord-dashboard.js').then(module => { module.coordTabAtiva = 'pap'; module.carregarEcraProjetosCoord(); }); return; }
     if (e.target.closest('.aluno-list-item')) { abrirPerfil360Aluno(e.target.closest('.aluno-list-item').getAttribute('data-id')); return; }
@@ -283,7 +311,6 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('#btn-create-chat-prof')) { document.getElementById('forum-turma-select').innerHTML = '<option value="">Selecionar Turma...</option>' + state.turmasProfessor.map(t => `<option value="${t}">Turma ${t}</option>`).join(''); document.getElementById('input-nome-novo-forum').value = ''; document.getElementById('lista-alunos-forum').innerHTML = '<p class="text-muted center" style="font-size:0.8rem;">Seleciona turma primeiro.</p>'; document.getElementById('forum-bulk-actions').style.display = 'none'; document.getElementById('modal-criar-forum').style.display = 'flex'; return; }
     if (e.target.closest('#btn-confirm-novo-forum')) { const nome = document.getElementById('input-nome-novo-forum').value.trim(); const turma = document.getElementById('forum-turma-select').value; if(!nome || !turma) return alert("Preenche o nome do chat e a turma."); let mbr = [state.myUserId]; document.querySelectorAll('.forum-aluno-check:checked').forEach(c => mbr.push(c.value)); const btnConf = e.target.closest('#btn-confirm-novo-forum'); btnConf.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btnConf.disabled = true; try { await addDoc(collection(db, "turmas", turma, "foruns"), { nome: nome, tipo: 'permanente', isDefault: false, membros: mbr, criadoPor: state.myUserName }); document.getElementById('modal-criar-forum').style.display = 'none'; btnConf.innerHTML = 'Criar Chat'; btnConf.disabled = false; carregarForunsProf(); } catch(err) { btnConf.innerHTML = 'Erro!'; setTimeout(() => { btnConf.innerHTML = 'Criar Chat'; btnConf.disabled = false; }, 2000); } return; }
 
-    // CONTINUAÇÃO DE AÇÕES DE IA, EVENTOS E PRHF 
     if (e.target.closest('#btn-abrir-copiloto')) { const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT); const alunoNome = document.getElementById('p-aluno-nome').innerText; const faltas = document.getElementById('p-aluno-faltas').innerText; const modFeitos = document.getElementById('p-aluno-notas').innerText; const textareaPrompt = document.getElementById('prompt-ia-text'); let promptText = ""; if (isDT) { promptText = `Atua como Diretor de Turma. Faz uma Síntese Global para o aluno ${alunoNome}. Baseia-te nos dados (Tem ${faltas}h de faltas e concluiu ${modFeitos} módulos). Regras obrigatórias: Ser objetivo e claro; Indicar pontos fortes no empenho; Referir os aspetos a melhorar no comportamento/aprendizagem; Apresentar estratégias concretas de progressão; Incluir a lista de módulos não concluídos (se aplicável). Tom: Institucional e construtivo.`; } else { promptText = `Atua como professor da disciplina de ${document.getElementById('perfil-disc-select').value || 'Técnicas'}. Escreve uma síntese de avaliação para o aluno ${alunoNome}. A síntese deve cumprir as regras da direção: Ser objetiva e construtiva; 1. Elogiar pontos fortes. 2. Apontar aspetos a melhorar na disciplina. 3. Dar estratégias claras de progressão. (Nota: O aluno concluiu ${modFeitos} módulos e tem ${faltas}h de faltas na globalidade). Tom: Profissional e direto ao assunto.`; } textareaPrompt.value = promptText; document.getElementById('modal-copiloto-ia').style.display = 'flex'; return; }
     if (e.target.closest('#btn-copiar-prompt')) { const copyText = document.getElementById('prompt-ia-text'); copyText.select(); document.execCommand("copy"); const btn = e.target.closest('#btn-copiar-prompt'); btn.innerHTML = '<i class="fa-solid fa-check"></i> Copiado!'; setTimeout(() => { btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copiar Prompt'; document.getElementById('modal-copiloto-ia').style.display = 'none'; }, 1500); return; }
     if (e.target.closest('#btn-ia-formatar-sumario')) { const btn = e.target.closest('#btn-ia-formatar-sumario'); const sumarioBox = document.getElementById('mat-sumario'); const textoOriginal = sumarioBox.value.trim(); if (!textoOriginal) return alert("Escreve primeiro alguns tópicos para a IA formatar."); btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; setTimeout(() => { const linhas = textoOriginal.split('\n').filter(l => l.trim() !== ''); let textoFormatado = "Sumário da Aula:\n"; linhas.forEach(linha => { let cleanLine = linha.replace(/^[-\*\.]\s*/, '').trim(); textoFormatado += `• ${cleanLine.charAt(0).toUpperCase() + cleanLine.slice(1)}.\n`; }); sumarioBox.value = textoFormatado; btn.innerHTML = '<i class="fa-solid fa-check" style="color:var(--success-green);"></i>'; setTimeout(() => { btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; }, 2000); }, 800); return; }
@@ -298,27 +325,5 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('.btn-rejeitar-tema')) { document.getElementById('rej-pap-aluno-id').value = e.target.closest('.btn-rejeitar-tema').getAttribute('data-id'); document.getElementById('rej-pap-motivo').value = ''; document.getElementById('modal-rejeitar-tema-pap').style.display = 'flex'; return; }
     if (e.target.closest('#btn-confirmar-rejeicao-pap')) { const motivo = document.getElementById('rej-pap-motivo').value.trim(); if(!motivo) return alert("Indica o motivo."); rejeitarTemaPAPExecutar(document.getElementById('rej-pap-aluno-id').value, motivo, e.target.closest('#btn-confirmar-rejeicao-pap')); return; }
     if (e.target.closest('.btn-aprovar-relatorio')) { aprovarRelatorioPAP(e.target.closest('.btn-aprovar-relatorio').getAttribute('data-id'), e.target.closest('.btn-aprovar-relatorio')); return; }
-
-    // CÓDIGO BÁSICO MODAIS (Restante da lógica mantida coesa)
-    document.getElementById('prhf-horas-totais')?.addEventListener('input', (e) => { const val = parseInt(e.target.value) || 0; document.getElementById('prhf-horas-presenciais').value = val <= 4 ? 0 : Math.ceil(val * 0.3); });
-    document.getElementById('btn-prhf-minha')?.addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('btn-prhf-todas').classList.remove('active'); state.prhfViewMode = 'minha'; carregarTarefasProf(); });
-    document.getElementById('btn-prhf-todas')?.addEventListener('click', (e) => { e.currentTarget.classList.add('active'); document.getElementById('btn-prhf-minha').classList.remove('active'); state.prhfViewMode = 'todas'; carregarTarefasProf(); });
-    document.getElementById('btn-graph-disc')?.addEventListener('click', () => { document.getElementById('btn-graph-disc').classList.add('active'); document.getElementById('btn-graph-global').classList.remove('active'); desenharGraficoAluno('disc'); });
-    document.getElementById('btn-graph-global')?.addEventListener('click', () => { document.getElementById('btn-graph-global').classList.add('active'); document.getElementById('btn-graph-disc').classList.remove('active'); desenharGraficoAluno('global'); });
-    document.getElementById('evento-periodo')?.addEventListener('change', (e) => { const timeInput = document.getElementById('evento-hora'); if(e.target.value === 'hora') { timeInput.style.display = 'block'; } else { timeInput.style.display = 'none'; } });
-    document.getElementById('pauta-disc-select')?.addEventListener('change', renderizarPautaTurma);
-    document.getElementById('faltas-disc-select')?.addEventListener('change', renderizarFaltasTurma);
-    document.getElementById('prof-seletor-turmas')?.addEventListener('change', (e) => { state.selectedTurma = e.target.value; if (state.selectedTurma) { document.getElementById('turma-ativa-container').style.display = 'block'; analisarEAtualizarTurma(state.selectedTurma); } else { document.getElementById('turma-ativa-container').style.display = 'none'; } });
-    document.getElementById('prhf-turma')?.addEventListener('change', async (e) => { const s = document.getElementById('prhf-aluno'); const t = e.target.value; if (!t) { s.innerHTML = '<option value="">Selecione primeiro a Turma</option>'; return; } const disc = document.getElementById('prhf-disciplina').value; atualizarDropdownModulos(t, disc, document.getElementById('prhf-modulo')); s.innerHTML = '<option value="">A carregar...</option>'; try { const qS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); let arr = []; qS.forEach(d => arr.push({ id: d.id, nome: d.data().nome })); arr.sort((a,b) => a.nome.localeCompare(b.nome)); s.innerHTML = '<option value="">-- Selecione o Aluno --</option>' + arr.map(a => `<option value="${a.id}">${nomeCurto(a.nome)}</option>`).join(''); } catch (err) { s.innerHTML = '<option value="">Erro</option>'; } });
-    document.getElementById('prhf-disciplina')?.addEventListener('change', (e) => { const t = document.getElementById('prhf-turma').value; if (t) atualizarDropdownModulos(t, e.target.value, document.getElementById('prhf-modulo')); });
-    
-    // PRHF Actions...
-    if (e.target.closest('#btn-novo-prhf')) { document.getElementById('erro-modal-prhf').style.display = 'none'; document.getElementById('prhf-urgente').checked = false; document.getElementById('prhf-turma').innerHTML = '<option value="">-- Turma --</option>' + state.turmasProfessor.map(t => `<option value="${t}">${t}</option>`).join(''); const permitidas = getDisciplinasPermitidas(); document.getElementById('prhf-disciplina').innerHTML = permitidas.length > 0 ? permitidas.map(dc => `<option value="${dc}">${dc}</option>`).join('') : '<option value="">Sem disciplinas</option>'; document.getElementById('prhf-modulo').innerHTML = '<option value="">Mod...</option>'; document.getElementById('prhf-file').value = ''; state.prhfBase64 = null; document.getElementById('prhf-file-name').innerText = 'Toca para PDF ou Imagem'; document.getElementById('prhf-horas-totais').value = ''; document.getElementById('prhf-horas-presenciais').value = ''; document.getElementById('modal-criar-prhf').style.display = 'flex'; return; }
-    if (e.target.closest('#btn-gravar-novo-prhf')) { const tTurma = document.getElementById('prhf-turma').value; const tAluno = document.getElementById('prhf-aluno').value; const tDisc = document.getElementById('prhf-disciplina').value; const tMod = document.getElementById('prhf-modulo').value; const tPrazo = document.getElementById('prhf-prazo').value; const tHorasT = document.getElementById('prhf-horas-totais').value; const tHorasP = document.getElementById('prhf-horas-presenciais').value; const tDesc = document.getElementById('prhf-descricao').value.trim(); const urg = document.getElementById('prhf-urgente').checked; const errDiv = document.getElementById('erro-modal-prhf'); if (!tAluno || !tDisc || !tMod || !tHorasT || !tPrazo || !tDesc) { errDiv.innerText = "Por favor, preenche todos os campos obrigatórios."; errDiv.style.display = 'block'; return; } const b = e.target.closest('#btn-gravar-novo-prhf'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await addDoc(collection(db, "utilizadores", tAluno, "prhfs"), { disciplina: tDisc, modulo: Number(tMod), prazo: tPrazo, horasTotais: Number(tHorasT), horasPresenciais: Number(tHorasP), descricao: tDesc, status: 'pendente', dataCriacao: new Date().toISOString(), professor: state.myUserName, ficheiroBase64: state.prhfBase64, urgente: urg, presencaValidada: false }); b.innerHTML = '<i class="fa-solid fa-check"></i> Atribuído'; setTimeout(() => { b.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Atribuir PRHF'; b.disabled = false; document.getElementById('modal-criar-prhf').style.display = 'none'; carregarTarefasProf(); analisarEAtualizarTurma(state.selectedTurma); }, 1500); } catch (err) { errDiv.innerText = "Erro ao gravar. Tenta de novo."; errDiv.style.display = 'block'; b.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Atribuir PRHF'; b.disabled = false; } return; }
-    if (e.target.closest('.btn-validar-presenca')) { const btn = e.target.closest('.btn-validar-presenca'); const aId = btn.getAttribute('data-aluno'); const pId = btn.getAttribute('data-prhf'); btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true; try { await updateDoc(doc(db, "utilizadores", aId, "prhfs", pId), { presencaValidada: true }); carregarTarefasProf(); } catch (err) { btn.innerHTML = "Erro"; btn.disabled = false; } return; }
-    if (e.target.closest('.btn-propor-prof')) { const btn = e.target.closest('.btn-propor-prof'); document.getElementById('prop-prof-aluno-id').value = btn.getAttribute('data-aluno'); document.getElementById('prop-prof-prhf-id').value = btn.getAttribute('data-prhf'); document.getElementById('prop-prof-data').value = ''; document.getElementById('prop-prof-inicio').value = ''; document.getElementById('prop-prof-fim').value = ''; document.getElementById('modal-propor-prhf-prof').style.display = 'flex'; return; }
-    if (e.target.closest('#btn-confirmar-proposta-prof')) { const aId = document.getElementById('prop-prof-aluno-id').value; const pId = document.getElementById('prop-prof-prhf-id').value; const pd = document.getElementById('prop-prof-data').value; const pi = document.getElementById('prop-prof-inicio').value; const pf = document.getElementById('prop-prof-fim').value; if(!pd || !pi || !pf) return alert("Preenche todos os campos."); const btn = e.target.closest('#btn-confirmar-proposta-prof'); btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true; try { await updateDoc(doc(db, "utilizadores", aId, "prhfs", pId), { propostaProfessor: `Dia ${pd.split('-').reverse().join('/')} das ${pi} às ${pf}` }); btn.innerHTML = '<i class="fa-solid fa-check"></i> Sugerido'; setTimeout(() => { btn.innerHTML = 'Sugerir Horário'; btn.disabled = false; document.getElementById('modal-propor-prhf-prof').style.display = 'none'; carregarTarefasProf(); }, 1500); } catch(err) { btn.innerHTML = 'Erro'; setTimeout(()=>btn.disabled=false, 1500); } return; }
-    if (e.target.closest('.btn-concluir-prhf')) { const btn = e.target.closest('.btn-concluir-prhf'); document.getElementById('conc-aluno-id').value = btn.getAttribute('data-aluno'); document.getElementById('conc-prhf-id').value = btn.getAttribute('data-prhf'); document.getElementById('conc-motivo').value = ''; document.getElementById('modal-concluir-prhf').style.display = 'flex'; return; }
-    if (e.target.closest('#btn-confirmar-conclusao-prhf')) { const aId = document.getElementById('conc-aluno-id').value; const pId = document.getElementById('conc-prhf-id').value; const feedback = document.getElementById('conc-motivo').value.trim() || "Concluído com sucesso."; const b = e.target.closest('#btn-confirmar-conclusao-prhf'); b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true; try { await updateDoc(doc(db, "utilizadores", aId, "prhfs", pId), { status: 'concluida', feedbackProfessor: feedback }); b.innerHTML = '<i class="fa-solid fa-check"></i> Plano Fechado'; setTimeout(() => { b.innerHTML = 'Aprovar e Fechar Plano'; b.disabled = false; document.getElementById('modal-concluir-prhf').style.display = 'none'; carregarTarefasProf(); analisarEAtualizarTurma(state.selectedTurma); }, 1500); } catch (err) { b.innerHTML = "Erro"; setTimeout(() => b.disabled = false, 1500); } return; }
 
 });
