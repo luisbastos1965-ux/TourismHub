@@ -605,15 +605,67 @@
                 </div>
             </div>
 
-            <!-- MODAIS MENORES -->
+            <!-- MODAL CRIAR FORUM -->
+            <div id="modal-criar-forum" class="modal-overlay">
+                <div class="action-sheet" style="max-width:400px; border-radius:12px; margin:20px;">
+                    <h3 style="margin-bottom: 15px; color:var(--primary-green);"><i class="fa-solid fa-comments"></i> Criar Novo Chat</h3>
+                    <input type="text" id="input-nome-novo-forum" placeholder="Nome do Chat (Ex: Projeto Global)" style="width:100%; margin-bottom:15px;" class="input-padrao">
+                    <select id="forum-turma-select" class="input-padrao" style="width:100%; margin-bottom:15px;">
+                        <option value="">Selecionar Turma...</option>
+                    </select>
+                    
+                    <!-- NOVOS BOTÕES SELEÇÃO FÓRUM -->
+                    <div id="forum-bulk-actions" style="display:none; gap:10px; margin-bottom:10px;">
+                        <button id="btn-forum-select-all" class="secondary-btn small-btn" style="flex:1; border-color:var(--primary-green); color:var(--primary-green);"><i class="fa-solid fa-check-double"></i> Todos</button>
+                        <button id="btn-forum-deselect-all" class="secondary-btn small-btn" style="flex:1; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-square-minus"></i> Nenhum</button>
+                    </div>
+
+                    <div id="lista-alunos-forum" style="max-height: 250px; overflow-y: auto; background: #111; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333;">
+                        <p class="text-muted center" style="font-size:0.8rem;">Seleciona turma primeiro.</p>
+                    </div>
+                    
+                    <div style="display:flex; gap:10px;">
+                        <button id="btn-cancelar-novo-forum" class="secondary-btn fechar-modal" data-target="modal-criar-forum" style="flex:1;">Cancelar</button>
+                        <button id="btn-confirm-novo-forum" class="primary-btn" style="flex:1;">Criar Chat</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL EDITAR FORUM -->
+            <div id="modal-editar-forum" class="modal-overlay">
+                <div class="action-sheet" style="max-width:400px; border-radius:12px; margin:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                        <h3 style="color:var(--warning-yellow); margin:0;"><i class="fa-solid fa-gear"></i> Editar Chat</h3>
+                        <button class="fechar-modal" data-target="modal-editar-forum" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <input type="hidden" id="edit-forum-id">
+                    <input type="hidden" id="edit-forum-turma">
+                    <input type="text" id="input-nome-edit-forum" placeholder="Nome do Chat" style="width:100%; margin-bottom:15px;" class="input-padrao">
+                    
+                    <!-- NOVOS BOTÕES EDIÇÃO FÓRUM -->
+                    <div id="edit-forum-bulk-actions" style="display:flex; gap:10px; margin-bottom:10px;">
+                        <button id="btn-edit-forum-select-all" class="secondary-btn small-btn" style="flex:1; border-color:var(--primary-green); color:var(--primary-green);"><i class="fa-solid fa-check-double"></i> Todos</button>
+                        <button id="btn-edit-forum-deselect-all" class="secondary-btn small-btn" style="flex:1; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-square-minus"></i> Nenhum</button>
+                    </div>
+
+                    <div id="lista-alunos-edit-forum" style="max-height: 250px; overflow-y: auto; background: #111; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333;">
+                        <p class="text-muted center" style="font-size:0.8rem;">A carregar membros...</p>
+                    </div>
+                    
+                    <div style="display:flex; gap:10px; margin-bottom: 10px;">
+                        <button id="btn-guardar-edit-forum" class="primary-btn" style="flex:1; background:var(--warning-yellow); color:black;">Guardar Alterações</button>
+                    </div>
+                    <button id="btn-apagar-forum" class="secondary-btn" style="width:100%; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-trash"></i> Apagar Chat Definitivamente</button>
+                </div>
+            </div>
+
+            <!-- OUTROS MODAIS MENORES -->
             <div id="modal-propor-prhf-prof" class="modal-overlay" style="z-index: 2001;"><div class="action-sheet" style="max-width: 400px; padding: 20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color: var(--primary-green); margin:0;"><i class="fa-regular fa-calendar"></i> Agendar Sessão</h3><button class="fechar-modal" data-target="modal-propor-prhf-prof" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><input type="hidden" id="prop-prof-aluno-id"><input type="hidden" id="prop-prof-prhf-id"><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">Propõe uma data e hora. O aluno terá de aceitar na sua aplicação.</p><input type="date" id="prop-prof-data" class="input-padrao" style="width:100%; margin-bottom:10px;"><div style="display:flex; gap:10px; margin-bottom:15px;"><input type="time" id="prop-prof-inicio" class="input-padrao" style="flex:1; margin:0;" title="Início"><input type="time" id="prop-prof-fim" class="input-padrao" style="flex:1; margin:0;" title="Fim"></div><button id="btn-confirmar-proposta-prof" class="primary-btn" style="width:100%;">Sugerir Horário</button></div></div>
             <div id="modal-concluir-prhf" class="modal-overlay" style="z-index: 2001;"><div class="action-sheet" style="max-width: 400px; padding: 20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color: var(--success-green); margin:0;"><i class="fa-solid fa-clipboard-check"></i> Fechar PRHF</h3><button class="fechar-modal" data-target="modal-concluir-prhf" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><input type="hidden" id="conc-aluno-id" value=""><input type="hidden" id="conc-prhf-id" value=""><p style="font-size:0.9rem; color:white; margin-bottom:10px;">O aluno cumpriu com sucesso os objetivos deste Plano de Recuperação?</p><textarea id="conc-motivo" class="input-padrao" placeholder="Deixa um pequeno feedback final (Opcional)..." style="width:100%; min-height:60px; margin-bottom:15px;"></textarea><button id="btn-confirmar-conclusao-prhf" class="primary-btn" style="width:100%; background:var(--success-green);">Aprovar e Fechar Plano</button></div></div>
             <div id="modal-rejeitar-prhf" class="modal-overlay" style="z-index: 2001;"><div class="action-sheet" style="max-width: 400px; padding: 20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color: var(--danger-red); margin:0;"><i class="fa-solid fa-ban"></i> Rejeitar Proposta</h3><button class="fechar-modal" data-target="modal-rejeitar-prhf" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><input type="hidden" id="rej-aluno-id" value=""><input type="hidden" id="rej-prhf-id" value=""><textarea id="rej-motivo" class="input-padrao" placeholder="Motivo da rejeição..." style="width:100%; min-height:80px; margin-bottom:15px;"></textarea><button id="btn-confirmar-rejeicao" class="primary-btn" style="width:100%; background:var(--danger-red);">Rejeitar Agendamento</button></div></div>
             <div id="modal-agendar-evento" class="modal-overlay" style="z-index: 2000;"><div class="action-sheet" style="max-width: 400px;"><h3 style="margin-bottom: 15px; color: white;"><i class="fa-solid fa-calendar-plus" style="color:#b82bf2;"></i> Agendar Evento</h3><input type="text" id="evento-titulo" class="input-padrao" placeholder="Título (Ex: Teste Escrito)" style="width:100%; margin-bottom:10px;"><div style="display:flex; gap:10px; margin-bottom:10px;"><select id="agendar-disciplina" class="input-padrao" style="flex:1; margin:0; display:none;"></select><input type="date" id="evento-data" class="input-padrao" style="flex:1; margin:0;"><select id="evento-tipo" class="input-padrao" style="flex:1; margin:0;"><option value="avaliacao">Avaliação / Teste</option><option value="entrega">Entrega Trabalho</option><option value="outro">Outro Evento</option></select></div><div style="display:flex; gap:10px; margin-bottom:10px;"><select id="evento-periodo" class="input-padrao" style="flex:1; margin:0;"><option value="dia">Dia Inteiro</option><option value="manha">Manhã</option><option value="tarde">Tarde</option><option value="hora">Hora Exata...</option></select><input type="time" id="evento-hora" class="input-padrao" style="flex:1; margin:0; display:none;"></div><div style="display:flex; gap:10px; margin-top: 15px;"><button class="secondary-btn fechar-modal" data-target="modal-agendar-evento" style="flex:1;">Cancelar</button><button id="btn-gravar-evento" class="primary-btn" style="flex:1;">Agendar</button></div></div></div>
             <div id="modal-confirm-justificar" class="modal-overlay" style="z-index: 3000;"><div class="action-sheet" style="max-width:350px; border-radius:12px; margin:20px; text-align: center;"><i class="fa-solid fa-clipboard-check" style="font-size: 3rem; color: #00d2ff; margin-bottom: 15px;"></i><h3 style="margin-bottom: 10px; color: white;">Justificar Faltas?</h3><p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;">Vais justificar todas as faltas pendentes deste aluno. Esta ação é irreversível.</p><div style="display:flex; gap:10px;"><button class="secondary-btn fechar-modal" data-target="modal-confirm-justificar" style="flex:1;">Cancelar</button><button id="btn-executar-justificar" class="primary-btn" style="flex:1; background:#00d2ff; color:black; border:none;">Sim, Justificar</button></div></div></div>
             <div id="modal-rejeitar-tema-pap" class="modal-overlay" style="z-index: 2001;"><div class="action-sheet" style="max-width: 400px; padding: 20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color: var(--danger-red); margin:0;"><i class="fa-solid fa-ban"></i> Rejeitar Tema</h3><button class="fechar-modal" data-target="modal-rejeitar-tema-pap" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><input type="hidden" id="rej-pap-aluno-id" value=""><textarea id="rej-pap-motivo" class="input-padrao" placeholder="Motivo da rejeição (Ex: Tema muito lato, reformular)..." style="width:100%; min-height:80px; margin-bottom:15px;"></textarea><button id="btn-confirmar-rejeicao-pap" class="primary-btn" style="width:100%; background:var(--danger-red);">Rejeitar Tema</button></div></div>
-            <div id="modal-criar-forum" class="modal-overlay"><div class="action-sheet" style="max-width:400px; border-radius:12px; margin:20px;"><h3 style="margin-bottom: 15px; color:var(--primary-green);"><i class="fa-solid fa-comments"></i> Criar Novo Chat</h3><input type="text" id="input-nome-novo-forum" placeholder="Nome do Chat (Ex: Projeto Global)" style="width:100%; margin-bottom:15px;" class="input-padrao"><select id="forum-turma-select" class="input-padrao" style="width:100%; margin-bottom:15px;"><option value="">Selecionar Turma...</option></select><div id="lista-alunos-forum" style="max-height: 150px; overflow-y: auto; background: #111; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333;"><p class="text-muted center" style="font-size:0.8rem;">Seleciona turma primeiro.</p></div><div style="display:flex; gap:10px;"><button id="btn-cancelar-novo-forum" class="secondary-btn" style="flex:1;">Cancelar</button><button id="btn-confirm-novo-forum" class="primary-btn" style="flex:1;">Criar Chat</button></div></div></div>
-            <div id="modal-editar-forum" class="modal-overlay"><div class="action-sheet" style="max-width:400px; border-radius:12px; margin:20px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;"><h3 style="color:var(--warning-yellow); margin:0;"><i class="fa-solid fa-gear"></i> Editar Chat</h3><button class="fechar-modal" data-target="modal-editar-forum" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div><input type="hidden" id="edit-forum-id"><input type="hidden" id="edit-forum-turma"><input type="text" id="input-nome-edit-forum" placeholder="Nome do Chat" style="width:100%; margin-bottom:15px;" class="input-padrao"><div id="lista-alunos-edit-forum" style="max-height: 150px; overflow-y: auto; background: #111; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333;"><p class="text-muted center" style="font-size:0.8rem;">A carregar membros...</p></div><div style="display:flex; gap:10px; margin-bottom: 10px;"><button id="btn-guardar-edit-forum" class="primary-btn" style="flex:1; background:var(--warning-yellow); color:black;">Guardar Alterações</button></div><button id="btn-apagar-forum" class="secondary-btn" style="width:100%; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-trash"></i> Apagar Chat Definitivamente</button></div></div>
 
         </main>
 
