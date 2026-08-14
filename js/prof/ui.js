@@ -5,17 +5,34 @@ import { state, ACADEMIAS_INFO, ordemDisciplinasGlobal, nomeCurto, getDisciplina
 // ==========================================
 // UTILITÁRIO: MÓDULOS DINÂMICOS
 // ==========================================
-export function atualizarDropdownModulos(turmaStr, selectElement) {
+export function atualizarDropdownModulos(turmaStr, disciplina, selectElement) {
     if (!selectElement) return;
-    const ano = parseInt(turmaStr.match(/\d+/)?.[0]) || 10;
-    let start = 1, end = 3;
-    if (ano === 11) { start = 4; end = 6; }
-    if (ano >= 12) { start = 7; end = 9; }
+    const ano = parseInt((turmaStr||"10").match(/\d+/)?.[0]) || 10;
+    const disc = (disciplina || "").toLowerCase();
     
+    let totalMods = 9; // Mat, PT, Inglês (Média)
+    if (disc.includes('técnic') || disc.includes('tecnolog') || disc.includes('sistem') || disc.includes('física') || disc.includes('prátic') || disc.includes('oficin')) {
+        totalMods = 15;
+    } else if (disc.includes('área de integração') || disc.includes('cidadania')) {
+        totalMods = 6;
+    }
+
+    let start = 1, end = 3;
+    if (totalMods === 15) {
+        if (ano === 10) { start = 1; end = 5; } else if (ano === 11) { start = 6; end = 10; } else if (ano >= 12) { start = 11; end = 15; }
+    } else if (totalMods === 9) {
+        if (ano === 10) { start = 1; end = 3; } else if (ano === 11) { start = 4; end = 6; } else if (ano >= 12) { start = 7; end = 9; }
+    } else {
+        start = (ano - 10) * 2 + 1; end = start + 1; if (end > totalMods) end = totalMods;
+    }
+
     let html = '<option value="">Mod...</option>';
-    for(let i=1; i<=15; i++) {
-        let isRecomendado = (i >= start && i <= end) ? ' (Atual)' : '';
-        html += `<option value="${i}">${i}${isRecomendado}</option>`;
+    for(let i=1; i<=totalMods; i++) {
+        if (i > end && i > start) break; // Não mostrar módulos do futuro
+        let label = `Módulo ${i}`;
+        if (i >= start && i <= end) label += ` (Atual)`;
+        else label += ` (Em atraso)`;
+        html += `<option value="${i}">${label}</option>`;
     }
     selectElement.innerHTML = html;
 }
@@ -45,15 +62,12 @@ export async function carregarRadarProfessor() {
     const papContainerId = 'dyn-pap-dashboard'; let papCont = document.getElementById(papContainerId);
     if (!papCont) { papCont = document.createElement('div'); papCont.id = papContainerId; document.getElementById('view-prof-dashboard').prepend(papCont); }
 
-    // MODO ORIENTADOR E COORDENADOR...
     if (state.activeRole === 'orientador_pap' || state.activeRole === 'coordenador') {
-        // [Este bloco está correto na tua versão e inalterado. Resumido aqui para manter o foco nas correções pedidas]
         if(cardAssistente) cardAssistente.style.display = 'none'; if(divCarrossel) divCarrossel.style.display = 'none'; if(cardModulos) cardModulos.style.display = 'none'; if(cardHorario) cardHorario.style.display = 'none'; if(cardEventos) cardEventos.style.display = 'none';
         papCont.style.display = 'block'; papCont.innerHTML = `<p class="text-muted center">A carregar vista especial...</p>`;
         return; 
     }
 
-    // MODO PROFESSOR BASE / DT
     papCont.style.display = 'none';
     if(cardAssistente) cardAssistente.style.display = 'block'; if(divCarrossel) divCarrossel.style.display = 'block'; if(cardModulos) cardModulos.style.display = 'block'; if(cardHorario) cardHorario.style.display = 'block'; if(cardEventos) cardEventos.style.display = 'block';
 
@@ -98,9 +112,10 @@ export async function carregarRadarProfessor() {
             <div class="stat-card"><h2 style="color: var(--warning-yellow); margin-bottom: 5px;">${prhfsAtivos}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">PRHFs Ativos</span></div>
             <div class="stat-card"><h2 style="color: #b82bf2; margin-bottom: 5px;">${totalOcorrencias}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Ocorrências</span></div>
             <div class="stat-card"><h2 style="color: #ffaa00; margin-bottom: 5px;">${avaliacoesEmFalta}</h2><span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">A Lançar</span></div>`;
-        carouselTrack.innerHTML = statsHtmlBlock + statsHtmlBlock; iniciarCarrossel();
+        carouselTrack.innerHTML = statsHtmlBlock; iniciarCarrossel(); // REMOVIDA A DUPLICAÇÃO DAS ESTATISTICAS AQUI!
 
         let modHtml = '<div style="display:flex; flex-direction:column; gap:8px;">';
+        let foundMods = false;
         for (const t of state.turmasProfessor) {
             for (const d of state.disciplinasProfessor) {
                 let modsAvaliados = new Set();
@@ -110,14 +125,20 @@ export async function carregarRadarProfessor() {
                         try { const nS = await getDocs(collection(db, "utilizadores", docAl.id, "notas")); nS.forEach(n => { if(n.data().disciplina === d) modsAvaliados.add(n.data().modulo); }); } catch(err){}
                     }
                 } catch(e) {}
-                modHtml += `
-                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;">
-                    <div><strong style="color:white; font-size:0.9rem;">${t} - ${d}</strong></div>
-                    <div style="text-align:right;"><strong style="color:var(--primary-green); font-size:1.1rem;">${modsAvaliados.size}</strong><br><span style="color:var(--text-muted); font-size:0.7rem; text-transform:uppercase;">Módulos Concluídos</span></div>
-                </div>`;
+                
+                if (modsAvaliados.size > 0) {
+                    foundMods = true;
+                    modHtml += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;">
+                        <div><strong style="color:white; font-size:0.9rem;">${t} - ${d}</strong></div>
+                        <div style="text-align:right;"><strong style="color:var(--primary-green); font-size:1.1rem;">${modsAvaliados.size}</strong><br><span style="color:var(--text-muted); font-size:0.7rem; text-transform:uppercase;">Mód. Lançados</span></div>
+                    </div>`;
+                }
             }
         }
-        modHtml += '</div>'; document.getElementById('dashboard-modulos-container').innerHTML = modHtml;
+        modHtml += '</div>'; 
+        if(!foundMods) modHtml = '<p class="text-muted center" style="font-size: 0.85rem;">Ainda não lançaste notas a nenhum módulo.</p>';
+        document.getElementById('dashboard-modulos-container').innerHTML = modHtml;
 
         if(profAulasHoje.length > 0) {
             try { profAulasHoje.sort((a,b) => { if(!a.hora || !b.hora) return 0; const getMin = (hx) => parseInt(hx.split(':')[0])*60 + parseInt(hx.split(':')[1]); return getMin(a.hora) - getMin(b.hora); }); let hHtml = ''; profAulasHoje.forEach(aula => { hHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:5px; border-left:3px solid #0099ff;"><div><strong style="color:white; font-size:0.9rem;">${aula.disciplina}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Turma ${aula.turma}</span></div><span style="color:#0099ff; font-weight:bold; font-size:0.85rem;">${aula.hora}</span></div>`; }); hCont.innerHTML = hHtml; } catch(sortErr) { hCont.innerHTML = '<p class="text-muted center" style="font-size:0.85rem;">Sem aulas marcadas.</p>'; }
@@ -132,9 +153,6 @@ export async function carregarRadarProfessor() {
     } catch (e) { aText.innerHTML = "Problema na ligação a recolher dados estatísticos globais."; }
 }
 
-// ==========================================
-// GESTÃO DA TURMA (Lista, Pauta, Faltas)
-// ==========================================
 export async function analisarEAtualizarTurma(turmaId) {
     const listC = document.getElementById('lista-alunos-turma'); listC.innerHTML = '<p class="text-muted center">A ler dados dos alunos...</p>';
     document.getElementById('assistente-aula-texto').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A analisar a turma...';
@@ -148,8 +166,8 @@ export async function analisarEAtualizarTurma(turmaId) {
     const btnAvisoGlobal = document.getElementById('btn-abrir-aviso-global');
     if (btnAvisoGlobal) btnAvisoGlobal.style.display = isDT ? 'block' : 'none';
     
-    if (state.activeRole === 'professor') { btnPauta.style.display = 'none'; btnFaltasGlobal.style.display = 'none'; lmsGrid.style.display = 'flex'; } 
-    else if (state.activeRole === 'diretor_turma') { btnPauta.style.display = 'block'; btnFaltasGlobal.style.display = 'block'; lmsGrid.style.display = 'flex'; } 
+    if (state.activeRole === 'professor') { btnPauta.style.display = 'none'; btnFaltasGlobal.style.display = 'none'; lmsGrid.style.display = 'grid'; } 
+    else if (state.activeRole === 'diretor_turma') { btnPauta.style.display = 'block'; btnFaltasGlobal.style.display = 'block'; lmsGrid.style.display = 'grid'; } 
     else { btnPauta.style.display = 'block'; btnFaltasGlobal.style.display = 'block'; lmsGrid.style.display = 'none'; }
 
     try {
@@ -259,7 +277,8 @@ export function desenharGraficoAluno(modo) {
 
 export async function abrirPerfil360Aluno(alunoId) {
     state.alunoSelecionadoId = alunoId; const al = state.alunosTurmaRAM.find(a => a.id === alunoId); if (!al) return;
-    document.getElementById('p-aluno-nome').innerText = nomeCurto(al.nome); document.getElementById('p-aluno-foto').src = al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=333&color=fff`; document.getElementById('p-aluno-academia').innerText = al.academia ? ACADEMIAS_INFO[al.academia].nome : 'Sem Academia';
+    document.getElementById('p-aluno-nome').innerText = nomeCurto(al.nome); document.getElementById('p-aluno-foto').src = al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=333&color=fff`; 
+    try { document.getElementById('p-aluno-academia').innerText = (al.academia && ACADEMIAS_INFO[al.academia]) ? ACADEMIAS_INFO[al.academia].nome : 'Sem Academia'; } catch(err) { document.getElementById('p-aluno-academia').innerText = 'Sem Academia'; }
 
     const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
     document.getElementById('perfil-aluno-title-estat').innerText = isDT ? 'Estatísticas Globais' : 'Estatísticas na Tua Disciplina';
@@ -286,7 +305,6 @@ export async function abrirPerfil360Aluno(alunoId) {
             if (rS.exists() && rS.data().texto) { document.getElementById('p-aluno-obs-dt').value = rS.data().texto; } else { document.getElementById('p-aluno-obs-dt').value = ''; }
         }
         
-        // Renderizar Histórico de Notas (NOVO)
         let notasHtml = '<div style="display:flex; flex-direction:column; gap:8px;">';
         let notasParaMostrar = state.notasAlunoRAM.filter(n => isDT || n.disciplina === (state.disciplinasProfessor[0] || 'Geral'));
         notasParaMostrar.sort((a,b) => a.moduloReal - b.moduloReal);
@@ -304,7 +322,7 @@ export async function abrirPerfil360Aluno(alunoId) {
         const blocoPosNeg = document.getElementById('btn-dar-positiva')?.closest('div');
         if (state.activeRole === 'coordenador') { document.getElementById('area-sintese-prof').style.display = 'none'; if(blocoPosNeg) blocoPosNeg.style.display = 'none'; } else { if(blocoPosNeg) blocoPosNeg.style.display = 'flex'; }
 
-    } catch (e) {}
+    } catch (e) { console.error(e); }
 
     document.getElementById('p-aluno-faltas').innerText = fCount; document.getElementById('p-aluno-prhfs').innerText = pCount; document.getElementById('p-aluno-notas').innerText = state.notasAlunoRAM.length;
     document.getElementById('btn-graph-disc').classList.add('active'); document.getElementById('btn-graph-global').classList.remove('active');
@@ -322,7 +340,7 @@ export async function carregarTarefasProf() {
         if(isDT) { document.getElementById('btn-radar-conflitos').style.display = 'block'; document.getElementById('prhf-dt-toggles').style.display = 'flex'; } else { document.getElementById('btn-radar-conflitos').style.display = 'none'; document.getElementById('prhf-dt-toggles').style.display = 'none'; }
 
         const container = document.getElementById('lista-prhfs-professor'); container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A procurar PRHFs...</p>';
-        if (state.turmasProfessor.length === 0) { container.innerHTML = '<p class="text-muted center">Sem turmas.</p>'; return; }
+        if (!state.turmasProfessor || state.turmasProfessor.length === 0) { container.innerHTML = '<p class="text-muted center">Sem turmas.</p>'; return; }
         try {
             let todosAlunos = []; for (const t of state.turmasProfessor) { const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); snap.forEach(d => todosAlunos.push({ id: d.id, ...d.data() })); }
             let todosPrhfs = []; for (const al of todosAlunos) { const pSnap = await getDocs(collection(db, "utilizadores", al.id, "prhfs")); pSnap.forEach(p => todosPrhfs.push({ id: p.id, alunoId: al.id, alunoNome: al.nome, turma: al.turma, ...p.data() })); }
@@ -455,3 +473,24 @@ export function abrirChatForum(turma, disciplina, nomeCustom) {
         msgCont.innerHTML = h; setTimeout(() => { msgCont.scrollTop = msgCont.scrollHeight; }, 100);
     });
 }
+
+// ==========================================
+// EXPORTAÇÃO DE DADOS (BOTÃO MÁGICO)
+// ==========================================
+window.exportarCSV = function(tableId, filename) {
+    const table = document.getElementById(tableId);
+    if (!table) return alert("Tabela não encontrada.");
+    let csv = [];
+    for (let i = 0; i < table.rows.length; i++) {
+        let row = [], cols = table.rows[i].querySelectorAll("td, th");
+        for (let j = 0; j < cols.length; j++) {
+            let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, " ").trim();
+            data = data.replace(/"/g, '""');
+            row.push(`"${data}"`);
+        }
+        csv.push(row.join(","));
+    }
+    const csvFile = new Blob(["\uFEFF" + csv.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const downloadLink = document.createElement("a"); downloadLink.download = filename; downloadLink.href = window.URL.createObjectURL(csvFile);
+    downloadLink.style.display = "none"; document.body.appendChild(downloadLink); downloadLink.click(); document.body.removeChild(downloadLink);
+};
