@@ -96,6 +96,7 @@
                         <button class="secondary-btn" id="btn-ver-pauta" style="flex:1; min-width: 120px; border-color:var(--warning-yellow); color:var(--warning-yellow);"><i class="fa-solid fa-list-ol"></i> Pauta</button>
                         <button class="secondary-btn" id="btn-ver-faltas-turma" style="flex:1; min-width: 120px; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-clipboard-user"></i> Mapa Faltas</button>
                         <button class="secondary-btn" id="btn-ver-cidadania" style="flex:1; min-width: 140px; border-color:#b82bf2; color:#b82bf2;"><i class="fa-solid fa-users-rectangle"></i> Proj. Cidadania</button>
+                        <button class="secondary-btn" id="btn-ver-planta" style="flex:1; min-width: 140px; border-color:var(--primary-green); color:var(--primary-green);"><i class="fa-solid fa-border-all"></i> Planta da Sala</button>
                     </div>
 
                     <div class="lms-action-grid" style="margin-bottom: 25px;">
@@ -226,6 +227,42 @@
             <!-- ============================================== -->
             <!-- MODAIS PRINCIPAIS (COM A NOVA GRELHA)          -->
             <!-- ============================================== -->
+
+            <!-- NOVO: MODAL PLANTA DA SALA -->
+            <div id="modal-planta-sala" class="modal-overlay" style="z-index: 2500;">
+                <div class="action-sheet" style="max-width: 600px; max-height: 90vh;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                        <h3 style="color: var(--primary-green); margin:0;"><i class="fa-solid fa-border-all"></i> Planta da Sala Inteligente</h3>
+                        <button class="fechar-modal" data-target="modal-planta-sala" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+
+                    <div class="modal-section">
+                        <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px; display:block;">1. Seleciona a Sala / Disposição:</label>
+                        <select id="planta-sala-select" class="input-padrao" style="margin-bottom:15px; width:100%;">
+                            <option value="">-- Escolher Sala --</option>
+                            <option value="sala4">Sala 4 (4x3, Duplas)</option>
+                            <option value="sala7">Sala 7 (3x6, Duplas)</option>
+                            <option value="sala8">Sala 8 (3x6, Duplas)</option>
+                            <option value="sala11">Sala 11 (3x4, Meio Individual)</option>
+                            <option value="sala12">Sala 12 (3x4, Duplas)</option>
+                            <option value="sala13">Sala 13 (4x4, Duplas)</option>
+                            <option value="labCTE">Laboratório CTE (4x5, Individuais)</option>
+                        </select>
+
+                        <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px; display:block;">2. Orientações para a IA (Opcional):</label>
+                        <textarea id="planta-instrucoes-ia" class="input-padrao" placeholder="Ex: Separar alunos com mais de 3 faltas. Sentar Diogo e Tomás afastados. Agrupar notas mais baixas com notas altas." style="min-height:80px;"></textarea>
+                    </div>
+                    
+                    <div id="planta-gerada-container" style="display:none; padding:15px; background:rgba(0,0,0,0.2); border:1px solid #333; border-radius:8px; margin-bottom:15px; overflow-x:auto;">
+                        <!-- A grelha será desenhada aqui -->
+                    </div>
+
+                    <div class="sticky-action-bar" style="display:flex; gap:10px;">
+                        <button id="btn-gerar-planta" class="primary-btn" style="flex:2;"><i class="fa-solid fa-wand-magic-sparkles"></i> Gerar Planta</button>
+                        <button id="btn-exportar-planta" class="secondary-btn" style="flex:1; display:none;"><i class="fa-solid fa-file-pdf"></i> Exportar</button>
+                    </div>
+                </div>
+            </div>
 
             <!-- MODAL MENU DE AÇÃO RÁPIDA (FAB) -->
             <div id="modal-fab-menu" class="modal-overlay" style="z-index: 4001; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px);">
