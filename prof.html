@@ -306,7 +306,7 @@
                         <h4 style="color:white; font-size:0.9rem; margin-bottom:10px;">Histórico de Avaliações</h4>
                         <div id="historico-notas-container" style="margin-bottom:20px;"></div>
 
-                        <div style="display:flex; gap:10px; margin-bottom: 20px;" id="area-botoes-ocorrencia">
+                        <div style="display:flex; gap:10px; margin-bottom: 20px; width: 100%; justify-content: center;" id="area-botoes-ocorrencia">
                             <button class="btn-ocorrencia-premium btn-pos" id="btn-dar-positiva"><i class="fa-solid fa-star" style="font-size: 1.5rem; color: var(--success-green); margin-bottom: 5px;"></i><strong style="color: white; font-size: 0.85rem;">Positiva</strong></button>
                             <button class="btn-ocorrencia-premium btn-neg" id="btn-dar-negativa"><i class="fa-solid fa-triangle-exclamation" style="font-size: 1.5rem; color: var(--danger-red); margin-bottom: 5px;"></i><strong style="color: white; font-size: 0.85rem;">Negativa</strong></button>
                         </div>
@@ -390,6 +390,7 @@
                     <div class="modal-section">
                         <select id="lancar-falta-disciplina" class="input-padrao" style="margin-bottom:10px; display:none;"></select>
                         <div style="display:flex; gap:10px;">
+                            <!-- NOVO: Removido o 8º Tempo -->
                             <div style="flex:2;"><label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 5px;">Duração</label><select id="falta-aula-select" class="input-padrao" style="margin:0;"><option value="">-- Selecionar --</option><option value="1">1 Tempo</option><option value="2">2 Tempos</option><option value="3">3 Tempos</option><option value="4">4 Tempos</option><option value="5">5 Tempos</option><option value="6">6 Tempos</option><option value="7">7 Tempos</option></select></div>
                             <div style="flex:1;"><label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 5px;">Módulo</label><select id="falta-modulo-select" class="input-padrao" style="margin:0;"><option value="">Mod...</option></select></div>
                         </div>
@@ -401,7 +402,7 @@
                 </div>
             </div>
 
-            <!-- MODAL DE LANÇAR NOTAS (Corrigida a Caixa de Justificação) -->
+            <!-- MODAL DE LANÇAR NOTAS -->
             <div id="modal-lancamento-notas" class="modal-overlay" style="z-index: 2000;">
                 <div class="action-sheet" style="max-width: 450px; padding: 15px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
@@ -447,7 +448,7 @@
                         <button class="grade-btn rep" data-val="REP" style="grid-column: span 1;">REP</button>
                     </div>
                     
-                    <!-- LARGURA TOTAL DA JUSTIFICAÇÃO RESOLVIDA -->
+                    <!-- NOVO: LARGURA TOTAL DA JUSTIFICAÇÃO RESOLVIDA -->
                     <div id="area-justificacao-rep" style="display: none; margin-bottom: 15px; width: 100%;">
                         <label style="font-size:0.8rem; color:var(--danger-red); margin-bottom:5px; display:block;">Justificação da Reprovação:</label>
                         <textarea id="texto-justificacao-rep" class="input-padrao" placeholder="Falta de assiduidade, não cumpriu os objetivos..." style="min-height: 80px; width:100%; box-sizing:border-box; border-color: var(--danger-red);"></textarea>
