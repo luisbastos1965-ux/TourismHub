@@ -108,7 +108,7 @@ export async function carregarRadarProfessor() {
 
     try {
         let totalAlunos = 0; let prhfsAtivos = 0; let eventosGlobais = []; let totalFaltasProf = 0; let totalOcorrencias = 0; let profAulasHoje = [];
-        let listaAlertas = []; // NOVO ARRAY PARA ALERTAS
+        let listaAlertas = []; 
 
         const bK = ['1', '2', '3', '4', '1300', '5', '6', '7']; const bT = { '1': '08:30', '2': '09:35', '3': '10:50', '4': '11:55', '1300': '13:00', '5': '14:05', '6': '15:15', '7': '16:20' };
         const hjD = new Date(); const hjStr = `${hjD.getFullYear()}-${String(hjD.getMonth()+1).padStart(2,'0')}-${String(hjD.getDate()).padStart(2,'0')}`;
@@ -118,14 +118,11 @@ export async function carregarRadarProfessor() {
             try {
                 const snapAl = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); 
                 for (const docAluno of snapAl.docs) {
-                    totalAlunos++;
-                    let faltasAluno = 0; let prhfsAluno = 0;
-                    
+                    totalAlunos++; let faltasAluno = 0; let prhfsAluno = 0;
                     try { const pSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "prhfs")); pSnap.forEach(p => { if (p.data().status !== 'concluida' && state.disciplinasProfessor.includes(p.data().disciplina)) { prhfsAtivos++; prhfsAluno++; } }); } catch(err){}
                     try { const fSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "faltas")); fSnap.forEach(f => { if (state.disciplinasProfessor.includes(f.data().disciplina)) { const h = Number(f.data().horas || 0); totalFaltasProf += h; if(!f.data().justificada) faltasAluno += h;} }); } catch(err){}
                     try { const oSnap = await getDocs(collection(db, "utilizadores", docAluno.id, "ocorrencias")); oSnap.forEach(o => { if(o.data().autor === state.myUserName) totalOcorrencias++; }); } catch(err){}
                     
-                    // LÓGICA DE ALERTA INDIVIDUAL
                     if (faltasAluno > 6) listaAlertas.push({ nome: docAluno.data().nome, turma: t, msg: `${faltasAluno}h de faltas injustificadas.`, tipo: 'falta' });
                     if (prhfsAluno > 1) listaAlertas.push({ nome: docAluno.data().nome, turma: t, msg: `${prhfsAluno} PRHFs pendentes.`, tipo: 'prhf' });
                 }
@@ -142,7 +139,6 @@ export async function carregarRadarProfessor() {
         if (avaliacoesEmFalta > 0) resumo += `<br><span style="color:var(--danger-red); font-size:0.85rem;"><i class="fa-solid fa-star"></i> Tens avaliações por lançar no sistema.</span>`;
         aText.innerHTML = resumo;
 
-        // RENDER ALERTAS
         let alertasHtml = '';
         if (listaAlertas.length === 0) {
             alertasHtml = '<div class="empty-state"><i class="fa-solid fa-check-circle empty-state-icon" style="color:var(--success-green);"></i><p class="empty-state-desc">Nenhum aluno em risco nas tuas turmas.</p></div>';
@@ -169,23 +165,18 @@ export async function carregarRadarProfessor() {
             iniciarCarrossel();
         }
 
-        let modHtml = '<div style="display:flex; flex-direction:column; gap:8px;">';
-        let foundMods = false;
+        let modHtml = '<div style="display:flex; flex-direction:column; gap:8px;">'; let foundMods = false;
         for (const t of state.turmasProfessor) {
             const discValidas = filtrarDisciplinasDoAno(t, state.disciplinasProfessor);
             for (const d of discValidas) {
                 let modsAvaliados = new Set();
                 try {
                     const snapAl = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
-                    for(const docAl of snapAl.docs) {
-                        try { const nS = await getDocs(collection(db, "utilizadores", docAl.id, "notas")); nS.forEach(n => { if(n.data().disciplina === d && n.data().nota !== 'REP') modsAvaliados.add(n.data().modulo); }); } catch(err){}
-                    }
+                    for(const docAl of snapAl.docs) { try { const nS = await getDocs(collection(db, "utilizadores", docAl.id, "notas")); nS.forEach(n => { if(n.data().disciplina === d && n.data().nota !== 'REP') modsAvaliados.add(n.data().modulo); }); } catch(err){} }
                 } catch(e) {}
-                
                 if (modsAvaliados.size > 0) {
                     foundMods = true;
-                    modHtml += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;">
+                    modHtml += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333;">
                         <div><strong style="color:white; font-size:0.9rem;">${t} - ${d}</strong></div>
                         <div style="text-align:right;"><strong style="color:var(--primary-green); font-size:1.1rem;">${modsAvaliados.size}</strong><br><span style="color:var(--text-muted); font-size:0.7rem; text-transform:uppercase;">Mód. Fechados</span></div>
                     </div>`;
@@ -277,8 +268,7 @@ export async function renderizarPautaTurma() {
         let html = `<tr><th>Aluno</th><th>Mod. 1</th><th>Mod. 2</th><th>Mod. 3</th><th>Média</th></tr>`;
         for(const al of state.alunosTurmaRAM) {
             const nS = await getDocs(collection(db, "utilizadores", al.id, "notas"));
-            let m1='-', m2='-', m3='-';
-            let sum = 0; let count = 0;
+            let m1='-', m2='-', m3='-'; let sum = 0; let count = 0;
             nS.forEach(n => {
                 if(n.data().disciplina === curDisc) {
                     if(n.data().modulo == 1) m1 = n.data().nota;
@@ -521,9 +511,14 @@ export async function carregarForunsProf() {
     }
 
     let html = '<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Estrutura da Turma</h3>';
+    
+    // CORREÇÃO: Coordenador de Curso vem primeiro
+    html += `<div class="canal-card" data-turma="Global" data-disc="Coordenador" data-nome="Coordenador de Curso"><div class="canal-icon" style="color:#ff4d4d; border-color:#ff4d4d;"><i class="fa-solid fa-sitemap"></i></div><div class="canal-info" style="flex:1;"><h4>Coordenador de Curso</h4></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
+
+    // CORREÇÃO: Nomes limpos para Conselho e Diretor de Turma
     state.turmasProfessor.forEach(t => {
-        html += `<div class="canal-card" data-turma="${t}" data-disc="Professores" data-nome="Conselho de Turma"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-chalkboard-user"></i></div><div class="canal-info" style="flex:1;"><h4>Conselho de Turma</h4><p>Professores do ${t}</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
-        html += `<div class="canal-card" data-turma="${t}" data-disc="DT_Privado" data-nome="Diretor de Turma"><div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div><div class="canal-info" style="flex:1;"><h4>Diretor de Turma</h4><p>Assuntos Privados - ${t}</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
+        html += `<div class="canal-card" data-turma="${t}" data-disc="Professores" data-nome="Conselho de Turma - ${t}"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-chalkboard-user"></i></div><div class="canal-info" style="flex:1;"><h4>Conselho de Turma - ${t}</h4></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
+        html += `<div class="canal-card" data-turma="${t}" data-disc="DT_Privado" data-nome="Diretor de Turma - ${t}"><div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div><div class="canal-info" style="flex:1;"><h4>Diretor de Turma - ${t}</h4></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
     });
     
     html += '<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">A Minha Disciplina</h3>';
@@ -533,8 +528,6 @@ export async function carregarForunsProf() {
             html += `<div class="canal-card" data-turma="${t}" data-disc="${d}" data-nome="Apoio a ${d}"><div class="canal-icon" style="color:#00d2ff; border-color:#00d2ff;"><i class="fa-solid fa-book-open"></i></div><div class="canal-info" style="flex:1;"><h4>Apoio a ${d}</h4><p>Turma ${t}</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`; 
         }); 
     });
-
-    html += `<div class="canal-card" data-turma="Global" data-disc="Coordenador" data-nome="Coordenador de Curso" style="margin-top:15px;"><div class="canal-icon" style="color:#ff4d4d; border-color:#ff4d4d;"><i class="fa-solid fa-sitemap"></i></div><div class="canal-info" style="flex:1;"><h4>Coordenador de Curso</h4><p>Chat Global do Curso</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
 
     html += '<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Chats Personalizados</h3>';
     let encontrouPersonalizado = false; let htmlPersonalizado = '<div style="display:flex; flex-direction:column; gap:10px;">';
