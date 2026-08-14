@@ -38,7 +38,7 @@
             </div>
         </header>
 
-        <!-- NOVO: FLOATING ACTION BUTTON (Ação Rápida Global) -->
+        <!-- FLOATING ACTION BUTTON (Ação Rápida Global) -->
         <button id="btn-fab-global" style="position: fixed; bottom: 85px; right: 20px; width: 55px; height: 55px; border-radius: 50%; background-color: var(--primary-green); color: var(--bg-dark); border: none; font-size: 1.5rem; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); z-index: 4000; cursor: pointer; transition: transform 0.2s ease;"><i class="fa-solid fa-bolt"></i></button>
 
         <main class="app-content">
@@ -55,7 +55,7 @@
                     </div>
                 </div>
 
-                <!-- NOVO: Alertas de Alunos (Faltas e PRHFs) -->
+                <!-- Alertas de Alunos (Faltas e PRHFs) -->
                 <div class="card" style="border-left: 4px solid var(--danger-red); margin-bottom: 20px;">
                     <h3 style="font-size: 1rem; margin-bottom: 10px; color: white;"><i class="fa-solid fa-triangle-exclamation" style="color:var(--danger-red);"></i> A Precisar de Atenção</h3>
                     <div id="dashboard-alertas-container"><p class="text-muted" style="font-size: 0.85rem;">A cruzar dados...</p></div>
@@ -263,7 +263,9 @@
                     <select id="aviso-destino-turma" class="input-padrao" style="margin-bottom:10px;"></select>
                     <input type="text" id="aviso-titulo" class="input-padrao" placeholder="Título (Ex: Reunião Cancelada)" style="margin-bottom:10px;">
                     <textarea id="aviso-mensagem" class="input-padrao" placeholder="Escreve aqui o teu aviso..." style="min-height:80px; margin-bottom:15px;"></textarea>
-                    <button id="btn-enviar-aviso-global" class="primary-btn" style="background:var(--warning-yellow); color:black;"><i class="fa-solid fa-paper-plane"></i> Enviar Aviso</button>
+                    <div class="sticky-action-bar">
+                        <button id="btn-enviar-aviso-global" class="primary-btn" style="background:var(--warning-yellow); color:black;"><i class="fa-solid fa-paper-plane"></i> Enviar Aviso</button>
+                    </div>
                 </div>
             </div>
 
@@ -276,7 +278,9 @@
                     </div>
                     <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">Copia o texto abaixo e cola no teu ChatGPT ou Gemini.</p>
                     <textarea id="prompt-ia-text" class="input-padrao" style="min-height:180px; margin-bottom:15px; font-family:monospace; font-size:0.8rem; color:#3b82f6; background:rgba(59,130,246,0.1); border-color:#3b82f6;" readonly></textarea>
-                    <button id="btn-copiar-prompt" class="primary-btn" style="background:#3b82f6;"><i class="fa-regular fa-copy"></i> Copiar Prompt</button>
+                    <div class="sticky-action-bar">
+                        <button id="btn-copiar-prompt" class="primary-btn" style="background:#3b82f6;"><i class="fa-regular fa-copy"></i> Copiar Prompt</button>
+                    </div>
                 </div>
             </div>
 
@@ -362,7 +366,9 @@
                                 <option value="3_periodo">Final do 3º Período</option>
                             </select>
                             <textarea id="p-aluno-obs-dt" class="input-padrao" placeholder="1. Pontos Fortes&#10;2. Aspetos a melhorar&#10;3. Estratégias de progressão" style="min-height:120px; margin-bottom:10px;"></textarea>
-                            <button id="btn-salvar-obs-dt" class="primary-btn small-btn" style="width:100%;">Gravar Síntese</button>
+                            <div class="sticky-action-bar">
+                                <button id="btn-salvar-obs-dt" class="primary-btn small-btn" style="width:100%;">Gravar Síntese</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -409,7 +415,9 @@
                         <input type="file" id="prhf-file" style="display:none;" accept=".pdf,.doc,.docx,.jpg,.png">
                     </div>
 
-                    <button id="btn-gravar-novo-prhf" class="primary-btn" style="background:var(--danger-red);"><i class="fa-solid fa-paper-plane"></i> Atribuir PRHF</button>
+                    <div class="sticky-action-bar">
+                        <button id="btn-gravar-novo-prhf" class="primary-btn" style="background:var(--danger-red);"><i class="fa-solid fa-paper-plane"></i> Atribuir PRHF</button>
+                    </div>
                 </div>
             </div>
 
@@ -423,7 +431,6 @@
                     <div id="erro-modal-faltas" style="color: var(--danger-red); font-size: 0.85rem; display: none; margin-bottom: 10px; text-align: center;"></div>
                     
                     <div class="modal-section">
-                        <!-- NOVO: Seletor Global de Turma para Faltas Rápidas -->
                         <div style="display:none; margin-bottom:10px;" id="global-falta-turma-container">
                             <select id="lancar-falta-turma" class="input-padrao" style="margin:0;"><option value="">Selecionar Turma...</option></select>
                         </div>
@@ -436,7 +443,10 @@
                     
                     <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Seleciona os alunos que <strong>faltaram</strong>:</p>
                     <div id="lista-metralhadora-faltas" style="flex:1; overflow-y:auto; border: 1px solid #333; border-radius:8px; padding:5px;"><p class="text-muted center" style="padding:15px; font-size:0.85rem;">Seleciona uma turma para ver os alunos.</p></div>
-                    <button id="btn-confirmar-faltas" class="primary-btn" style="margin-top:15px; background:var(--danger-red);">Gravar Faltas</button>
+                    
+                    <div class="sticky-action-bar">
+                        <button id="btn-confirmar-faltas" class="primary-btn" style="background:var(--danger-red);">Gravar Faltas</button>
+                    </div>
                 </div>
             </div>
 
@@ -458,7 +468,10 @@
                     
                     <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Toca no bloco vazio para atribuir nota.</p>
                     <div id="grid-notas-alunos" style="flex:1; overflow-y:auto; border: 1px solid #333; border-radius:8px; padding:5px; display:flex; flex-direction:column; gap:5px;"></div>
-                    <button id="btn-confirmar-notas" class="primary-btn" style="margin-top:15px; background:var(--warning-yellow); color:black;"><i class="fa-solid fa-save"></i> Gravar Notas</button>
+                    
+                    <div class="sticky-action-bar">
+                        <button id="btn-confirmar-notas" class="primary-btn" style="background:var(--warning-yellow); color:black;"><i class="fa-solid fa-save"></i> Gravar Notas</button>
+                    </div>
                 </div>
             </div>
 
@@ -495,7 +508,7 @@
                 </div>
             </div>
 
-            <!-- MODAL DE SUMÁRIOS COM IA (NOVO) -->
+            <!-- MODAL DE SUMÁRIOS COM IA -->
             <div id="modal-materiais" class="modal-overlay" style="z-index: 2001;">
                 <div class="action-sheet" style="max-width: 450px; padding: 20px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
@@ -522,11 +535,13 @@
                     </div>
                     <input type="file" id="mat-file" style="display:none;" accept=".pdf,.doc,.docx,.jpg,.png,.zip">
                     
-                    <button id="btn-gravar-material" class="primary-btn" style="width:100%; background:#0099ff;">Registar Aula</button>
+                    <div class="sticky-action-bar">
+                        <button id="btn-gravar-material" class="primary-btn" style="background:#0099ff;">Registar Aula</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- MODAL DE OCORRÊNCIA COM EE (ATUALIZADO) -->
+            <!-- MODAL DE OCORRÊNCIA COM EE -->
             <div id="modal-ocorrencia" class="modal-overlay" style="z-index: 2001;">
                 <div class="action-sheet" style="max-width: 400px; padding: 20px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
@@ -542,13 +557,14 @@
 
                     <textarea id="oco-motivo" class="input-padrao" placeholder="Descreve a situação..." style="width:100%; min-height:80px; margin-bottom:15px;"></textarea>
                     
-                    <!-- NOVO: Toggle EE -->
                     <label style="display:flex; align-items:center; gap:10px; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333; cursor:pointer; margin-bottom: 15px;">
                         <input type="checkbox" id="oco-notificar-ee" style="width: 20px; height: 20px; accent-color: #00d2ff;">
                         <span style="font-size: 0.85rem; color: white;">Notificar Encarregado de Educação na App Familiar</span>
                     </label>
 
-                    <button id="btn-gravar-ocorrencia" class="primary-btn" style="width:100%;">Confirmar Registo</button>
+                    <div class="sticky-action-bar">
+                        <button id="btn-gravar-ocorrencia" class="primary-btn">Confirmar Registo</button>
+                    </div>
                 </div>
             </div>
 
