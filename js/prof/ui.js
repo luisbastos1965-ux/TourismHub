@@ -416,6 +416,9 @@ export async function abrirPerfil360Aluno(alunoId) {
     document.getElementById('modal-perfil-aluno').style.display = 'flex';
 }
 
+// ----------------------------------------------------
+// A FUNÇÃO RECUPERADA (QUE ESTAVA A CAUSAR O BUG NA NAVEGAÇÃO)
+// ----------------------------------------------------
 export async function carregarTarefasProf() {
     const isPRHFTab = document.getElementById('tab-tarefas-prhf').classList.contains('active');
     const canSeePassaporteTab = (state.activeRole === 'diretor_turma' || state.activeRole === 'orientador_pap' || state.activeRole === 'coordenador');
