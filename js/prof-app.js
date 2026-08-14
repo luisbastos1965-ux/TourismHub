@@ -190,7 +190,7 @@ document.getElementById('lancar-sumario-turma')?.addEventListener('change', (e) 
 document.getElementById('forum-turma-select')?.addEventListener('change', async (e) => { const t = e.target.value; const cCont = document.getElementById('lista-alunos-forum'); if (!t) { cCont.innerHTML = '<p class="text-muted center" style="font-size:0.8rem;">Seleciona uma turma primeiro.</p>'; return; } cCont.innerHTML = '<p class="text-muted center" style="font-size:0.8rem;"><i class="fa-solid fa-spinner fa-spin"></i> A carregar alunos...</p>'; try { const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); let cH = ''; cS.forEach(d => { cH += `<label style="display:flex; align-items:center; gap:10px; color:white; font-size:0.9rem; padding:8px 0; cursor:pointer;"><input type="checkbox" class="forum-aluno-check" value="${d.id}" checked style="width:18px;height:18px;accent-color:var(--primary-green);"> ${nomeCurto(d.data().nome)}</label>`; }); cCont.innerHTML = cH === '' ? '<p class="text-muted center" style="font-size:0.8rem;">Turma vazia.</p>' : cH; } catch(err) { cCont.innerHTML = '<p class="text-danger center">Erro.</p>'; } });
 
 // ----------------------------------------------------
-// NOVO: LÓGICA DA PLANTA DA SALA
+// LÓGICA DA PLANTA DA SALA
 // ----------------------------------------------------
 document.getElementById('planta-sala-select')?.addEventListener('change', (e) => {
     const salaId = e.target.value;
@@ -341,44 +341,137 @@ document.body.addEventListener('click', async (e) => {
         return;
     }
 
-    // BOTÃO GERAR PLANTA DA SALA
+    // BOTÃO GERAR PLANTA DA SALA - CÉREBRO LEXICAL HÍBRIDO
     if (e.target.closest('#btn-gerar-planta')) {
         const salaId = document.getElementById('planta-sala-select').value;
+        const instrucoes = document.getElementById('planta-instrucoes-ia').value.toLowerCase();
         if(!salaId) return;
-        
+
         const btn = document.getElementById('btn-gerar-planta');
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A calcular...';
-        
-        // Simular o delay da Inteligência Artificial a pensar
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A calcular otimização...';
+        btn.disabled = true;
+
         setTimeout(() => {
-            const mesas = document.querySelectorAll('.mesa-planta');
-            // Embaralhar alunos da turma atual para a demo
-            let alunosBaralhados = [...state.alunosTurmaRAM].sort(() => 0.5 - Math.random());
-            
-            // Limpar tudo
-            mesas.forEach(m => {
-                m.innerText = 'Vazio'; 
-                m.style.color = 'var(--text-muted)'; 
-                m.style.borderColor = '#555';
-                m.style.background = '#1c1f26';
+            // 1. DATA PREP (Preparar Alunos)
+            let alunos = state.alunosTurmaRAM.map(al => {
+                return {
+                    id: al.id,
+                    nome: al.nome,
+                    primeiroNome: al.nome.split(' ')[0],
+                    // Simulação rápida de "risco" ou "nível" para o motor trabalhar imediatamente
+                    risco: Math.floor(Math.random() * 10)
+                };
             });
-            
-            // Preencher com a IA (Simulada)
-            let i = 0;
-            mesas.forEach(m => {
-                if (i < alunosBaralhados.length) {
-                    const primeiroNome = alunosBaralhados[i].nome.split(' ')[0];
-                    m.innerText = primeiroNome;
-                    m.style.color = 'white';
-                    m.style.borderColor = 'var(--primary-green)';
-                    m.style.background = 'rgba(0, 204, 136, 0.15)';
-                    i++;
+
+            // 2. PARSER LEXICAL (Extração de Regras da Caixa de Texto)
+            let naFrente = [];
+            let noFundo = [];
+            let separar = []; 
+
+            const frases = instrucoes.split(/[.,\n]/);
+            frases.forEach(frase => {
+                // Encontra alunos mencionados na frase
+                let nomesNaFrase = alunos.filter(a => frase.includes(a.primeiroNome.toLowerCase()));
+                
+                if(frase.includes('frente') || frase.includes('primeira')) {
+                    nomesNaFrase.forEach(n => naFrente.push(n.id));
+                }
+                if(frase.includes('fundo') || frase.includes('trás') || frase.includes('ultima') || frase.includes('última')) {
+                    nomesNaFrase.forEach(n => noFundo.push(n.id));
+                }
+                if(frase.includes('separar') || frase.includes('afastar') || frase.includes('longe')) {
+                    if(nomesNaFrase.length >= 2) separar.push([nomesNaFrase[0].id, nomesNaFrase[1].id]);
                 }
             });
-            
+
+            let modoAleatorio = instrucoes.includes('aleat');
+            let modoAlfabetico = instrucoes.includes('alfab');
+
+            // 3. ORDENAÇÃO BASE
+            if (modoAlfabetico) {
+                alunos.sort((a,b) => a.nome.localeCompare(b.nome));
+            } else if (modoAleatorio) {
+                alunos.sort(() => 0.5 - Math.random());
+            } else {
+                // Modo Foco Padrão: Alunos com maior risco processados primeiro
+                alunos.sort((a,b) => b.risco - a.risco);
+            }
+
+            // 4. MAPEAR LUGARES VAZIOS
+            const mesasDOM = Array.from(document.querySelectorAll('.mesa-planta'));
+            let slots = mesasDOM.map(m => {
+                const dataMesa = m.getAttribute('data-mesa'); 
+                const parts = dataMesa.split('-');
+                return {
+                    el: m,
+                    id: dataMesa,
+                    linha: parseInt(parts[0]),
+                    coluna: parseInt(parts[1]),
+                    parId: parts.length === 3 ? `${parts[0]}-${parts[1]}` : dataMesa,
+                    aluno: null
+                };
+            });
+
+            // 5. ATRIBUIÇÃO HÍBRIDA
+            let unassigned = [...alunos];
+
+            const assign = (alunoId, slotCondition) => {
+                const alIndex = unassigned.findIndex(a => a.id === alunoId);
+                if(alIndex === -1) return;
+                const al = unassigned[alIndex];
+                const slot = slots.find(s => s.aluno === null && slotCondition(s));
+                if(slot) {
+                    slot.aluno = al;
+                    unassigned.splice(alIndex, 1);
+                }
+            };
+
+            // Regra: Frente
+            naFrente.forEach(id => assign(id, s => s.linha === 0));
+            // Regra: Fundo
+            let maxLinha = Math.max(...slots.map(s => s.linha));
+            noFundo.forEach(id => assign(id, s => s.linha === maxLinha));
+
+            // Preenche o resto com a ordenação escolhida
+            unassigned.forEach(al => {
+                const slot = slots.find(s => s.aluno === null);
+                if(slot) slot.aluno = al;
+            });
+
+            // Regra: Separar (Swap de segurança)
+            separar.forEach(par => {
+                const s1 = slots.find(s => s.aluno?.id === par[0]);
+                const s2 = slots.find(s => s.aluno?.id === par[1]);
+                if(s1 && s2 && s1.parId === s2.parId) {
+                    // Trocar o s2 com alguém distante
+                    const s3 = slots.find(s => s.aluno !== null && s.parId !== s1.parId && s.aluno.id !== par[0] && s.aluno.id !== par[1]);
+                    if(s3) {
+                        const temp = s2.aluno;
+                        s2.aluno = s3.aluno;
+                        s3.aluno = temp;
+                    }
+                }
+            });
+
+            // 6. RENDERIZAÇÃO FINAL
+            slots.forEach(s => {
+                if(s.aluno) {
+                    s.el.innerText = s.aluno.primeiroNome;
+                    s.el.style.color = 'white';
+                    s.el.style.borderColor = 'var(--primary-green)';
+                    s.el.style.background = 'rgba(0, 204, 136, 0.15)';
+                } else {
+                    s.el.innerText = 'Vazio';
+                    s.el.style.color = 'var(--text-muted)';
+                    s.el.style.borderColor = '#555';
+                    s.el.style.background = '#1c1f26';
+                }
+            });
+
             btn.innerHTML = '<i class="fa-solid fa-check"></i> Refazer Disposição';
+            btn.disabled = false;
             document.getElementById('btn-exportar-planta').style.display = 'block';
-        }, 1200);
+        }, 800);
         return;
     }
 
