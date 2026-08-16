@@ -7,13 +7,20 @@ export async function gerirCliquesForum(e) {
     try {
         // 1. ABRIR O MODAL DE CRIAR NOVO CHAT (Infalível)
         if (e.target.closest('#btn-create-chat-prof')) { 
-            e.preventDefault(); 
+            e.preventDefault();
+            alert("1. O clique no botão funcionou! O JavaScript detetou o clique."); // ALERTA 1
             
             const modal = document.getElementById('modal-criar-forum');
-            if (modal) {
-                modal.style.display = 'flex';
+            
+            if (!modal) {
+                alert("2. ERRO: O JavaScript não consegue encontrar nenhum modal com o ID 'modal-criar-forum' no teu ficheiro HTML. Verifica o nome do ID no HTML!");
+                return true;
             }
 
+            alert("3. Modal encontrado! A tentar forçar a abertura..."); // ALERTA 2
+            modal.style.display = 'flex';
+            modal.style.zIndex = '9999';
+            
             const selTurmas = document.getElementById('forum-turma-select');
             if (selTurmas && state.turmasProfessor) {
                 selTurmas.innerHTML = '<option value="">Selecionar Turma...</option>' + state.turmasProfessor.map(t => `<option value="${t}">Turma ${t}</option>`).join('');
