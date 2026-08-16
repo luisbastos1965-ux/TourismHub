@@ -1,4 +1,4 @@
-import { db } from "../../firebase.js";
+import { db } from "./firebase.js";
 import { doc, setDoc, getDoc, collection, addDoc, updateDoc, deleteDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { state, nomeCurto } from "../store.js";
 import { carregarForunsProf, abrirChatForum } from "../ui.js";
