@@ -1,23 +1,21 @@
 import { db } from "../../firebase.js";
 import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-import { state, nomeCurto } from "../store.js";
+import { state } from "../store.js";
 import { renderizarPautaTurma, renderizarFaltasTurma, abrirPerfil360Aluno } from "../ui.js";
 
 export async function gerirCliquesTurmas(e) {
     try {
-        // PERFIL DO ALUNO
         if (e.target.closest('.aluno-list-item')) { 
             abrirPerfil360Aluno(e.target.closest('.aluno-list-item').getAttribute('data-id')); 
             return true; 
         }
 
-        // PAUTA E FALTAS
         if (e.target.closest('#btn-ver-pauta')) { renderizarPautaTurma(); return true; }
         if (e.target.closest('#btn-ver-faltas-turma')) { renderizarFaltasTurma(); return true; }
 
         // PLANTA DA SALA
         if (e.target.closest('#btn-ver-planta')) { 
-            if (!state.selectedTurma) { alert("Seleciona uma turma primeiro."); return true; }
+            if (!state.selectedTurma) { alert("Seleciona uma turma primeiro."); return true; } 
             document.getElementById('planta-sala-select').value = ''; 
             document.getElementById('planta-gerada-container').style.display = 'none'; 
             document.getElementById('planta-instrucoes-ia').value = ''; 
@@ -66,47 +64,7 @@ export async function gerirCliquesTurmas(e) {
             return true;
         }
 
-        // COPILOTO IA E AVISOS
-        if (e.target.closest('#btn-abrir-copiloto')) { 
-            const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT); 
-            const alunoNome = document.getElementById('p-aluno-nome').innerText; 
-            const faltas = document.getElementById('p-aluno-faltas').innerText; 
-            const modFeitos = document.getElementById('p-aluno-notas').innerText; 
-            const textareaPrompt = document.getElementById('prompt-ia-text'); 
-            let promptText = ""; 
-            if (isDT) { promptText = `Atua como Diretor de Turma. Faz uma Síntese Global para o aluno ${alunoNome}. Baseia-te nos dados (Tem ${faltas}h de faltas e concluiu ${modFeitos} módulos). Regras obrigatórias: Ser objetivo e claro; Indicar pontos fortes no empenho; Referir os aspetos a melhorar no comportamento/aprendizagem; Apresentar estratégias concretas de progressão; Incluir a lista de módulos não concluídos (se aplicável). Tom: Institucional e construtivo.`; } 
-            else { promptText = `Atua como professor da disciplina de ${document.getElementById('perfil-disc-select').value || 'Técnicas'}. Escreve uma síntese de avaliação para o aluno ${alunoNome}. A síntese deve cumprir as regras da direção: Ser objetiva e construtiva; 1. Elogiar pontos fortes. 2. Apontar aspetos a melhorar na disciplina. 3. Dar estratégias claras de progressão. (Nota: O aluno concluiu ${modFeitos} módulos e tem ${faltas}h de faltas na globalidade). Tom: Profissional e direto ao assunto.`; } 
-            textareaPrompt.value = promptText; 
-            document.getElementById('modal-copiloto-ia').style.display = 'flex'; 
-            return true; 
-        }
-
-        if (e.target.closest('#btn-copiar-prompt')) { 
-            const copyText = document.getElementById('prompt-ia-text'); 
-            copyText.select(); document.execCommand("copy"); 
-            const btn = e.target.closest('#btn-copiar-prompt'); 
-            btn.innerHTML = '<i class="fa-solid fa-check"></i> Copiado!'; 
-            setTimeout(() => { btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copiar Prompt'; document.getElementById('modal-copiloto-ia').style.display = 'none'; }, 1500); 
-            return true; 
-        }
-
-        if (e.target.closest('#btn-ia-formatar-sumario')) { 
-            const btn = e.target.closest('#btn-ia-formatar-sumario'); 
-            const sumarioBox = document.getElementById('mat-sumario'); 
-            const textoOriginal = sumarioBox.value.trim(); 
-            if (!textoOriginal) { alert("Escreve primeiro alguns tópicos para a IA formatar."); return true; }
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; 
-            setTimeout(() => { 
-                const linhas = textoOriginal.split('\n').filter(l => l.trim() !== ''); 
-                let textoFormatado = "Sumário da Aula:\n"; 
-                linhas.forEach(linha => { let cleanLine = linha.replace(/^[-\*\.]\s*/, '').trim(); textoFormatado += `• ${cleanLine.charAt(0).toUpperCase() + cleanLine.slice(1)}.\n`; }); 
-                sumarioBox.value = textoFormatado; 
-                btn.innerHTML = '<i class="fa-solid fa-check" style="color:var(--success-green);"></i>'; 
-                setTimeout(() => { btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; }, 2000); 
-            }, 800); 
-            return true; 
-        }
-
+        // AVISOS GLOBAIS
         if (e.target.closest('#btn-abrir-aviso-global') || e.target.closest('#btn-abrir-aviso-global-coord')) { 
             let options = ''; 
             if (state.activeRole === 'coordenador') { options = '<option value="todas">Todas as minhas turmas</option>' + state.turmasProfessor.map(t => `<option value="${t}">Turma ${t}</option>`).join(''); } 
@@ -130,15 +88,10 @@ export async function gerirCliquesTurmas(e) {
                 for (const t of turmasAlvo) { await addDoc(collection(db, "turmas", t, "avisos"), { titulo: titulo, mensagem: mensagem, autor: state.myUserName, papel: state.activeRole, timestamp: Date.now() }); } 
                 btn.innerHTML = '<i class="fa-solid fa-check"></i> Enviado'; 
                 setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; document.getElementById('modal-aviso-global').style.display = 'none'; }, 1500); 
-            } catch (err) { 
-                btn.innerHTML = 'Erro!'; setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000); 
-            } 
+            } catch (err) { btn.innerHTML = 'Erro!'; setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000); } 
             return true; 
         }
 
         return false;
-    } catch (err) {
-        console.error("Erro no módulo Turmas:", err);
-        return false;
-    }
+    } catch (err) { return false; }
 }
