@@ -114,6 +114,7 @@ onAuthStateChanged(auth, async (user) => {
                     };
 
                     window.mudarCapaProfessor('professor');
+                    
                     document.getElementById('btn-toggle-perfis').addEventListener('click', (e) => { 
                         e.stopPropagation(); 
                         const drop = document.getElementById('dropdown-perfis'); 
@@ -150,45 +151,27 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-
 // ========================================================
-// 2. FÓRUM - CARREGAR ANEXOS E INPUT DE EVENTOS
-// ========================================================
-document.getElementById('prof-forum-file-input')?.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    if (file.size > 2 * 1024 * 1024) return alert("Ficheiro demasiado grande (Máx: 2MB).");
-    
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        state.chatAttachmentBase64 = event.target.result;
-        state.chatAttachmentName = file.name;
-        document.getElementById('prof-forum-attachment-name').innerHTML = `<i class="fa-solid fa-file"></i> ${file.name}`;
-        document.getElementById('prof-forum-attachment-preview').style.display = 'flex';
-    };
-    reader.readAsDataURL(file);
-});
-
-
-// ========================================================
-// 3. DELEGAÇÃO DE EVENTOS DE MUDANÇA (CHANGE & INPUT)
+// 2. EVENTOS DE INPUT E CHANGE (Digitação e Seleção)
 // ========================================================
 document.body.addEventListener('input', (e) => {
+    // Cálculo Rápido PRHF
     if (e.target.id === 'prhf-horas-totais') {
         const val = parseInt(e.target.value) || 0;
+        // O CÁLCULO PROVISÓRIO! (mínimo 4h ou 30%)
         document.getElementById('prhf-horas-presenciais').value = val <= 4 ? 0 : Math.ceil(val * 0.3);
     }
 });
 
 document.body.addEventListener('change', async (e) => {
     
-    // ATUALIZAÇÃO SEGURA DO FILTRO DE WORKFLOW DO PRHF
+    // ATUALIZAÇÃO DO FILTRO DE WORKFLOW DO PRHF
     if (e.target.id === 'filtro-workflow-prhf') {
         carregarTarefasProf();
         return;
     }
 
+    // UI: Colorir Labels das Checkboxes
     if (e.target.classList.contains('forum-aluno-check') || e.target.classList.contains('edit-forum-aluno-check') || e.target.classList.contains('prhf-aluno-check')) {
         const chk = e.target; 
         const lbl = chk.closest('label');
@@ -206,6 +189,7 @@ document.body.addEventListener('change', async (e) => {
         }
     }
 
+    // PRHF - Atualizar lista de alunos
     if (e.target.id === 'prhf-turma') {
         const t = e.target.value;
         const cCont = document.getElementById('prhf-alunos-bulk-container');
@@ -215,7 +199,6 @@ document.body.addEventListener('change', async (e) => {
             cCont.innerHTML = '<p class="text-muted center" style="font-size:0.8rem; margin:0;">Selecione primeiro a Turma</p>';
             return;
         }
-        
         cCont.innerHTML = '<p class="text-muted center" style="font-size:0.8rem; margin:0;"><i class="fa-solid fa-spinner fa-spin"></i> A carregar alunos...</p>';
         try {
             if (discSelect && discSelect.value) atualizarDropdownModulos(t, discSelect.value, document.getElementById('prhf-modulo'));
@@ -241,6 +224,7 @@ document.body.addEventListener('change', async (e) => {
         } catch(err) { cCont.innerHTML = '<p class="text-danger center" style="font-size:0.8rem;">Erro ao carregar alunos.</p>'; }
     }
 
+    // FÓRUM - Atualizar lista de alunos
     if (e.target.id === 'forum-turma-select') {
         const t = e.target.value; 
         const cCont = document.getElementById('lista-alunos-forum'); 
@@ -277,9 +261,8 @@ document.body.addEventListener('change', async (e) => {
     }
 });
 
-
 // ========================================================
-// 4. MOTOR PRINCIPAL DE CLIQUES (DELEGAÇÃO)
+// 3. MOTOR GERAL (DELEGAÇÃO FINAL)
 // ========================================================
 document.body.addEventListener('click', async (e) => {
     
@@ -312,7 +295,7 @@ document.body.addEventListener('click', async (e) => {
         return; 
     }
 
-    // FECHAR MENUS & DROPDOWNS
+    // FECHAR MENUS E LOGOUT
     if (!e.target.closest('#header-prof') && !e.target.closest('#modal-fab-menu') && !e.target.closest('#btn-fab-global')) { 
         const drop = document.getElementById('dropdown-perfis'); 
         if(drop) drop.style.display = 'none'; 
@@ -332,9 +315,15 @@ document.body.addEventListener('click', async (e) => {
         return; 
     }
 
+    // ==========================================
     // DELEGAÇÃO PARA OS MÓDULOS DE FÓRUM E PRHF
-    if (await gerirCliquesForum(e)) return;
-    if (await gerirCliquesPRHF(e)) return;
+    // ==========================================
+    try {
+        if (await gerirCliquesForum(e)) return;
+        if (await gerirCliquesPRHF(e)) return;
+    } catch (moduloError) {
+        console.error("Erro interno nos módulos delegados:", moduloError);
+    }
 
     // ==========================================
     // RESTANTES AÇÕES DA APLICAÇÃO
