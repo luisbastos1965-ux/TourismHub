@@ -1,4 +1,4 @@
-import { db } from "../../firebase.js";
+import { db } from "./firebase.js";
 import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { state } from "../store.js";
 import { renderizarPautaTurma, renderizarFaltasTurma, abrirPerfil360Aluno } from "../ui.js";
