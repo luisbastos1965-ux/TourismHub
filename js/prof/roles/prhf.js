@@ -5,7 +5,6 @@ import { carregarTarefasProf, analisarEAtualizarTurma } from "../ui.js";
 
 export async function gerirCliquesPRHF(e) {
     try {
-        // 1. SELEÇÃO EM MASSA (BULK)
         if (e.target.closest('#btn-prhf-select-all')) {
             e.preventDefault();
             document.querySelectorAll('.prhf-aluno-check').forEach(chk => { 
@@ -26,7 +25,6 @@ export async function gerirCliquesPRHF(e) {
             return true;
         }
 
-        // 2. ABRIR MODAL CRIAR
         if (e.target.closest('#btn-novo-prhf')) {
             document.getElementById('prhf-modal-title').innerHTML = '<i class="fa-solid fa-file-medical" style="color:var(--danger-red);"></i> Novo PRHF';
             document.getElementById('erro-modal-prhf').style.display = 'none'; 
@@ -54,7 +52,6 @@ export async function gerirCliquesPRHF(e) {
             return true;
         }
 
-        // 3. ABRIR MODAL EDITAR (LÁPIS)
         if (e.target.closest('.btn-edit-prhf')) {
             const btn = e.target.closest('.btn-edit-prhf');
             const pId = btn.getAttribute('data-prhf');
@@ -63,11 +60,8 @@ export async function gerirCliquesPRHF(e) {
             document.getElementById('prhf-modal-title').innerHTML = '<i class="fa-solid fa-pen" style="color:var(--warning-yellow);"></i> Editar PRHF';
             document.getElementById('erro-modal-prhf').style.display = 'none';
             
-            // Marca o modal como modo Edição
             document.getElementById('prhf-edit-id').value = pId;
             document.getElementById('prhf-edit-aluno-id').value = aId;
-            
-            // Esconde os campos de turma/bulk alunos (que só servem para criar)
             document.getElementById('prhf-turma').style.display = 'none';
             document.getElementById('prhf-alunos-bulk-container').style.display = 'none';
             
@@ -78,7 +72,6 @@ export async function gerirCliquesPRHF(e) {
             document.getElementById('modal-criar-prhf').style.display = 'flex';
             
             try {
-                // Vai buscar os dados originais ao Firebase
                 const pSnap = await getDoc(doc(db, "utilizadores", aId, "prhfs", pId));
                 if(pSnap.exists()) {
                     const data = pSnap.data();
@@ -86,12 +79,9 @@ export async function gerirCliquesPRHF(e) {
                     const nomeAluno = uSnap.exists() ? uSnap.data().nome : "Aluno";
                     
                     nameCont.innerText = `A editar plano de: ${nomeAluno}`;
-                    
                     const permitidas = getDisciplinasPermitidas();
                     document.getElementById('prhf-disciplina').innerHTML = permitidas.length > 0 ? permitidas.map(dc => `<option value="${dc}" ${dc === data.disciplina ? 'selected' : ''}>${dc}</option>`).join('') : '<option value="">Sem disciplinas</option>';
-                    
                     document.getElementById('prhf-modulo').innerHTML = `<option value="${data.modulo}">Módulo ${data.modulo}</option>`;
-                    
                     document.getElementById('prhf-horas-totais').value = data.horasTotais || '';
                     document.getElementById('prhf-horas-presenciais').value = data.horasPresenciais || '';
                     document.getElementById('prhf-urgente').checked = data.urgente || false;
@@ -112,11 +102,9 @@ export async function gerirCliquesPRHF(e) {
             return true;
         }
 
-        // 4. GRAVAR (CRIAR OU ATUALIZAR)
         if (e.target.closest('#btn-gravar-novo-prhf')) { 
             const isEdit = document.getElementById('prhf-edit-id').value !== '';
             const aIdEdit = document.getElementById('prhf-edit-aluno-id').value;
-            
             const tDisc = document.getElementById('prhf-disciplina').value; 
             const tMod = document.getElementById('prhf-modulo').value; 
             const tPrazo = document.getElementById('prhf-prazo').value; 
@@ -128,7 +116,7 @@ export async function gerirCliquesPRHF(e) {
             
             let alunosSelecionados = [];
             if (isEdit) {
-                alunosSelecionados = [aIdEdit]; // Se for edição, afeta só este aluno
+                alunosSelecionados = [aIdEdit]; 
             } else {
                 const chks = document.querySelectorAll('.prhf-aluno-check:checked');
                 alunosSelecionados = Array.from(chks).map(c => c.value);
@@ -146,13 +134,11 @@ export async function gerirCliquesPRHF(e) {
             
             try { 
                 if (isEdit) {
-                    // MODO ATUALIZAÇÃO (UPDATE)
                     await updateDoc(doc(db, "utilizadores", aIdEdit, "prhfs", document.getElementById('prhf-edit-id').value), {
                         disciplina: tDisc, modulo: Number(tMod), prazo: tPrazo, horasTotais: Number(tHorasT), 
                         horasPresenciais: Number(tHorasP), descricao: tDesc, urgente: urg, ficheiroBase64: state.prhfBase64
                     });
                 } else {
-                    // MODO CRIAÇÃO EM MASSA (CREATE)
                     for(const aId of alunosSelecionados) {
                         await addDoc(collection(db, "utilizadores", aId, "prhfs"), { 
                             disciplina: tDisc, modulo: Number(tMod), prazo: tPrazo, horasTotais: Number(tHorasT), 
@@ -186,7 +172,6 @@ export async function gerirCliquesPRHF(e) {
             return true; 
         }
 
-        // 5. VALIDAR PRESENÇA
         if (e.target.closest('.btn-validar-presenca')) { 
             const btn = e.target.closest('.btn-validar-presenca'); 
             const aId = btn.getAttribute('data-aluno'); 
@@ -196,7 +181,6 @@ export async function gerirCliquesPRHF(e) {
             return true; 
         }
 
-        // 6. PROPOR HORÁRIO
         if (e.target.closest('.btn-propor-prof')) { 
             const btn = e.target.closest('.btn-propor-prof'); 
             document.getElementById('prop-prof-aluno-id').value = btn.getAttribute('data-aluno'); 
@@ -210,7 +194,7 @@ export async function gerirCliquesPRHF(e) {
             const aId = document.getElementById('prop-prof-aluno-id').value; 
             const pId = document.getElementById('prop-prof-prhf-id').value; 
             const pd = document.getElementById('prop-prof-data').value; const pi = document.getElementById('prop-prof-inicio').value; const pf = document.getElementById('prop-prof-fim').value; 
-            if(!pd || !pi || !pf) return alert("Preenche todos os campos."); 
+            if(!pd || !pi || !pf) return true; 
             
             const btn = e.target.closest('#btn-confirmar-proposta-prof'); 
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true; 
@@ -222,7 +206,6 @@ export async function gerirCliquesPRHF(e) {
             return true; 
         }
 
-        // 7. CONCLUIR PLANO
         if (e.target.closest('.btn-concluir-prhf')) { 
             const btn = e.target.closest('.btn-concluir-prhf'); 
             document.getElementById('conc-aluno-id').value = btn.getAttribute('data-aluno'); 
