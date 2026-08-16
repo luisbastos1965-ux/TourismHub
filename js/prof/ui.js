@@ -1,4 +1,4 @@
-import { db } from "../firebase.js";
+import { db } from "../../firebase.js";
 import { doc, getDoc, collection, getDocs, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { state, ACADEMIAS_INFO, ordemDisciplinasGlobal, nomeCurto, getDisciplinasPermitidas } from "./store.js";
 
@@ -690,6 +690,252 @@ export async function abrirPerfil360Aluno(alunoId) {
     document.getElementById('modal-perfil-aluno').style.display = 'flex';
 }
 
+// AS FUNÇÕES QUE FALTAVAM AQUI! -------------------------------------
+
+export async function carregarTarefasProf() {
+    const isPRHFTab = document.getElementById('tab-tarefas-prhf').classList.contains('active');
+    const canSeePassaporteTab = (state.activeRole === 'diretor_turma' || state.activeRole === 'orientador_pap' || state.activeRole === 'coordenador');
+    document.getElementById('tab-tarefas-passaporte').style.display = canSeePassaporteTab ? 'inline-block' : 'none';
+    if (!canSeePassaporteTab && !isPRHFTab) { document.getElementById('tab-tarefas-prhf').click(); return; }
+
+    if (isPRHFTab) {
+        const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
+        if(isDT) { 
+            document.getElementById('btn-radar-conflitos').style.display = 'block'; 
+            document.getElementById('prhf-dt-toggles').style.display = 'flex'; 
+        } else { 
+            document.getElementById('btn-radar-conflitos').style.display = 'none'; 
+            document.getElementById('prhf-dt-toggles').style.display = 'none'; 
+        }
+
+        const container = document.getElementById('lista-prhfs-professor'); 
+        const histContainer = document.getElementById('lista-prhfs-historico');
+        
+        const workflowFiltroEl = document.getElementById('filtro-workflow-prhf');
+        const workflowFiltro = workflowFiltroEl ? workflowFiltroEl.value : 'todos';
+        
+        container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A procurar PRHFs...</p>';
+        histContainer.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar histórico...</p>';
+        
+        if (!state.turmasProfessor || state.turmasProfessor.length === 0) { 
+            container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-ban empty-state-icon"></i><p class="empty-state-desc">Sem turmas atribuídas.</p></div>'; 
+            histContainer.innerHTML = '<div class="empty-state"><i class="fa-solid fa-ban empty-state-icon"></i><p class="empty-state-desc">Sem turmas atribuídas.</p></div>';
+            return; 
+        }
+        
+        try {
+            let todosAlunos = []; 
+            for (const t of state.turmasProfessor) { 
+                const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); 
+                snap.forEach(d => todosAlunos.push({ id: d.id, ...d.data() })); 
+            }
+            
+            let todosPrhfs = []; 
+            for (const al of todosAlunos) { 
+                const pSnap = await getDocs(collection(db, "utilizadores", al.id, "prhfs")); 
+                pSnap.forEach(p => todosPrhfs.push({ id: p.id, alunoId: al.id, alunoNome: al.nome, turma: al.turma, ...p.data() })); 
+            }
+            
+            todosPrhfs.sort((a,b) => {
+                if (a.urgente && !b.urgente) return -1;
+                if (!a.urgente && b.urgente) return 1;
+                return new Date(a.prazo || 0) - new Date(b.prazo || 0);
+            }); 
+            
+            const matVerificar = (isDT && state.prhfViewMode === 'todas') ? ordemDisciplinasGlobal : state.disciplinasProfessor;
+            let pendentes = todosPrhfs.filter(p => p.status !== 'concluida' && matVerificar.includes(p.disciplina));
+            let concluidos = todosPrhfs.filter(p => p.status === 'concluida' && matVerificar.includes(p.disciplina));
+            
+            if (workflowFiltro === 'acao_prof') {
+                pendentes = pendentes.filter(p => p.propostaAluno && !p.propostaLidaDT);
+            }
+
+            let h = ''; 
+            if (pendentes.length === 0) { 
+                h = `<div class="empty-state"><i class="fa-solid fa-check empty-state-icon" style="color:var(--success-green);"></i><p class="empty-state-desc">Não há PRHFs pendentes para esta vista.</p></div>`; 
+            }
+            
+            pendentes.forEach(p => {
+                const souOProfessorDoPRHF = state.disciplinasProfessor.includes(p.disciplina) || p.professor === state.myUserName;
+                let acoesProposta = '';
+                let progresso = 25;
+                
+                if (p.propostaProfessor) { 
+                    acoesProposta = `<div style="background:rgba(0,153,255,0.1); border:1px dashed #0099ff; padding:10px; border-radius:8px; margin-top:10px;"><strong style="color:#0099ff; font-size:0.85rem;"><i class="fa-solid fa-clock"></i> Sugestão do Professor:</strong><p style="font-size:0.85rem; color:white; margin:5px 0;">${p.propostaProfessor}</p><span style="font-size:0.75rem; color:var(--text-muted);">A aguardar que o aluno aceite.</span></div>`; 
+                    progresso = 40;
+                } else if (p.propostaAluno && p.propostaLidaDT === false) { 
+                    acoesProposta = `<div style="background:rgba(255,204,0,0.1); border:1px dashed var(--warning-yellow); padding:10px; border-radius:8px; margin-top:10px;"><strong style="color:var(--warning-yellow); font-size:0.85rem;"><i class="fa-solid fa-clock"></i> Aluno sugere:</strong><p style="font-size:0.85rem; color:white; margin:5px 0;">${p.propostaAluno}</p><div style="display:flex; gap:10px; margin-top:10px;">${souOProfessorDoPRHF ? `<button class="primary-btn small-btn btn-aceitar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1; background:var(--success-green);"><i class="fa-solid fa-check"></i> Aceitar</button><button class="secondary-btn small-btn btn-rejeitar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-xmark"></i> Rejeitar</button>` : `<span style="font-size:0.75rem; color:var(--warning-yellow);">A aguardar aprovação do prof. ${p.disciplina}</span>`}</div></div>`; 
+                    progresso = 50;
+                } else if (p.propostaAluno && p.propostaLidaDT === true) { 
+                    acoesProposta = `<div style="margin-top:10px; font-size:0.8rem; color:var(--success-green);"><i class="fa-solid fa-calendar-check"></i> Sessão Presencial Agendada (${p.propostaProfessor || p.propostaAluno})</div>`; 
+                    progresso = 75;
+                }
+
+                if(p.presencaValidada) progresso = 90;
+
+                let conflitoTag = ''; 
+                if(isDT && p.propostaLidaDT) { 
+                    const allDataDesc = todosPrhfs.filter(px => px.id !== p.id && px.propostaLidaDT).map(px => px.propostaProfessor || px.propostaAluno); 
+                    if(allDataDesc.includes(p.propostaProfessor || p.propostaAluno)) { 
+                        conflitoTag = `<span style="background:var(--danger-red); color:white; font-size:0.6rem; padding:2px 6px; border-radius:4px; font-weight:bold; margin-left:8px;">⚠️ CONFLITO</span>`; 
+                    } 
+                }
+
+                const isUrgente = p.urgente; 
+                const corCard = isUrgente ? 'var(--danger-red)' : 'var(--warning-yellow)'; 
+                const txtSt = isUrgente ? 'URGENTE' : 'EM CURSO'; 
+                const hPres = Number(p.horasPresenciais || 0);
+                
+                const barraProgressoHtml = `<div style="width:100%; background:rgba(255,255,255,0.1); height:6px; border-radius:3px; margin: 10px 0; overflow:hidden;"><div style="width:${progresso}%; background:${corCard}; height:100%; border-radius:3px; transition:width 0.5s ease;"></div></div>`;
+
+                let btnAction = '';
+                if(souOProfessorDoPRHF) { 
+                    if (hPres > 0) { 
+                        if (!p.propostaLidaDT) { 
+                            btnAction = `<button class="secondary-btn small-btn" disabled style="width:100%; opacity:0.5;"><i class="fa-solid fa-clock"></i> Aguarda Horário</button>`; 
+                        } else if (!p.presencaValidada) { 
+                            btnAction = `<button class="primary-btn small-btn btn-validar-presenca" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="width:100%; background:var(--warning-yellow); color:black;"><i class="fa-solid fa-user-check"></i> Validar Presença</button>`; 
+                        } else { 
+                            btnAction = `<button class="btn-concluir-prhf primary-btn small-btn" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="width:100%; background:var(--success-green); color:white;"><i class="fa-solid fa-clipboard-check"></i> Fechar Plano</button>`; 
+                        } 
+                    } else { 
+                        btnAction = `<button class="btn-concluir-prhf primary-btn small-btn" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="width:100%; background:var(--success-green); color:white;"><i class="fa-solid fa-clipboard-check"></i> Fechar Plano</button>`; 
+                    } 
+                }
+                
+                const dataPrint = p.prazo ? p.prazo.split('-').reverse().join('/') : 'S/ Prazo';
+                
+                h += `
+                <div class="card" style="margin-bottom:15px; border-left: 4px solid ${corCard}; position:relative;">
+                    <button class="btn-edit-prhf" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.1rem;"><i class="fa-solid fa-pen"></i></button>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div style="width: 85%;">
+                            <strong style="color:white; font-size:1.05rem;">${nomeCurto(p.alunoNome)} <span style="font-size:0.75rem; color:var(--text-muted);">(${p.turma})</span></strong>
+                            <div style="color:${corCard}; font-weight:bold; font-size:0.9rem; margin-top:3px;">${p.disciplina} (Mod. ${p.modulo}) - ${txtSt} ${conflitoTag}</div>
+                            ${barraProgressoHtml}
+                        </div>
+                    </div>
+                    <p style="font-size:0.85rem; color:var(--text-light); margin:5px 0 10px 0;">${p.descricao}</p>
+                    <div style="font-size:0.8rem; color:var(--text-muted);">Prazo: <strong style="color:white;">${dataPrint}</strong> | Presenciais: <strong>${hPres}h</strong></div>
+                    ${acoesProposta} 
+                    <div style="display:flex; gap:10px; margin-top:10px;">
+                        ${souOProfessorDoPRHF ? `<button class="secondary-btn small-btn btn-propor-prof" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1;"><i class="fa-regular fa-calendar"></i> Sugerir</button>` : ''} 
+                        ${btnAction}
+                    </div>
+                </div>`;
+            }); 
+            container.innerHTML = h;
+
+            const dFiltro = document.getElementById('filtro-prhf-data').value; 
+            const mFiltro = document.getElementById('filtro-prhf-modulo').value; 
+            let concluidosFiltrados = concluidos;
+            
+            if(mFiltro) concluidosFiltrados = concluidosFiltrados.filter(c => c.modulo == mFiltro);
+            concluidosFiltrados.sort((a,b) => { 
+                const da = a.dataCriacao ? new Date(a.dataCriacao) : 0; 
+                const db = b.dataCriacao ? new Date(b.dataCriacao) : 0; 
+                return dFiltro === 'desc' ? db - da : da - db; 
+            });
+
+            let histHtml = '';
+            if (concluidosFiltrados.length === 0) { 
+                histHtml += `<div class="empty-state"><i class="fa-solid fa-clock-rotate-left empty-state-icon"></i><p class="empty-state-desc">Nenhum plano registado no histórico com estes filtros.</p></div>`; 
+            } else { 
+                concluidosFiltrados.forEach(c => { 
+                    const dataConcluida = c.dataCriacao ? new Date(c.dataCriacao).toLocaleDateString('pt-PT') : 'Antigo'; 
+                    histHtml += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); border-left: 3px solid var(--success-green); padding:10px; border-radius:6px; margin-bottom:8px;">
+                        <div>
+                            <strong style="color:white; font-size:0.95rem;">${nomeCurto(c.alunoNome)} <span style="font-size:0.75rem; color:var(--text-muted);">(${c.turma})</span></strong><br>
+                            <span style="font-size:0.8rem; color:var(--success-green);">${c.disciplina} - Módulo ${c.modulo}</span>
+                        </div>
+                        <div style="text-align:right;">
+                            <span style="font-size:0.7rem; color:var(--text-muted);">Concluído</span><br>
+                            <strong style="font-size:0.8rem; color:white;">${dataConcluida}</strong>
+                        </div>
+                    </div>`; 
+                }); 
+            }
+            histContainer.innerHTML = histHtml;
+        } catch (e) { 
+            console.error("Erro PRHF:", e);
+            container.innerHTML = '<p class="text-danger center">Erro ao carregar PRHFs pendentes.</p>'; 
+            histContainer.innerHTML = '<p class="text-danger center">Erro ao carregar histórico.</p>';
+        }
+    } else {
+        const container = document.getElementById('lista-passaportes-professor'); 
+        container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar passaportes...</p>';
+        try {
+            let todosAlunos = []; 
+            for (const t of state.turmasProfessor) { 
+                const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); 
+                snap.forEach(d => todosAlunos.push({ id: d.id, ...d.data() })); 
+            }
+            
+            const sortMode = document.getElementById('sort-passaporte').value;
+            if(sortMode === 'fct') { 
+                todosAlunos.sort((a,b) => (b.fct?.horasRealizadas || 0) - (a.fct?.horasRealizadas || 0)); 
+            }
+
+            let h = '';
+            todosAlunos.forEach(al => {
+                const turmaAno = parseInt(al.turma.match(/\d+/)?.[0]) || 10;
+                let showFCT = turmaAno >= 11; let showPAP = turmaAno === 12;
+                if(!showFCT && !showPAP) return;
+
+                let fctHtml = ''; 
+                if (showFCT) { 
+                    if (al.fct && al.fct.horasRealizadas > 0) { 
+                        if (al.fct.validadoDT) { 
+                            fctHtml = `<span style="color:var(--success-green); font-size:0.8rem;"><i class="fa-solid fa-check-double"></i> ${al.fct.horasRealizadas}h Validadas</span>`; 
+                        } else { 
+                            let btnValidar = state.activeRole === 'coordenador' || state.activeRole === 'diretor_turma' ? `<button class="primary-btn small-btn btn-validar-fct" data-id="${al.id}" style="width:auto; padding:4px 10px;">Validar</button>` : `<span style="font-size:0.75rem; color:var(--text-muted);">A aguardar validação.</span>`; 
+                            fctHtml = `<div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:var(--warning-yellow); font-size:0.8rem;">${al.fct.horasRealizadas}h declaradas</span> ${btnValidar}</div>`; 
+                        } 
+                    } else { 
+                        fctHtml = `<span style="color:var(--text-muted); font-size:0.8rem;">Sem registos FCT.</span>`; 
+                    } 
+                }
+
+                let papHtml = ''; 
+                if (showPAP) { 
+                    if (al.papFicheiroEnviado && al.papFicheiroBase64) { 
+                        if (state.activeRole === 'orientador_pap' || state.activeRole === 'diretor_turma' || state.activeRole === 'coordenador') { 
+                            papHtml = `
+                            <span style="color:white; font-size:0.85rem; display:block; margin-bottom:5px;">Tema: ${al.pap?.tema || 'Desconhecido'}</span>
+                            <a href="${al.papFicheiroBase64}" download="PAP_${al.nome.replace(/\s+/g, '_')}" class="secondary-btn small-btn" style="color:#0099ff; border-color:#0099ff; display:inline-block; text-align:center; margin-bottom:5px;"><i class="fa-solid fa-download"></i> Baixar Relatório Final</a>`; 
+                            
+                            if (state.activeRole === 'orientador_pap') { 
+                                if (!al.pap.relatorioAprovado) { 
+                                    papHtml += `<button class="primary-btn small-btn btn-aprovar-relatorio" data-id="${al.id}" style="width:100%; background:var(--success-green); margin-top:5px;"><i class="fa-solid fa-check"></i> Aprovar Relatório</button>`; 
+                                } else { 
+                                    papHtml += `<span style="color:var(--success-green); font-size:0.8rem; display:block; margin-top:5px;"><i class="fa-solid fa-check-double"></i> Apto para Apresentação Final</span>`; 
+                                } 
+                            } 
+                        } else { 
+                            papHtml = `<span style="color:var(--success-green); font-size:0.8rem;"><i class="fa-solid fa-check"></i> Relatório submetido</span>`; 
+                        } 
+                    } else if (al.pap && al.pap.tema) { 
+                        let statusTag = al.pap.temaAprovado ? `<span style="color:var(--warning-yellow);">Em Desenvolvimento</span>` : `<span style="color:#00d2ff;">A Aguardar Aprovação</span>`; 
+                        papHtml = `<span style="color:var(--text-light); font-size:0.8rem;">Tema: <strong style="color:white;">${al.pap.tema}</strong><br>${statusTag}</span>`; 
+                        if (state.activeRole === 'orientador_pap' && !al.pap.temaAprovado) { 
+                            papHtml += `<div style="display:flex; gap:10px; margin-top:10px;"><button class="primary-btn small-btn btn-aprovar-tema" data-id="${al.id}" style="flex:1; background:var(--success-green);"><i class="fa-solid fa-check"></i> Aceitar</button><button class="secondary-btn small-btn btn-rejeitar-tema" data-id="${al.id}" style="flex:1; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-xmark"></i> Rejeitar</button></div>`; 
+                        } 
+                    } else { 
+                        papHtml = `<span style="color:var(--text-muted); font-size:0.8rem;">Por iniciar.</span>`; 
+                    } 
+                }
+
+                let bodyHtml = '';
+                if(showFCT) bodyHtml += `<div style="margin-top:10px; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px dashed #333;"><strong style="font-size:0.85rem; color:white;"><i class="fa-solid fa-briefcase" style="color:var(--primary-green);"></i> FCT (Estágio)</strong><div style="margin-top:5px;">${fctHtml}</div></div>`;
+                if(showPAP) bodyHtml += `<div style="margin-top:10px; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px dashed #333;"><strong style="font-size:0.85rem; color:white;"><i class="fa-solid fa-laptop-code" style="color:#0099ff;"></i> Projeto de Aptidão Profissional (PAP)</strong><div style="margin-top:5px;">${papHtml}</div></div>`;
+                h += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #ff9900;"><strong style="color:white; font-size:1.05rem;">${nomeCurto(al.nome)} <span style="font-size:0.75rem; color:var(--text-muted);">(${al.turma})</span></strong>${bodyHtml}</div>`;
+            }); 
+            container.innerHTML = h === '' ? '<div class="empty-state"><i class="fa-solid fa-briefcase empty-state-icon"></i><p class="empty-state-desc">Nenhum aluno submeteu dados de Passaporte.</p></div>' : h;
+        } catch (e) { container.innerHTML = '<p class="text-danger center">Erro ao carregar passaportes.</p>'; }
+    }
+}
+
 export async function carregarForunsProf() {
     const cont = document.getElementById('prof-forum-channel-list'); 
     cont.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A ler canais...</p>';
@@ -726,8 +972,6 @@ export async function carregarForunsProf() {
     }
 
     let html = '<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Estrutura da Turma</h3>';
-    
-    // Sem as setinhas do Fórum
     html += `<div class="canal-card" data-turma="Global" data-disc="Coordenador" data-nome="Coordenador de Curso"><div class="canal-icon" style="color:#ff4d4d; border-color:#ff4d4d;"><i class="fa-solid fa-sitemap"></i></div><div class="canal-info" style="flex:1; display:flex; justify-content:space-between; align-items:center;"><h4>Coordenador de Curso</h4><span class="notification-badge" style="position:relative; top:0; right:0; display:none;">!</span></div></div>`;
 
     state.turmasProfessor.forEach(t => {
