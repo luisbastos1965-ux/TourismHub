@@ -179,16 +179,42 @@
                 <div id="lista-coord-projetos-dinamico" style="display: flex; flex-direction: column; gap: 10px;"></div>
             </div>
 
+            <!-- FÓRUM E CHATS -->
             <div id="view-prof-forum" style="display: none; flex-direction:column;">
                 <button id="btn-create-chat-prof" class="primary-btn" style="background:var(--bg-dark); border:2px dashed var(--primary-green); color:var(--primary-green); margin-bottom: 20px;"><i class="fa-solid fa-plus"></i> Criar Novo Chat</button>
                 <div id="prof-forum-channel-list"></div>
+                
                 <div id="prof-forum-chat-view" class="forum-container" style="display: none;">
                     <div style="background: #222; padding: 15px; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 15px;">
                         <button id="btn-prof-voltar-canais" class="icon-btn" style="color:var(--primary-green);"><i class="fa-solid fa-arrow-left"></i></button>
                         <h3 id="prof-chat-active-title" style="color: white; margin:0; font-size:1.1rem;">Chat</h3>
                     </div>
+                    
+                    <!-- NOVO: BANNER DE MENSAGEM FIXA -->
+                    <div id="prof-chat-pinned-banner" style="display:none; background:rgba(245, 158, 11, 0.15); border-bottom:1px solid #333; padding:10px 15px; align-items:center; gap:12px;">
+                        <i class="fa-solid fa-thumbtack" style="color:var(--warning-yellow); font-size:1.2rem;"></i>
+                        <div style="flex:1; overflow:hidden;">
+                            <span style="font-size:0.7rem; color:var(--warning-yellow); font-weight:bold; text-transform:uppercase; display:block; margin-bottom:2px;">Mensagem Fixada</span>
+                            <p id="prof-chat-pinned-text" style="margin:0; font-size:0.85rem; color:white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">...</p>
+                        </div>
+                        <button id="btn-unpin-msg" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:5px;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+
                     <div id="prof-chat-messages-container" class="forum-messages"></div>
+                    
+                    <!-- NOVO: PRÉ-VISUALIZAÇÃO DE ANEXO (CLIPE) -->
+                    <div id="prof-forum-attachment-preview" style="display:none; background:#111; padding:8px 15px; border-top:1px solid #333; align-items:center; justify-content:space-between;">
+                        <span id="prof-forum-attachment-name" style="font-size:0.8rem; color:var(--primary-green);"><i class="fa-solid fa-file"></i> Ficheiro.pdf</span>
+                        <button id="btn-prof-remove-attachment" style="background:none; border:none; color:var(--danger-red); cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+
                     <div class="forum-input-area">
+                        <!-- NOVO: BOTÃO DE CLIPE -->
+                        <label style="cursor:pointer; color:var(--text-muted); font-size:1.4rem; padding:8px; margin:0; transition:0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--text-muted)'">
+                            <i class="fa-solid fa-paperclip"></i>
+                            <input type="file" id="prof-forum-file-input" style="display:none;" accept=".pdf,.png,.jpg,.jpeg">
+                        </label>
+                        
                         <input type="text" id="prof-input-forum-msg" class="input-padrao" placeholder="Escreve uma mensagem...">
                         <button id="btn-prof-send-msg" class="forum-send-btn"><i class="fa-solid fa-paper-plane"></i></button>
                     </div>
@@ -574,7 +600,6 @@
                         <button id="btn-forum-deselect-all" class="secondary-btn small-btn" style="flex:1; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-square-minus"></i> Nenhum</button>
                     </div>
 
-                    <!-- GRELHA 2 COLUNAS DE ALUNOS -->
                     <div id="lista-alunos-forum" style="max-height: 250px; overflow-y: auto; background: #111; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
                         <p class="text-muted center" style="grid-column: span 2; font-size:0.8rem;">Seleciona turma primeiro.</p>
                     </div>
@@ -602,7 +627,6 @@
                         <button id="btn-edit-forum-deselect-all" class="secondary-btn small-btn" style="flex:1; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-square-minus"></i> Nenhum</button>
                     </div>
 
-                    <!-- GRELHA 2 COLUNAS DE ALUNOS -->
                     <div id="lista-alunos-edit-forum" style="max-height: 250px; overflow-y: auto; background: #111; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
                         <p class="text-muted center" style="grid-column: span 2; font-size:0.8rem;">A carregar membros...</p>
                     </div>
