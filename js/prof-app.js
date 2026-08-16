@@ -11,7 +11,7 @@ import { validarFCT } from "./prof/roles/coord.js";
 import { aprovarTemaPAP, rejeitarTemaPAPExecutar, aprovarRelatorioPAP } from "./prof/roles/pap.js";
 import { gerarRadarConflitos } from "./prof/roles/dt.js";
 
-// === OS NOSSOS 4 MÓDULOS DE CLIQUES ===
+// OS NOSSOS 4 MÓDULOS 
 import { gerirCliquesForum } from "./prof/roles/forum.js";
 import { gerirCliquesPRHF } from "./prof/roles/prhf.js";
 import { gerirCliquesTurmas } from "./prof/roles/turmas.js";
@@ -138,17 +138,6 @@ document.body.addEventListener('input', (e) => {
 
 document.body.addEventListener('change', async (e) => {
     if (e.target.id === 'filtro-workflow-prhf') { carregarTarefasProf(); return; }
-
-    if (e.target.classList.contains('forum-aluno-check') || e.target.classList.contains('edit-forum-aluno-check') || e.target.classList.contains('prhf-aluno-check')) {
-        const chk = e.target; 
-        const lbl = chk.closest('label');
-        if (lbl) {
-            if (chk.checked) { 
-                if (chk.classList.contains('prhf-aluno-check')) { lbl.style.background = 'rgba(239, 68, 68, 0.15)'; lbl.style.borderColor = 'var(--danger-red)'; } 
-                else { lbl.style.background = 'rgba(0, 204, 136, 0.15)'; lbl.style.borderColor = 'var(--primary-green)'; }
-            } else { lbl.style.background = 'rgba(0,0,0,0.2)'; lbl.style.borderColor = '#333'; }
-        }
-    }
 
     if (e.target.id === 'prhf-disciplina') {
         const t = document.getElementById('prhf-turma').value;
