@@ -12,7 +12,6 @@ export async function gerirCliquesForum(e) {
             const modal = document.getElementById('modal-criar-forum');
             if (modal) {
                 modal.style.display = 'flex';
-                modal.style.zIndex = '5000'; 
             }
 
             const selTurmas = document.getElementById('forum-turma-select');
