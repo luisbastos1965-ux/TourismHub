@@ -146,6 +146,26 @@ onAuthStateChanged(auth, async (user) => {
 
 
 // ========================================================
+// FÓRUM - CARREGAR ANEXOS 
+// ========================================================
+document.getElementById('prof-forum-file-input')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (file.size > 2 * 1024 * 1024) return alert("Ficheiro demasiado grande (Máx: 2MB).");
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        state.chatAttachmentBase64 = event.target.result;
+        state.chatAttachmentName = file.name;
+        document.getElementById('prof-forum-attachment-name').innerHTML = `<i class="fa-solid fa-file"></i> ${file.name}`;
+        document.getElementById('prof-forum-attachment-preview').style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+});
+
+
+// ========================================================
 // DROPDOWNS E ATUALIZAÇÕES GERAIS (Fora do click global)
 // ========================================================
 
@@ -172,7 +192,6 @@ document.getElementById('forum-turma-select')?.addEventListener('change', async 
         
         let cH = ''; 
         arr.forEach(d => { 
-            // Ocultamos a checkbox nativa mas o label captura o clique e desenha o bloco!
             cH += `
             <label class="forum-member-card" style="display:flex; justify-content:center; align-items:center; background:rgba(0, 204, 136, 0.15); border:1px solid var(--primary-green); padding:10px; border-radius:8px; cursor:pointer; transition:all 0.2s; text-align:center; height: 100%;">
                 <span style="color:white; font-size:0.9rem; font-weight:500; text-align:center;">${nomeCurto(d.nome)}</span>
@@ -225,6 +244,7 @@ document.body.addEventListener('click', async (e) => {
             targetView.style.display = (tId === 'view-prof-forum') ? 'flex' : 'block';
         }
         
+        // Dispara as funções de carregamento dependendo da vista selecionada
         if (tId === 'view-prof-dashboard') carregarRadarProfessor();
         if (tId === 'view-prof-turmas' && state.selectedTurma) analisarEAtualizarTurma(state.selectedTurma);
         if (tId === 'view-prof-tarefas') carregarTarefasProf();
@@ -235,6 +255,10 @@ document.body.addEventListener('click', async (e) => {
             if (state.chatUnsubscribe) {
                 state.chatUnsubscribe();
                 state.chatUnsubscribe = null;
+            }
+            if (state.chatMetaUnsubscribe) {
+                state.chatMetaUnsubscribe();
+                state.chatMetaUnsubscribe = null;
             }
             document.getElementById('prof-forum-chat-view').style.display = 'none';
             document.getElementById('btn-create-chat-prof').style.display = 'block';
@@ -269,7 +293,7 @@ document.body.addEventListener('click', async (e) => {
     }
 
     // ========================================================
-    // AÇÕES DO FÓRUM (Botões Rápidos)
+    // AÇÕES DO FÓRUM (Seleção em Massa)
     // ========================================================
 
     // Fórum Criar: Selecionar Todos
@@ -353,7 +377,7 @@ document.body.addEventListener('click', async (e) => {
                     
                     cH += `
                     <label class="forum-member-card" style="display:flex; justify-content:center; align-items:center; background:${bg}; border:1px solid ${border}; padding:10px; border-radius:8px; cursor:pointer; transition:all 0.2s; text-align:center; height: 100%;">
-                        <span style="color:white; font-size:0.9rem; font-weight:500;">${nomeCurto(d.nome)}</span>
+                        <span style="color:white; font-size:0.95rem; font-weight:500;">${nomeCurto(d.nome)}</span>
                         <input type="checkbox" class="edit-forum-aluno-check" value="${d.id}" ${isChecked} style="display:none;">
                     </label>`; 
                 }); 
@@ -366,7 +390,7 @@ document.body.addEventListener('click', async (e) => {
     }
 
     // ========================================================
-    // TABS (Separadores de Navegação no Topo)
+    // TABS E SUB-NAVEGAÇÕES
     // ========================================================
     if (e.target.closest('#tab-coord-fct')) { 
         document.getElementById('tab-coord-fct').classList.add('active'); 
@@ -605,8 +629,40 @@ document.body.addEventListener('click', async (e) => {
     }
 
     // ========================================================
-    // GESTÃO E GRAVAÇÃO DO FÓRUM
+    // GESTÃO E GRAVAÇÃO DO FÓRUM (MENSAGENS, PINS E ANEXOS)
     // ========================================================
+    if (e.target.closest('#btn-prof-remove-attachment')) {
+        state.chatAttachmentBase64 = null;
+        state.chatAttachmentName = null;
+        document.getElementById('prof-forum-file-input').value = '';
+        document.getElementById('prof-forum-attachment-preview').style.display = 'none';
+        return;
+    }
+
+    if (e.target.closest('.btn-pin-msg')) {
+        const btn = e.target.closest('.btn-pin-msg');
+        const textToPin = btn.getAttribute('data-text');
+        
+        if(!state.activeChatTurma || !state.activeChatDisc) return;
+        
+        try {
+            await updateDoc(doc(db, "turmas", state.activeChatTurma, "foruns", state.activeChatDisc), {
+                pinnedMessage: textToPin
+            });
+        } catch(err) { alert("Erro ao fixar mensagem."); }
+        return;
+    }
+
+    if (e.target.closest('#btn-unpin-msg')) {
+        if(!state.activeChatTurma || !state.activeChatDisc) return;
+        try {
+            await updateDoc(doc(db, "turmas", state.activeChatTurma, "foruns", state.activeChatDisc), {
+                pinnedMessage: null
+            });
+        } catch(err) {}
+        return;
+    }
+
     if (e.target.closest('#btn-guardar-edit-forum')) { 
         const cId = document.getElementById('edit-forum-id').value; 
         const t = document.getElementById('edit-forum-turma').value; 
@@ -663,34 +719,71 @@ document.body.addEventListener('click', async (e) => {
 
     if (e.target.closest('.canal-card')) { 
         const card = e.target.closest('.canal-card'); 
-        abrirChatForum(card.getAttribute('data-turma'), card.getAttribute('data-disc'), card.getAttribute('data-nome')); 
+        const t = card.getAttribute('data-turma');
+        const d = card.getAttribute('data-disc');
+        
+        // Atualiza leitura assim que abre o chat (Tracking Badges)
+        try {
+            setDoc(doc(db, "turmas", t, "foruns", d), {
+                [`lastRead_${state.myUserId}`]: Date.now()
+            }, { merge: true });
+        } catch(err){}
+        
+        abrirChatForum(t, d, card.getAttribute('data-nome')); 
         return; 
     }
 
     if (e.target.closest('#btn-prof-voltar-canais')) { 
-        if (state.chatUnsubscribe) { 
-            state.chatUnsubscribe(); 
-            state.chatUnsubscribe = null; 
-        } 
+        // Atualiza a leitura ao sair do chat (Tracking Badges)
+        if(state.activeChatTurma && state.activeChatDisc) {
+            try {
+                setDoc(doc(db, "turmas", state.activeChatTurma, "foruns", state.activeChatDisc), {
+                    [`lastRead_${state.myUserId}`]: Date.now()
+                }, { merge: true });
+            } catch(err){}
+        }
+        
+        if (state.chatUnsubscribe) { state.chatUnsubscribe(); state.chatUnsubscribe = null; } 
+        if (state.chatMetaUnsubscribe) { state.chatMetaUnsubscribe(); state.chatMetaUnsubscribe = null; } 
+        
         document.getElementById('prof-forum-chat-view').style.display = 'none'; 
         document.getElementById('btn-create-chat-prof').style.display = 'block'; 
         document.getElementById('prof-forum-channel-list').style.display = 'block'; 
+        
+        carregarForunsProf(); // Refresca os cartões para apagar as badges se for caso disso
         return; 
     }
 
     if (e.target.closest('#btn-prof-send-msg')) { 
         const msgInput = document.getElementById('prof-input-forum-msg'); 
         const msg = msgInput.value.trim(); 
-        if (!msg || !state.activeChatTurma || !state.activeChatDisc) return; 
+        
+        // Exige que exista pelo menos texto OU anexo
+        if ((!msg && !state.chatAttachmentBase64) || !state.activeChatTurma || !state.activeChatDisc) return; 
         
         try { 
             await addDoc(collection(db, "turmas", state.activeChatTurma, "foruns", state.activeChatDisc, "mensagens"), { 
-                texto: msg, 
+                texto: msg || "", 
+                anexoBase64: state.chatAttachmentBase64 || null,
+                anexoNome: state.chatAttachmentName || null,
                 autor: state.myUserName, 
                 papel: "professor", 
                 timestamp: Date.now() 
             }); 
+            
             msgInput.value = ''; 
+            
+            // Limpa Anexos do UI e State
+            state.chatAttachmentBase64 = null;
+            state.chatAttachmentName = null;
+            document.getElementById('prof-forum-file-input').value = '';
+            document.getElementById('prof-forum-attachment-preview').style.display = 'none';
+            
+            // Atualiza o documento principal para as Badges do Fórum
+            await updateDoc(doc(db, "turmas", state.activeChatTurma, "foruns", state.activeChatDisc), {
+                lastMessageTimestamp: Date.now()
+            });
+
         } catch (err) { alert("Erro ao enviar."); } 
         return; 
     }
@@ -722,7 +815,8 @@ document.body.addEventListener('click', async (e) => {
                 tipo: 'permanente', 
                 isDefault: false, 
                 membros: mbr, 
-                criadoPor: state.myUserName 
+                criadoPor: state.myUserName,
+                lastMessageTimestamp: Date.now()
             }); 
             document.getElementById('modal-criar-forum').style.display = 'none'; 
             btnConf.innerHTML = 'Criar Chat'; 
