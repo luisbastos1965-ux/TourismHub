@@ -83,7 +83,7 @@ export function iniciarCarrossel() {
 }
 
 // ==========================================
-// VISTAS E GERAÇÃO DE DADOS (Não minificadas)
+// VISTAS E GERAÇÃO DE DADOS 
 // ==========================================
 export async function carregarRadarProfessor() {
     const cardAssistente = document.getElementById('assistente-global-texto')?.closest('.card');
@@ -693,9 +693,6 @@ export async function abrirPerfil360Aluno(alunoId) {
 // ==========================================
 // A NOVA FUNÇÃO PRHF: ORDENAÇÃO E EDIÇÃO
 // ==========================================
-// Adicionado evento no filtro de workflow
-document.getElementById('filtro-workflow-prhf')?.addEventListener('change', carregarTarefasProf);
-
 export async function carregarTarefasProf() {
     const isPRHFTab = document.getElementById('tab-tarefas-prhf').classList.contains('active');
     const canSeePassaporteTab = (state.activeRole === 'diretor_turma' || state.activeRole === 'orientador_pap' || state.activeRole === 'coordenador');
@@ -714,7 +711,10 @@ export async function carregarTarefasProf() {
 
         const container = document.getElementById('lista-prhfs-professor'); 
         const histContainer = document.getElementById('lista-prhfs-historico');
-        const workflowFiltro = document.getElementById('filtro-workflow-prhf').value;
+        
+        // Elemento de filtro capturado aqui dentro, de forma 100% segura!
+        const workflowFiltroEl = document.getElementById('filtro-workflow-prhf');
+        const workflowFiltro = workflowFiltroEl ? workflowFiltroEl.value : 'todos';
         
         container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A procurar PRHFs...</p>';
         histContainer.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar histórico...</p>';
@@ -941,3 +941,128 @@ export async function carregarTarefasProf() {
         } catch (e) { container.innerHTML = '<p class="text-danger center">Erro ao carregar passaportes.</p>'; }
     }
 }
+
+// ... FÓRUM E EXPORTAÇÃO MANTIDOS ...
+export async function carregarForunsProf() {
+    const cont = document.getElementById('prof-forum-channel-list'); 
+    cont.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A ler canais...</p>';
+    if(!state.turmasProfessor || state.turmasProfessor.length === 0) { 
+        cont.innerHTML = '<div class="empty-state"><i class="fa-solid fa-comments empty-state-icon"></i><p class="empty-state-desc">Não tens turmas atribuídas para visualizar fóruns.</p></div>'; 
+        return; 
+    }
+
+    if (state.activeRole === 'orientador_pap') {
+        let html = '<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Rede de Orientação</h3><div class="canal-card" data-turma="Global" data-disc="Orientadores" data-nome="Equipa de Orientadores"><div class="canal-icon" style="color:var(--success-green); border-color:var(--success-green);"><i class="fa-solid fa-users-viewfinder"></i></div><div class="canal-info" style="flex:1;"><h4>Equipa de Orientadores</h4><p>Chat fechado de coordenação</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div><h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Os Meus Orientandos</h3>';
+        let temAlunos = false;
+        try {
+            let meusOrientandos = [];
+            for (const t of state.turmasProfessor) { 
+                const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); 
+                snap.forEach(d => { 
+                    const data = d.data(); 
+                    if (data.pap && (data.pap.orientador === state.myUserName || data.pap.orientador === state.myUserId)) { 
+                        meusOrientandos.push({ id: d.id, ...data }); 
+                    } 
+                }); 
+            }
+            if (meusOrientandos.length > 0) {
+                temAlunos = true;
+                html += `<div class="canal-card" data-turma="Global" data-disc="Avisos_Orientandos_${state.myUserId}" data-nome="Avisos (Todos os Orientandos)"><div class="canal-icon" style="color:#0099ff; border-color:#0099ff;"><i class="fa-solid fa-bullhorn"></i></div><div class="canal-info" style="flex:1;"><h4>Avisos Gerais</h4><p>Mensagem para os teus alunos</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
+                meusOrientandos.forEach(al => { 
+                    html += `<div class="canal-card" data-turma="${al.turma}" data-disc="PAP_${al.id}" data-nome="PAP - ${nomeCurto(al.nome)}"><div class="canal-icon" style="color:var(--warning-yellow); border-color:var(--warning-yellow); padding:0; overflow:hidden;"><img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=333&color=fff`}" style="width:100%;height:100%;object-fit:cover;"></div><div class="canal-info" style="flex:1;"><h4>${nomeCurto(al.nome)}</h4><p>Apoio Individual</p></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`; 
+                });
+            }
+        } catch(e) {}
+        if (!temAlunos) html += '<p class="text-muted center" style="font-size:0.85rem;">Não tens orientandos atribuídos neste momento.</p>';
+        cont.innerHTML = `<div class="forum-canais-grid">${html}</div>`; 
+        return; 
+    }
+
+    let html = '<h3 style="font-size:1rem; color:var(--text-muted); margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">Estrutura da Turma</h3>';
+    html += `<div class="canal-card" data-turma="Global" data-disc="Coordenador" data-nome="Coordenador de Curso"><div class="canal-icon" style="color:#ff4d4d; border-color:#ff4d4d;"><i class="fa-solid fa-sitemap"></i></div><div class="canal-info" style="flex:1; display:flex; justify-content:space-between; align-items:center;"><h4>Coordenador de Curso</h4><span class="notification-badge" style="position:relative; top:0; right:0; display:none;">!</span></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
+
+    state.turmasProfessor.forEach(t => {
+        html += `<div class="canal-card" data-turma="${t}" data-disc="Professores" data-nome="Conselho de Turma - ${t}"><div class="canal-icon" style="color:#b82bf2; border-color:#b82bf2;"><i class="fa-solid fa-chalkboard-user"></i></div><div class="canal-info" style="flex:1; display:flex; justify-content:space-between; align-items:center;"><h4>Conselho de Turma - ${t}</h4><span class="notification-badge" style="position:relative; top:0; right:0; display:none;">!</span></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
+        html += `<div class="canal-card" data-turma="${t}" data-disc="DT_Privado" data-nome="Diretor de Turma - ${t}"><div class="canal-icon" style="color:#ffaa00; border-color:#ffaa00;"><i class="fa-solid fa-user-tie"></i></div><div class="canal-info" style="flex:1; display:flex; justify-content:space-between; align-items:center;"><h4>Diretor de Turma - ${t}</h4><span class="notification-badge" style="position:relative; top:0; right:0; display:none;">!</span></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`;
+    });
+    
+    html += '<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">A Minha Disciplina</h3>';
+    state.turmasProfessor.forEach(t => { 
+        const discValidas = filtrarDisciplinasDoAno(t, state.disciplinasProfessor);
+        discValidas.forEach(d => { 
+            html += `<div class="canal-card" data-turma="${t}" data-disc="${d}" data-nome="Apoio a ${d}"><div class="canal-icon" style="color:#00d2ff; border-color:#00d2ff;"><i class="fa-solid fa-book-open"></i></div><div class="canal-info" style="flex:1; display:flex; justify-content:space-between; align-items:center;"><div><h4>Apoio a ${d}</h4><p>Turma ${t}</p></div><span class="notification-badge" style="position:relative; top:0; right:0; display:none;">!</span></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i></div>`; 
+        }); 
+    });
+
+    html += '<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Chats Personalizados</h3>';
+    let encontrouPersonalizado = false; let htmlPersonalizado = '<div style="display:flex; flex-direction:column; gap:10px;">';
+    try {
+        for (const t of state.turmasProfessor) {
+            const s = await getDocs(collection(db, "turmas", t, "foruns")); let arr = []; s.forEach(d => arr.push({id: d.id, ...d.data()}));
+            arr.forEach(f => { 
+                if(f.membros && f.membros.includes(state.myUserId) && !f.isDefault) { 
+                    encontrouPersonalizado = true;
+                    const iconConfig = f.criadoPor === state.myUserName ? `<i class="fa-solid fa-gear btn-edit-chat" data-id="${f.id}" data-turma="${t}" style="color:var(--warning-yellow); font-size:1.2rem; cursor:pointer; padding:5px;"></i>` : `<i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i>`;
+                    htmlPersonalizado += `<div class="canal-card" data-turma="${t}" data-disc="${f.id}" data-nome="${f.nome}" style="position:relative;"><div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-comments"></i></div><div class="canal-info" style="flex:1; display:flex; justify-content:space-between; align-items:center;"><div><h4>${f.nome}</h4><p>Turma ${t}</p></div><span class="notification-badge" style="position:relative; top:0; right:0; display:none;">!</span></div>${iconConfig}</div>`; 
+                } 
+            });
+        }
+        if (!encontrouPersonalizado) { htmlPersonalizado += '<div class="empty-state"><i class="fa-solid fa-comments empty-state-icon"></i><p class="empty-state-desc">Nenhum chat extra criado.</p></div>'; }
+        htmlPersonalizado += '</div>'; cont.innerHTML = `<div class="forum-canais-grid">${html}${htmlPersonalizado}</div>`;
+    } catch (e) { cont.innerHTML = '<p class="text-danger center">Erro a carregar chats.</p>'; }
+}
+
+export function abrirChatForum(turma, disciplina, nomeCustom) {
+    state.activeChatTurma = turma; state.activeChatDisc = disciplina;
+    document.getElementById('prof-forum-channel-list').style.display = 'none'; document.getElementById('btn-create-chat-prof').style.display = 'none'; 
+    document.getElementById('prof-forum-chat-view').style.display = 'flex'; 
+    document.getElementById('prof-chat-active-title').innerText = `${nomeCustom || disciplina} (${turma})`;
+    const msgCont = document.getElementById('prof-chat-messages-container'); msgCont.innerHTML = '<p class="text-muted center">A carregar mensagens...</p>';
+    
+    const forumDocRef = doc(db, "turmas", turma, "foruns", disciplina);
+    if (state.chatMetaUnsubscribe) state.chatMetaUnsubscribe();
+    state.chatMetaUnsubscribe = onSnapshot(forumDocRef, (docSnap) => {
+        if(docSnap.exists() && docSnap.data().pinnedMessage) {
+            document.getElementById('prof-chat-pinned-banner').style.display = 'flex';
+            document.getElementById('prof-chat-pinned-text').innerText = docSnap.data().pinnedMessage;
+        } else {
+            document.getElementById('prof-chat-pinned-banner').style.display = 'none';
+        }
+    });
+
+    const q = query(collection(db, "turmas", turma, "foruns", disciplina, "mensagens"), orderBy("timestamp", "asc"));
+    if (state.chatUnsubscribe) state.chatUnsubscribe(); 
+    state.chatUnsubscribe = onSnapshot(q, (snapshot) => {
+        let h = '';
+        snapshot.forEach(doc => { 
+            const m = doc.data(); const d = new Date(m.timestamp); const hora = isNaN(d.getTime()) ? '' : `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`; 
+            const isMe = m.autor === state.myUserName || m.remetente === state.myUserName; const nomeStr = m.autor || m.remetente || 'Desconhecido';
+            const pinBtn = `<button class="btn-pin-msg" data-text="${m.texto}" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.75rem; margin-left:10px;"><i class="fa-solid fa-thumbtack"></i></button>`;
+            let anexoHtml = '';
+            if (m.anexoBase64 && m.anexoNome) { anexoHtml = `<div style="background:rgba(0,0,0,0.2); padding:8px; border-radius:6px; margin-top:5px; font-size:0.8rem;"><i class="fa-solid fa-file" style="color:var(--primary-green);"></i> <a href="${m.anexoBase64}" download="${m.anexoNome}" style="color:white; text-decoration:none;">${m.anexoNome}</a></div>`; }
+
+            if (isMe) { h += `<div class="chat-bubble admin"><strong>Eu</strong>${pinBtn}<br>${m.texto}${anexoHtml}<span class="chat-meta">${hora}</span></div>`; } 
+            else { h += `<div class="chat-bubble student"><strong style="color:var(--primary-green);">${nomeStr}</strong>${pinBtn}<br>${m.texto}${anexoHtml}<span class="chat-meta">${hora}</span></div>`; }
+        });
+        if (h === '') h = '<div class="empty-state" style="margin-top:20px;"><i class="fa-solid fa-comment-dots empty-state-icon" style="color:var(--primary-green);"></i><p class="empty-state-desc">Sê o primeiro a enviar uma mensagem para este canal!</p></div>';
+        msgCont.innerHTML = h; setTimeout(() => { msgCont.scrollTop = msgCont.scrollHeight; }, 100);
+    });
+}
+
+window.exportarCSV = function(tableId, filename) {
+    const table = document.getElementById(tableId);
+    if (!table) return alert("Tabela não encontrada.");
+    let csv = [];
+    for (let i = 0; i < table.rows.length; i++) {
+        let row = [], cols = table.rows[i].querySelectorAll("td, th");
+        for (let j = 0; j < cols.length; j++) {
+            let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, " ").trim();
+            data = data.replace(/"/g, '""');
+            row.push(`"${data}"`);
+        }
+        csv.push(row.join(","));
+    }
+    const csvFile = new Blob(["\uFEFF" + csv.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const downloadLink = document.createElement("a"); downloadLink.download = filename; downloadLink.href = window.URL.createObjectURL(csvFile);
+    downloadLink.style.display = "none"; document.body.appendChild(downloadLink); downloadLink.click(); document.body.removeChild(downloadLink);
+};
