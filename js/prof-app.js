@@ -11,7 +11,7 @@ import { carregarRadarProfessor, analisarEAtualizarTurma, renderizarPautaTurma, 
 import { carregarEcraOrientandos, carregarEcraDiario, prepararModalNovaSessao } from "./prof/roles/pap-diario.js";
 import { carregarEcraProjetosCoord } from "./prof/roles/coord-dashboard.js";
 
-// A NOSSA ARQUITETURA MODULAR (A apontar para os ficheiros que criaste!)
+// A NOSSA ARQUITETURA MODULAR
 import { gerirCliquesForum } from "./prof/roles/forum.js";
 import { gerirCliquesPRHF } from "./prof/roles/prhf.js";
 
@@ -114,7 +114,6 @@ onAuthStateChanged(auth, async (user) => {
                     };
 
                     window.mudarCapaProfessor('professor');
-                    
                     document.getElementById('btn-toggle-perfis').addEventListener('click', (e) => { 
                         e.stopPropagation(); 
                         const drop = document.getElementById('dropdown-perfis'); 
@@ -153,20 +152,43 @@ onAuthStateChanged(auth, async (user) => {
 
 
 // ========================================================
-// 2. INPUT DE EVENTOS E CÁLCULO DE HORAS PRHF
+// 2. FÓRUM - CARREGAR ANEXOS E INPUT DE EVENTOS
+// ========================================================
+document.getElementById('prof-forum-file-input')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (file.size > 2 * 1024 * 1024) return alert("Ficheiro demasiado grande (Máx: 2MB).");
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        state.chatAttachmentBase64 = event.target.result;
+        state.chatAttachmentName = file.name;
+        document.getElementById('prof-forum-attachment-name').innerHTML = `<i class="fa-solid fa-file"></i> ${file.name}`;
+        document.getElementById('prof-forum-attachment-preview').style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+});
+
+
+// ========================================================
+// 3. DELEGAÇÃO DE EVENTOS DE MUDANÇA (CHANGE & INPUT)
 // ========================================================
 document.body.addEventListener('input', (e) => {
     if (e.target.id === 'prhf-horas-totais') {
         const val = parseInt(e.target.value) || 0;
-        
-        // CÁLCULO PROVISÓRIO (À espera da tua fórmula oficial)
         document.getElementById('prhf-horas-presenciais').value = val <= 4 ? 0 : Math.ceil(val * 0.3);
     }
 });
 
 document.body.addEventListener('change', async (e) => {
     
-    // UI: Colorir Labels das Checkboxes Escondidas
+    // ATUALIZAÇÃO SEGURA DO FILTRO DE WORKFLOW DO PRHF
+    if (e.target.id === 'filtro-workflow-prhf') {
+        carregarTarefasProf();
+        return;
+    }
+
     if (e.target.classList.contains('forum-aluno-check') || e.target.classList.contains('edit-forum-aluno-check') || e.target.classList.contains('prhf-aluno-check')) {
         const chk = e.target; 
         const lbl = chk.closest('label');
@@ -184,7 +206,6 @@ document.body.addEventListener('change', async (e) => {
         }
     }
 
-    // PRHF - Listar alunos
     if (e.target.id === 'prhf-turma') {
         const t = e.target.value;
         const cCont = document.getElementById('prhf-alunos-bulk-container');
@@ -220,7 +241,6 @@ document.body.addEventListener('change', async (e) => {
         } catch(err) { cCont.innerHTML = '<p class="text-danger center" style="font-size:0.8rem;">Erro ao carregar alunos.</p>'; }
     }
 
-    // FÓRUM - Listar alunos
     if (e.target.id === 'forum-turma-select') {
         const t = e.target.value; 
         const cCont = document.getElementById('lista-alunos-forum'); 
@@ -259,14 +279,14 @@ document.body.addEventListener('change', async (e) => {
 
 
 // ========================================================
-// 3. MOTOR PRINCIPAL DE CLIQUES (DELEGAÇÃO)
+// 4. MOTOR PRINCIPAL DE CLIQUES (DELEGAÇÃO)
 // ========================================================
 document.body.addEventListener('click', async (e) => {
     
     // NAVEGAÇÃO BÁSICA
     const nav = e.target.closest('.nav-item');
     if (nav) {
-        e.preventDefault();
+        e.preventDefault(); 
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         nav.classList.add('active');
         esconderTodasAsVistas();
@@ -312,16 +332,13 @@ document.body.addEventListener('click', async (e) => {
         return; 
     }
 
-
     // DELEGAÇÃO PARA OS MÓDULOS DE FÓRUM E PRHF
     if (await gerirCliquesForum(e)) return;
     if (await gerirCliquesPRHF(e)) return;
 
-
     // ==========================================
     // RESTANTES AÇÕES DA APLICAÇÃO
     // ==========================================
-
     if (e.target.closest('#btn-fab-global')) { document.getElementById('modal-fab-menu').style.display = 'flex'; return; }
     
     if (e.target.closest('#tab-coord-fct')) { document.getElementById('tab-coord-fct').classList.add('active'); document.getElementById('tab-coord-pap').classList.remove('active'); import('./prof/roles/coord-dashboard.js').then(module => { module.coordTabAtiva = 'fct'; module.carregarEcraProjetosCoord(); }); return; }
@@ -394,5 +411,4 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('.btn-rejeitar-tema')) { document.getElementById('rej-pap-aluno-id').value = e.target.closest('.btn-rejeitar-tema').getAttribute('data-id'); document.getElementById('rej-pap-motivo').value = ''; document.getElementById('modal-rejeitar-tema-pap').style.display = 'flex'; return; }
     if (e.target.closest('#btn-confirmar-rejeicao-pap')) { const motivo = document.getElementById('rej-pap-motivo').value.trim(); if(!motivo) return alert("Indica o motivo."); rejeitarTemaPAPExecutar(document.getElementById('rej-pap-aluno-id').value, motivo, e.target.closest('#btn-confirmar-rejeicao-pap')); return; }
     if (e.target.closest('.btn-aprovar-relatorio')) { aprovarRelatorioPAP(e.target.closest('.btn-aprovar-relatorio').getAttribute('data-id'), e.target.closest('.btn-aprovar-relatorio')); return; }
-
 });
