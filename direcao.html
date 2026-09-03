@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Turma PRO - Direção</title>
+    <link rel="icon" type="image/png" href="logo_tur.png">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="app-content">
+        <!-- HEADER DA DIREÇÃO -->
+        <header class="app-header" style="border-bottom: 2px solid var(--danger-red);">
+            <div class="user-profile" style="display: flex; align-items: center; gap: 12px; height: 100%;">
+                <div class="profile-avatar" id="dir-avatar-circle" style="width: 38px; height: 38px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 0; flex-shrink: 0;">
+                    <i class="fa-solid fa-user-tie" style="color: white; font-size: 1rem;"></i>
+                </div>
+                <div>
+                    <span id="dir-user-name" style="margin: 0; font-weight: bold; display: block; line-height: 1.2;">A carregar...</span>
+                    <span style="font-size: 0.65rem; color: white; background-color: var(--danger-red); padding: 2px 8px; border-radius: 12px; font-weight: bold; text-transform: uppercase;">Direção</span>
+                </div>
+            </div>
+            <button id="btn-logout-dir" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.2rem;"><i class="fa-solid fa-right-from-bracket"></i></button>
+        </header>
+
+        <main class="app-content">
+            <!-- VISTA 1: DASHBOARD ESCOLA -->
+            <div id="view-direcao-dashboard" style="padding-bottom: 20px;">
+                <div class="card" style="background: linear-gradient(135deg, var(--danger-red), #800000); border: none; margin-bottom: 20px; color: white;">
+                    <h3 style="font-size: 1.2rem; margin-bottom: 5px;"><i class="fa-solid fa-chart-line"></i> Ponto de Situação</h3>
+                    <p style="font-size: 0.85rem; opacity: 0.8;">Visão global de desempenho e assiduidade.</p>
+                </div>
+                
+                <!-- KPIs 2x2 -->
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 25px;" id="dir-kpi-container">
+                    <p class="text-muted center" style="grid-column: span 2;"><i class="fa-solid fa-spinner fa-spin"></i> A calcular métricas...</p>
+                </div>
+
+                <h3 style="font-size: 1.1rem; color: white; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px;">Estado das Turmas</h3>
+                <div id="dir-alertas-turmas" style="display: flex; flex-direction: column; gap: 15px;"></div>
+            </div>
+
+            <!-- VISTA 2: TURMAS (RAIO-X) -->
+            <div id="view-direcao-turmas" style="display: none;">
+                <div style="margin-bottom: 20px;">
+                    <select id="dir-seletor-turmas" class="input-padrao" style="text-align: center; font-weight: bold; font-size: 1.1rem;">
+                        <option value="">A carregar turmas...</option>
+                    </select>
+                </div>
+                <div id="dir-turma-container" style="display: none;">
+                    <!-- Preenchido pelo JS -->
+                </div>
+            </div>
+
+            <!-- VISTA 3: PERFIL -->
+            <div id="view-direcao-perfil" style="display: none;">
+                <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: calc(100vh - 180px);">
+                    <div class="card" style="text-align: center; width: 100%; max-width: 350px;">
+                        <div style="position:relative; width: 100px; height: 100px; margin: 0 auto 15px auto;">
+                            <img id="dir-avatar-img" src="" style="width:100%; height:100%; border-radius:50%; object-fit:cover; border: 3px solid var(--danger-red);">
+                        </div>
+                        <h3 id="perfil-nome-dir-view" style="margin-bottom: 25px; font-size: 1.4rem; color: white;">A carregar...</h3>
+                        <div class="modal-section" style="margin-bottom: 15px;">
+                            <strong style="color: white; font-size: 0.9rem; display: block; margin-bottom: 5px;">Cargo</strong>
+                            <span style="color: var(--text-muted); font-size: 0.85rem;">Direção Pedagógica</span>
+                        </div>
+                        <div class="modal-section">
+                            <strong style="color: white; font-size: 0.9rem; display: block; margin-bottom: 5px;">Turmas Supervisionadas</strong>
+                            <span style="color: var(--danger-red); font-size: 0.85rem; font-weight: bold;">10T • 11T • 12T</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- MODAL PERFIL 360º DO ALUNO -->
+            <!-- ============================================== -->
+            <div id="modal-perfil-360" class="modal-overlay" style="z-index: 5000; display: none;">
+                <div class="action-sheet" style="max-width: 450px; padding: 20px; max-height: 90vh; overflow-y: auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+                        <div style="display: flex; gap: 15px; align-items: center;">
+                            <img id="p360-foto" src="" style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 2px solid #333;">
+                            <div>
+                                <h3 id="p360-nome" style="color: white; margin: 0; font-size: 1.1rem;">A carregar...</h3>
+                                <span id="p360-turma" style="color: var(--text-muted); font-size: 0.85rem;">Turma</span>
+                                <span id="p360-badge" style="padding: 2px 8px; border-radius: 12px; font-size: 0.65rem; font-weight: bold; text-transform: uppercase; margin-left: 5px;">Risco</span>
+                            </div>
+                        </div>
+                        <button class="fechar-modal" data-target="modal-perfil-360" style="background: none; border: none; color: white; font-size: 1.3rem; cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    
+                    <!-- ESTATÍSTICAS DO ALUNO -->
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; background: rgba(0,0,0,0.2); border: 1px solid #333; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
+                        <div style="text-align: center; border-right: 1px solid #333;"><span id="p360-faltas" style="color: white; font-weight: bold; font-size: 1.2rem;">0%</span><br><span style="font-size: 0.55rem; color: var(--text-muted); text-transform: uppercase;">Taxa de Faltas</span></div>
+                        <div style="text-align: center; border-right: 1px solid #333;"><span id="p360-prhfs" style="color: white; font-weight: bold; font-size: 1.2rem;">0</span><br><span style="font-size: 0.55rem; color: var(--text-muted); text-transform: uppercase;">PRHFs</span></div>
+                        <div style="text-align: center; border-right: 1px solid #333;"><span id="p360-ocorr" style="color: white; font-weight: bold; font-size: 1.2rem;">0</span><br><span style="font-size: 0.55rem; color: var(--text-muted); text-transform: uppercase;">Ocorr.</span></div>
+                        <div style="text-align: center;"><span id="p360-atrasos" style="color: white; font-weight: bold; font-size: 1.2rem;">0</span><br><span style="font-size: 0.55rem; color: var(--text-muted); text-transform: uppercase;">Módulos em Atraso</span></div>
+                    </div>
+
+                    <!-- MÓDULOS EM ATRASO DETALHADOS -->
+                    <div class="modal-section" style="margin-bottom: 20px;">
+                        <h4 style="color: white; font-size: 1rem; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px;"><i class="fa-solid fa-book-journal-whills" style="color: #b82bf2;"></i> Módulos por Recuperar</h4>
+                        <div id="p360-lista-atrasos" style="display: flex; flex-direction: column; gap: 8px;">
+                            <p class="text-muted" style="font-size: 0.85rem; margin: 0;"><i class="fa-solid fa-spinner fa-spin"></i> A ler notas...</p>
+                        </div>
+                    </div>
+
+                    <!-- AÇÕES -->
+                    <div class="modal-section">
+                        <h4 style="color: white; font-size: 1rem; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px;"><i class="fa-solid fa-bolt" style="color: var(--warning-yellow);"></i> Ações de Direção</h4>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <button class="secondary-btn" style="border-color: #0099ff; color: #0099ff; justify-content: center;"><i class="fa-solid fa-envelope"></i> Notificar Encarregado de Educação</button>
+                            <button class="secondary-btn" style="border-color: var(--danger-red); color: var(--danger-red); justify-content: center;"><i class="fa-solid fa-hand-holding-hand"></i> Exigir Reunião com DT</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <nav class="bottom-nav">
+            <a href="#" class="nav-item active" data-target="view-direcao-dashboard"><i class="fa-solid fa-building-columns"></i><span>Escola</span></a>
+            <a href="#" class="nav-item" data-target="view-direcao-turmas"><i class="fa-solid fa-users-viewfinder"></i><span>Turmas</span></a>
+            <a href="#" class="nav-item" data-target="view-direcao-perfil"><i class="fa-solid fa-user-tie"></i><span>Perfil</span></a>
+        </nav>
+    </div>
+
+    <script type="module" src="./js/direcao-app.js?v=4"></script>
+</body>
+</html>
