@@ -77,19 +77,7 @@ window.registarAtividadeProfessor = async function(tipo, descricao, subtexto) {
 // LER E MOSTRAR A ATIVIDADE NO DASHBOARD
 window.carregarAtividadeRecente = async function() {
     const container = document.getElementById('dashboard-atividade-container');
-    
-    if (!container) {
-        console.error("ERRO ATIVIDADE: A caixa 'dashboard-atividade-container' não existe no HTML!");
-        return;
-    }
-    if (!state.myUserId) {
-        console.error("ERRO ATIVIDADE: O state.myUserId está vazio quando a função tenta correr!");
-        container.innerHTML = '<p class="text-muted center" style="font-size:0.85rem; color:var(--warning-yellow);">A aguardar identificação do professor...</p>';
-        return;
-    }
-    
-    try {
-        // ... (o resto do código fica exatamente igual a partir daqui)
+    if (!container || !state.myUserId) return;
     
     try {
         const q = query(
@@ -136,40 +124,47 @@ window.carregarAtividadeRecente = async function() {
     }
 };
 window.processarAcaoRapida = async function(turma, acaoId) {
-    document.getElementById('modal-quick-turma').remove();
-    
-    // Ecrã de Loading hiper rápido para a App fazer o trabalho sujo
-    let loading = document.createElement('div');
-    loading.className = 'modal-overlay';
-    loading.style.zIndex = '9999';
-    loading.style.display = 'flex';
-    loading.innerHTML = '<div style="background:rgba(0,0,0,0.8); padding:20px; border-radius:8px; color:white; text-align:center;"><i class="fa-solid fa-spinner fa-spin" style="font-size:2rem; margin-bottom:10px;"></i><br>A preparar dados...</div>';
-    document.body.appendChild(loading);
+    let loading = null;
+    try {
+        const modalQuick = document.getElementById('modal-quick-turma');
+        if (modalQuick) modalQuick.remove();
+        
+        // Ecrã de Loading hiper rápido para a App fazer o trabalho sujo
+        loading = document.createElement('div');
+        loading.className = 'modal-overlay';
+        loading.style.zIndex = '9999';
+        loading.style.display = 'flex';
+        loading.innerHTML = '<div style="background:rgba(0,0,0,0.8); padding:20px; border-radius:8px; color:white; text-align:center;"><i class="fa-solid fa-spinner fa-spin" style="font-size:2rem; margin-bottom:10px;"></i><br>A preparar dados...</div>';
+        document.body.appendChild(loading);
 
-    // Guarda a turma no sistema de forma global!
-    state.selectedTurma = turma;
-    const seletorGlobal = document.getElementById('prof-seletor-turmas');
-    if (seletorGlobal) seletorGlobal.value = turma;
-    
-    // Puxa os dados dos alunos
-    await window.analisarEAtualizarTurma(turma);
-    
-    loading.remove();
-    
-    // Finge que o utilizador clicou no botão original e abre o modal certo!
-    const btn = document.getElementById(acaoId);
-    if (btn) btn.click();
-    
-    // Bónus de usabilidade: Se escolheste PRHF, preenche o dropdown lá dentro sozinho!
-    setTimeout(() => {
-        if (acaoId === 'btn-novo-prhf') {
-            const prhfTurma = document.getElementById('prhf-turma');
-            if(prhfTurma) { 
-                prhfTurma.value = turma;
-                prhfTurma.dispatchEvent(new Event('change', { bubbles: true }));
+        // Guarda a turma no sistema de forma global!
+        state.selectedTurma = turma;
+        const seletorGlobal = document.getElementById('prof-seletor-turmas');
+        if (seletorGlobal) seletorGlobal.value = turma;
+        
+        // Puxa os dados dos alunos
+        await window.analisarEAtualizarTurma(turma);
+        
+        if (loading) loading.remove();
+        
+        // Finge que o utilizador clicou no botão original e abre o modal certo!
+        const btn = document.getElementById(acaoId);
+        if (btn) btn.click();
+        
+        // Bónus de usabilidade: Se escolheste PRHF, preenche o dropdown lá dentro sozinho!
+        setTimeout(() => {
+            if (acaoId === 'btn-novo-prhf') {
+                const prhfTurma = document.getElementById('prhf-turma');
+                if(prhfTurma) { 
+                    prhfTurma.value = turma;
+                    prhfTurma.dispatchEvent(new Event('change', { bubbles: true }));
+                }
             }
-        }
-    }, 100);
+        }, 100);
+    } catch (err) {
+        console.error("Erro em processarAcaoRapida:", err);
+        if (loading) loading.remove();
+    }
 };
 function getIniciais(nomeStr) {
     if (!nomeStr) return "PR";
