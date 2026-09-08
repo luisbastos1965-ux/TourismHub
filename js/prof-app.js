@@ -227,20 +227,43 @@ onAuthStateChanged(auth, async (user) => {
                         const badge = document.getElementById('badge-perfil-ativo');
                         if(badge) { badge.innerText = config.nome; badge.style.backgroundColor = config.cor; }
                         
+                        // Substitui a lógica de IFs dentro da window.mudarCapaProfessor por isto:
                         const navBase = document.querySelectorAll('.nav-role-base');
                         const navPap = document.querySelectorAll('.nav-role-pap');
                         const navCoord = document.querySelectorAll('.nav-role-coord');
+                        const navDt = document.querySelectorAll('.nav-role-dt');
                         
+                        // Esconde tudo primeiro
+                        [...navBase, ...navPap, ...navCoord, ...navDt].forEach(el => el.style.display = 'none');
+
                         if (novoPapel === 'orientador_pap') { 
-                            navBase.forEach(el => el.style.display = 'none'); navCoord.forEach(el => el.style.display = 'none'); navPap.forEach(el => el.style.display = 'flex'); 
+                            navPap.forEach(el => el.style.display = 'flex'); 
                         } else if (novoPapel === 'coordenador') { 
-                            navBase.forEach(el => el.style.display = 'none'); navPap.forEach(el => el.style.display = 'none'); navCoord.forEach(el => el.style.display = 'flex'); 
+                            navCoord.forEach(el => el.style.display = 'flex');
+                        } else if (novoPapel === 'diretor_turma') { 
+                            navDt.forEach(el => el.style.display = 'flex');
+                            state.selectedTurma = state.minhaTurmaDT; // O DT aterra logo na sua turma
                         } else { 
-                            navPap.forEach(el => el.style.display = 'none'); navCoord.forEach(el => el.style.display = 'none'); navBase.forEach(el => el.style.display = 'flex'); 
-                        }
+                            navBase.forEach(el => el.style.display = 'flex');
+                        } // (Fim dos teus IFs das roles)
 
                         document.getElementById('dropdown-perfis').style.display = 'none';
-                        document.querySelector('.nav-item[data-target="view-prof-dashboard"]').click();
+                        
+                        // Mostrar o Botão Flutuante (FAB) APENAS na capa de Professor
+                        const btnFab = document.getElementById('btn-fab-global');
+                        if (btnFab) {
+                            btnFab.style.display = (novoPapel === 'professor') ? 'flex' : 'none';
+                        }
+                        
+                        // Forçar o fecho do menu das bolinhas ao mudar de capa
+                        const modalFab = document.getElementById('modal-fab-menu');
+                        if (modalFab) modalFab.style.display = 'none';
+
+                        // Procura o primeiro botão do menu que está visível e clica nele automaticamente
+                        const primeiroMenuVisivel = Array.from(document.querySelectorAll('.nav-item')).find(el => el.style.display !== 'none');
+                        if (primeiroMenuVisivel) {
+                            primeiroMenuVisivel.click();
+                        }
                     };
 
                     window.mudarCapaProfessor('professor');
@@ -343,6 +366,12 @@ document.body.addEventListener('change', async (e) => {
             const targetSelectId = e.target.id === 'lancar-falta-disciplina' ? 'falta-modulo-select' : 'lancar-nota-modulo';
             atualizarDropdownModulos(turma, e.target.value, document.getElementById(targetSelectId));
         }
+        return;
+    }
+
+    // --- MUDANÇA DE DISCIPLINA NA PAUTA ---
+    if (e.target.id === 'pauta-disc-select') {
+        import('./prof/ui.js').then(m => m.renderizarPautaTurma());
         return;
     }
 
@@ -455,6 +484,7 @@ document.body.addEventListener('click', async (e) => {
         if (targetView) targetView.style.display = (tId === 'view-prof-forum') ? 'flex' : 'block';
         
         if (tId === 'view-prof-dashboard') carregarRadarProfessor();
+        if (tId === 'view-dt-dashboard') { import('./prof/roles/dt.js').then(m => m.carregarPainelDT()); }
         if (tId === 'view-prof-turmas' && state.selectedTurma) analisarEAtualizarTurma(state.selectedTurma);
         if (tId === 'view-prof-tarefas') carregarTarefasProf();
         if (tId === 'view-prof-orientandos') carregarEcraOrientandos();
@@ -482,6 +512,12 @@ document.body.addEventListener('click', async (e) => {
         const targetId = e.target.closest('.fechar-modal').getAttribute('data-target');
         const modal = document.getElementById(targetId);
         if (modal) modal.style.display = 'none'; 
+        return; 
+    }
+
+    // ABRIR MODAL DA ATA DO DT
+    if (e.target.closest('#btn-gerar-resumo-ata')) { 
+        import('./prof/roles/dt.js').then(m => m.abrirModalResumoAta()); 
         return; 
     }
 

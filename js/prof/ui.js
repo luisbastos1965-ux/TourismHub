@@ -488,45 +488,83 @@ export async function analisarEAtualizarTurma(turmaId) {
 export async function renderizarPautaTurma() {
     const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
     const cont = document.getElementById('tabela-pauta-conteudo'); 
-    cont.innerHTML = '<tr><td colspan="5" class="center text-muted">A ler notas...</td></tr>';
+    cont.innerHTML = '<tr><td colspan="5" class="center text-muted"><i class="fa-solid fa-spinner fa-spin"></i> A ler notas e a limpar dados...</td></tr>';
     document.getElementById('modal-pauta-turma').style.display = 'flex';
     
     const discSelect = document.getElementById('pauta-disc-select');
+    
+    // CORREÇÃO 1: Mostrar SEMPRE o seletor para saberes o que estás a ver!
+    discSelect.style.display = 'block'; 
+    
     if(isDT) { 
-        discSelect.style.display = 'block'; 
-        const discValidas = filtrarDisciplinasDoAno(state.selectedTurma, ordemDisciplinasGlobal);
-        if(discSelect.options.length <= 1) discSelect.innerHTML = discValidas.map(dc => `<option value="${dc}">${dc}</option>`).join(''); 
+        // Se for DT, tenta ler a ordem global do curso
+        const discValidas = typeof filtrarDisciplinasDoAno === "function" ? filtrarDisciplinasDoAno(state.selectedTurma, ordemDisciplinasGlobal) : ordemDisciplinasGlobal;
+        discSelect.innerHTML = discValidas.map(dc => `<option value="${dc}">${dc}</option>`).join(''); 
     } else { 
-        discSelect.style.display = 'none'; 
-        const discValidas = filtrarDisciplinasDoAno(state.selectedTurma, state.disciplinasProfessor);
+        // Se for Professor, lê as suas disciplinas
+        const discValidas = state.disciplinasProfessor || [];
         discSelect.innerHTML = discValidas.map(dc => `<option value="${dc}">${dc}</option>`).join(''); 
     }
 
-    const curDisc = discSelect.value || (isDT ? ordemDisciplinasGlobal[0] : state.disciplinasProfessor[0]);
+    const curDisc = discSelect.value;
+    if (!curDisc) {
+        cont.innerHTML = '<tr><td colspan="5" class="center text-muted">Sem disciplina selecionada.</td></tr>';
+        return;
+    }
 
     try {
-        let html = `<tr><th>Aluno</th><th>Mod. 1</th><th>Mod. 2</th><th>Mod. 3</th><th>Média</th></tr>`;
+        let html = `<tr><th style="text-align:left;">Aluno</th><th style="text-align:center;">Mod. 1</th><th style="text-align:center;">Mod. 2</th><th style="text-align:center;">Mod. 3</th><th style="text-align:center;">Média</th></tr>`;
+        
         for(const al of state.alunosTurmaRAM) {
-            const nS = await getDocs(collection(db, "utilizadores", al.id, "notas"));
+            // CORREÇÃO 2: Procurar na coleção correta "avaliacoes" (onde a nossa App grava). 
+            // Adicionei também a "notas" caso o Excel tenha ido parar lá por engano!
+            const nS_novas = await getDocs(collection(db, "utilizadores", al.id, "avaliacoes"));
+            const nS_antigas = await getDocs(collection(db, "utilizadores", al.id, "notas"));
+            const todosRegistos = [...nS_novas.docs, ...nS_antigas.docs];
+
             let m1='-', m2='-', m3='-'; 
             let sum = 0; let count = 0;
             
-            nS.forEach(n => {
-                if(n.data().disciplina === curDisc) {
-                    if(n.data().modulo == 1) m1 = n.data().nota;
-                    else if(n.data().modulo == 2) m2 = n.data().nota;
-                    else if(n.data().modulo == 3) m3 = n.data().nota;
+            todosRegistos.forEach(n => {
+                const d = n.data();
+                // Limpa espaços vazios no nome da disciplina vindos do Excel
+                const nomeDisciplina = String(d.disciplina || '').trim();
+                
+                if(nomeDisciplina === curDisc) {
+                    // CORREÇÃO 3: Arrancar o número exato do módulo (ex: "Módulo 1" -> 1, "02" -> 2)
+                    const modStr = String(d.modulo || '').replace(/\D/g, ''); 
+                    const modNum = parseInt(modStr, 10);
                     
-                    if(!isNaN(n.data().nota)) { sum += Number(n.data().nota); count++; }
+                    const notaRaw = String(d.nota || '').trim().toUpperCase();
+                    
+                    // Coloca a nota na coluna certa, independentemente de como o Excel escreveu
+                    if(modNum === 1) m1 = notaRaw;
+                    else if(modNum === 2) m2 = notaRaw;
+                    else if(modNum === 3) m3 = notaRaw;
+                    
+                    // Soma para a média apenas se for número válido (ignora 'REP')
+                    if(notaRaw !== 'REP' && !isNaN(notaRaw) && notaRaw !== '') { 
+                        sum += Number(notaRaw); 
+                        count++; 
+                    }
                 }
             });
+            
             const media = count > 0 ? (sum / count).toFixed(1) : '-';
             const medColor = (media !== '-' && media < 10) ? 'color:var(--danger-red);' : 'color:var(--success-green);';
-            html += `<tr><td>${nomeCurto(al.nome)}</td><td>${m1}</td><td>${m2}</td><td>${m3}</td><td style="font-weight:bold; ${medColor}">${media}</td></tr>`;
+            
+            html += `<tr>
+                <td style="text-align:left;">${nomeCurto(al.nome)}</td>
+                <td style="text-align:center; color: ${m1 === 'REP' ? 'var(--danger-red)' : 'white'};">${m1}</td>
+                <td style="text-align:center; color: ${m2 === 'REP' ? 'var(--danger-red)' : 'white'};">${m2}</td>
+                <td style="text-align:center; color: ${m3 === 'REP' ? 'var(--danger-red)' : 'white'};">${m3}</td>
+                <td style="text-align:center; font-weight:bold; ${medColor}">${media}</td>
+            </tr>`;
         }
         cont.innerHTML = html;
     } catch(e) { 
-        cont.innerHTML = '<tr><td colspan="5" class="center text-danger">Erro de ligação.</td></tr>'; 
+        console.error(e);
+        cont.innerHTML = '<tr><td colspan="5" class="center text-danger">Erro ao carregar a pauta.</td></tr>'; 
     }
 }
 
