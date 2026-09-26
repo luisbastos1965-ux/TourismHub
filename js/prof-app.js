@@ -227,7 +227,6 @@ onAuthStateChanged(auth, async (user) => {
                         const badge = document.getElementById('badge-perfil-ativo');
                         if(badge) { badge.innerText = config.nome; badge.style.backgroundColor = config.cor; }
                         
-                        // Substitui a lógica de IFs dentro da window.mudarCapaProfessor por isto:
                         const navBase = document.querySelectorAll('.nav-role-base');
                         const navPap = document.querySelectorAll('.nav-role-pap');
                         const navCoord = document.querySelectorAll('.nav-role-coord');
@@ -236,34 +235,47 @@ onAuthStateChanged(auth, async (user) => {
                         // Esconde tudo primeiro
                         [...navBase, ...navPap, ...navCoord, ...navDt].forEach(el => el.style.display = 'none');
 
+                        // Lógica de Vistas e Menus Ativos conforme a Capa
                         if (novoPapel === 'orientador_pap') { 
                             navPap.forEach(el => el.style.display = 'flex'); 
+                            // O Orientador salta direto para os Orientandos
+                            setTimeout(() => {
+                                const btnOrientandos = document.querySelector('.nav-role-pap[data-target="view-prof-orientandos"]');
+                                if (btnOrientandos) btnOrientandos.click();
+                            }, 50);
                         } else if (novoPapel === 'coordenador') { 
                             navCoord.forEach(el => el.style.display = 'flex');
+                            // O Coordenador salta direto para as Turmas
+                            setTimeout(() => {
+                                const btnTurmasCoord = document.querySelector('.nav-role-coord[data-target="view-prof-turmas"]');
+                                if (btnTurmasCoord) btnTurmasCoord.click();
+                            }, 50);
                         } else if (novoPapel === 'diretor_turma') { 
                             navDt.forEach(el => el.style.display = 'flex');
                             state.selectedTurma = state.minhaTurmaDT; // O DT aterra logo na sua turma
+                            setTimeout(() => {
+                                const btnPainelDT = document.querySelector('.nav-role-dt[data-target="view-dt-dashboard"]');
+                                if (btnPainelDT) btnPainelDT.click();
+                            }, 50);
                         } else { 
                             navBase.forEach(el => el.style.display = 'flex');
-                        } // (Fim dos teus IFs das roles)
+                            setTimeout(() => {
+                                const btnInicio = document.querySelector('.nav-role-base[data-target="view-prof-dashboard"]');
+                                if (btnInicio) btnInicio.click();
+                            }, 50);
+                        }
 
                         document.getElementById('dropdown-perfis').style.display = 'none';
                         
-                        // Mostrar o Botão Flutuante (FAB) APENAS na capa de Professor
+                        // Ocultar o Botão Flutuante (FAB) nas capas de Orientador e Coordenador
                         const btnFab = document.getElementById('btn-fab-global');
                         if (btnFab) {
-                            btnFab.style.display = (novoPapel === 'professor') ? 'flex' : 'none';
+                            btnFab.style.display = (novoPapel === 'orientador_pap' || novoPapel === 'coordenador') ? 'none' : 'flex';
                         }
                         
                         // Forçar o fecho do menu das bolinhas ao mudar de capa
                         const modalFab = document.getElementById('modal-fab-menu');
                         if (modalFab) modalFab.style.display = 'none';
-
-                        // Procura o primeiro botão do menu que está visível e clica nele automaticamente
-                        const primeiroMenuVisivel = Array.from(document.querySelectorAll('.nav-item')).find(el => el.style.display !== 'none');
-                        if (primeiroMenuVisivel) {
-                            primeiroMenuVisivel.click();
-                        }
                     };
 
                     window.mudarCapaProfessor('professor');
@@ -314,6 +326,12 @@ onAuthStateChanged(auth, async (user) => {
 // 2. EVENTOS DE MUDANÇA (CHANGE) UNIFICADOS
 // ----------------------------------------------------
 document.body.addEventListener('change', async (e) => {
+    // --- FILTRO DE TURMA DO COORDENADOR ---
+    if (e.target.id === 'coord-filtro-turma') {
+        import('./prof/roles/coord-dashboard.js').then(m => m.carregarEcraProjetosCoord());
+        return;
+    }
+
     // --- MUDANÇA DE TURMA NO MENU PRINCIPAL ---
     if (e.target.id === 'prof-seletor-turmas') {
         const turmaSelecionada = e.target.value;
@@ -521,11 +539,32 @@ document.body.addEventListener('click', async (e) => {
         return; 
     }
 
-// CLIQUE NO BOTÃO "IR PARA GESTÃO PRHF" DO DASHBOARD
+    // CLIQUE NO BOTÃO "IR PARA GESTÃO PRHF" DO DASHBOARD
     if (e.target.closest('#btn-dashboard-ir-prhf')) {
-        // Encontra o botão do menu inferior correspondente à aba dos PRHFs e clica nele
         const tabPrhf = document.querySelector('.nav-item[data-target="view-prof-tarefas"]');
         if (tabPrhf) tabPrhf.click();
+        return;
+    }
+
+    // --- EDIÇÃO DE PAP E FCT (COORDENADOR) DE FORMA DIRETA ---
+    if (e.target.closest('.btn-editar-pap-coord')) {
+        const id = e.target.closest('.btn-editar-pap-coord').getAttribute('data-id');
+        import('./prof/roles/coord-dashboard.js').then(m => m.abrirModalEdicaoPAP(id)).catch(err => console.error(err));
+        return;
+    }
+    if (e.target.closest('#btn-salvar-edicao-pap')) {
+        const btn = e.target.closest('#btn-salvar-edicao-pap');
+        import('./prof/roles/coord-dashboard.js').then(m => m.salvarEdicaoPAP(btn)).catch(err => console.error(err));
+        return;
+    }
+    if (e.target.closest('.btn-editar-fct-coord')) {
+        const id = e.target.closest('.btn-editar-fct-coord').getAttribute('data-id');
+        import('./prof/roles/coord-dashboard.js').then(m => m.abrirModalEdicaoFCT(id)).catch(err => console.error(err));
+        return;
+    }
+    if (e.target.closest('#btn-salvar-edicao-fct')) {
+        const btn = e.target.closest('#btn-salvar-edicao-fct');
+        import('./prof/roles/coord-dashboard.js').then(m => m.salvarEdicaoFCT(btn)).catch(err => console.error(err));
         return;
     }
 
@@ -534,8 +573,8 @@ document.body.addEventListener('click', async (e) => {
     if (await gerirCliquesTurmas(e)) return;
     if (await gerirCliquesInicio(e)) return;
 
-    if (e.target.closest('#tab-coord-fct')) { document.getElementById('tab-coord-fct').classList.add('active'); document.getElementById('tab-coord-pap').classList.remove('active'); import('./prof/roles/coord-dashboard.js').then(module => { module.coordTabAtiva = 'fct'; module.carregarEcraProjetosCoord(); }); return; }
-    if (e.target.closest('#tab-coord-pap')) { document.getElementById('tab-coord-pap').classList.add('active'); document.getElementById('tab-coord-fct').classList.remove('active'); import('./prof/roles/coord-dashboard.js').then(module => { module.coordTabAtiva = 'pap'; module.carregarEcraProjetosCoord(); }); return; }
+    if (e.target.closest('#tab-coord-fct')) { document.getElementById('tab-coord-fct').classList.add('active'); document.getElementById('tab-coord-pap').classList.remove('active'); import('./prof/roles/coord-dashboard.js').then(module => { module.carregarEcraProjetosCoord(); }); return; }
+    if (e.target.closest('#tab-coord-pap')) { document.getElementById('tab-coord-pap').classList.add('active'); document.getElementById('tab-coord-fct').classList.remove('active'); import('./prof/roles/coord-dashboard.js').then(module => { module.carregarEcraProjetosCoord(); }); return; }
     if (e.target.closest('#tab-tarefas-prhf')) { document.querySelectorAll('.falta-tab-btn').forEach(b => b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('sec-tarefas-prhf').style.display = 'block'; document.getElementById('sec-tarefas-passaporte').style.display = 'none'; carregarTarefasProf(); return; }
     if (e.target.closest('#tab-tarefas-passaporte')) { document.querySelectorAll('.falta-tab-btn').forEach(b => b.classList.remove('active')); e.target.closest('.falta-tab-btn').classList.add('active'); document.getElementById('sec-tarefas-prhf').style.display = 'none'; document.getElementById('sec-tarefas-passaporte').style.display = 'block'; carregarTarefasProf(); return; }
     if (e.target.closest('#btn-nova-sessao-pap')) { prepararModalNovaSessao(); return; }

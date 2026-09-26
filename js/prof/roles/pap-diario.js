@@ -297,24 +297,39 @@ export async function prepararModalNovaSessao() {
     document.getElementById('sessao-pap-notas').value = '';
     
     modalPresencaAtiva = true;
-    atualizarBotoesPresenca();
+    if (typeof atualizarBotoesPresenca === 'function') atualizarBotoesPresenca();
 
     document.getElementById('modal-nova-sessao-pap').style.display = 'flex';
 
     try {
+        let countOrientandos = 0;
         let optionsHtml = '<option value="">-- Seleciona o Orientando --</option>';
-        for (const t of state.turmasProfessor) {
-            const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
-            snap.forEach(d => {
-                const data = d.data();
-                if (data.pap && (data.pap.orientador === state.myUserName || data.pap.orientador === state.myUserId)) {
-                    optionsHtml += `<option value="${d.id}">${nomeCurto(data.nome)} (${data.turma})</option>`;
-                }
-            });
+        
+        // Só procura se tiveres turmas
+        if (state.turmasProfessor && state.turmasProfessor.length > 0) {
+            for (const t of state.turmasProfessor) {
+                const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
+                snap.forEach(d => {
+                    const data = d.data();
+                    // Verifica se és o orientador oficial deste aluno
+                    if (data.pap && (data.pap.orientador === state.myUserName || data.pap.orientador === state.myUserId)) {
+                        optionsHtml += `<option value="${d.id}">${nomeCurto(data.nome)} (${data.turma})</option>`;
+                        countOrientandos++;
+                    }
+                });
+            }
         }
-        selAluno.innerHTML = optionsHtml;
+        
+        // O Toque Mágico: Avisa se não houver alunos!
+        if (countOrientandos === 0) {
+            selAluno.innerHTML = '<option value="" disabled selected>⚠️ Ainda não tens orientandos atribuídos</option>';
+        } else {
+            selAluno.innerHTML = optionsHtml;
+        }
+
     } catch (err) {
-        selAluno.innerHTML = '<option value="">Erro ao carregar</option>';
+        console.error("Erro ao preparar sessão:", err);
+        selAluno.innerHTML = '<option value="">Erro ao carregar lista</option>';
     }
 }
 

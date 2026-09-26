@@ -128,6 +128,9 @@ export async function carregarRadarProfessor() {
         document.getElementById('view-prof-dashboard').prepend(papCont); 
     }
 
+    // ====================================================
+    // VISTA DO ORIENTADOR E COORDENADOR (CORRIGIDA)
+    // ====================================================
     if (state.activeRole === 'orientador_pap' || state.activeRole === 'coordenador') {
         if(cardAssistente) cardAssistente.style.display = 'none'; 
         if(divCarrossel) divCarrossel.style.display = 'none'; 
@@ -136,11 +139,21 @@ export async function carregarRadarProfessor() {
         if(cardEventos) cardEventos.style.display = 'none'; 
         if(cardAlertas) cardAlertas.style.display = 'none';
         
-        papCont.style.display = 'block'; 
-        papCont.innerHTML = `<p class="text-muted center" style="padding: 20px;">A carregar vista de coordenação especial...</p>`;
+        // 1. Esconder as caixas que não interessam (PCT, Notas, etc.)
+        const avisosDT = document.getElementById('avisos-dt-container');
+        if(avisosDT) avisosDT.style.display = 'none';
+        
+        // 2. Remover a mensagem falsa de loading que parava tudo
+        papCont.style.display = 'none'; 
+        
+        // 3. Deixar passar direto para a leitura da Atividade Recente
+        if (window.carregarAtividadeRecente) window.carregarAtividadeRecente();
         return; 
     }
 
+    // ====================================================
+    // VISTA DO PROFESSOR NORMAL (RESTAURADA)
+    // ====================================================
     papCont.style.display = 'none';
     if(cardAssistente) cardAssistente.style.display = 'block'; 
     if(divCarrossel) divCarrossel.style.display = 'block'; 
@@ -148,6 +161,9 @@ export async function carregarRadarProfessor() {
     if(cardHorario) cardHorario.style.display = 'block'; 
     if(cardEventos) cardEventos.style.display = 'block'; 
     if(cardAlertas) cardAlertas.style.display = 'block';
+    
+    const avisosDT = document.getElementById('avisos-dt-container');
+    if(avisosDT) avisosDT.style.display = 'grid'; // Volta a mostrar as caixas
 
     const aText = document.getElementById('assistente-global-texto'); 
     const hCont = document.getElementById('dashboard-horario-container'); 
