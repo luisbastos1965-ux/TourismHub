@@ -56,8 +56,20 @@ async function carregarTimelineAluno() {
         const nS = await getDocs(collection(window.db, "utilizadores", window.myUserId, "notas")); 
         nS.forEach(d => { const n = d.data(); ev.push({ time: new Date(n.data).getTime(), cat: 'notas', icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação', desc: `${n.disciplina} (M${n.modulo}): <strong style="color:var(--text-light);">${n.nota}</strong>` }); });
         
+        // 👇 A LER AS FALTAS DO NOVO FORMATO 👇
         const fS = await getDocs(collection(window.db, "utilizadores", window.myUserId, "faltas")); 
-        fS.forEach(d => { const f = d.data(); ev.push({ time: new Date(f.criadoEm || f.dataInicio).getTime(), cat: 'faltas', icon: '<i class="fa-solid fa-user-xmark"></i>', cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Falta a ${f.disciplina} (${f.horas}h)`, desc: f.justificada ? `Justificada` : `Injustificada` }); });
+        fS.forEach(d => { 
+            const f = d.data(); 
+            // O novo formato usa dataRegisto para ordenar e dataFalta para o texto, duracaoBlocos para horas
+            ev.push({ 
+                time: new Date(f.dataRegisto || f.dataInicio).getTime(), 
+                cat: 'faltas', 
+                icon: '<i class="fa-solid fa-user-xmark"></i>', 
+                cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', 
+                titulo: `Falta a ${f.disciplina} (${f.duracaoBlocos || f.horas}h)`, 
+                desc: f.justificada ? `Justificada` : `Injustificada - Falta em ${f.dataFalta ? new Date(f.dataFalta).toLocaleDateString('pt-PT') : (f.dataInicio || 'SN')}` 
+            }); 
+        });
         
         ev = ev.filter(e => !isNaN(e.time)); ev.sort((a,b) => b.time - a.time); 
         
@@ -77,7 +89,7 @@ async function carregarTimelineAluno() {
                      </div>`; 
         });
         cCont.innerHTML = html + '</div>';
-    } catch(e) {}
+    } catch(e) { console.error("Erro na Timeline:", e); }
 }
 
 async function carregarEvolucaoAluno() {
@@ -253,15 +265,23 @@ window.abrirModalPautaGlobal = function() {
 async function carregarFaltasAluno() {
     const cCont = document.getElementById('aluno-caderneta-content'); if(!cCont) return;
     try {
-        const snap = await getDocs(query(collection(window.db, "utilizadores", window.myUserId, "faltas"), orderBy("dataInicio", "desc"))); 
+        // Atualizado para usar a data certa do Firebase (dataRegisto em vez de dataInicio)
+        const snap = await getDocs(query(collection(window.db, "utilizadores", window.myUserId, "faltas"), orderBy("dataRegisto", "desc"))); 
         if(snap.empty) { cCont.innerHTML = getEmptyState('Nenhuma falta registada.', 'fa-user-check'); return; }
 
         let faltasPorChave = {};
         snap.forEach(d => {
-            const f = d.data(); const mod = f.modulo || '1'; const key = `${f.disciplina}_${mod}`;
+            const f = d.data(); 
+            const mod = f.modulo || '1'; 
+            const duracaoDaFalta = Number(f.duracaoBlocos || f.horas || 1); // Lê a nova variável
+            const key = `${f.disciplina}_${mod}`;
+            
             if(!faltasPorChave[key]) faltasPorChave[key] = { disc: f.disciplina, mod: mod, horasInjustificadas: 0, totalHoras: 0, detalhes: [] };
-            faltasPorChave[key].detalhes.push(f); faltasPorChave[key].totalHoras += Number(f.horas);
-            if(!f.justificada) faltasPorChave[key].horasInjustificadas += Number(f.horas);
+            
+            faltasPorChave[key].detalhes.push(f); 
+            faltasPorChave[key].totalHoras += duracaoDaFalta;
+            
+            if(!f.justificada) faltasPorChave[key].horasInjustificadas += duracaoDaFalta;
         });
 
         const matriz = getMatriz(); let html = '';
@@ -282,16 +302,19 @@ async function carregarFaltasAluno() {
                         <div class="progress-bar-bg" style="margin-bottom:15px;"><div class="progress-bar-fill" style="width:${perc}%; background:${pCor};"></div></div>`;
             
             group.detalhes.forEach(f => {
+                const duracao = f.duracaoBlocos || f.horas;
+                const dataFormatada = f.dataFalta ? new Date(f.dataFalta).toLocaleDateString('pt-PT') : (f.dataInicio || "SN");
                 const jStatus = f.justificada ? `<span style="color:var(--success-green);"><i class="fa-solid fa-check"></i> Justificada</span>` : `<span style="color:var(--danger-red);"><i class="fa-solid fa-xmark"></i> Injustificada</span>`;
+                
                 html += `<div style="padding:10px; background:rgba(0,0,0,0.2); border-left:3px solid ${f.justificada?'var(--success-green)':'var(--danger-red)'}; border-radius:6px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-                            <div><div style="font-size:0.85rem; color:var(--text-light); margin-bottom:3px;">${f.dataInicio}</div><span style="color:var(--text-muted); font-size:0.75rem;">${f.horas}h marcadas</span></div>
+                            <div><div style="font-size:0.85rem; color:var(--text-light); margin-bottom:3px;">${dataFormatada}</div><span style="color:var(--text-muted); font-size:0.75rem;">${duracao}h marcadas</span></div>
                             <div style="font-size:0.8rem; font-weight:bold;">${jStatus}</div>
                          </div>`;
             });
             html += `</div>`;
         }
         cCont.innerHTML = html;
-    } catch(e) {}
+    } catch(e) { console.error("Erro no carregamento de faltas:", e); }
 }
 
 async function carregarPRHFsAluno() {

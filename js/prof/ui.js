@@ -797,8 +797,15 @@ export async function abrirPerfil360Aluno(alunoId) {
                 if (elMom) {
                     try {
                         const rS = await getDoc(doc(db, "utilizadores", alunoId, "reunioes", `sintese_${d}_${elMom.value}`)); 
-                        const obsDt = document.getElementById('p-aluno-obs-dt');
-                        if (obsDt) obsDt.value = (rS.exists() && rS.data().texto) ? rS.data().texto : '';
+                        // Corrigido o ID para o nome exato do HTML e usa innerText em vez de value
+                        const obsDt = document.getElementById('p-aluno-obs-dt-display');
+                        if (obsDt) {
+                            if (rS.exists() && rS.data().texto) {
+                                obsDt.innerText = rS.data().texto;
+                            } else {
+                                obsDt.innerHTML = '<span style="color:var(--text-muted); font-style:italic;">Sem síntese registada para este momento.</span>';
+                            }
+                        }
                     } catch(e) {}
                 }
             }
@@ -876,36 +883,58 @@ export async function abrirPerfil360Aluno(alunoId) {
 
         // 6. TRATAR ZONA DAS SÍNTESES
         const areaSintese = document.getElementById('area-sintese-prof');
-        if (areaSintese) areaSintese.style.display = 'block';
+        if (areaSintese) {
+            areaSintese.style.display = 'block';
+            
+            // Apanha o título (no teu HTML ele não tem ID, é um H4, por isso usamos querySelector)
+            const tituloSint = areaSintese.querySelector('h4'); 
+            const elMomento = document.getElementById('sintese-momento');
 
-        if (isDT) { 
-            const btnJustFaltas = document.getElementById('btn-justificar-faltas');
-            if (btnJustFaltas) btnJustFaltas.style.display = fCount > 0 ? 'block' : 'none'; 
-            
-            const tituloSint = document.getElementById('titulo-sintese-area');
-            if (tituloSint) tituloSint.innerText = 'Síntese Global (DT)';
-            
-            if (elMomento) elMomento.style.display = 'none'; 
-            
-            const rS = await getDoc(doc(db, "utilizadores", alunoId, "reunioes", "1_avaliacao")); 
-            const obsDt = document.getElementById('p-aluno-obs-dt');
-            if (obsDt) {
-                if (rS.exists() && rS.data().global) { obsDt.value = rS.data().global; } else { obsDt.value = ''; } 
+            // Cria ou atualiza o seletor extra de disciplinas para o DT
+            let discSintSelect = document.getElementById('perfil-sintese-disc-select');
+            if (!discSintSelect) {
+                discSintSelect = document.createElement('select');
+                discSintSelect.id = 'perfil-sintese-disc-select';
+                discSintSelect.className = 'input-padrao';
+                discSintSelect.style.marginBottom = '10px';
+                discSintSelect.style.width = '100%';
+                if (elMomento) elMomento.insertAdjacentElement('afterend', discSintSelect);
             }
-        } else { 
-            const btnJustFaltas = document.getElementById('btn-justificar-faltas');
-            if (btnJustFaltas) btnJustFaltas.style.display = 'none'; 
+
+            if (isDT) { 
+                const btnJustFaltas = document.getElementById('btn-justificar-faltas');
+                if (btnJustFaltas) btnJustFaltas.style.display = fCount > 0 ? 'block' : 'none'; 
+                
+                if (tituloSint) tituloSint.innerHTML = '<i class="fa-solid fa-clipboard-user"></i> Observações Globais (DT)';
+                if (elMomento) elMomento.style.display = 'block'; 
+                
+                // O DT ganha o super-poder de escolher o que quer ler (A global ou as dos colegas)
+                let opts = '<option value="GLOBAL">A Minha Observação Global</option>';
+                disciplinasDoAno.forEach(d => {
+                    opts += `<option value="${d}">Ver Síntese de ${d}</option>`;
+                });
+                discSintSelect.innerHTML = opts;
+                discSintSelect.style.display = 'block';
+
+            } else { 
+                const btnJustFaltas = document.getElementById('btn-justificar-faltas');
+                if (btnJustFaltas) btnJustFaltas.style.display = 'none'; 
+                
+                if (tituloSint) tituloSint.innerHTML = '<i class="fa-solid fa-clipboard-user"></i> Síntese da Minha Disciplina';
+                if (elMomento) elMomento.style.display = 'block';
+                if (discSintSelect) discSintSelect.style.display = 'none'; // Esconde do prof normal
+            }
             
-            const tituloSint = document.getElementById('titulo-sintese-area');
-            if (tituloSint) tituloSint.innerText = `Síntese da Disciplina`;
-            
-            if (elMomento) elMomento.style.display = 'block';
+            // Força a leitura do Firebase com as novas regras
+            if (elMomento) {
+                elMomento.dispatchEvent(new Event('change', { bubbles: true }));
+            }
         }
         
         if (discSelect) discSelect.onchange(); 
 
     } catch (e) {
-        console.error("Erro a carregar dados do Firebase:", e);
+        console.error("Erro a carregar dados do Firebase no perfil 360:", e);
     }
 
     // 7. ATUALIZAR CONTADORES GERAIS
@@ -1284,36 +1313,64 @@ export async function carregarForunsProf() {
     state.turmasProfessor.forEach(t => { 
         const discValidas = filtrarDisciplinasDoAno(t, state.disciplinasProfessor);
         discValidas.forEach(d => { 
-            html += `<div class="canal-card" data-turma="${t}" data-disc="${d}" data-nome="Apoio a ${d}"><div class="canal-icon" style="color:#00d2ff; border-color:#00d2ff;"><i class="fa-solid fa-book-open"></i></div><div class="canal-info" style="flex:1; display:flex; justify-content:space-between; align-items:center;"><div><h4>Apoio a ${d}</h4><p>Turma ${t}</p></div><span class="notification-badge" style="position:relative; top:0; right:0; display:none;">!</span></div></div>`; 
+            html += `<div class="canal-card" data-turma="${t}" data-disc="${d}" data-nome="Apoio a ${d}"><div class="canal-icon" style="color:#00d2ff; border-color:#00d2ff;"><i class="fa-solid fa-book-open"></i></div><div class="canal-info" style="flex:1; display:flex; justify-content:space-between; align-items:center;"><div><h4>Apoio a ${d}</h4><p>Turma${t}</p></div><span class="notification-badge" style="position:relative; top:0; right:0; display:none;">!</span></div></div>`; 
         }); 
     });
 
     html += '<h3 style="font-size:1rem; color:var(--text-muted); margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Chats Personalizados</h3>';
     let encontrouPersonalizado = false; let htmlPersonalizado = '<div style="display:flex; flex-direction:column; gap:10px;">';
+    
     try {
-        for (const t of state.turmasProfessor) {
-            const s = await getDocs(collection(db, "turmas", t, "foruns")); let arr = []; s.forEach(d => arr.push({id: d.id, ...d.data()}));
-            arr.forEach(f => { 
-                if(f.membros && f.membros.includes(state.myUserId) && !f.isDefault) { 
-                    encontrouPersonalizado = true;
-                    const iconConfig = f.criadoPor === state.myUserName ? `<i class="fa-solid fa-gear btn-edit-chat" data-id="${f.id}" data-turma="${t}" style="color:var(--warning-yellow); font-size:1.2rem; cursor:pointer; padding:5px;"></i>` : ``;
-                    htmlPersonalizado += `<div class="canal-card" data-turma="${t}" data-disc="${f.id}" data-nome="${f.nome}" style="position:relative;"><div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-comments"></i></div><div class="canal-info" style="flex:1; display:flex; justify-content:space-between; align-items:center;"><div><h4>${f.nome}</h4><p>Turma ${t}</p></div><span class="notification-badge" style="position:relative; top:0; right:0; display:none;">!</span></div>${iconConfig}</div>`; 
-                } 
-            });
-        }
+        // CORREÇÃO: Agora o Professor lê da raiz "forums", não de dentro de cada Turma
+        const s = await getDocs(collection(db, "forums")); 
+        let arr = []; 
+        s.forEach(d => arr.push({id: d.id, ...d.data()}));
+        
+        arr.forEach(f => { 
+            // Verifica se o Professor está nos participantes E se não é um chat fixo antigo (isDefault)
+            let souParticipante = false;
+            if (f.criadoPor === state.myUserName) souParticipante = true; // Se eu criei, vejo.
+            else if (f.participantes && Array.isArray(f.participantes) && f.participantes.includes(state.myUserId)) souParticipante = true;
+            else if (f.membros && Array.isArray(f.membros) && f.membros.includes(state.myUserId)) souParticipante = true; // retrocompatibilidade
+            
+            if (souParticipante && !f.isDefault && f.isGlobal !== true) { 
+                encontrouPersonalizado = true;
+                const iconConfig = f.criadoPor === state.myUserName ? `<i class="fa-solid fa-gear btn-edit-chat" data-id="${f.id}" data-turma="${f.turma || ''}" style="color:var(--warning-yellow); font-size:1.2rem; cursor:pointer; padding:5px;"></i>` : ``;
+                // Usamos f.id no data-disc e "custom" no data-turma para não confundir a função de abrir
+                htmlPersonalizado += `<div class="canal-card" data-turma="custom" data-disc="${f.id}" data-nome="${f.nome}" style="position:relative;"><div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-comments"></i></div><div class="canal-info" style="flex:1; display:flex; justify-content:space-between; align-items:center;"><div><h4>${f.nome}</h4><p>${f.turma ? `Turma ${f.turma}` : 'Grupo de Estudo'}</p></div><span class="notification-badge" style="position:relative; top:0; right:0; display:none;">!</span></div>${iconConfig}</div>`; 
+            } 
+        });
+        
         if (!encontrouPersonalizado) { htmlPersonalizado += '<div class="empty-state"><i class="fa-solid fa-comments empty-state-icon"></i><p class="empty-state-desc">Nenhum chat extra criado.</p></div>'; }
         htmlPersonalizado += '</div>'; cont.innerHTML = `<div class="forum-canais-grid">${html}${htmlPersonalizado}</div>`;
-    } catch (e) { cont.innerHTML = '<p class="text-danger center">Erro a carregar chats.</p>'; }
+    } catch (e) { console.error(e); cont.innerHTML = '<p class="text-danger center">Erro a carregar chats.</p>'; }
 }
 
 export function abrirChatForum(turma, disciplina, nomeCustom) {
-    state.activeChatTurma = turma; state.activeChatDisc = disciplina;
-    document.getElementById('prof-forum-channel-list').style.display = 'none'; document.getElementById('btn-create-chat-prof').style.display = 'none'; 
-    document.getElementById('prof-forum-chat-view').style.display = 'flex'; 
-    document.getElementById('prof-chat-active-title').innerText = `${nomeCustom || disciplina} (${turma})`;
-    const msgCont = document.getElementById('prof-chat-messages-container'); msgCont.innerHTML = '<p class="text-muted center">A carregar mensagens...</p>';
+    state.activeChatTurma = turma; 
+    state.activeChatDisc = disciplina;
     
-    const forumDocRef = doc(db, "turmas", turma, "foruns", disciplina);
+    document.getElementById('prof-forum-channel-list').style.display = 'none'; 
+    document.getElementById('btn-create-chat-prof').style.display = 'none'; 
+    document.getElementById('prof-forum-chat-view').style.display = 'flex'; 
+    document.getElementById('prof-chat-active-title').innerText = `${nomeCustom || disciplina} ${turma !== 'custom' ? `(${turma})` : ''}`;
+    
+    const msgCont = document.getElementById('prof-chat-messages-container'); 
+    msgCont.innerHTML = '<p class="text-muted center">A carregar mensagens...</p>';
+    
+    // CORREÇÃO: Encaminhamento Inteligente. Se for "custom", vai ler à raiz "forums". Se for dos antigos, vai a "turmas/XX/foruns".
+    let forumDocRef;
+    let mensagensCollRef;
+    
+    if (turma === 'custom') {
+        // disciplina aqui traz o f.id verdadeiro do chat criado.
+        forumDocRef = doc(db, "forums", disciplina);
+        mensagensCollRef = collection(db, "forums", disciplina, "mensagens");
+    } else {
+        forumDocRef = doc(db, "turmas", turma, "foruns", disciplina);
+        mensagensCollRef = collection(db, "turmas", turma, "foruns", disciplina, "mensagens");
+    }
+
     if (state.chatMetaUnsubscribe) state.chatMetaUnsubscribe();
     state.chatMetaUnsubscribe = onSnapshot(forumDocRef, (docSnap) => {
         if(docSnap.exists() && docSnap.data().pinnedMessage) {
@@ -1324,19 +1381,27 @@ export function abrirChatForum(turma, disciplina, nomeCustom) {
         }
     });
 
-    const q = query(collection(db, "turmas", turma, "foruns", disciplina, "mensagens"), orderBy("timestamp", "asc"));
+    const q = query(mensagensCollRef, orderBy("timestamp", "asc"));
     if (state.chatUnsubscribe) state.chatUnsubscribe(); 
     state.chatUnsubscribe = onSnapshot(q, (snapshot) => {
         let h = '';
         snapshot.forEach(doc => { 
-            const m = doc.data(); const d = new Date(m.timestamp); const hora = isNaN(d.getTime()) ? '' : `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`; 
-            const isMe = m.autor === state.myUserName || m.remetente === state.myUserName; const nomeStr = m.autor || m.remetente || 'Desconhecido';
-            const pinBtn = `<button class="btn-pin-msg" data-text="${m.texto}" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.75rem; margin-left:10px;"><i class="fa-solid fa-thumbtack"></i></button>`;
+            const m = doc.data(); 
+            const d = new Date(m.timestamp); 
+            const hora = isNaN(d.getTime()) ? '' : `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`; 
+            
+            const isMe = m.autor === state.myUserName || m.remetente === state.myUserName || m.sender === state.myUserId; 
+            const nomeStr = m.autor || m.remetente || m.senderName || 'Desconhecido';
+            
+            const pinBtn = `<button class="btn-pin-msg" data-text="${m.texto || m.text}" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.75rem; margin-left:10px;"><i class="fa-solid fa-thumbtack"></i></button>`;
+            
             let anexoHtml = '';
             if (m.anexoBase64 && m.anexoNome) { anexoHtml = `<div style="background:rgba(0,0,0,0.2); padding:8px; border-radius:6px; margin-top:5px; font-size:0.8rem;"><i class="fa-solid fa-file" style="color:var(--primary-green);"></i> <a href="${m.anexoBase64}" download="${m.anexoNome}" style="color:white; text-decoration:none;">${m.anexoNome}</a></div>`; }
 
-            if (isMe) { h += `<div class="chat-bubble admin"><strong>Eu</strong>${pinBtn}<br>${m.texto}${anexoHtml}<span class="chat-meta">${hora}</span></div>`; } 
-            else { h += `<div class="chat-bubble student"><strong style="color:var(--primary-green);">${nomeStr}</strong>${pinBtn}<br>${m.texto}${anexoHtml}<span class="chat-meta">${hora}</span></div>`; }
+            const textoDaMensagem = m.texto || m.text || '';
+
+            if (isMe) { h += `<div class="chat-bubble admin"><strong>Eu</strong>${pinBtn}<br>${textoDaMensagem}${anexoHtml}<span class="chat-meta">${hora}</span></div>`; } 
+            else { h += `<div class="chat-bubble student"><strong style="color:var(--primary-green);">${nomeStr}</strong>${pinBtn}<br>${textoDaMensagem}${anexoHtml}<span class="chat-meta">${hora}</span></div>`; }
         });
         if (h === '') h = '<div class="empty-state" style="margin-top:20px;"><i class="fa-solid fa-comment-dots empty-state-icon" style="color:var(--primary-green);"></i><p class="empty-state-desc">Sê o primeiro a enviar uma mensagem para este canal!</p></div>';
         msgCont.innerHTML = h; setTimeout(() => { msgCont.scrollTop = msgCont.scrollHeight; }, 100);

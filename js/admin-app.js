@@ -42,11 +42,19 @@ let coordTabAtiva = 'fct';
 
 const nomeCurto = (nomeStr) => { if(!nomeStr) return 'Desconhecido'; const p = nomeStr.split(' '); return p.length > 1 ? `${p[0]} ${p[p.length-1]}` : p[0]; };
 
-function esconderTudoMenos(ecraAtivo) {
-    [adminDashboard, viewAdminTurmas, viewCoordProjetos, classHubView, classView, studentDetailView, viewAvaliacoes, viewDisciplinaModulos, 
-     viewInformacoes, viewPrhf, viewFaltas, viewFaltasModulos, viewClassCalendario, 
-     viewClassHorario, viewClassForum, viewClassEstatisticas, viewValidarJustificacoes, viewMusai, viewObservacoes, viewComportamento].forEach(el => { if(el) el.style.display = 'none'; });
-    if(ecraAtivo) ecraAtivo.style.display = 'block';
+function esconderTudoMenos(vistaAtiva) {
+    // Encontra todas as vistas (ecrãs) que estão dentro da área principal
+    const todasAsVistas = document.querySelectorAll('main.app-content > div');
+    
+    // Esconde todas automaticamente
+    todasAsVistas.forEach(vista => {
+        vista.style.display = 'none';
+    });
+    
+    // Mostra apenas a vista que pedimos no momento
+    if(vistaAtiva) {
+        vistaAtiva.style.display = 'block';
+    }
 }
 
 // 1. SEGURANÇA E INICIALIZAÇÃO ADMIN
@@ -65,8 +73,10 @@ onAuthStateChanged(auth, async (user) => {
                 document.getElementById('header-user-name-staff').innerText = `Olá, ${myUserName}`;
                 document.getElementById('header-staff').style.display = 'flex';
                 esconderTudoMenos(adminDashboard);
+                
                 carregarJustificacoesPendentesGlobal();
                 carregarEstatisticaRiscoGlobal();
+                carregarLogsAuditoria(); // <-- ADICIONAS APENAS ESTA LINHA AQUI!
             }
         } catch (e) { console.error(e); }
     } else { window.location.href = "index.html"; }
@@ -699,3 +709,243 @@ if(typeof onMessage !== "undefined" && messaging) {
     });
 }
 setTimeout(() => { if(myUserId) pedirPermissaoNotificacoes(); }, 4000);
+
+// ==========================================
+// MÓDULO ADMIN: PROFESSORES, LOGS E CONFIGS
+// ==========================================
+
+async function registarLogAuditoria(acaoDesc) {
+    try {
+        await addDoc(collection(db, "escola_logs"), {
+            acao: acaoDesc,
+            autor: myUserName || "Admin",
+            timestamp: new Date().toISOString()
+        });
+    } catch(e) { console.error("Erro ao gravar log", e); }
+}
+
+async function carregarLogsAuditoria() {
+    const container = document.getElementById('lista-logs-auditoria');
+    if(!container) return;
+    try {
+        const q = query(collection(db, "escola_logs"), orderBy("timestamp", "desc"));
+        const snap = await getDocs(q);
+        if(snap.empty) { container.innerHTML = '<p class="text-muted center">Sem atividade recente registada.</p>'; return; }
+        let html = '';
+        let count = 0;
+        snap.forEach(d => {
+            if(count < 5) {
+                const log = d.data();
+                const horaFmt = new Date(log.timestamp).toLocaleString([], {dateStyle: 'short', timeStyle: 'short'});
+                html += `<div style="font-size:0.85rem; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between;"><span style="color:var(--text-light);"><i class="fa-solid fa-circle-dot" style="font-size:0.5rem; color:#0099ff; margin-right:6px;"></i> ${log.acao} <strong>(${log.autor})</strong></span><span style="color:var(--text-muted); font-size:0.75rem;">${horaFmt}</span></div>`;
+                count++;
+            }
+        });
+        container.innerHTML = html;
+    } catch(e) { container.innerHTML = '<p class="text-muted center">Erro ao carregar logs.</p>'; }
+}
+
+// Navegação para Professores
+document.getElementById('btn-ir-professores')?.addEventListener('click', () => {
+    esconderTudoMenos(document.getElementById('view-admin-professores'));
+    carregarListaProfessores();
+});
+
+// Botão Voltar (Corrigido para evitar erros de variável)
+document.getElementById('btn-voltar-admin-prof')?.addEventListener('click', () => {
+    esconderTudoMenos(document.getElementById('admin-dashboard'));
+});
+
+// Modal Novo Professor
+document.getElementById('btn-novo-professor')?.addEventListener('click', () => {
+    document.getElementById('ap-id').value = ""; 
+    document.getElementById('ap-nome').value = "";
+    document.getElementById('ap-turmas').value = ""; 
+    document.getElementById('ap-disciplinas').value = "";
+    document.getElementById('modal-atribuir-professor').style.display = 'flex';
+});
+
+async function carregarListaProfessores() {
+    const container = document.getElementById('lista-professores-container');
+    container.innerHTML = '<p class="text-muted center">A procurar professores...</p>';
+    try {
+        const snap = await getDocs(query(collection(db, "utilizadores"), where("papel", "==", "professor")));
+        if(snap.empty) { container.innerHTML = '<p class="text-muted center">Sem professores registados.</p>'; return; }
+        let html = '';
+        snap.forEach(docSnap => {
+            const p = docSnap.data();
+            const turmasStr = Array.isArray(p.turmas) ? p.turmas.join(', ') : (p.turmas || 'Nenhuma');
+            const discsStr = Array.isArray(p.disciplinas) ? p.disciplinas.join(', ') : (p.disciplinas || 'Nenhuma');
+            html += `
+            <div class="card" style="margin-bottom: 12px; background: rgba(0,0,0,0.2); border-left: 4px solid var(--primary-green);">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="color:white; font-size:1rem;">${p.nome}</strong> <span style="font-size:0.75rem; color:var(--text-muted);">(${docSnap.id})</span>
+                        <div style="font-size:0.85rem; color:var(--text-light); margin-top:4px;"><i class="fa-solid fa-users"></i> Turmas: ${turmasStr} | <i class="fa-solid fa-book"></i> Disciplinas: ${discsStr}</div>
+                    </div>
+                </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+    } catch(e) { container.innerHTML = '<p class="text-danger center">Erro ao carregar professores.</p>'; }
+}
+
+document.getElementById('btn-gravar-atribuicao-prof')?.addEventListener('click', async (e) => {
+    const id = document.getElementById('ap-id').value.trim().toLowerCase();
+    const nome = document.getElementById('ap-nome').value.trim();
+    const turmas = document.getElementById('ap-turmas').value.trim().toUpperCase().split(',').map(s => s.trim()).filter(Boolean);
+    const disciplinas = document.getElementById('ap-disciplinas').value.trim().toUpperCase().split(',').map(s => s.trim()).filter(Boolean);
+    if(!id || !nome) return alert("Preenche pelo menos o ID e o Nome do Professor!");
+    const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A gravar...';
+    try {
+        await setDoc(doc(db, "utilizadores", id), {
+            nome: nome,
+            papel: 'professor',
+            turmas: turmas,
+            disciplinas: disciplinas
+        }, { merge: true });
+        await registarLogAuditoria(`Atribuiu turmas/disciplinas ao professor ${nome}`);
+        btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Gravado!';
+        setTimeout(() => {
+            document.getElementById('modal-atribuir-professor').style.display = 'none';
+            btnRef.innerHTML = 'Guardar Atribuição';
+            carregarListaProfessores();
+        }, 1200);
+    } catch(err) { btnRef.innerHTML = 'Erro!'; }
+});
+
+// Navegação para Configurações e Prazos
+document.getElementById('btn-ir-config')?.addEventListener('click', async () => {
+    esconderTudoMenos(document.getElementById('view-admin-config'));
+    try {
+        const cfgDoc = await getDoc(doc(db, "escola_config", "global"));
+        if(cfgDoc.exists()) {
+            const d = cfgDoc.data();
+            document.getElementById('cfg-inicio-ano').value = d.inicioAno || "";
+            document.getElementById('cfg-limite-pap').value = d.limitePAP || "";
+            document.getElementById('cfg-bloquear-notas').value = d.bloquearNotas || "nao";
+        }
+    } catch(e) {}
+});
+document.getElementById('btn-voltar-admin-config')?.addEventListener('click', () => esconderTudoMenos(adminDashboard));
+
+document.getElementById('btn-guardar-config')?.addEventListener('click', async (e) => {
+    const inicioAno = document.getElementById('cfg-inicio-ano').value;
+    const limitePAP = document.getElementById('cfg-limite-pap').value;
+    const bloquearNotas = document.getElementById('cfg-bloquear-notas').value;
+    const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A gravar...';
+    try {
+        await setDoc(doc(db, "escola_config", "global"), {
+            inicioAno, limitePAP, bloquearNotas, atualizadoEm: new Date().toISOString()
+        }, { merge: true });
+        await registarLogAuditoria("Atualizou as configurações globais e prazos escolares");
+        btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Configurações Salvas!';
+        setTimeout(() => { btnRef.innerHTML = 'Guardar Configurações'; }, 1500);
+    } catch(err) { btnRef.innerHTML = 'Erro!'; }
+});
+
+// ==========================================
+// MÓDULO ADMIN: OCORRÊNCIAS E PUSH EM MASSA
+// ==========================================
+
+// Navegação Ocorrências Globais
+document.getElementById('btn-ir-ocorrencias')?.addEventListener('click', () => {
+    esconderTudoMenos(document.getElementById('view-admin-ocorrencias'));
+    carregarOcorrenciasGlobais();
+});
+document.getElementById('btn-voltar-admin-oc')?.addEventListener('click', () => esconderTudoMenos(adminDashboard));
+
+async function carregarOcorrenciasGlobais() {
+    const container = document.getElementById('lista-global-ocorrencias-container');
+    container.innerHTML = '<p class="text-muted center">A cruzar ocorrências da escola...</p>';
+    try {
+        let todasOcorrencias = [];
+        const snapshotAlunos = await getDocs(query(collection(db, "utilizadores"), where("papel", "==", "aluno")));
+        
+        for(const alunoDoc of snapshotAlunos.docs) {
+            const ocSnap = await getDocs(collection(db, "utilizadores", alunoDoc.id, "ocorrencias"));
+            ocSnap.forEach(o => {
+                todasOcorrencias.push({
+                    idAluno: alunoDoc.id,
+                    nomeAluno: alunoDoc.data().nome,
+                    turma: alunoDoc.data().turma,
+                    ...o.data()
+                });
+            });
+        }
+
+        if(todasOcorrencias.length === 0) {
+            container.innerHTML = '<p class="text-success center"><i class="fa-solid fa-circle-check"></i> Sem ocorrências disciplinares registadas na escola.</p>';
+            return;
+        }
+
+        todasOcorrencias.sort((a,b) => (b.data || "").localeCompare(a.data || ""));
+
+        let html = '';
+        todasOcorrencias.forEach(oc => {
+            const isPositivo = oc.tipo === 'positivo';
+            const corBorda = isPositivo ? 'var(--success-green)' : 'var(--danger-red)';
+            const icone = isPositivo ? 'fa-face-smile' : 'fa-triangle-exclamation';
+            
+            html += `
+            <div class="card" style="margin-bottom: 12px; background: rgba(0,0,0,0.2); border-left: 4px solid ${corBorda};">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <strong style="color:white; font-size:1rem;"><i class="fa-solid ${icone}" style="color:${corBorda};"></i> ${oc.titulo || 'Ocorrência'}</strong>
+                        <div style="font-size:0.85rem; color:var(--text-light); margin-top:4px;">Aluno: <strong>${oc.nomeAluno}</strong> (${oc.turma})</div>
+                        ${oc.descricao ? `<p style="font-size:0.8rem; color:var(--text-muted); margin-top:6px;">${oc.descricao}</p>` : ''}
+                    </div>
+                    <span style="font-size:0.75rem; color:var(--text-muted);">${oc.data || ''}</span>
+                </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+    } catch(e) {
+        container.innerHTML = '<p class="text-danger center">Erro ao carregar ocorrências.</p>';
+    }
+}
+
+// Navegação Push em Massa / Broadcast
+document.getElementById('btn-ir-broadcast')?.addEventListener('click', () => {
+    esconderTudoMenos(document.getElementById('view-admin-broadcast'));
+});
+document.getElementById('btn-voltar-admin-bc')?.addEventListener('click', () => esconderTudoMenos(adminDashboard));
+
+document.getElementById('btn-enviar-broadcast')?.addEventListener('click', async (e) => {
+    const alvo = document.getElementById('bc-alvo').value;
+    const titulo = document.getElementById('bc-titulo').value.trim();
+    const mensagem = document.getElementById('bc-mensagem').value.trim();
+    
+    if(!titulo || !mensagem) return alert("Preenche o Título e a Mensagem do aviso!");
+    
+    const btnRef = e.currentTarget;
+    btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A enviar aviso...';
+    btnRef.disabled = true;
+
+    try {
+        await addDoc(collection(db, "escola_avisos_globais"), {
+            alvo,
+            titulo,
+            mensagem,
+            enviadoPor: myUserName || "Direção",
+            timestamp: new Date().toISOString()
+        });
+
+        await registarLogAuditoria(`Enviou aviso global em massa (${alvo}): "${titulo}"`);
+
+        btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Aviso Enviado com Sucesso!';
+        setTimeout(() => {
+            document.getElementById('bc-titulo').value = "";
+            document.getElementById('bc-mensagem').value = "";
+            btnRef.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Notificação Push';
+            btnRef.disabled = false;
+        }, 2000);
+    } catch(err) {
+        console.error("Erro ao enviar broadcast", err);
+        btnRef.innerHTML = 'Erro ao enviar!';
+        setTimeout(() => {
+            btnRef.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Notificação Push';
+            btnRef.disabled = false;
+        }, 2000);
+    }
+});

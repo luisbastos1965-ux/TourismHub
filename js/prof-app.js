@@ -347,20 +347,35 @@ document.body.addEventListener('change', async (e) => {
     }
 
     // --- MUDANÇA DO MOMENTO DA SÍNTESE DO ALUNO ---
-    if (e.target.id === 'sintese-momento') {
-        const momento = e.target.value;
+    if (e.target.id === 'sintese-momento' || e.target.id === 'perfil-sintese-disc-select') {
+        const momento = document.getElementById('sintese-momento').value;
         const alunoId = document.getElementById('perfil-aluno-id-hidden').value;
-        const turma = state.selectedTurma;
-        const displayBox = document.getElementById('p-aluno-obs-dt-display');
+        const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
         
-        displayBox.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A ler caderneta do DT...';
+        // O DT tem um filtro extra para escolher ver a Global ou as disciplinas dos outros profs
+        const discFiltro = document.getElementById('perfil-sintese-disc-select');
+        const filtroAtivo = (isDT && discFiltro) ? discFiltro.value : state.disciplinasProfessor[0];
+        
+        const displayBox = document.getElementById('p-aluno-obs-dt-display');
+        displayBox.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A ler síntese...';
         
         try {
-            const snap = await getDoc(doc(db, "turmas", turma, "sinteses", `${alunoId}_${momento}`));
-            if (snap.exists() && snap.data().texto) {
-                displayBox.innerText = snap.data().texto;
+            const snap = await getDoc(doc(db, "utilizadores", alunoId, "reunioes", momento));
+            let textoParaMostrar = null;
+
+            if (snap.exists()) {
+                const dados = snap.data();
+                if (isDT && filtroAtivo === 'GLOBAL') {
+                    textoParaMostrar = dados.sintese_global;
+                } else {
+                    textoParaMostrar = dados.sinteses_disciplinas ? dados.sinteses_disciplinas[filtroAtivo] : null;
+                }
+            }
+
+            if (textoParaMostrar) {
+                displayBox.innerText = textoParaMostrar;
             } else {
-                displayBox.innerHTML = '<span style="color:var(--text-muted); font-style:italic;">Sem síntese registada para este momento.</span>';
+                displayBox.innerHTML = '<span style="color:var(--text-muted); font-style:italic;">Sem síntese registada.</span>';
             }
         } catch(err) {
             displayBox.innerText = "Erro ao carregar síntese.";
@@ -659,6 +674,66 @@ document.body.addEventListener('click', async (e) => {
 
         const modal = document.getElementById('modal-marcar-faltas');
         if(modal) modal.style.display = 'flex';
+        return;
+    }
+
+    // --- GRAVAR FALTAS NA BASE DE DADOS (O REMENDO!) ---
+    if (e.target.closest('#btn-confirmar-faltas')) {
+        const btn = e.target.closest('#btn-confirmar-faltas');
+        const turma = document.getElementById('lancar-falta-turma').value;
+        const disciplina = document.getElementById('lancar-falta-disciplina').value;
+        const modulo = document.getElementById('falta-modulo-select').value;
+        const dataFalta = document.getElementById('falta-data-input').value;
+        const duracao = parseInt(document.getElementById('falta-aula-select').value) || 2;
+        
+        // Vai buscar todas as checkboxes de alunos que foram selecionadas (marcadas com falta)
+        const checksFaltas = document.querySelectorAll('.falta-aluno-check:checked');
+        
+        if (checksFaltas.length === 0) {
+            alert("Atenção: Não selecionaste nenhum aluno para marcar falta.");
+            return;
+        }
+
+        const txtOriginal = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A gravar...';
+        btn.disabled = true;
+
+        try {
+            // Cria um pacote (promessa) para cada aluno que levou falta
+            const gravacoes = Array.from(checksFaltas).map(chk => {
+                const alunoId = chk.value;
+                return addDoc(collection(db, "utilizadores", alunoId, "faltas"), {
+                    turma: turma,
+                    disciplina: disciplina,
+                    modulo: modulo,
+                    dataFalta: dataFalta,
+                    duracaoBlocos: duracao,
+                    dataRegisto: new Date().toISOString(),
+                    professor: state.myUserName,
+                    justificada: false
+                });
+            });
+            
+            // Dispara todos os pacotes para a Firebase ao mesmo tempo!
+            await Promise.all(gravacoes);
+            
+            // Regista no log do professor
+            if (window.registarAtividadeProfessor) {
+                await window.registarAtividadeProfessor('falta', `Faltas marcadas a ${checksFaltas.length} aluno(s)`, `Turma ${turma} | ${disciplina}`);
+            }
+
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Faltas Gravadas!';
+            setTimeout(() => { 
+                btn.innerHTML = txtOriginal; 
+                btn.disabled = false; 
+                document.getElementById('modal-marcar-faltas').style.display = 'none';
+            }, 2000);
+            
+        } catch(err) {
+            console.error(err);
+            btn.innerHTML = 'Erro ao gravar!';
+            setTimeout(() => { btn.innerHTML = txtOriginal; btn.disabled = false; }, 2000);
+        }
         return;
     }
 
@@ -1184,10 +1259,10 @@ document.body.addEventListener('click', async (e) => {
         return;
     }
 
-    // ABRIR MODAL PRINCIPAL DAS SÍNTESES
-    if (e.target.closest('#btn-ver-sinteses-turma')) {
+    // ABRIR MODAL PRINCIPAL DAS SÍNTESES (Corrigido para apanhar os dois nomes possíveis do botão)
+    if (e.target.closest('#btn-ver-sinteses-turma') || e.target.closest('#btn-modal-sinteses')) {
         const turma = state.selectedTurma;
-        if (!turma) { alert("Seleciona primeiro uma turma."); return; }
+        if (!turma) { alert("Seleciona primeiro uma turma no menu superior."); return; }
         
         const grid = document.getElementById('grid-sinteses-alunos');
         if (grid) {
@@ -1201,7 +1276,7 @@ document.body.addEventListener('click', async (e) => {
                 let cH = '';
                 arr.forEach(d => {
                     cH += `
-                    <div class="aluno-sintese-row" data-id="${d.id}" style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.2); border:1px solid #333; border-radius:6px;">
+                    <div class="aluno-sintese-row" data-id="${d.id}" style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.2); border:1px solid #333; border-radius:6px; margin-bottom:5px;">
                         <span class="nome-aluno-span" style="color:white; font-size:0.85rem; flex: 1;">${nomeCurto(d.nome)}</span>
                         <button class="btn-abrir-gerador-sintese secondary-btn small-btn" style="width: 90px; color: #3b82f6; border-color: #3b82f6;">Avaliar</button>
                         <input type="hidden" class="input-sintese-hidden" value="">
@@ -1209,9 +1284,19 @@ document.body.addEventListener('click', async (e) => {
                     </div>`;
                 });
                 grid.innerHTML = cH === '' ? '<p class="text-muted center" style="font-size:0.8rem;">Turma vazia.</p>' : cH;
-            } catch(err) { grid.innerHTML = '<p class="text-danger center">Erro.</p>'; }
+            } catch(err) { grid.innerHTML = '<p class="text-danger center">Erro a carregar alunos.</p>'; }
         }
-        document.getElementById('modal-lancamento-sinteses').style.display = 'flex';
+        
+        // Tenta encontrar o modal com o nome novo ou com o nome antigo
+        const modalSintese = document.getElementById('modal-lancamento-sinteses') || document.getElementById('modal-sinteses') || document.getElementById('modal-sintese');
+        
+        if (modalSintese) {
+            modalSintese.style.display = 'flex';
+        } else {
+            console.error("IDs não encontrados. Verifica o teu HTML!");
+            alert("Atenção: O modal existe no código, mas o JavaScript não encontra o ID dele no ficheiro HTML! Confirma se a div do modal se chama 'modal-lancamento-sinteses' ou 'modal-sinteses'.");
+        }
+        
         return;
     }
 
@@ -1299,7 +1384,7 @@ document.body.addEventListener('click', async (e) => {
         const alunoId = document.getElementById('sintese-aluno-id-atual').value;
         const momento = document.getElementById('lancar-sintese-momento-global').value;
         const disciplina = state.disciplinasProfessor[0];
-        const turma = state.selectedTurma;
+        const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
         
         if (!textoF) { alert("A síntese está vazia."); return; }
 
@@ -1307,15 +1392,21 @@ document.body.addEventListener('click', async (e) => {
         btn.disabled = true;
 
         try {
-            // Guardar o documento final
-            await setDoc(doc(db, "utilizadores", alunoId, "reunioes", `sintese_${disciplina}_${momento}`), {
-                turma: turma,
-                disciplina: disciplina,
-                momento: momento,
-                texto: textoF,
-                dataLancamento: new Date().toISOString(),
-                professor: state.myUserName
-            }, { merge: true });
+            // Nova Estrutura Unificada (Perfeita para a App do Aluno)
+            const updateData = {
+                turma: state.selectedTurma,
+                atualizadoEm: new Date().toISOString()
+            };
+
+            if (isDT) {
+                updateData.sintese_global = textoF; // Grava como Global
+                updateData.dt = state.myUserName;
+            } else {
+                updateData[`sinteses_disciplinas.${disciplina}`] = textoF; // Grava na gaveta da Disciplina
+                updateData.professor = state.myUserName;
+            }
+
+            await setDoc(doc(db, "utilizadores", alunoId, "reunioes", momento), updateData, { merge: true });
 
             // Atualizar o cartão visualmente
             const linhas = Array.from(document.querySelectorAll('.aluno-sintese-row'));
@@ -1330,7 +1421,8 @@ document.body.addEventListener('click', async (e) => {
                 if (indexAtual + 1 < linhas.length) {
                     window.carregarAlunoNoMiniModalSintese(linhas[indexAtual + 1]);
                 } else {
-                    document.getElementById('modal-gerador-sintese').style.display = 'none';
+                    const modalS = document.getElementById('modal-gerador-sintese');
+                    if(modalS) modalS.style.display = 'none';
                 }
             }
             

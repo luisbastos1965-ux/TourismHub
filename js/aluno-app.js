@@ -1,7 +1,7 @@
 // js/aluno-app.js
 import { auth, db } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { doc, getDoc, enableIndexedDbPersistence, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // Importar os Módulos
 import { setupGamificacao, aplicarTemaAcademia } from "./modules/aluno-gamificacao.js";
@@ -87,6 +87,132 @@ onAuthStateChanged(auth, async (user) => {
                 setupHorario();
                 setupComunicacao();
                 setupPassaporte(); // <-- NOVO MÓDULO ATIVADO AQUI
+
+                // 👇 SISTEMA DE NOTIFICAÇÕES (VERSÃO FINAL VIP + POP-UP SÓ 1 VEZ) 👇
+                const avisosRef = collection(db, "escola_avisos_globais");
+                
+                onSnapshot(avisosRef, (snapshot) => {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === "added") {
+                            const aviso = change.doc.data();
+                            const avisoId = change.doc.id; // <-- Pega no ID único do aviso
+                            
+                            try {
+                                const alvoAviso = (aviso.alvo || "").trim().toUpperCase();
+                                const turmaAluno = (window.minhaTurma || "").trim().toUpperCase();
+                                
+                                if (alvoAviso === "TODOS" || alvoAviso === turmaAluno) {
+                                    
+                                    // 1. Acende o sino com o Ponto de Exclamação
+                                    const bellBadge = document.getElementById('badge-notificacoes');
+                                    if (bellBadge) {
+                                        bellBadge.style.display = 'flex';
+                                        bellBadge.innerText = '!';
+                                    }
+                                    
+                                    // 2. Trata a Data
+                                    let dataTxt = "Agora mesmo";
+                                    if (aviso.timestamp) {
+                                        let d;
+                                        if (typeof aviso.timestamp.toDate === 'function') { d = aviso.timestamp.toDate(); } 
+                                        else if (typeof aviso.timestamp === 'string') { d = new Date(aviso.timestamp); }
+                                        
+                                        if(d && !isNaN(d)) {
+                                            dataTxt = d.toLocaleDateString('pt-PT') + " às " + d.toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'});
+                                        }
+                                    }
+
+                                    // 3. Monta o Cartão HTML VIP (Roxo) para a Central
+                                    const cardHTML = `
+                                        <div class="card" style="border-left: 4px solid #9333ea; margin-bottom: 15px; background: linear-gradient(135deg, rgba(147, 51, 234, 0.15), rgba(0, 0, 0, 0.2));">
+                                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                                                <h4 style="margin: 0; color: #9333ea; font-size: 1rem;"><i class="fa-solid fa-bullhorn"></i> ${aviso.titulo}</h4>
+                                                <span style="font-size: 0.75rem; color: var(--text-muted);">${dataTxt}</span>
+                                            </div>
+                                            <p style="margin: 0; font-size: 0.9rem; color: var(--text-light); line-height: 1.4;">${aviso.mensagem}</p>
+                                        </div>
+                                    `;
+
+                                    // 4. Injeção Protegida na Zona VIP
+                                    let pushContainer = document.getElementById('zona-vip-avisos-direcao');
+                                    if (!pushContainer) {
+                                        pushContainer = document.createElement('div');
+                                        pushContainer.id = 'zona-vip-avisos-direcao';
+                                        pushContainer.style.marginBottom = '20px';
+                                        const filtros = document.getElementById('notificacoes-filtros');
+                                        if (filtros) filtros.insertAdjacentElement('afterend', pushContainer);
+                                    }
+                                    if (pushContainer) pushContainer.insertAdjacentHTML('afterbegin', cardHTML);
+
+                                    // 5. O POP-UP BONITO NO ECRÃ (SÓ MOSTRA 1 VEZ)
+                                    let avisosLidos = JSON.parse(localStorage.getItem('avisos_lidos_popup') || '[]');
+                                    
+                                    if (!avisosLidos.includes(avisoId)) {
+                                        let modalApp = document.getElementById('modal-aviso-direcao-dinamico');
+                                        
+                                        if (!modalApp) {
+                                            const modalHTML = `
+                                            <div id="modal-aviso-direcao-dinamico" class="modal-overlay" style="display: flex; z-index: 9999; align-items: center; justify-content: center;">
+                                                <div class="action-sheet" style="border-radius: 12px; max-width: 350px; width: 90%; margin: auto; text-align: center; border: 2px solid #9333ea; box-shadow: 0 10px 30px rgba(147, 51, 234, 0.4); background: var(--bg-card);">
+                                                    <div style="background-color: rgba(147, 51, 234, 0.15); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto;">
+                                                        <i class="fa-solid fa-bullhorn" style="color: #9333ea; font-size: 1.8rem;"></i>
+                                                    </div>
+                                                    <h3 id="modal-aviso-titulo" style="color: #9333ea; margin-bottom: 15px; font-size: 1.2rem;">${aviso.titulo}</h3>
+                                                    <p id="modal-aviso-mensagem" style="color: var(--text-light); font-size: 0.95rem; margin-bottom: 25px; line-height: 1.5; text-align: left; background: var(--bg-dark); padding: 15px; border-radius: 8px; border-left: 3px solid #9333ea;">
+                                                        ${aviso.mensagem}
+                                                    </p>
+                                                    <button id="btn-fechar-modal-aviso" class="primary-btn" style="background-color: #9333ea; color: #fff; width: 100%;">
+                                                        Entendido
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            `;
+                                            document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+                                            document.getElementById('btn-fechar-modal-aviso').addEventListener('click', () => {
+                                                document.getElementById('modal-aviso-direcao-dinamico').style.display = 'none';
+                                                avisosLidos.push(avisoId);
+                                                localStorage.setItem('avisos_lidos_popup', JSON.stringify(avisosLidos));
+                                            });
+                                        } else {
+                                            document.getElementById('modal-aviso-titulo').innerText = aviso.titulo;
+                                            document.getElementById('modal-aviso-mensagem').innerText = aviso.mensagem;
+                                            modalApp.style.display = 'flex';
+                                            
+                                            const btnFechar = document.getElementById('btn-fechar-modal-aviso');
+                                            const novoClone = btnFechar.cloneNode(true);
+                                            btnFechar.parentNode.replaceChild(novoClone, btnFechar);
+                                            
+                                            novoClone.addEventListener('click', () => {
+                                                document.getElementById('modal-aviso-direcao-dinamico').style.display = 'none';
+                                                avisosLidos.push(avisoId);
+                                                localStorage.setItem('avisos_lidos_popup', JSON.stringify(avisosLidos));
+                                            });
+                                        }
+                                    }
+
+                                }
+                            } catch (erro) {
+                                console.error("⚠️ Erro no ciclo de notificações:", erro);
+                            }
+                        }
+                    });
+                });
+
+                // --- NAVEGAÇÃO DO SINO ---
+                document.getElementById('btn-open-notificacoes')?.addEventListener('click', () => {
+                    document.querySelectorAll('.app-content > div:not(.modal-overlay)').forEach(d => d.style.display = 'none');
+                    document.getElementById('view-aluno-notificacoes').style.display = 'block';
+                    
+                    const bellBadge = document.getElementById('badge-notificacoes');
+                    if (bellBadge) bellBadge.style.display = 'none';
+                });
+
+                document.getElementById('btn-voltar-notificacoes')?.addEventListener('click', () => {
+                    const abaAtiva = document.querySelector('.bottom-nav .nav-item.active');
+                    if (abaAtiva) abaAtiva.click();
+                });
+                // 👆 FIM DO SISTEMA DE NOTIFICAÇÕES 👆
 
                 // Verificar Academia
                 if (!window.myAcademia) {

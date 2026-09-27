@@ -4,15 +4,15 @@
    VARIÁVEIS DE COR (SaaS MATURO E PRO)
 ========================================= */
 :root { 
-    --primary-green: #10b981; 
-    --primary-hover: #059669; 
-    --bg-dark: #0f1115;       
-    --bg-card: #181b21;       
-    --text-light: #f3f4f6;  
-    --text-muted: #9ca3af;  
-    --danger-red: #ef4444;  
-    --success-green: #10b981; 
-    --warning-yellow: #f59e0b;
+    --primary-green: #ff8632;        /* O teu laranja passa a ser a cor principal de destaque */ 
+    --primary-hover: #e06d20;        /* Tom de laranja ligeiramente mais escuro para o efeito hover */ 
+    --bg-dark: #0f1115;              /* Fundo neutro escuro profundo */ 
+    --bg-card: #181b21;              /* Fundo de cartões neutro */ 
+    --text-light: #f3f4f6;           /* Texto principal claro */ 
+    --text-muted: #9ca3af;           /* Texto secundário neutro */ 
+    --danger-red: #ef4444;           /* Mantido estritamente para REP, faltas e ocorrências negativas */  
+    --success-green: #10b981;        /* Mantido estritamente para notas positivas e aprovações */ 
+    --warning-yellow: #f59e0b;       /* Mantido para avisos e atestados pendentes */
     --accent-purple: #8b5cf6;
 }
 

@@ -1215,6 +1215,78 @@
                 </div>
             </div>
 
+            <!-- MODAL LISTA DE SÍNTESES -->
+            <div id="modal-lancamento-sinteses" class="modal-overlay" style="z-index: 2000; display: none;">
+                <div class="action-sheet" style="max-width: 500px; padding: 20px; max-height: 90vh; overflow-y: auto;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                        <h3 style="color: #3b82f6; margin:0;"><i class="fa-solid fa-clipboard"></i> Sínteses da Turma</h3>
+                        <button class="fechar-modal" data-target="modal-lancamento-sinteses" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    
+                    <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 5px;">Momento de Avaliação</label>
+                    <select id="lancar-sintese-momento-global" class="input-padrao" style="width:100%; margin-bottom:15px; border-color: #3b82f6;">
+                        <option value="momento_1">1º Momento (Intercalar 1º Período)</option>
+                        <option value="momento_2">2º Momento (Final 1º Período)</option>
+                        <option value="momento_3">3º Momento (Intercalar 2º Período)</option>
+                        <option value="momento_4">4º Momento (Final 2º Período)</option>
+                        <option value="momento_5">5º Momento (Final 3º Período)</option>
+                    </select>
+
+                    <div id="grid-sinteses-alunos" style="display:flex; flex-direction:column; gap:6px;">
+                        <p class="text-muted center" style="padding:15px; font-size:0.85rem;">A carregar lista...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL GERADOR DE SÍNTESE IA -->
+            <div id="modal-gerador-sintese" class="modal-overlay" style="z-index: 2500; display: none;">
+                <div class="action-sheet" style="max-width: 450px; padding: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                        <h3 style="color: #3b82f6; margin:0;"><i class="fa-solid fa-wand-magic-sparkles"></i> IA Assistente</h3>
+                        <button class="fechar-modal" data-target="modal-gerador-sintese" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    
+                    <input type="hidden" id="sintese-aluno-id-atual">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px;">
+                        <button id="btn-sint-anterior" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.2rem; padding:5px;"><i class="fa-solid fa-chevron-left"></i></button>
+                        <h4 id="nome-aluno-sintese-atual" style="color: white; margin: 0; font-size: 1.1rem; text-align: center; flex:1;">Nome do Aluno</h4>
+                        <button id="btn-sint-seguinte" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.2rem; padding:5px;"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin-bottom:15px;">
+                        <div>
+                            <label style="font-size:0.7rem; color:var(--text-muted);">Assiduidade</label>
+                            <select id="sint-assid" class="input-padrao" style="margin:0; padding:8px; font-size:0.85rem;"><option>Sempre</option><option selected>Geralmente</option><option>Falhas</option></select>
+                        </div>
+                        <div>
+                            <label style="font-size:0.7rem; color:var(--text-muted);">Empenho</label>
+                            <select id="sint-emp" class="input-padrao" style="margin:0; padding:8px; font-size:0.85rem;"><option>Elevado</option><option selected>Bom</option><option>Suficiente</option><option>Fraco</option></select>
+                        </div>
+                        <div>
+                            <label style="font-size:0.7rem; color:var(--text-muted);">Participação</label>
+                            <select id="sint-part" class="input-padrao" style="margin:0; padding:8px; font-size:0.85rem;"><option>Ativa</option><option selected>Regular</option><option>Pouca</option><option>Passiva</option></select>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:15px; background: rgba(0,0,0,0.2); border: 1px solid #333; padding: 10px; border-radius: 8px;">
+                        <label style="display:flex; align-items:center; gap:10px; color:white; font-size:0.85rem; cursor:pointer;">
+                            <input type="checkbox" id="sint-check-prhfs" style="width:18px; height:18px; accent-color:#3b82f6;"> Mencionar PRHFs ativos (se houver)
+                        </label>
+                        <label style="display:flex; align-items:center; gap:10px; color:white; font-size:0.85rem; cursor:pointer;">
+                            <input type="checkbox" id="sint-check-atrasos" style="width:18px; height:18px; accent-color:#3b82f6;"> Mencionar módulos em atraso
+                        </label>
+                    </div>
+
+                    <button id="btn-auto-gerar-sintese" class="secondary-btn" style="width:100%; margin-bottom:15px; border-color:#3b82f6; color:#3b82f6;">
+                        <i class="fa-solid fa-robot"></i> Gerar Texto Base
+                    </button>
+
+                    <textarea id="texto-sintese-final" class="input-padrao" style="min-height:100px; width:100%; margin-bottom:15px;" placeholder="O texto gerado aparecerá aqui para poderes afinar..."></textarea>
+
+                    <button id="btn-salvar-sintese-bd" class="primary-btn" style="width:100%; background:#3b82f6; color:white;"><i class="fa-solid fa-floppy-disk"></i> Guardar e Avançar</button>
+                </div>
+            </div>
+
         </main>
 
         <nav class="bottom-nav" id="main-bottom-nav">

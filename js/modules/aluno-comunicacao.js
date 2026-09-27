@@ -128,16 +128,22 @@ export function setupComunicacao() {
     });
 }
 
+// Variável para não duplicarmos a audição (evita gasto de dados do Firebase)
+let forumListUnsubscribe = null;
+
 function carregarCanaisForumAluno() {
     const list = document.getElementById('aluno-forum-channel-list'); if(!list) return;
-    list.innerHTML = '<p class="text-muted center">A organizar chats...</p>';
+    list.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A organizar chats...</p>';
     
+    // Limpa ouvintes antigos para a página não ficar pesada
+    if(forumListUnsubscribe) { forumListUnsubscribe(); }
+
     try {
         const q = query(collection(window.db, "forums")); 
-        onSnapshot(q, (snap) => {
+        forumListUnsubscribe = onSnapshot(q, (snap) => {
             let grupos = [];
             
-            // 1. INJEÇÃO DOS CHATS FIXOS/PERMANENTES (Sem Academia dos / Sem Geral)
+            // 1. INJEÇÃO DOS CHATS FIXOS/PERMANENTES
             const mAcad = window.myAcademia ? window.myAcademia.charAt(0).toUpperCase() + window.myAcademia.slice(1) : 'Academia';
             grupos.push({ id: `chat_dt_${window.minhaTurma}`, nome: "Diretor de Turma (Privado)", isGlobal: false, icone: "fa-user-tie", cor: "var(--warning-yellow)", type: 'fixo' });
             grupos.push({ id: `chat_turma_${window.minhaTurma}`, nome: `Turma ${window.minhaTurma}`, isGlobal: false, icone: "fa-users", cor: "#0ea5e9", type: 'fixo' });
@@ -147,47 +153,79 @@ function carregarCanaisForumAluno() {
                 grupos.push({ id: `chat_disc_${window.minhaTurma}_${d}`, nome: d, isGlobal: false, icone: "fa-book", cor: "#8b5cf6", type: 'disciplina' });
             });
 
-            // 2. CRUZA COM A BD
+            // 2. CRUZA COM A BD (A PROVA DE BALAS)
             snap.forEach(d => {
-                const ch = d.data();
-                if (ch.isGlobal || !ch.participantes || ch.participantes.includes(window.myUserId)) {
-                    const exists = grupos.findIndex(g => g.id === d.id);
-                    if (exists !== -1) {
-                        grupos[exists] = { ...grupos[exists], ...ch }; 
-                    } else {
-                        grupos.push({ id: d.id, ...ch, type: 'custom' });
+                try {
+                    const ch = d.data();
+                    
+                    // Lógica de Participantes Anti-Crash (MÁGICA AQUI)
+                    let souParticipante = false;
+                    
+                    if (ch.isGlobal === true) {
+                        souParticipante = true;
+                    } else if (!ch.participantes) {
+                        souParticipante = true; // Se não tiver o campo, assume aberto
+                    } else if (Array.isArray(ch.participantes)) {
+                        // Se for uma lista normal (como é suposto)
+                        souParticipante = ch.participantes.includes(window.myUserId);
+                    } else if (typeof ch.participantes === 'string') {
+                        // Se no passado gravaste como texto por engano
+                        souParticipante = (ch.participantes === window.myUserId || ch.participantes === "todos");
+                    } else if (typeof ch.participantes === 'object') {
+                        // Se no passado gravaste como objeto { "aluno10": true }
+                        souParticipante = (ch.participantes[window.myUserId] === true);
                     }
+
+                    if (souParticipante) {
+                        const exists = grupos.findIndex(g => g.id === d.id);
+                        if (exists !== -1) {
+                            grupos[exists] = { ...grupos[exists], ...ch }; 
+                        } else {
+                            grupos.push({ id: d.id, ...ch, type: 'custom' });
+                        }
+                    }
+                } catch(innerErr) {
+                    console.error("⚠️ Chat corrompido saltado:", d.id, innerErr);
                 }
             });
 
-            // SEPARAÇÃO E RENDERING
+            // 3. SEPARAÇÃO E RENDERING
             const fixos = grupos.filter(g => g.type === 'fixo');
             const disciplinas = grupos.filter(g => g.type === 'disciplina');
-            const custom = grupos.filter(g => g.type === 'custom' || (!g.type && !g.id.startsWith('chat_')));
+            const custom = grupos.filter(g => g.type === 'custom'); 
 
+            // Ordena os chats de grupo pelos mais recentes
             custom.sort((a,b) => (b.dataCriacao || 0) - (a.dataCriacao || 0));
 
             let html = '';
 
-            // --- SECÇÃO: COMUNIDADE ---
             html += `<h4 style="color:var(--text-muted); font-size:0.85rem; text-transform:uppercase; margin-bottom:10px;">Comunidade</h4>`;
             fixos.forEach(ch => { html += renderCardLargo(ch); });
 
-            // --- SECÇÃO: DISCIPLINAS (Grelha 2x2) ---
             html += `<h4 style="color:var(--text-muted); font-size:0.85rem; text-transform:uppercase; margin:20px 0 10px 0;">Disciplinas</h4>`;
             html += `<div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">`;
             disciplinas.forEach(ch => { html += renderCardPequeno(ch); });
             html += `</div>`;
 
-            // --- SECÇÃO: GRUPOS PRIVADOS ---
+            // Secção dos Grupos de Trabalho
+            html += `<h4 style="color:var(--text-muted); font-size:0.85rem; text-transform:uppercase; margin:20px 0 10px 0;">Grupos de Estudo</h4>`;
             if(custom.length > 0) {
-                html += `<h4 style="color:var(--text-muted); font-size:0.85rem; text-transform:uppercase; margin:20px 0 10px 0;">Grupos de Estudo</h4>`;
                 custom.forEach(ch => { html += renderCardLargo(ch); });
+            } else {
+                html += `<p style="font-size:0.85rem; color:var(--text-muted); text-align:center; padding: 15px; background:rgba(0,0,0,0.2); border-radius:8px; border: 1px dashed #333;">Ainda não foste adicionado a nenhum grupo de projeto.</p>`;
             }
 
             list.innerHTML = html;
+            
+        }, (error) => {
+            console.error("🚨 Erro de Base de Dados no Fórum:", error);
+            list.innerHTML = `<p class="text-danger center">Erro de permissão no Firebase.</p>`;
         });
-    } catch(e) {}
+        
+    } catch(e) { 
+        console.error("Erro a configurar fóruns:", e); 
+        list.innerHTML = `<p class="text-danger center">Ocorreu um erro interno.</p>`;
+    }
 }
 
 // Design para os Chats Principais e de Estudo

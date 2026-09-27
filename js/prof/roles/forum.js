@@ -90,11 +90,21 @@ export async function gerirCliquesForum(e) {
             if(document.getElementById('modal-editar-forum')) document.getElementById('modal-editar-forum').style.display = 'flex'; 
             
             try { 
-                const chatSnap = await getDoc(doc(db, "turmas", t, "foruns", cId)); 
+                // CORREÇÃO: Ler da raiz "forums"
+                const chatSnap = await getDoc(doc(db, "forums", cId)); 
                 if(chatSnap.exists()) { 
-                    if(document.getElementById('input-nome-edit-forum')) document.getElementById('input-nome-edit-forum').value = chatSnap.data().nome; 
-                    const membrosAtuais = chatSnap.data().membros || []; 
-                    const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno"))); 
+                    const data = chatSnap.data();
+                    if(document.getElementById('input-nome-edit-forum')) document.getElementById('input-nome-edit-forum').value = data.nome; 
+                    
+                    const turmaVerdadeira = data.turma || t; // Encontra a turma deste grupo
+                    const membrosAtuais = data.participantes || data.membros || []; 
+                    
+                    if (!turmaVerdadeira || turmaVerdadeira === 'custom') {
+                         if(mCont) mCont.innerHTML = '<p class="text-muted center" style="grid-column: span 2;">Turma não identificada.</p>';
+                         return true;
+                    }
+
+                    const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turmaVerdadeira), where("papel", "==", "aluno"))); 
                     
                     let arr = []; 
                     cS.forEach(d => arr.push({id: d.id, ...d.data()}));
@@ -114,7 +124,7 @@ export async function gerirCliquesForum(e) {
                     }); 
                     if(mCont) mCont.innerHTML = cH === '' ? '<p class="text-muted center" style="font-size:0.8rem; grid-column: span 2;">Turma vazia.</p>' : cH; 
                 } 
-            } catch(err) { if(mCont) mCont.innerHTML = '<p class="text-danger center" style="grid-column: span 2;">Erro.</p>'; } 
+            } catch(err) { console.error(err); if(mCont) mCont.innerHTML = '<p class="text-danger center" style="grid-column: span 2;">Erro ao ler chat.</p>'; } 
             return true; 
         }
 
@@ -144,8 +154,8 @@ export async function gerirCliquesForum(e) {
 // 6. GRAVAR / APAGAR CHAT
         if (e.target.closest('#btn-guardar-edit-forum')) { 
             const cId = document.getElementById('edit-forum-id').value; 
-            const t = document.getElementById('edit-forum-turma').value; 
             const novoNome = document.getElementById('input-nome-edit-forum').value.trim(); 
+            
             let mbr = [state.myUserId]; 
             document.querySelectorAll('.edit-forum-aluno-check:checked').forEach(c => mbr.push(c.value)); 
             
@@ -155,7 +165,8 @@ export async function gerirCliquesForum(e) {
             btn.disabled = true; 
             
             try { 
-                await updateDoc(doc(db, "turmas", t, "foruns", cId), { nome: novoNome, membros: mbr }); 
+                // CORREÇÃO: Guardar na raiz "forums" com o novo campo "participantes"
+                await updateDoc(doc(db, "forums", cId), { nome: novoNome, participantes: mbr, membros: mbr }); 
                 document.getElementById('modal-editar-forum').style.display = 'none'; 
                 btn.innerHTML = 'Guardar Alterações'; btn.disabled = false; 
                 carregarForunsProf(); 
@@ -175,7 +186,6 @@ export async function gerirCliquesForum(e) {
         // Executar a eliminação quando clica no "Sim, Apagar" do novo Modal
         if (e.target.closest('#btn-executar-apagar-forum')) {
             const cId = document.getElementById('edit-forum-id').value; 
-            const t = document.getElementById('edit-forum-turma').value; 
             const btn = e.target.closest('#btn-executar-apagar-forum'); 
             
             const txtOriginal = btn.innerHTML;
@@ -183,7 +193,8 @@ export async function gerirCliquesForum(e) {
             btn.disabled = true; 
             
             try { 
-                await deleteDoc(doc(db, "turmas", t, "foruns", cId)); 
+                // CORREÇÃO: Apagar da coleção raiz "forums"
+                await deleteDoc(doc(db, "forums", cId)); 
                 document.getElementById('modal-confirm-apagar-forum').style.display = 'none';
                 document.getElementById('modal-editar-forum').style.display = 'none'; 
                 btn.innerHTML = txtOriginal; 
@@ -225,7 +236,18 @@ export async function gerirCliquesForum(e) {
             const msg = msgInput.value.trim(); 
             if ((!msg && !state.chatAttachmentBase64) || !state.activeChatTurma || !state.activeChatDisc) return true; 
             try { 
-                await addDoc(collection(db, "turmas", state.activeChatTurma, "foruns", state.activeChatDisc, "mensagens"), { 
+                // CORREÇÃO: Encaminhamento Inteligente para o botão de Enviar
+                let mensagensCollRef;
+                let forumDocRef;
+                if (state.activeChatTurma === 'custom') {
+                    mensagensCollRef = collection(db, "forums", state.activeChatDisc, "mensagens");
+                    forumDocRef = doc(db, "forums", state.activeChatDisc);
+                } else {
+                    mensagensCollRef = collection(db, "turmas", state.activeChatTurma, "foruns", state.activeChatDisc, "mensagens");
+                    forumDocRef = doc(db, "turmas", state.activeChatTurma, "foruns", state.activeChatDisc);
+                }
+
+                await addDoc(mensagensCollRef, { 
                     texto: msg || "", 
                     anexoBase64: state.chatAttachmentBase64 || null,
                     anexoNome: state.chatAttachmentName || null,
@@ -233,13 +255,15 @@ export async function gerirCliquesForum(e) {
                     papel: "professor", 
                     timestamp: Date.now() 
                 }); 
+                
                 msgInput.value = ''; 
                 state.chatAttachmentBase64 = null;
                 state.chatAttachmentName = null;
                 if(document.getElementById('prof-forum-file-input')) document.getElementById('prof-forum-file-input').value = '';
                 if(document.getElementById('prof-forum-attachment-preview')) document.getElementById('prof-forum-attachment-preview').style.display = 'none';
-                await updateDoc(doc(db, "turmas", state.activeChatTurma, "foruns", state.activeChatDisc), { lastMessageTimestamp: Date.now() });
-            } catch (err) {} 
+                
+                await updateDoc(forumDocRef, { lastMessageTimestamp: Date.now() });
+            } catch (err) { console.error("Erro a enviar mensagem:", err); } 
             return true; 
         }
 
@@ -248,16 +272,31 @@ export async function gerirCliquesForum(e) {
             const nome = document.getElementById('input-nome-novo-forum').value.trim(); 
             const turma = document.getElementById('forum-turma-select').value; 
             if(!nome || !turma) return true; 
+            
+            // Recolhe todos os IDs dos alunos selecionados nas checkboxes
             let mbr = [state.myUserId]; 
             document.querySelectorAll('.forum-aluno-check:checked').forEach(c => mbr.push(c.value)); 
+            
             const btnConf = e.target.closest('#btn-confirm-novo-forum'); 
             btnConf.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btnConf.disabled = true; 
+            
             try { 
-                await addDoc(collection(db, "turmas", turma, "foruns"), { nome: nome, tipo: 'permanente', isDefault: false, membros: mbr, criadoPor: state.myUserName, lastMessageTimestamp: Date.now() }); 
+                // CORRIGIDO: Guarda diretamente na coleção de raiz 'forums' com os participantes
+                await addDoc(collection(db, "forums"), { 
+                    nome: nome, 
+                    turma: turma,
+                    isGlobal: false,
+                    participantes: mbr, // Formato idêntico ao que o aluno lê
+                    criadoPor: state.myUserName, 
+                    dataCriacao: Date.now(),
+                    lastMessageTimestamp: Date.now() 
+                }); 
+                
                 document.getElementById('modal-criar-forum').style.display = 'none'; 
                 btnConf.innerHTML = 'Criar Chat'; btnConf.disabled = false; 
                 carregarForunsProf(); 
             } catch(err) { 
+                console.error("Erro ao criar chat:", err);
                 btnConf.innerHTML = 'Erro!'; setTimeout(() => { btnConf.innerHTML = 'Criar Chat'; btnConf.disabled = false; }, 2000); 
             } 
             return true; 

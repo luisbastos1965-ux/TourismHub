@@ -27,6 +27,34 @@
                     <i class="fa-solid fa-user-plus"></i> Criar Novo Perfil de Utilizador
                 </button>
 
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+                  <button id="btn-ir-ocorrencias" class="secondary-btn" style="border-color: var(--danger-red); color: var(--danger-red);">
+                      <i class="fa-solid fa-scale-balanced"></i> Ocorrências Escolares
+                  </button>
+                  <button id="btn-ir-broadcast" class="secondary-btn" style="border-color: #9333ea; color: #9333ea;">
+                      <i class="fa-solid fa-bullhorn"></i> Enviar Push em Massa
+                  </button>
+              </div>
+
+                <!-- 👉 COLA ESTES ATALHOS AQUI: -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+                    <button id="btn-ir-professores" class="secondary-btn" style="border-color: var(--primary-green); color: var(--primary-green);">
+                        <i class="fa-solid fa-chalkboard-user"></i> Gerir Professores
+                    </button>
+                    <button id="btn-ir-config" class="secondary-btn" style="border-color: var(--warning-yellow); color: var(--warning-yellow);">
+                        <i class="fa-solid fa-gears"></i> Prazos Escolares
+                    </button>
+                </div>
+
+                <!-- Logs de Auditoria / Atividade Recente (Global) -->
+                <div class="card" style="border-left: 4px solid #0099ff; margin-bottom: 20px;">
+                    <h3 style="font-size: 1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-clock-rotate-left" style="color:#0099ff;"></i> Logs de Auditoria (Atividade Recente)</h3>
+                    <div id="lista-logs-auditoria">
+                        <p class="text-muted center">A carregar registos de atividade...</p>
+                    </div>
+                </div>
+                <!-- FIM DOS ATALHOS -->
+
                 <!-- Atestados Pendentes (Global) -->
                 <div class="card" style="border-left: 4px solid var(--warning-yellow); margin-bottom: 20px;">
                     <h3 style="font-size: 1rem; margin-bottom: 15px; color: white;"><i class="fa-solid fa-file-medical" style="color:var(--warning-yellow);"></i> Atestados Pendentes</h3>
@@ -39,6 +67,47 @@
                 <div class="card" style="background: linear-gradient(135deg, rgba(255, 77, 77, 0.15), rgba(0, 0, 0, 0.3)); border: 1px solid var(--danger-red); margin-bottom: 20px;">
                     <h3 style="font-size: 1.1rem; margin-bottom: 10px; color: var(--danger-red);"><i class="fa-solid fa-triangle-exclamation"></i> Top Alunos em Risco (Escola)</h3>
                     <div id="admin-risco-content"><p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A cruzar métricas...</p></div>
+                </div>
+            </div>
+
+            <!-- VISTA: GESTÃO DE PROFESSORES (ADMIN) -->
+            <div id="view-admin-professores" style="display: none;">
+                <div class="class-header">
+                    <button id="btn-voltar-admin-prof" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Início</button>
+                    <h2 class="section-title">Gestão de Corpo Docente</h2>
+                </div>
+                <button id="btn-novo-professor" class="primary-btn" style="margin-bottom: 20px; background-color: var(--primary-green); color: var(--bg-dark);">
+                    <i class="fa-solid fa-user-tie"></i> Registar / Atribuir Professor
+                </button>
+                <div id="lista-professores-container">
+                    <p class="text-muted center">A carregar professores...</p>
+                </div>
+            </div>
+
+            <!-- VISTA: CONFIGURAÇÕES DO ANO LETIVO E PRAZOS -->
+            <div id="view-admin-config" style="display: none;">
+                <div class="class-header">
+                    <button id="btn-voltar-admin-config" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Início</button>
+                    <h2 class="section-title">Configurações e Prazos Globais</h2>
+                </div>
+                <div class="card" style="border: 1px solid var(--warning-yellow); margin-bottom: 20px;">
+                    <h3 style="color: var(--warning-yellow); margin-bottom: 15px;"><i class="fa-solid fa-calendar-days"></i> Prazos e Datas Limite da Escola</h3>
+                    <div class="form-group">
+                        <label style="font-size:0.8rem; color:var(--text-muted);">Início do Ano Letivo</label>
+                        <input type="date" id="cfg-inicio-ano" class="input-padrao" style="margin-bottom:10px;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.8rem; color:var(--text-muted);">Limite Entrega PAP (12º Ano)</label>
+                        <input type="date" id="cfg-limite-pap" class="input-padrao" style="margin-bottom:10px;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.8rem; color:var(--text-muted);">Bloquear Lançamento de Notas?</label>
+                        <select id="cfg-bloquear-notas" class="input-padrao" style="margin-bottom:15px;">
+                            <option value="nao">Não (Lançamento livre)</option>
+                            <option value="sim">Sim (Apenas Direção/Admin)</option>
+                        </select>
+                    </div>
+                    <button id="btn-guardar-config" class="primary-btn" style="background-color: var(--warning-yellow); color: black;">Guardar Configurações</button>
                 </div>
             </div>
 
@@ -197,6 +266,47 @@
                 </div>
                 <div id="lista-observacoes-container"></div>
             </div>
+
+            <!-- VISTA: GESTÃO GLOBAL DE OCORRÊNCIAS -->
+          <div id="view-admin-ocorrencias" style="display: none;">
+              <div class="class-header">
+                  <button id="btn-voltar-admin-oc" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Início</button>
+                  <h2 class="section-title">Ocorrências Disciplinares (Escola)</h2>
+              </div>
+              <div id="lista-global-ocorrencias-container">
+                  <p class="text-muted center">A carregar registos disciplinares...</p>
+              </div>
+          </div>
+
+          <!-- VISTA: PAINEL DE NOTIFICAÇÕES PUSH EM MASSA -->
+          <div id="view-admin-broadcast" style="display: none;">
+              <div class="class-header">
+                  <button id="btn-voltar-admin-bc" class="secondary-btn small-btn"><i class="fa-solid fa-arrow-left"></i> Início</button>
+                  <h2 class="section-title">Central de Avisos e Push</h2>
+              </div>
+              <div class="card" style="border: 1px solid #9333ea; margin-bottom: 20px;">
+                  <h3 style="color: #9333ea; margin-bottom: 15px;"><i class="fa-solid fa-bullhorn"></i> Transmissão de Alerta Global</h3>
+                  <div class="form-group">
+                      <label style="font-size:0.8rem; color:var(--text-muted);">Destinatários</label>
+                      <select id="bc-alvo" class="input-padrao" style="margin-bottom:10px;">
+                          <option value="todos">Toda a Escola (Alunos e Professores)</option>
+                          <option value="professores">Apenas Professores</option>
+                          <option value="10T">Turma 10T</option>
+                          <option value="11T">Turma 11T</option>
+                          <option value="12T">Turma 12T</option>
+                      </select>
+                  </div>
+                  <div class="form-group">
+                      <label style="font-size:0.8rem; color:var(--text-muted);">Título do Aviso</label>
+                      <input type="text" id="bc-titulo" placeholder="Ex: Reunião Geral / Alteração de Horário" class="input-padrao" style="margin-bottom:10px;">
+                  </div>
+                  <div class="form-group">
+                      <label style="font-size:0.8rem; color:var(--text-muted);">Mensagem</label>
+                      <textarea id="bc-mensagem" placeholder="Escreve aqui o aviso detalhado..." class="input-padrao" rows="4" style="margin-bottom:15px; width:100%;"></textarea>
+                  </div>
+                  <button id="btn-enviar-broadcast" class="primary-btn" style="background-color: #9333ea; color: white;"><i class="fa-solid fa-paper-plane"></i> Enviar Notificação Push</button>
+              </div>
+          </div>
             
         </main>
 
@@ -281,7 +391,6 @@
                     <option value="aluno">Aluno</option>
                     <option value="professor">Professor</option>
                     <option value="ee">Enc. de Educação</option>
-                    <option value="dt">Diretor de Turma</option>
                 </select>
             </div>
             <div class="form-group"><input type="text" id="nu-turma" placeholder="Turma Principal (ex: 10T)" class="input-padrao" style="margin-bottom:10px;"></div>
@@ -301,6 +410,19 @@
             <div class="form-group"><label style="font-size:0.8rem; color:var(--text-muted);">Turma Atual</label><input type="text" id="ea-turma" class="input-padrao" style="margin-bottom:10px;"></div>
             
             <button id="btn-gravar-edicao-aluno" class="primary-btn" style="background-color: var(--warning-yellow); color: black;">Guardar Alterações</button>
+            <button class="secondary-btn btn-fechar-modal" style="margin-top:10px;">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- MODAL: ATRIBUIR PROFESSOR / TURMAS -->
+    <div id="modal-atribuir-professor" class="modal-overlay" style="display: none;">
+        <div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto;">
+            <h3 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-chalkboard-user"></i> Atribuir Turmas / Disciplinas</h3>
+            <div class="form-group"><input type="text" id="ap-id" placeholder="ID do Professor (ex: prof_joao)" class="input-padrao" style="margin-bottom:10px;"></div>
+            <div class="form-group"><input type="text" id="ap-nome" placeholder="Nome Completo" class="input-padrao" style="margin-bottom:10px;"></div>
+            <div class="form-group"><input type="text" id="ap-turmas" placeholder="Turmas (ex: 10T, 11T)" class="input-padrao" style="margin-bottom:10px;"></div>
+            <div class="form-group"><input type="text" id="ap-disciplinas" placeholder="Disciplinas (ex: PORT, MAT)" class="input-padrao" style="margin-bottom:15px;"></div>
+            <button id="btn-gravar-atribuicao-prof" class="primary-btn">Guardar Atribuição</button>
             <button class="secondary-btn btn-fechar-modal" style="margin-top:10px;">Cancelar</button>
         </div>
     </div>
