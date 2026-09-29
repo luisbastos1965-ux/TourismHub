@@ -1,6 +1,6 @@
 import { db } from "../../firebase.js";
 import { collection, getDocs, doc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-import { carregarEcraProjetosCoord } from "./coord-dashboard.js";
+import { carregarEcraProjetosCoord, abrirModalEdicaoFCT, abrirModalEdicaoPAP } from "./coord-dashboard.js";
 
 // Utilitário de Alertas
 function mostrarAlerta(msg, erro = true) {
@@ -38,7 +38,6 @@ window.desbloquearFCTTurma = async function(turmaId, btnElement) {
     try {
         const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turmaId), where("papel", "==", "aluno")));
         for(const d of snap.docs) {
-            // Define o fctBloqueada para false no perfil do aluno
             await updateDoc(doc(db, "utilizadores", d.id), { fctBloqueada: false });
         }
         mostrarAlerta(`Acesso à FCT libertado para a Turma ${turmaId}!`, false);
@@ -54,7 +53,6 @@ window.desbloquearFCTTurma = async function(turmaId, btnElement) {
 window.validarDocFCT = async function(alunoId, docId, btnElement) {
     const orig = btnElement.innerHTML; btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btnElement.disabled = true;
     try {
-        // Altera o estado do documento para 2 (Validado)
         await updateDoc(doc(db, "utilizadores", alunoId), { [`fct.burocracia.${docId}`]: 2 });
         mostrarAlerta("Documento validado!", false);
         carregarEcraProjetosCoord();
@@ -63,3 +61,7 @@ window.validarDocFCT = async function(alunoId, docId, btnElement) {
         btnElement.innerHTML = orig; btnElement.disabled = false; 
     }
 };
+
+// Exposição global segura das funções de edição
+window.abrirModalEdicaoFCT = abrirModalEdicaoFCT;
+window.abrirModalEdicaoPAP = abrirModalEdicaoPAP;

@@ -886,11 +886,9 @@ export async function abrirPerfil360Aluno(alunoId) {
         if (areaSintese) {
             areaSintese.style.display = 'block';
             
-            // Apanha o título (no teu HTML ele não tem ID, é um H4, por isso usamos querySelector)
             const tituloSint = areaSintese.querySelector('h4'); 
             const elMomento = document.getElementById('sintese-momento');
 
-            // Cria ou atualiza o seletor extra de disciplinas para o DT
             let discSintSelect = document.getElementById('perfil-sintese-disc-select');
             if (!discSintSelect) {
                 discSintSelect = document.createElement('select');
@@ -908,30 +906,38 @@ export async function abrirPerfil360Aluno(alunoId) {
                 if (tituloSint) tituloSint.innerHTML = '<i class="fa-solid fa-clipboard-user"></i> Observações Globais (DT)';
                 if (elMomento) elMomento.style.display = 'block'; 
                 
-                // O DT ganha o super-poder de escolher o que quer ler (A global ou as dos colegas)
                 let opts = '<option value="GLOBAL">A Minha Observação Global</option>';
                 disciplinasDoAno.forEach(d => {
                     opts += `<option value="${d}">Ver Síntese de ${d}</option>`;
                 });
                 discSintSelect.innerHTML = opts;
                 discSintSelect.style.display = 'block';
+                discSintSelect.disabled = false; // Garante que o DT pode clicar
 
             } else { 
                 const btnJustFaltas = document.getElementById('btn-justificar-faltas');
                 if (btnJustFaltas) btnJustFaltas.style.display = 'none'; 
                 
-                if (tituloSint) tituloSint.innerHTML = '<i class="fa-solid fa-clipboard-user"></i> Síntese da Minha Disciplina';
+                if (tituloSint) tituloSint.innerHTML = '<i class="fa-solid fa-clipboard-user"></i> Sínteses das Minhas Disciplinas';
                 if (elMomento) elMomento.style.display = 'block';
-                if (discSintSelect) discSintSelect.style.display = 'none'; // Esconde do prof normal
+                
+                let opts = '';
+                state.disciplinasProfessor.forEach(d => {
+                    opts += `<option value="${d}">Síntese de ${d}</option>`;
+                });
+                discSintSelect.innerHTML = opts;
+                
+                // CORREÇÃO: Mostra sempre a caixa, mas bloqueia se for só 1 disciplina (ajuda visual)
+                discSintSelect.style.display = 'block';
+                discSintSelect.disabled = state.disciplinasProfessor.length === 1;
             }
             
-            // Força a leitura do Firebase com as novas regras
             if (elMomento) {
                 elMomento.dispatchEvent(new Event('change', { bubbles: true }));
             }
         }
         
-        if (discSelect) discSelect.onchange(); 
+        if (discSelect) discSelect.onchange();
 
     } catch (e) {
         console.error("Erro a carregar dados do Firebase no perfil 360:", e);
@@ -1327,17 +1333,31 @@ export async function carregarForunsProf() {
         s.forEach(d => arr.push({id: d.id, ...d.data()}));
         
         arr.forEach(f => { 
-            // Verifica se o Professor está nos participantes E se não é um chat fixo antigo (isDefault)
             let souParticipante = false;
-            if (f.criadoPor === state.myUserName) souParticipante = true; // Se eu criei, vejo.
+            
+            // O professor vê se criou, se está nos participantes/membros, 
+            // OU se é um chat da turma e ele lecciona nessa turma / é Diretor de Turma
+            if (f.criadoPor === state.myUserName) souParticipante = true;
             else if (f.participantes && Array.isArray(f.participantes) && f.participantes.includes(state.myUserId)) souParticipante = true;
-            else if (f.membros && Array.isArray(f.membros) && f.membros.includes(state.myUserId)) souParticipante = true; // retrocompatibilidade
+            else if (f.membros && Array.isArray(f.membros) && f.membros.includes(state.myUserId)) souParticipante = true;
+            // MAGIA: Se o chat pertence à turma do professor, ele também tem acesso para moderação/acompanhamento!
+            else if (f.turma && state.turmasProfessor && state.turmasProfessor.includes(f.turma)) souParticipante = true;
             
             if (souParticipante && !f.isDefault && f.isGlobal !== true) { 
                 encontrouPersonalizado = true;
                 const iconConfig = f.criadoPor === state.myUserName ? `<i class="fa-solid fa-gear btn-edit-chat" data-id="${f.id}" data-turma="${f.turma || ''}" style="color:var(--warning-yellow); font-size:1.2rem; cursor:pointer; padding:5px;"></i>` : ``;
-                // Usamos f.id no data-disc e "custom" no data-turma para não confundir a função de abrir
-                htmlPersonalizado += `<div class="canal-card" data-turma="custom" data-disc="${f.id}" data-nome="${f.nome}" style="position:relative;"><div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-comments"></i></div><div class="canal-info" style="flex:1; display:flex; justify-content:space-between; align-items:center;"><div><h4>${f.nome}</h4><p>${f.turma ? `Turma ${f.turma}` : 'Grupo de Estudo'}</p></div><span class="notification-badge" style="position:relative; top:0; right:0; display:none;">!</span></div>${iconConfig}</div>`; 
+                
+                htmlPersonalizado += `<div class="canal-card" data-turma="custom" data-disc="${f.id}" data-nome="${f.nome}" style="position:relative;">
+                    <div class="canal-icon" style="color:#00cc88; border-color:#00cc88;"><i class="fa-solid fa-comments"></i></div>
+                    <div class="canal-info" style="flex:1; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <h4>${f.nome}</h4>
+                            <p>${f.turma ? `Turma ${f.turma}` : 'Grupo de Estudo'}</p>
+                        </div>
+                        <span class="notification-badge" style="position:relative; top:0; right:0; display:none;">!</span>
+                    </div>
+                    ${iconConfig}
+                </div>`; 
             } 
         });
         

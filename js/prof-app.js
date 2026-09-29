@@ -350,11 +350,10 @@ document.body.addEventListener('change', async (e) => {
     if (e.target.id === 'sintese-momento' || e.target.id === 'perfil-sintese-disc-select') {
         const momento = document.getElementById('sintese-momento').value;
         const alunoId = document.getElementById('perfil-aluno-id-hidden').value;
-        const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
         
-        // O DT tem um filtro extra para escolher ver a Global ou as disciplinas dos outros profs
+        // CORREÇÃO: Lê sempre o valor do seletor, quer seja DT ou Professor com várias disciplinas
         const discFiltro = document.getElementById('perfil-sintese-disc-select');
-        const filtroAtivo = (isDT && discFiltro) ? discFiltro.value : state.disciplinasProfessor[0];
+        const filtroAtivo = discFiltro ? discFiltro.value : state.disciplinasProfessor[0];
         
         const displayBox = document.getElementById('p-aluno-obs-dt-display');
         displayBox.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A ler síntese...';
@@ -365,7 +364,8 @@ document.body.addEventListener('change', async (e) => {
 
             if (snap.exists()) {
                 const dados = snap.data();
-                if (isDT && filtroAtivo === 'GLOBAL') {
+                // Se o filtro for GLOBAL, lê a síntese do DT. Senão, vai à disciplina escolhida
+                if (filtroAtivo === 'GLOBAL') {
                     textoParaMostrar = dados.sintese_global;
                 } else {
                     textoParaMostrar = dados.sinteses_disciplinas ? dados.sinteses_disciplinas[filtroAtivo] : null;
@@ -375,7 +375,7 @@ document.body.addEventListener('change', async (e) => {
             if (textoParaMostrar) {
                 displayBox.innerText = textoParaMostrar;
             } else {
-                displayBox.innerHTML = '<span style="color:var(--text-muted); font-style:italic;">Sem síntese registada.</span>';
+                displayBox.innerHTML = '<span style="color:var(--text-muted); font-style:italic;">Sem síntese registada para este momento.</span>';
             }
         } catch(err) {
             displayBox.innerText = "Erro ao carregar síntese.";
@@ -615,7 +615,44 @@ document.body.addEventListener('click', async (e) => {
         const card = e.target.closest('.aluno-list-item');
         const alunoId = card.getAttribute('data-id');
         if (alunoId) {
+            // 1. Abre o perfil normalmente
             abrirPerfil360Aluno(alunoId);
+            
+            // 2. Acorda o Botão de Justificar Faltas (meio segundo depois para dar tempo à janela de abrir)
+            setTimeout(async () => {
+                const btnJustificar = document.getElementById('btn-justificar-faltas');
+                if (btnJustificar) {
+                    const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
+                    
+                    if (isDT) {
+                        try {
+                            // Vai espreitar se o pai enviou alguma justificação nova
+                            const q = query(collection(db, "utilizadores", alunoId, "atestados"), where("status", "==", "pendente"));
+                            const snap = await getDocs(q);
+                            
+                            btnJustificar.style.display = 'block'; // Mostra o botão
+                            
+                            if (!snap.empty) {
+                                // Se houver atestados pendentes, grita por atenção (Vermelho)!
+                                btnJustificar.innerHTML = `<i class="fa-solid fa-bell fa-shake"></i> Analisar Comprovativos (${snap.size} novo!)`;
+                                btnJustificar.style.background = 'var(--danger-red)';
+                                btnJustificar.style.color = 'white';
+                            } else {
+                                // Se não houver, fica sereno (Amarelo)
+                                btnJustificar.innerHTML = `<i class="fa-solid fa-file-signature"></i> Histórico de Comprovativos`;
+                                btnJustificar.style.background = 'var(--warning-yellow)';
+                                btnJustificar.style.color = 'black';
+                            }
+                        } catch(e) {
+                            console.error(e);
+                            btnJustificar.style.display = 'block'; 
+                        }
+                    } else {
+                        // Se for um Professor normal, o botão desaparece
+                        btnJustificar.style.display = 'none';
+                    }
+                }
+            }, 600);
         }
         return;
     }
@@ -1259,10 +1296,16 @@ document.body.addEventListener('click', async (e) => {
         return;
     }
 
-    // ABRIR MODAL PRINCIPAL DAS SÍNTESES (Corrigido para apanhar os dois nomes possíveis do botão)
+    // ABRIR MODAL PRINCIPAL DAS SÍNTESES
     if (e.target.closest('#btn-ver-sinteses-turma') || e.target.closest('#btn-modal-sinteses')) {
         const turma = state.selectedTurma;
         if (!turma) { alert("Seleciona primeiro uma turma no menu superior."); return; }
+        
+        // NOVO: Preencher as disciplinas do Professor
+        const discSelectModal = document.getElementById('lancar-sintese-disciplina');
+        if (discSelectModal) {
+            discSelectModal.innerHTML = state.disciplinasProfessor.map(d => `<option value="${d}">${d}</option>`).join('');
+        }
         
         const grid = document.getElementById('grid-sinteses-alunos');
         if (grid) {
@@ -1297,14 +1340,6 @@ document.body.addEventListener('click', async (e) => {
             alert("Atenção: O modal existe no código, mas o JavaScript não encontra o ID dele no ficheiro HTML! Confirma se a div do modal se chama 'modal-lancamento-sinteses' ou 'modal-sinteses'.");
         }
         
-        return;
-    }
-
-    // CLIQUE EM AVALIAR NO ALUNO
-    if (e.target.closest('.btn-abrir-gerador-sintese')) {
-        const row = e.target.closest('.aluno-sintese-row');
-        window.carregarAlunoNoMiniModalSintese(row);
-        document.getElementById('modal-gerador-sintese').style.display = 'flex';
         return;
     }
 
@@ -1377,13 +1412,214 @@ document.body.addEventListener('click', async (e) => {
         return;
     }
 
+    // =========================================================================
+    // SUPER-PODERES DO DIRETOR DE TURMA: ABRIR MODAL, USAR IA E GUARDAR
+    // =========================================================================
+    
+    // 1. ABRIR O MODAL DA SÍNTESE (LÓGICA UNIFICADA: PROFESSOR vs DT)
+    if (e.target.closest('.btn-abrir-gerador-sintese')) {
+        const btn = e.target.closest('.btn-abrir-gerador-sintese');
+        const row = btn.closest('.aluno-sintese-row');
+        const alunoId = row.getAttribute('data-id');
+        const nomeAluno = row.querySelector('.nome-aluno-span').innerText;
+        const momento = document.getElementById('lancar-sintese-momento-global').value;
+        
+        // O famoso semáforo
+        const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
+
+        if (isDT) {
+            // ==========================================
+            // CAMINHO 1: MODO DIRETOR DE TURMA
+            // ==========================================
+            document.getElementById('dt-sintese-aluno-id').value = alunoId;
+            document.getElementById('dt-nome-aluno-sintese').innerText = nomeAluno;
+            document.getElementById('texto-sintese-final-dt').value = ""; 
+            
+            const modalDt = document.getElementById('modal-gerador-sintese-dt');
+            const listaColegas = document.getElementById('dt-lista-sinteses-colegas');
+            listaColegas.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A ler sínteses dos colegas...</p>';
+            modalDt.style.display = 'flex';
+
+            try {
+                // Vai buscar os textos dos colegas à gaveta certa
+                const snap = await getDoc(doc(db, "utilizadores", alunoId, "reunioes", momento));
+                let htmlSinteses = '';
+                let textoParaIA = ''; 
+                
+                if (snap.exists() && snap.data().sinteses_disciplinas) {
+                    const sDisc = snap.data().sinteses_disciplinas;
+                    for (const [disc, texto] of Object.entries(sDisc)) {
+                        htmlSinteses += `<div style="margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid #444;">
+                            <strong style="color:var(--primary-green); font-size:0.9rem;">${disc}</strong>
+                            <p style="font-size:0.85rem; color:var(--text-light); margin:5px 0 0 0; white-space:pre-wrap;">${texto}</p>
+                        </div>`;
+                        textoParaIA += `[Disciplina: ${disc}]\n${texto}\n\n`;
+                    }
+                }
+                
+                if (htmlSinteses === '') {
+                    listaColegas.innerHTML = '<p class="text-muted center" style="margin-top:15px;">Nenhum professor registou sínteses para este momento.</p>';
+                    listaColegas.setAttribute('data-texto-bruto', '');
+                } else {
+                    listaColegas.innerHTML = htmlSinteses;
+                    listaColegas.setAttribute('data-texto-bruto', textoParaIA); // Guarda o texto invisível para a IA ler
+                }
+
+                // Carrega Parecer Global antigo se já existir
+                if (snap.exists() && snap.data().sintese_global) {
+                    document.getElementById('texto-sintese-final-dt').value = snap.data().sintese_global;
+                }
+            } catch(err) {
+                listaColegas.innerHTML = '<p class="text-danger center">Erro a carregar dados.</p>';
+            }
+            
+        } else {
+            // ==========================================
+            // CAMINHO 2: MODO PROFESSOR DA DISCIPLINA
+            // ==========================================
+            document.getElementById('sintese-aluno-id-atual').value = alunoId;
+            document.getElementById('nome-aluno-sintese-atual').innerText = nomeAluno;
+            document.getElementById('texto-sintese-final').value = ""; // Limpa a caixa
+            
+            const discSelectModal = document.getElementById('lancar-sintese-disciplina');
+            const disciplina = discSelectModal ? discSelectModal.value : state.disciplinasProfessor[0];
+
+            try {
+                const snap = await getDoc(doc(db, "utilizadores", alunoId, "reunioes", momento));
+                if (snap.exists() && snap.data().sinteses_disciplinas && snap.data().sinteses_disciplinas[disciplina]) {
+                    document.getElementById('texto-sintese-final').value = snap.data().sinteses_disciplinas[disciplina];
+                }
+            } catch(err) {}
+            
+            document.getElementById('modal-gerador-sintese').style.display = 'flex';
+        }
+        return;
+    }
+
+    // 2. O COMPILADOR DE SIMBIOSE (ALGORITMO INTERNO)
+    if (e.target.closest('#btn-auto-gerar-sintese-dt')) {
+        const btn = e.target.closest('#btn-auto-gerar-sintese-dt');
+        const txtBox = document.getElementById('texto-sintese-final-dt');
+        const alunoId = document.getElementById('dt-sintese-aluno-id').value;
+        const momento = document.getElementById('lancar-sintese-momento-global').value;
+
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A unificar relatórios...';
+        btn.disabled = true;
+
+        setTimeout(async () => {
+            try {
+                const snap = await getDoc(doc(db, "utilizadores", alunoId, "reunioes", momento));
+                
+                if (snap.exists() && snap.data().sinteses_disciplinas) {
+                    const sDisc = snap.data().sinteses_disciplinas;
+                    const entries = Object.entries(sDisc);
+                    
+                    if (entries.length === 0) {
+                        alert("Ainda não existem sínteses dos colegas para compilar.");
+                        btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Unificar Sínteses';
+                        btn.disabled = false;
+                        return;
+                    }
+
+                    // 1. INÍCIO DO TEXTO
+                    let textoFinal = "O Conselho de Turma procedeu à análise detalhada e integrada do percurso do aluno neste momento de avaliação. Do balanço global, reuniram-se os seguintes contributos específicos que atestam a sua prestação:\n\n";
+                    
+                    // 2. O ALGORITMO DE COSTURA (Junta as disciplinas com conectores fluidos)
+                    let i = 0;
+                    for (const [disc, texto] of entries) {
+                        let textoLimpo = texto.trim();
+                        
+                        // Garante que a frase acaba sempre com pontuação
+                        if (!textoLimpo.match(/[.!?]$/)) textoLimpo += ".";
+                        
+                        // Primeira letra minúscula para colar melhor nas frases (ex: "tem bom comportamento" em vez de "Tem bom comportamento")
+                        let textoLower = textoLimpo.charAt(0).toLowerCase() + textoLimpo.slice(1);
+
+                        // Aplica uma rotação de conectores para o texto não parecer um robô a falar
+                        if (i === 0) {
+                            textoFinal += `Na disciplina de ${disc}, a avaliação destaca que ${textoLower} `;
+                        } else if (i % 3 === 0) {
+                            // Quebra de parágrafo a cada 3 disciplinas para o texto respirar
+                            textoFinal += `\n\nPor sua vez, no âmbito de ${disc}, é de salientar a seguinte apreciação: ${textoLimpo} `;
+                        } else if (i % 2 === 0) {
+                            textoFinal += `Adicionalmente, em ${disc}, a observação denota que ${textoLower} `;
+                        } else {
+                            textoFinal += `Relativamente a ${disc}, o parecer do docente indica: ${textoLimpo} `;
+                        }
+                        
+                        i++;
+                    }
+                    
+                    // 3. REMATE FINAL DO TEXTO
+                    textoFinal += "\n\nEm suma, a equipa pedagógica incentiva o aluno a manter o empenho e a regularidade no trabalho autónomo, de modo a consolidar as aprendizagens e a atingir os objetivos propostos para as próximas etapas letivas.";
+                    
+                    // Escreve na caixa para o DT ver e (se quiser) dar um retoque
+                    txtBox.value = textoFinal;
+                    
+                } else {
+                    alert("Ainda não existem sínteses dos colegas para este aluno.");
+                }
+            } catch(err) {
+                console.error("Erro na simbiose de textos: ", err);
+            }
+
+            // Restaura o botão
+            btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Unificar Sínteses';
+            btn.disabled = false;
+        }, 1000); // 1 segundo de simulação para dar aquele ar premium de processamento
+        
+        return;
+    }
+
+    // 3. O DT GUARDA A SUA SÍNTESE GLOBAL FINAL
+    if (e.target.closest('#btn-salvar-sintese-bd-dt')) {
+        const btn = e.target.closest('#btn-salvar-sintese-bd-dt');
+        const textoF = document.getElementById('texto-sintese-final-dt').value.trim();
+        const alunoId = document.getElementById('dt-sintese-aluno-id').value;
+        const momento = document.getElementById('lancar-sintese-momento-global').value;
+        
+        if (!textoF) { alert("O parecer global está vazio."); return; }
+
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A gravar...';
+        btn.disabled = true;
+
+        try {
+            const updateData = {
+                turma: state.selectedTurma,
+                atualizadoEm: new Date().toISOString(),
+                sintese_global: textoF,
+                dt: state.myUserName
+            };
+
+            await setDoc(doc(db, "utilizadores", alunoId, "reunioes", momento), updateData, { merge: true });
+
+            // Dá feedback visual de sucesso na linha do aluno (o visto verde)
+            const linhas = Array.from(document.querySelectorAll('.aluno-sintese-row'));
+            const indexAtual = linhas.findIndex(r => r.getAttribute('data-id') === alunoId);
+            if (indexAtual !== -1) {
+                linhas[indexAtual].querySelector('.icon-sintese-feita').style.display = 'block';
+            }
+            
+            document.getElementById('modal-gerador-sintese-dt').style.display = 'none';
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar Parecer Global';
+            btn.disabled = false;
+        } catch(err) {
+            btn.innerHTML = 'Erro!';
+            setTimeout(() => { btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar Parecer Global'; btn.disabled = false; }, 2000);
+        }
+        return;
+    }
+
     // GUARDAR SÍNTESE
     if (e.target.closest('#btn-salvar-sintese-bd')) {
         const btn = e.target.closest('#btn-salvar-sintese-bd');
         const textoF = document.getElementById('texto-sintese-final').value.trim();
         const alunoId = document.getElementById('sintese-aluno-id-atual').value;
         const momento = document.getElementById('lancar-sintese-momento-global').value;
-        const disciplina = state.disciplinasProfessor[0];
+        
+        const discSelectModal = document.getElementById('lancar-sintese-disciplina');
+        const disciplina = discSelectModal ? discSelectModal.value : state.disciplinasProfessor[0];
+        
         const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
         
         if (!textoF) { alert("A síntese está vazia."); return; }
@@ -1392,23 +1628,24 @@ document.body.addEventListener('click', async (e) => {
         btn.disabled = true;
 
         try {
-            // Nova Estrutura Unificada (Perfeita para a App do Aluno)
             const updateData = {
                 turma: state.selectedTurma,
                 atualizadoEm: new Date().toISOString()
             };
 
             if (isDT) {
-                updateData.sintese_global = textoF; // Grava como Global
+                updateData.sintese_global = textoF; 
                 updateData.dt = state.myUserName;
             } else {
-                updateData[`sinteses_disciplinas.${disciplina}`] = textoF; // Grava na gaveta da Disciplina
+                // CORREÇÃO CRÍTICA: Enviar como um objeto "pasta" para o Firebase arrumar no sítio certo
+                updateData.sinteses_disciplinas = {
+                    [disciplina]: textoF
+                };
                 updateData.professor = state.myUserName;
             }
 
             await setDoc(doc(db, "utilizadores", alunoId, "reunioes", momento), updateData, { merge: true });
 
-            // Atualizar o cartão visualmente
             const linhas = Array.from(document.querySelectorAll('.aluno-sintese-row'));
             const indexAtual = linhas.findIndex(r => r.getAttribute('data-id') === alunoId);
             
@@ -1417,7 +1654,6 @@ document.body.addEventListener('click', async (e) => {
                 row.querySelector('.input-sintese-hidden').value = textoF;
                 row.querySelector('.icon-sintese-feita').style.display = 'block';
                 
-                // Saltar para o próximo aluno
                 if (indexAtual + 1 < linhas.length) {
                     window.carregarAlunoNoMiniModalSintese(linhas[indexAtual + 1]);
                 } else {
@@ -1435,68 +1671,367 @@ document.body.addEventListener('click', async (e) => {
         return;
     }
 
-    // ABRIR MODAL OCORRÊNCIA (A PARTIR DO PERFIL 360º)
+    // =========================================================================
+    // GAMIFICAÇÃO & OCORRÊNCIAS
+    // =========================================================================
+
+    // MUDAR TIPO DE OCORRÊNCIA (Positiva vs Negativa)
+    if (e.target.closest('#btn-oco-pos') || e.target.closest('#btn-oco-neg')) {
+        const isPos = e.target.closest('#btn-oco-pos') !== null;
+        
+        document.getElementById('btn-oco-pos').style.background = isPos ? 'rgba(16,185,129,0.1)' : 'transparent';
+        document.getElementById('btn-oco-pos').style.borderColor = isPos ? 'var(--success-green)' : '#333';
+        document.getElementById('btn-oco-pos').style.color = isPos ? 'var(--success-green)' : 'var(--text-muted)';
+        
+        document.getElementById('btn-oco-neg').style.background = !isPos ? 'rgba(239,68,68,0.1)' : 'transparent';
+        document.getElementById('btn-oco-neg').style.borderColor = !isPos ? 'var(--danger-red)' : '#333';
+        document.getElementById('btn-oco-neg').style.color = !isPos ? 'var(--danger-red)' : 'var(--text-muted)';
+        
+        document.getElementById('oco-tipo-hidden').value = isPos ? 'positiva' : 'negativa';
+        document.getElementById('area-skills-xp').style.display = isPos ? 'block' : 'none';
+        
+        // Mudar o aspeto para ajudar o professor
+        document.getElementById('oco-titulo-registo').placeholder = isPos ? "Ex: Participação brilhante" : "Ex: Interrupção constante";
+        document.getElementById('oco-titulo-registo').style.borderColor = isPos ? "var(--success-green)" : "var(--danger-red)";
+        
+        const btnGravar = document.getElementById('btn-gravar-ocorrencia');
+        btnGravar.style.background = isPos ? "var(--success-green)" : "var(--danger-red)";
+        btnGravar.style.color = isPos ? "black" : "white";
+        btnGravar.innerHTML = isPos ? '<i class="fa-solid fa-bolt"></i> Gravar Registo & Atribuir XP' : '<i class="fa-solid fa-triangle-exclamation"></i> Registar Falta Disciplinar';
+        return;
+    }
+
+    // ESCOLHER A COMPETÊNCIA (SKILL)
+    if (e.target.closest('.btn-skill-oco')) {
+        const btn = e.target.closest('.btn-skill-oco');
+        
+        // Reset a todas as caixas
+        document.querySelectorAll('.btn-skill-oco').forEach(b => {
+            b.style.background = 'transparent'; 
+            b.style.borderColor = '#333'; 
+            b.style.color = 'var(--text-muted)';
+        });
+        
+        // Aplica a cor certa à competência escolhida
+        const skill = btn.getAttribute('data-skill');
+        if(skill === 'comunicacao') { btn.style.borderColor = '#0ea5e9'; btn.style.color = '#0ea5e9'; btn.style.background = 'rgba(14,165,233,0.1)'; }
+        if(skill === 'criatividade') { btn.style.borderColor = '#8b5cf6'; btn.style.color = '#8b5cf6'; btn.style.background = 'rgba(139,92,246,0.1)'; }
+        if(skill === 'lideranca') { btn.style.borderColor = '#f97316'; btn.style.color = '#f97316'; btn.style.background = 'rgba(249,115,22,0.1)'; }
+        if(skill === 'organizacao') { btn.style.borderColor = '#10b981'; btn.style.color = '#10b981'; btn.style.background = 'rgba(16,185,129,0.1)'; }
+        
+        document.getElementById('oco-skill-hidden').value = skill;
+        return;
+    }
+
+    // ABRIR MODAL (A PARTIR DO PERFIL 360º)
     if (e.target.closest('#btn-abrir-ocorrencia-360')) {
         const alunoId = document.getElementById('perfil-aluno-id-hidden').value;
         const alunoNome = document.getElementById('p-aluno-nome').innerText;
-        
         if (!alunoId) return;
         
-        // Limpar o formulário
+        // Limpar o formulário todo
+        document.getElementById('oco-titulo-registo').value = '';
         document.getElementById('oco-motivo').value = '';
         document.getElementById('oco-notificar-ee').checked = true;
         
-        // Esconder os seletores de turma/aluno globais, porque já sabemos quem é
-        const globalContainer = document.getElementById('global-oco-turma-container');
-        if (globalContainer) globalContainer.style.display = 'none';
+        // Força a voltar ao modo Positivo (+XP) por defeito!
+        const btnPos = document.getElementById('btn-oco-pos');
+        if (btnPos) btnPos.click(); 
         
-        document.getElementById('oco-titulo').innerText = `Ocorrência: ${alunoNome}`;
+        document.getElementById('oco-titulo').innerText = `Avaliar: ${alunoNome}`;
         document.getElementById('modal-ocorrencia').style.display = 'flex';
         return;
     }
 
-    // GRAVAR A OCORRÊNCIA NA BASE DE DADOS
+    // GRAVAR A OCORRÊNCIA NA BASE DE DADOS E APLICAR XP
     if (e.target.closest('#btn-gravar-ocorrencia')) {
         const btn = e.target.closest('#btn-gravar-ocorrencia');
         const alunoId = document.getElementById('perfil-aluno-id-hidden').value; 
+        const titulo = document.getElementById('oco-titulo-registo').value.trim();
         const motivo = document.getElementById('oco-motivo').value.trim();
         const notificarEE = document.getElementById('oco-notificar-ee').checked;
+        
+        const tipoOco = document.getElementById('oco-tipo-hidden').value;
+        const skill = document.getElementById('oco-skill-hidden').value;
+        
         const turma = state.selectedTurma;
         const disciplina = state.disciplinasProfessor[0] || "Geral";
         
-        if (!motivo) { alert("Descreve a situação primeiro."); return; }
+        if (!titulo || !motivo) { alert("Preenche o título e a descrição do registo."); return; }
         
         const txtOriginal = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A registar...';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A calcular...';
         btn.disabled = true;
         
         try {
+            // A MAGIA DO XP: Se for positivo ganha 50 pontos. Se for negativo perde 20.
+            const xpGanho = tipoOco === 'positiva' ? 50 : -20;
+            
+            // 1. Grava no Histórico do Aluno (Para a App do Pai ler a cronologia)
             await addDoc(collection(db, "utilizadores", alunoId, "ocorrencias"), {
                 turma: turma,
                 disciplina: disciplina,
+                titulo: titulo,
                 descricao: motivo,
+                tipo: tipoOco, // 'positiva' ou 'negativa'
+                skill: tipoOco === 'positiva' ? skill : null,
+                xp: xpGanho,
                 data: new Date().toISOString(),
                 autor: state.myUserName,
                 notificarEE: notificarEE,
                 lidaEE: false
             });
 
-            // --- A MÁGICA ACONTECE AQUI! GRAVAR NO LOG DE ATIVIDADES ---
-            if (window.registarAtividadeProfessor) {
-                await window.registarAtividadeProfessor('ocorrencia', `Ocorrência registada a ${alunoNome}`, `Turma ${turma}`);
+            // 2. Vai ao documento PRINCIPAL do aluno injetar os pontos nos gráficos de radar!
+            const alunoRef = doc(db, "utilizadores", alunoId);
+            const alunoSnap = await getDoc(alunoRef);
+            
+            if (alunoSnap.exists()) {
+                const aData = alunoSnap.data();
+                const xpAtualGlobal = aData.xp || 0;
+                
+                // O XP nunca pode ser menor que Zero
+                const updates = { xp: Math.max(0, xpAtualGlobal + xpGanho) };
+                
+                // Atualiza o ramo específico para os gráficos do E.E.
+                if (tipoOco === 'positiva') {
+                    const campoSkill = `xp_${skill}`; // ex: 'xp_lideranca'
+                    const xpSkillAtual = aData[campoSkill] || 0;
+                    updates[campoSkill] = xpSkillAtual + xpGanho;
+                }
+                
+                await setDoc(alunoRef, updates, { merge: true });
             }
-            // -------------------------------------------------------------
 
-            btn.innerHTML = '<i class="fa-solid fa-check"></i> Registada!';
+            // 3. Regista no Livro de Ponto do Professor
+            if (window.registarAtividadeProfessor) {
+                const acao = tipoOco === 'positiva' ? `Atribuiu +50 XP (${skill}) a um aluno` : `Registou ocorrência negativa (-20 XP)`;
+                await window.registarAtividadeProfessor('ocorrencia', acao, `Turma ${turma}`);
+            }
+
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Registado!';
             setTimeout(() => {
                 btn.innerHTML = txtOriginal;
                 btn.disabled = false;
                 document.getElementById('modal-ocorrencia').style.display = 'none';
             }, 1500);
+            
         } catch (err) {
-            console.error("Erro ao gravar ocorrência:", err);
+            console.error("Erro ao gravar registo:", err);
             btn.innerHTML = 'Erro ao gravar!';
             setTimeout(() => { btn.innerHTML = txtOriginal; btn.disabled = false; }, 2000);
+        }
+        return;
+    }
+
+    // =========================================================================
+    // CIRCUITO DE JUSTIFICAÇÃO DE FALTAS (DIRETOR DE TURMA)
+    // =========================================================================
+
+    // 1. ABRIR MODAL E CARREGAR ATESTADOS PENDENTES
+    if (e.target.closest('#btn-justificar-faltas')) {
+        const btnPrincipal = document.getElementById('btn-justificar-faltas'); // O botão exterior
+        const alunoId = document.getElementById('perfil-aluno-id-hidden').value;
+        const modal = document.getElementById('modal-justificar-faltas');
+        const container = document.getElementById('lista-atestados-pendentes');
+
+        if (!alunoId || !modal) return;
+        modal.style.display = 'flex';
+        container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A ler base de dados...</p>';
+
+        try {
+            // Vai à gaveta dos atestados procurar os que estão pendentes
+            const qAtestados = query(collection(db, "utilizadores", alunoId, "atestados"), where("status", "==", "pendente"));
+            const snap = await getDocs(qAtestados);
+
+            // CORREÇÃO 2: ATUALIZA O BOTÃO EXTERIOR NA HORA (Limpa o aviso se já tiveres validado tudo!)
+            if (btnPrincipal) {
+                if (snap.empty) {
+                    btnPrincipal.innerHTML = `<i class="fa-solid fa-file-signature"></i> Histórico de Comprovativos`;
+                    btnPrincipal.style.background = 'var(--warning-yellow)';
+                    btnPrincipal.style.color = 'black';
+                    btnPrincipal.style.borderColor = 'var(--warning-yellow)';
+                } else {
+                    btnPrincipal.innerHTML = `<i class="fa-solid fa-bell fa-shake"></i> Analisar Comprovativos (${snap.size} pendente(s))`;
+                    btnPrincipal.style.background = 'var(--danger-red)';
+                    btnPrincipal.style.color = 'white';
+                    btnPrincipal.style.borderColor = 'var(--danger-red)';
+                }
+            }
+
+            if (snap.empty) {
+                container.innerHTML = '<div style="text-align:center; padding: 30px 10px;"><i class="fa-solid fa-clipboard-check" style="font-size:3rem; color:var(--success-green); margin-bottom:10px;"></i><p style="color:var(--text-muted); font-size:0.9rem;">Tudo em dia! Não há comprovativos pendentes para análise.</p></div>';
+                return;
+            }
+
+            let html = '';
+            // CORREÇÃO 1: Fazer o cruzamento de dados para mostrar os dias/horas das faltas ao DT
+            for (const docSnap of snap.docs) {
+                const atestado = docSnap.data();
+                const docId = docSnap.id;
+                const dataEnvio = new Date(atestado.dataEnvio).toLocaleDateString('pt-PT', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+                const obs = atestado.observacoes || 'Sem observações adicionais.';
+                const anexo = atestado.ficheiroBase64;
+                
+                let extensao = 'pdf';
+                if (anexo.startsWith('data:image/png')) extensao = 'png';
+                else if (anexo.startsWith('data:image/jpeg')) extensao = 'jpg';
+                
+                const nomeFicheiro = `comprovativo_${alunoId}_${docId}.${extensao}`;
+
+                // --- MAGIA: IR BUSCAR OS DETALHES EXATOS DAS FALTAS SELECIONADAS ---
+                let detalhesFaltas = "";
+                if (atestado.faltasAssociadas && atestado.faltasAssociadas.length > 0) {
+                    detalhesFaltas = `<ul style="margin: 5px 0 0 20px; padding: 0; color: var(--warning-yellow); font-size: 0.85rem; line-height: 1.4;">`;
+                    for (const fId of atestado.faltasAssociadas) {
+                        const fSnap = await getDoc(doc(db, "utilizadores", alunoId, "faltas", fId));
+                        if (fSnap.exists()) {
+                            const fData = fSnap.data();
+                            const dataFormatada = fData.dataFalta || new Date(fData.dataRegisto).toLocaleDateString('pt-PT');
+                            detalhesFaltas += `<li><strong>${fData.disciplina}</strong> - Dia ${dataFormatada} (${fData.duracaoBlocos || fData.horas || 2} tempos)</li>`;
+                        }
+                    }
+                    detalhesFaltas += `</ul>`;
+                } else {
+                    detalhesFaltas = `<span style="color:var(--danger-red); font-size: 0.8rem;"><br>(Aviso: Atestado genérico. Ao aceitar, justificará TODAS as faltas pendentes)</span>`;
+                }
+                // -------------------------------------------------------------
+
+                // Constrói o "Card" do atestado para o Diretor de Turma
+                html += `
+                <div class="card" style="border-left: 4px solid var(--warning-yellow); margin-bottom: 0; background: rgba(0,0,0,0.2);">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 10px;">
+                        <strong style="color:var(--text-light); font-size:0.9rem;"><i class="fa-regular fa-clock"></i> Enviado a ${dataEnvio}</strong>
+                    </div>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom: 10px;"><strong>Motivo do E.E:</strong> ${obs}</p>
+                    
+                    <div style="font-size:0.85rem; color:white; margin-bottom: 15px; border-top: 1px dashed #444; padding-top: 10px;">
+                        <strong>Faltas a Justificar:</strong>
+                        ${detalhesFaltas}
+                    </div>
+                    
+                    <!-- PRÉ-VISUALIZAÇÃO DO DOCUMENTO -->
+                    <div style="margin-bottom: 10px; border-radius: 8px; border: 1px solid #444; background:#111; overflow:hidden;">
+                        ${anexo.startsWith('data:image') 
+                            ? `<img src="${anexo}" style="width:100%; max-height:200px; object-fit:contain; display:block;">`
+                            : `<div style="padding:20px; text-align:center;"><i class="fa-solid fa-file-pdf" style="font-size:3rem; color:var(--primary-green); margin-bottom:10px;"></i><br><span style="color:white; font-size:0.9rem;">Documento PDF</span></div>`
+                        }
+                    </div>
+
+                    <!-- BOTÃO DE DESCARREGAR PARA IMPRIMIR -->
+                    <div style="margin-bottom: 15px;">
+                        <a href="${anexo}" download="${nomeFicheiro}" style="display:block; text-align:center; padding:8px; background:rgba(255,255,255,0.1); color:white; text-decoration:none; border-radius:6px; font-size:0.85rem; border:1px solid #555; transition: 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+                            <i class="fa-solid fa-download" style="margin-right: 5px;"></i> Descarregar Documento Original
+                        </a>
+                    </div>
+
+                    <!-- BOTÕES DE DECISÃO -->
+                    <div style="display:flex; gap: 10px;">
+                        <button class="primary-btn btn-aprovar-atestado" data-id="${docId}" data-aluno="${alunoId}" style="flex:1; background:var(--success-green); border-color:var(--success-green); color:black;"><i class="fa-solid fa-check"></i> Aceitar</button>
+                        <button class="secondary-btn btn-rejeitar-atestado" data-id="${docId}" data-aluno="${alunoId}" style="flex:1; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-xmark"></i> Recusar</button>
+                    </div>
+                </div>`;
+            }
+            container.innerHTML = html;
+        } catch(err) {
+            console.error("Erro ao carregar atestados:", err);
+            container.innerHTML = '<p class="text-danger center">Erro a ler documentos.</p>';
+        }
+        return;
+    }
+
+    // 2. APROVAR O ATESTADO E JUSTIFICAR APENAS AS FALTAS SELECIONADAS
+    if (e.target.closest('.btn-aprovar-atestado')) {
+        const btn = e.target.closest('.btn-aprovar-atestado');
+        const atestadoId = btn.getAttribute('data-id');
+        const alunoId = btn.getAttribute('data-aluno');
+        
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+
+        try {
+            // A. Vai ler o documento do atestado para saber que faltas foram selecionadas
+            const atestadoSnap = await getDoc(doc(db, "utilizadores", alunoId, "atestados", atestadoId));
+            if (!atestadoSnap.exists()) throw new Error("Atestado não encontrado");
+            const dadosAtestado = atestadoSnap.data();
+            const faltasAlvo = dadosAtestado.faltasAssociadas || []; // Lê o Array gravado pelo Pai
+
+            // B. Regista o atestado como "aceite"
+            await setDoc(doc(db, "utilizadores", alunoId, "atestados", atestadoId), {
+                status: "aceite",
+                dataDecisao: new Date().toISOString(),
+                dtAprovador: state.myUserName
+            }, { merge: true });
+
+            // C. Justifica APENAS as faltas que constam no Array!
+            const gravacoesFaltas = [];
+            if (faltasAlvo.length > 0) {
+                faltasAlvo.forEach(faltaId => {
+                    gravacoesFaltas.push(
+                        setDoc(doc(db, "utilizadores", alunoId, "faltas", faltaId), { 
+                            justificada: true,
+                            justificadaEm: new Date().toISOString()
+                        }, { merge: true })
+                    );
+                });
+            } else {
+                // Sistema de Segurança (Fallback): Se o atestado for muito antigo e não tiver a lista de faltas, aprova todas as vermelhas como acontecia dantes.
+                const qFaltas = query(collection(db, "utilizadores", alunoId, "faltas"), where("justificada", "==", false));
+                const faltasSnap = await getDocs(qFaltas);
+                faltasSnap.forEach(fDoc => {
+                    gravacoesFaltas.push(setDoc(doc(db, "utilizadores", alunoId, "faltas", fDoc.id), { justificada: true, justificadaEm: new Date().toISOString() }, { merge: true }));
+                });
+            }
+            
+            await Promise.all(gravacoesFaltas);
+
+            // D. Regista no log de Atividades do Professor
+            if (window.registarAtividadeProfessor) {
+                const qtd = faltasAlvo.length > 0 ? faltasAlvo.length : gravacoesFaltas.length;
+                await window.registarAtividadeProfessor('falta', `Aprovou um atestado. ${qtd} falta(s) justificada(s).`, `Aluno ID: ${alunoId}`);
+            }
+
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Aceite!';
+            btn.style.background = '#059669'; 
+            
+            setTimeout(() => {
+                document.getElementById('btn-justificar-faltas').click();
+            }, 1000);
+
+        } catch(err) {
+            console.error("Erro ao aprovar atestado:", err);
+            btn.innerHTML = 'Erro!';
+            btn.disabled = false;
+        }
+        return;
+    }
+
+    // 3. REJEITAR O ATESTADO
+    if (e.target.closest('.btn-rejeitar-atestado')) {
+        const btn = e.target.closest('.btn-rejeitar-atestado');
+        const atestadoId = btn.getAttribute('data-id');
+        const alunoId = btn.getAttribute('data-aluno');
+        
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+
+        try {
+            // Muda apenas o status para rejeitado, as faltas continuam vermelhas
+            await setDoc(doc(db, "utilizadores", alunoId, "atestados", atestadoId), {
+                status: "rejeitado",
+                dataDecisao: new Date().toISOString(),
+                dtAprovador: state.myUserName
+            }, { merge: true });
+
+            btn.innerHTML = '<i class="fa-solid fa-xmark"></i> Recusado';
+            setTimeout(() => {
+                document.getElementById('btn-justificar-faltas').click();
+            }, 1000);
+
+        } catch(err) {
+            console.error("Erro ao rejeitar atestado:", err);
+            btn.innerHTML = 'Erro!';
+            btn.disabled = false;
         }
         return;
     }
@@ -1724,6 +2259,53 @@ window.abrirPerfilCompletoAluno = async function(alunoId, alunoNome, alunoFoto) 
         document.getElementById('p-aluno-faltas').innerText = "12"; // Substitui depois pela query real de faltas
         document.getElementById('p-aluno-prhfs').innerText = "1";   // Substitui depois pela query real de PRHFs
 
+        // ==========================================
+        // MAGIA DO BOTÃO DE JUSTIFICAR FALTAS (DT)
+        // ==========================================
+        let btnJustificar = document.getElementById('btn-justificar-faltas');
+        
+        // Se o botão não existir no HTML, o JavaScript cria-o na hora!
+        if (!btnJustificar) {
+            btnJustificar = document.createElement('button');
+            btnJustificar.id = 'btn-justificar-faltas';
+            btnJustificar.className = 'primary-btn';
+            btnJustificar.style.width = '100%';
+            btnJustificar.style.marginBottom = '15px';
+            
+            // Coloca o botão perfeitamente acima da caixa das Sínteses
+            const areaSintese = document.getElementById('area-sintese-prof');
+            if (areaSintese) {
+                areaSintese.parentNode.insertBefore(btnJustificar, areaSintese);
+            }
+        }
+
+        // Esconde o botão por defeito para os Professores
+        btnJustificar.style.display = 'none';
+
+        // Se o utilizador tiver a capa de Diretor de Turma vestida:
+        if (state.activeRole === 'diretor_turma') {
+            btnJustificar.style.display = 'block';
+            btnJustificar.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> A verificar comprovativos...`;
+            btnJustificar.style.background = 'var(--bg-dark)';
+            btnJustificar.style.color = 'white';
+            
+            // Vai à base de dados ver se o Pai enviou documentos novos
+            const qAtestados = query(collection(db, "utilizadores", alunoId, "atestados"), where("status", "==", "pendente"));
+            const snapAtestados = await getDocs(qAtestados);
+            
+            if (!snapAtestados.empty) {
+                // Há documentos novos! Fica VERMELHO a piscar.
+                btnJustificar.innerHTML = `<i class="fa-solid fa-bell fa-shake"></i> Analisar Comprovativos (${snapAtestados.size} novo!)`;
+                btnJustificar.style.background = 'var(--danger-red)';
+                btnJustificar.style.color = 'white';
+            } else {
+                // Está tudo em dia! Fica AMARELO pacífico.
+                btnJustificar.innerHTML = `<i class="fa-solid fa-file-signature"></i> Histórico de Comprovativos`;
+                btnJustificar.style.background = 'var(--warning-yellow)';
+                btnJustificar.style.color = 'black';
+            }
+        }
+
     } catch(err) {
         console.error("Erro ao carregar perfil:", err);
     }
@@ -1746,3 +2328,59 @@ window.carregarAlunoNoMiniModalSintese = function(linhaHTML) {
     const txtGuardado = linhaHTML.querySelector('.input-sintese-hidden').value;
     document.getElementById('texto-sintese-final').value = txtGuardado || "";
 };
+
+// =========================================================================
+// OBSERVADOR GLOBAL: Injeta o botão do DT sempre que o perfil abrir!
+// =========================================================================
+const modalPerfilGlobal = document.getElementById('modal-perfil-aluno');
+if (modalPerfilGlobal) {
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            // Deteta se o modal acabou de ficar visível (display: flex)
+            if (mutation.attributeName === 'style' && modalPerfilGlobal.style.display === 'flex') {
+                
+                // Dá um pequeno atraso (200ms) para garantir que o ui.js acabou de preencher os dados do aluno
+                setTimeout(async () => {
+                    const btnJustificar = document.getElementById('btn-justificar-faltas');
+                    const alunoId = document.getElementById('perfil-aluno-id-hidden').value;
+                    
+                    if (btnJustificar && alunoId) {
+                        const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
+                        
+                        if (isDT) {
+                            btnJustificar.style.display = 'block';
+                            btnJustificar.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> A verificar atestados...`;
+                            
+                            try {
+                                // Espreita a base de dados em tempo real
+                                const qAtestados = query(collection(db, "utilizadores", alunoId, "atestados"), where("status", "==", "pendente"));
+                                const snapAtestados = await getDocs(qAtestados);
+                                
+                                if (!snapAtestados.empty) {
+                                    // Atestados Novos! Fica Vermelho e a tremer
+                                    btnJustificar.innerHTML = `<i class="fa-solid fa-bell fa-shake"></i> Analisar Comprovativos (${snapAtestados.size} novo!)`;
+                                    btnJustificar.style.background = 'var(--danger-red)';
+                                    btnJustificar.style.color = 'white';
+                                    btnJustificar.style.borderColor = 'var(--danger-red)';
+                                } else {
+                                    // Tudo lido! Fica Amarelo normal
+                                    btnJustificar.innerHTML = `<i class="fa-solid fa-file-signature"></i> Histórico de Comprovativos`;
+                                    btnJustificar.style.background = 'var(--warning-yellow)';
+                                    btnJustificar.style.color = 'black';
+                                    btnJustificar.style.borderColor = 'var(--warning-yellow)';
+                                }
+                            } catch(e) {
+                                btnJustificar.innerHTML = `<i class="fa-solid fa-file-signature"></i> Comprovativos`;
+                            }
+                        } else {
+                            // Se for só o professor da disciplina, esconde o botão
+                            btnJustificar.style.display = 'none';
+                        }
+                    }
+                }, 200);
+            }
+        });
+    });
+    // Inicia a vigilância ao Modal
+    observer.observe(modalPerfilGlobal, { attributes: true });
+}

@@ -791,13 +791,29 @@ async function registarHorasDia() {
         const currentHoras = snap.data().fct?.horasRealizadas || 0;
         const currentBanco = snap.data().fct?.bancoHoras || 0;
         
+        // NOVO: Criar o registo detalhado para o Coordenador visualizar os dias/horas
+        const dataFormatada = dt.split('-').reverse().join('/');
+        const novoRegistoDiario = {
+            data: dataFormatada,
+            horas: validarIn,
+            descricao: `Turno das ${hIn} às ${hOut} (${totalHorasFeitas}h efetuadas)`
+        };
+        
         await updateDoc(doc(window.db, "utilizadores", window.myUserId), {
             "fct.horasRealizadas": currentHoras + validarIn,
             "fct.bancoHoras": currentBanco + bancoFinal,
-            "fct.historicoHoras": arrayUnion({ data: dt.split('-').reverse().join('/'), dataIso: dt, inicio: hIn, fim: hOut, horasTotal: totalHorasFeitas, horasValidadas: validarIn, horasBanco: bancoFinal })
+            "fct.historicoHoras": arrayUnion({ data: dataFormatada, dataIso: dt, inicio: hIn, fim: hOut, horasTotal: totalHorasFeitas, horasValidadas: validarIn, horasBanco: bancoFinal }),
+            // ADICIONADO: Envia direto para o array que o coordenador lê no painel
+            "fct.registosDiarios": arrayUnion(novoRegistoDiario)
         });
-        mostrarAlerta("Horas registadas com sucesso!", false); window.recarregarViewPassaporte('fct');
-    } catch(e) { mostrarAlerta("Erro ao registar horas."); btn.innerHTML = textoOriginal; btn.disabled = false; }
+        
+        mostrarAlerta("Horas registadas com sucesso!", false); 
+        window.recarregarViewPassaporte('fct');
+    } catch(e) { 
+        mostrarAlerta("Erro ao registar horas."); 
+        btn.innerHTML = textoOriginal; 
+        btn.disabled = false; 
+    }
 }
 
 async function eliminarHorasFCT(index) {

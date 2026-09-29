@@ -1,5 +1,5 @@
-import { collection, getDocs, getDoc, doc, query, addDoc, updateDoc, onSnapshot, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-import { obterDisciplinasDoAno } from "./aluno-caderneta.js"; 
+import { collection, getDocs, getDoc, doc, query, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { obterDisciplinasDoAno } from "./aluno-caderneta.js";
 
 let alunoForumAtivoId = null;
 let chatUnsubscribeAluno = null;
@@ -35,8 +35,17 @@ export function setupComunicacao() {
         btnCreate.addEventListener('click', async () => {
             document.getElementById('modal-criar-forum').style.display = 'flex';
             const cList = document.getElementById('lista-colegas-forum');
-            cList.innerHTML = '<p class="text-muted center" style="font-size:0.8rem;">A procurar colegas...</p>';
+            cList.innerHTML = '<p class="text-muted center" style="font-size:0.8rem; grid-column: span 2; padding: 20px;"><i class="fa-solid fa-spinner fa-spin"></i> A procurar colegas...</p>';
             
+            // Mudamos o estilo da caixa para uma grelha moderna de cartões
+            cList.style.display = 'grid';
+            cList.style.gridTemplateColumns = '1fr 1fr';
+            cList.style.gap = '8px';
+            cList.style.maxHeight = '200px';
+            cList.style.overflowY = 'auto';
+            cList.style.background = 'transparent';
+            cList.style.border = 'none';
+
             if(window.minhaTurma) {
                 try {
                     const snap = await getDocs(query(collection(window.db, "utilizadores"), where("turma", "==", window.minhaTurma), where("papel", "==", "aluno")));
@@ -44,15 +53,19 @@ export function setupComunicacao() {
                     snap.forEach(d => {
                         const col = d.data();
                         if(d.id !== window.myUserId) {
-                            html += `<label style="display:flex; align-items:center; gap:10px; padding:8px; border-bottom:1px solid #222; font-size:0.9rem; color:var(--text-light); cursor:pointer;">
-                                        <input type="checkbox" class="coleta-chk" value="${d.id}" style="margin:0;">
-                                        <img src="${col.fotoPerfil || `https://ui-avatars.com/api/?name=${col.nome}&background=00cc88&color=fff`}" style="width:25px; height:25px; border-radius:50%; object-fit:cover;">
-                                        ${col.nome}
-                                     </label>`;
+                            const iniciais = col.nome ? col.nome.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'AL';
+                            
+                            // Cartão limpo sem caixas de seleção feias - clica-se em todo o bloco!
+                            html += `
+                            <div class="colegas-card-select" data-id="${d.id}" onclick="this.classList.toggle('selecionado'); const chk = this.querySelector('.coleta-chk'); chk.checked = !chk.checked; this.style.background = chk.checked ? 'rgba(0, 204, 136, 0.15)' : 'rgba(0,0,0,0.2)'; this.style.borderColor = chk.checked ? 'var(--primary-green)' : '#333';" style="display:flex; align-items:center; gap:10px; padding:10px; background:rgba(0,0,0,0.2); border:1px solid #333; border-radius:8px; cursor:pointer; transition:all 0.2s;">
+                                <input type="checkbox" class="coleta-chk" value="${d.id}" style="display:none;">
+                                <div style="width:30px; height:30px; background:var(--primary-green); color:black; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:0.75rem; flex-shrink:0;">${iniciais}</div>
+                                <span style="font-size:0.85rem; color:white; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${col.nome ? col.nome.split(' ')[0] : 'Colega'}</span>
+                            </div>`;
                         }
                     });
-                    cList.innerHTML = html === '' ? '<p class="text-muted center" style="font-size:0.8rem;">Nenhum colega encontrado.</p>' : html;
-                } catch(e) { cList.innerHTML = '<p class="text-danger center">Erro a carregar colegas.</p>'; }
+                    cList.innerHTML = html === '' ? '<p class="text-muted center" style="font-size:0.8rem; grid-column: span 2;">Nenhum colega encontrado.</p>' : html;
+                } catch(e) { cList.innerHTML = '<p class="text-danger center" style="grid-column: span 2;">Erro a carregar colegas.</p>'; }
             }
         });
     }
@@ -61,22 +74,40 @@ export function setupComunicacao() {
         document.getElementById('modal-criar-forum').style.display = 'none'; 
     });
 
-    // Usa o nosso alerta customizado em vez do nativo
     document.getElementById('btn-confirm-novo-forum')?.addEventListener('click', async (e) => {
-        const nInput = document.getElementById('input-nome-novo-forum'); const nome = nInput.value.trim();
+        const nInput = document.getElementById('input-nome-novo-forum'); 
+        const nome = nInput.value.trim();
         if(!nome) { mostrarAlerta("Dá um nome ao chat!"); return; }
+        
         const selecionados = Array.from(document.querySelectorAll('.coleta-chk:checked')).map(cb => cb.value);
         if(selecionados.length === 0) { mostrarAlerta("Seleciona pelo menos um colega."); return; }
         
         const participantes = [window.myUserId, ...selecionados];
-        const btn = e.currentTarget; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
+        const btn = e.currentTarget; 
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; 
+        btn.disabled = true;
         
         try {
-            await addDoc(collection(window.db, "forums"), { nome: nome, isGlobal: false, criador: window.myUserId, participantes: participantes, dataCriacao: Date.now(), lastMessage: null, unread: {} });
-            document.getElementById('modal-criar-forum').style.display = 'none'; nInput.value = ''; carregarCanaisForumAluno();
+            await addDoc(collection(window.db, "forums"), { 
+                nome: nome, 
+                turma: window.minhaTurma || "", 
+                isGlobal: false, 
+                criador: window.myUserId, 
+                participantes: participantes, 
+                dataCriacao: Date.now(), 
+                lastMessage: null, 
+                unread: {} 
+            });
+            
+            document.getElementById('modal-criar-forum').style.display = 'none'; 
+            nInput.value = ''; 
+            carregarCanaisForumAluno();
             mostrarAlerta("Chat criado com sucesso!", false);
-        } catch(err) { mostrarAlerta("Erro ao criar chat."); }
-        btn.innerHTML = 'Criar Chat'; btn.disabled = false;
+        } catch(err) { 
+            mostrarAlerta("Erro ao criar chat."); 
+        }
+        btn.innerHTML = 'Criar Chat'; 
+        btn.disabled = false;
     });
 
     document.getElementById('btn-aluno-voltar-canais')?.addEventListener('click', () => {
@@ -256,6 +287,48 @@ function renderCardPequeno(ch) {
             </div>`;
 }
 
+// MODAL BONITO DE ELIMINAÇÃO DE CHAT
+function mostrarModalApagarChat(callbackExecucao) {
+    let modalDel = document.getElementById('modal-confirmar-apagar-chat-aluno');
+    
+    if (!modalDel) {
+        const modalHTML = `
+        <div id="modal-confirmar-apagar-chat-aluno" class="modal-overlay" style="display: flex; z-index: 9999; align-items: center; justify-content: center;">
+            <div class="action-sheet" style="border-radius: 12px; max-width: 320px; width: 90%; margin: auto; text-align: center; border: 1px solid #333; background: #111; padding: 25px;">
+                <div style="background-color: rgba(239, 68, 68, 0.1); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto;">
+                    <i class="fa-solid fa-trash-can" style="color: var(--danger-red); font-size: 1.5rem;"></i>
+                </div>
+                <h3 style="color: white; margin-bottom: 10px; font-size: 1.1rem;">Apagar Chat</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 25px; line-height: 1.4;">
+                    Tens a certeza que queres eliminar este chat para todos? Esta ação não pode ser desfeita.
+                </p>
+                <div style="display: flex; gap: 10px;">
+                    <button id="btn-cancelar-apagar-chat" class="secondary-btn" style="flex: 1; border: 1px solid #444; color: var(--text-muted); background: transparent;">Cancelar</button>
+                    <button id="btn-confirmar-apagar-chat" class="primary-btn" style="flex: 1; background-color: var(--danger-red); color: white; border: none;">Eliminar</button>
+                </div>
+            </div>
+        </div>`;
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        modalDel = document.getElementById('modal-confirmar-apagar-chat-aluno');
+    } else {
+        modalDel.style.display = 'flex';
+    }
+
+    const btnConf = document.getElementById('btn-confirmar-apagar-chat');
+    const btnCanc = document.getElementById('btn-cancelar-apagar-chat');
+    
+    const novoBtnConf = btnConf.cloneNode(true);
+    const novoBtnCanc = btnCanc.cloneNode(true);
+    btnConf.parentNode.replaceChild(novoBtnConf, btnConf);
+    btnCanc.parentNode.replaceChild(novoBtnCanc, btnCanc);
+
+    novoBtnCanc.addEventListener('click', () => { modalDel.style.display = 'none'; });
+    novoBtnConf.addEventListener('click', () => { 
+        modalDel.style.display = 'none'; 
+        callbackExecucao(); 
+    });
+}
+
 window.abrirChatForumAluno = async (chatId, chatNome) => {
     alunoForumAtivoId = chatId;
     document.getElementById('aluno-chat-active-title').innerText = chatNome;
@@ -263,18 +336,74 @@ window.abrirChatForumAluno = async (chatId, chatNome) => {
     document.getElementById('aluno-forum-channel-list').style.display = 'none';
     document.getElementById('aluno-forum-chat-view').style.display = 'flex';
     
-    try { await updateDoc(doc(window.db, "forums", chatId), { [`unread.${window.myUserId}`]: false }); } catch(e){}
+    // Configuração do botão de apagar no cabeçalho do chat
+    const chatHeaderDiv = document.getElementById('aluno-chat-active-title').parentNode;
+    let btnApagarChat = document.getElementById('btn-apagar-chat-aluno');
     
-    const mc = document.getElementById('aluno-chat-messages-container'); mc.innerHTML = '<p class="text-muted center">A ler mensagens...</p>';
+    if (!btnApagarChat) {
+        btnApagarChat = document.createElement('button');
+        btnApagarChat.id = 'btn-apagar-chat-aluno';
+        btnApagarChat.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+        btnApagarChat.style.cssText = 'background:none; border:none; color:var(--danger-red); cursor:pointer; font-size:1.1rem; padding:5px; display:none;';
+        chatHeaderDiv.appendChild(btnApagarChat);
+    }
+
+    try {
+        const chSnap = await getDoc(doc(window.db, "forums", chatId));
+        if (chSnap.exists()) {
+            const dadosChat = chSnap.data();
+            // Verifica se o utilizador atual é o criador (aceita 'criador' ou 'criadoPor')
+            const isCriador = (dadosChat.criador === window.myUserId || dadosChat.criadoPor === window.myUserId);
+            
+            if (isCriador) {
+                btnApagarChat.style.display = 'block';
+                btnApagarChat.onclick = () => {
+                    mostrarModalApagarChat(async () => {
+                        try {
+                            await deleteDoc(doc(window.db, "forums", chatId));
+                            document.getElementById('btn-aluno-voltar-canais').click();
+                            if (window.carregarCanaisForumAluno) window.carregarCanaisForumAluno();
+                            mostrarAlerta("Chat apagado com sucesso.", false);
+                        } catch (err) {
+                            console.error("Erro ao apagar chat:", err);
+                            mostrarAlerta("Erro ao apagar o chat.");
+                        }
+                    });
+                };
+            } else {
+                btnApagarChat.style.display = 'none';
+            }
+        }
+        await updateDoc(doc(window.db, "forums", chatId), { [`unread.${window.myUserId}`]: false });
+    } catch(e) {
+        console.error("Erro ao carregar dados do chat:", e);
+    }
+    
+    const mc = document.getElementById('aluno-chat-messages-container'); 
+    mc.innerHTML = '<p class="text-muted center">A ler mensagens...</p>';
     if(chatUnsubscribeAluno) chatUnsubscribeAluno();
     
     chatUnsubscribeAluno = onSnapshot(query(collection(window.db, "forums", chatId, "mensagens"), orderBy("timestamp", "asc")), (snap) => {
         let h = '';
         snap.forEach(d => {
-            const m = d.data(); const mMinha = m.sender === window.myUserId;
-            const al = mMinha ? 'flex-end' : 'flex-start'; const bg = mMinha ? 'var(--primary-green)' : '#333'; const c = mMinha ? '#000' : 'var(--text-light)'; const br = mMinha ? '12px 12px 0 12px' : '12px 12px 12px 0';
-            const sN = mMinha ? '' : `<div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:3px; margin-left:5px;">${m.senderName}</div>`;
-            h += `<div style="display:flex; flex-direction:column; align-items:${al}; width:100%;">${sN}<div style="background:${bg}; color:${c}; padding:10px 14px; border-radius:${br}; max-width:85%; font-size:0.95rem; line-height:1.4; box-shadow:0 2px 5px rgba(0,0,0,0.2);">${m.text}</div></div>`;
+            const m = d.data(); 
+            
+            // Compatibilidade total: deteta se a mensagem é do próprio utilizador (seja aluno ou prof)
+            const mMinha = (m.sender === window.myUserId) || (m.autor === window.myUserName);
+            
+            const al = mMinha ? 'flex-end' : 'flex-start'; 
+            const bg = mMinha ? 'var(--primary-green)' : '#333'; 
+            const c = mMinha ? '#000' : 'var(--text-light)'; 
+            const br = mMinha ? '12px 12px 0 12px' : '12px 12px 12px 0';
+            
+            // Lê o nome do remetente independentemente de ter sido gravado como senderName ou autor
+            const nomeRemetente = m.senderName || m.autor || 'Desconhecido';
+            const sN = mMinha ? '' : `<div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:3px; margin-left:5px;">${nomeRemetente}</div>`;
+            
+            // Lê o texto independentemente de ter sido gravado como text ou texto
+            const textoMensagem = m.text || m.texto || '';
+
+            h += `<div style="display:flex; flex-direction:column; align-items:${al}; width:100%;">${sN}<div style="background:${bg}; color:${c}; padding:10px 14px; border-radius:${br}; max-width:85%; font-size:0.95rem; line-height:1.4; box-shadow:0 2px 5px rgba(0,0,0,0.2);">${textoMensagem}</div></div>`;
         });
         mc.innerHTML = h === '' ? '<p class="text-muted center" style="margin-top:20px;">Sê o primeiro a dizer olá!</p>' : h;
         setTimeout(() => mc.scrollTop = mc.scrollHeight, 100);

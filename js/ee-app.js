@@ -1,7 +1,6 @@
 import { auth, db } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, collection, getDocs, query, addDoc, onSnapshot, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-
+import { doc, getDoc, collection, getDocs, query, addDoc, onSnapshot, orderBy, where, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 let myUserId = ""; 
 let myUserName = ""; 
 let educandosArray = []; 
@@ -198,6 +197,11 @@ async function carregarDadosDoFilhoSelecionado() {
                 if (abaAtiva === 'view-ee-agenda') carregarAgendaEE();
                 if (abaAtiva === 'view-ee-horario') carregarHorarioEE();
             }
+
+            // ==========================================
+            // ATIVA O RADAR DE NOTIFICAÇÕES PARA ESTE ALUNO
+            // ==========================================
+            iniciarEscutaNotificacoes();
         }
     } catch(e) {}
 }
@@ -464,11 +468,84 @@ bindClick('btn-quick-justificar', () => {
     }); 
 });
 
+// ==========================================
+// SISTEMA DE NOTIFICAÇÕES EM TEMPO REAL (RPG)
+// ==========================================
+let unsubNotificacoes = null;
+
+function iniciarEscutaNotificacoes() {
+    if (!educandoAtualId) return;
+    if (unsubNotificacoes) unsubNotificacoes();
+
+    // Fica a "escutar" a base de dados ao vivo
+    const qOco = query(collection(db, "utilizadores", educandoAtualId, "ocorrencias"), orderBy("data", "desc"));
+    
+    unsubNotificacoes = onSnapshot(qOco, (snap) => {
+        let naoLidas = 0;
+        let html = '';
+
+        snap.forEach(docSnap => {
+            const oco = docSnap.data();
+            
+            // Só conta para o número vermelho se o Professor marcou "Notificar E.E." e se ainda não foi lida
+            if (oco.notificarEE && !oco.lidaEE) naoLidas++;
+
+            const isPos = oco.tipo === 'positiva';
+            const cor = isPos ? 'var(--success-green)' : 'var(--danger-red)';
+            const icone = isPos ? 'fa-bolt' : 'fa-triangle-exclamation';
+            const xpTexto = oco.xp ? (oco.xp > 0 ? `+${oco.xp} XP` : `${oco.xp} XP`) : '';
+
+            html += `
+            <div class="card" style="border-left: 4px solid ${cor}; margin-bottom:10px; background: rgba(0,0,0,0.2);">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                    <strong style="color:white; font-size:0.95rem;"><i class="fa-solid ${icone}" style="color:${cor};"></i> ${oco.titulo}</strong>
+                    <span style="color:${cor}; font-weight:bold; font-size:0.85rem;">${xpTexto}</span>
+                </div>
+                <p style="font-size:0.85rem; color:var(--text-light); margin-bottom:8px;">${oco.descricao}</p>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.75rem; color:var(--text-muted);">${new Date(oco.data).toLocaleString('pt-PT', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})} | Prof. ${oco.autor}</span>
+                    ${!oco.lidaEE 
+                        ? `<button class="btn-marcar-lida" data-id="${docSnap.id}" style="background:rgba(255,255,255,0.1); border:1px solid ${cor}; color:${cor}; border-radius:4px; padding:4px 10px; font-size:0.75rem; cursor:pointer; font-weight:bold;"><i class="fa-solid fa-check"></i> Visto</button>` 
+                        : `<span style="font-size:0.75rem; color:var(--text-muted);"><i class="fa-solid fa-check-double"></i> Lido</span>`
+                    }
+                </div>
+            </div>`;
+        });
+
+        // 1. Atualiza a bolinha vermelha no ícone do sino (header)
+        const btnSino = document.getElementById('btn-open-notificacoes');
+        if (btnSino) {
+            if (naoLidas > 0) {
+                btnSino.innerHTML = `<i class="fa-solid fa-bell fa-shake" style="color:var(--danger-red);"></i> <span style="position:absolute; top:-5px; right:-5px; background:var(--danger-red); color:white; font-size:0.6rem; font-weight:bold; padding:2px 5px; border-radius:50%;">${naoLidas}</span>`;
+                btnSino.style.position = 'relative';
+            } else {
+                btnSino.innerHTML = `<i class="fa-solid fa-bell" style="color:white;"></i>`;
+            }
+        }
+
+        // 2. Injeta na aba de notificações
+        const cont = document.getElementById('ee-notificacoes-container');
+        if (cont) {
+            cont.innerHTML = html === '' ? getEmptyState('Não há registos disciplinares ou de evolução.', 'fa-bell-slash') : html;
+            
+            // Lógica do botão "Visto"
+            document.querySelectorAll('.btn-marcar-lida').forEach(b => {
+                b.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    e.currentTarget.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                    await setDoc(doc(db, "utilizadores", educandoAtualId, "ocorrencias", id), { lidaEE: true }, { merge: true });
+                });
+            });
+        }
+    });
+}
+
+// Quando o E.E. clica no botão do Sino, abre a janela certa!
 bindClick('btn-open-notificacoes', () => { 
     navItems.forEach(nav => nav.classList.remove('active')); 
     esconderTodasAsVistas(); 
-    const vw = document.getElementById('view-ee-notificacoes'); if(vw) vw.style.display = 'block'; 
-    const cont = document.getElementById('ee-notificacoes-container'); if(cont) cont.innerHTML = getEmptyState('Ainda não recebeste notificações.', 'fa-bell-slash'); 
+    const vw = document.getElementById('view-ee-notificacoes'); 
+    if(vw) vw.style.display = 'block'; 
 });
 
 // ==========================================
@@ -842,12 +919,16 @@ async function carregarPrhfsEE() {
     } catch(e) {}
 }
 
-async function carregarReunioesEE(reuniaoSelecionada = '1_intercalar') {
+async function carregarReunioesEE(reuniaoSelecionada = 'momento_1') {
     const cadernetaContent = document.getElementById('ee-caderneta-content');
+    
+    // Agora apontamos para os IDs reais que os professores gravam na base de dados (momento_1, momento_2, etc)
     const reunioesMenu = [
-        {id: '1_intercalar', label: '1ª Intercalar'}, {id: '1_avaliacao', label: '1ª Avaliação'},
-        {id: '2_intercalar', label: '2ª Intercalar'}, {id: '2_avaliacao', label: '2ª Avaliação'},
-        {id: '3_avaliacao', label: '3ª Avaliação'}
+        {id: 'momento_1', label: '1ª Intercalar'}, 
+        {id: 'momento_2', label: '1ª Avaliação'},
+        {id: 'momento_3', label: '2ª Intercalar'}, 
+        {id: 'momento_4', label: '2ª Avaliação'},
+        {id: 'momento_5', label: '3ª Avaliação'}
     ];
     
     let html = '<div style="display:flex; overflow-x:auto; gap:10px; margin-bottom:20px; padding-bottom:10px;">';
@@ -874,16 +955,28 @@ async function carregarReunioesEE(reuniaoSelecionada = '1_intercalar') {
         let contentHtml = '<div style="display:flex; flex-direction:column; gap:10px;">';
         
         if (ordemDisciplinas.length === 0) {
-            contentHtml += '<p class="text-muted center">Ainda não existem disciplinas associadas.</p>';
+            contentHtml += '<p class="text-muted center">Ainda não existem disciplinas associadas à turma.</p>';
         } else {
+            // Renderiza as disciplinas usando a nova estrutura de dados (sinteses_disciplinas)
             ordemDisciplinas.forEach(disc => {
-                const comentario = dadosReuniao.disciplinas && dadosReuniao.disciplinas[disc] ? dadosReuniao.disciplinas[disc] : '<span style="color:var(--text-muted);">Sem comentário (SN)</span>';
-                contentHtml += `<div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;"><h4 style="margin-bottom:8px; color:var(--text-light); font-size:1rem;">${disc}</h4><p style="color:var(--text-light); font-size:0.9rem; line-height:1.4; margin:0;">${comentario}</p></div>`;
+                let comentario = '<span style="color:var(--text-muted);">Sem comentário (SN)</span>';
+                if (dadosReuniao.sinteses_disciplinas && dadosReuniao.sinteses_disciplinas[disc]) {
+                    comentario = dadosReuniao.sinteses_disciplinas[disc];
+                }
+                contentHtml += `<div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;">
+                                    <h4 style="margin-bottom:8px; color:var(--text-light); font-size:1rem;">${disc}</h4>
+                                    <p style="color:var(--text-light); font-size:0.9rem; line-height:1.5; margin:0; white-space: pre-wrap;">${comentario}</p>
+                                </div>`;
             });
         }
         
-        const global = dadosReuniao.global || '<span style="color:var(--text-muted);">Sem observações globais registadas (SN).</span>';
-        contentHtml += `<div class="card" style="margin-top:15px; border:1px solid var(--warning-yellow); background:rgba(255,204,0,0.05); padding:15px;"><h3 style="color:var(--warning-yellow); margin-bottom:10px; font-size:1.1rem;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3><p style="color:var(--text-light); font-size:0.95rem; line-height:1.5; margin:0;">${global}</p></div></div>`;
+        // Renderiza as observações globais do Diretor de Turma (sintese_global)
+        const global = dadosReuniao.sintese_global || '<span style="color:var(--text-muted);">Sem observações globais registadas (SN).</span>';
+        
+        contentHtml += `<div class="card" style="margin-top:15px; border:1px solid var(--warning-yellow); background:rgba(245,204,0,0.05); padding:15px;">
+                            <h3 style="color:var(--warning-yellow); margin-bottom:10px; font-size:1.1rem;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3>
+                            <p style="color:var(--text-light); font-size:0.95rem; line-height:1.6; margin:0; white-space: pre-wrap;">${global}</p>
+                        </div></div>`;
         
         const rArea = document.getElementById('reuniao-content-area');
         if(rArea) rArea.innerHTML = contentHtml;
@@ -1136,22 +1229,73 @@ let atestadoBase64 = "";
 bindChange('ee-upload-atestado', (e) => {
     const file = e.target.files[0]; 
     if (!file) return; 
-    if (file.size > 2097152) { 
-        alert("Ficheiro demasiado grande! Máximo de 2MB permitido."); 
-        return; 
-    } 
+
     const fn = document.getElementById('ee-atestado-file-name');
-    if(fn) fn.innerText = "Ficheiro anexado: " + file.name; 
+    if(fn) fn.innerText = "A processar imagem..."; 
     const btnEnv = document.getElementById('btn-ee-enviar-atestado');
-    if(btnEnv) btnEnv.style.display = 'block';
+    if(btnEnv) btnEnv.style.display = 'none';
     
-    const reader = new FileReader(); 
-    reader.onload = (ev) => { atestadoBase64 = ev.target.result; }; 
-    reader.readAsDataURL(file);
+    // A. SE FOR IMAGEM: Comprimir via URL
+    if (file.type.startsWith('image/')) {
+        const tempUrl = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 800; // Define a largura máxima de 800px
+            let width = img.width;
+            let height = img.height;
+            
+            if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Qualidade a 60% para ficheiros ridiculamente pequenos (ex: 80KB)
+            atestadoBase64 = canvas.toDataURL('image/jpeg', 0.6);
+            
+            URL.revokeObjectURL(tempUrl); // Limpa a memória
+            
+            if(fn) fn.innerText = "Imagem pronta (" + file.name + ")"; 
+            if(btnEnv) btnEnv.style.display = 'block';
+        };
+        img.onerror = () => {
+            if(fn) fn.innerText = "Erro ao processar imagem.";
+        };
+        img.src = tempUrl;
+    } 
+    // B. SE FOR PDF: Usar o FileReader normal
+    else {
+        if (file.size > 700000) { 
+            alert("Este documento PDF é demasiado pesado (Max: 700KB). Por favor, tira uma fotografia do documento ou comprime o PDF.");
+            if(fn) fn.innerText = "Ficheiro recusado pelo tamanho.";
+            return;
+        }
+        const reader = new FileReader(); 
+        reader.onload = (ev) => { 
+            atestadoBase64 = ev.target.result;
+            if(fn) fn.innerText = "PDF pronto (" + file.name + ")"; 
+            if(btnEnv) btnEnv.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
 });
 
 bindClick('btn-ee-enviar-atestado', async (e) => {
     if (!atestadoBase64 || !educandoAtualId) return; 
+    
+    // NOVO: Apanhar apenas as faltas selecionadas pelo E.E.
+    const checks = document.querySelectorAll('.check-falta-justificar:checked');
+    if (checks.length === 0) {
+        alert("Atenção: Tens de selecionar pelo menos uma falta na lista acima para associar a este documento.");
+        return;
+    }
+    const faltasSelecionadas = Array.from(checks).map(c => c.value);
     
     const obsEl = document.getElementById('ee-atestado-obs');
     const obs = obsEl ? obsEl.value.trim() : "";
@@ -1164,7 +1308,8 @@ bindClick('btn-ee-enviar-atestado', async (e) => {
             ficheiroBase64: atestadoBase64, 
             observacoes: obs, 
             status: "pendente", 
-            dataEnvio: new Date().toISOString() 
+            dataEnvio: new Date().toISOString(),
+            faltasAssociadas: faltasSelecionadas // A MAGIA DE GRAVAR OS IDs VAI AQUI!
         });
         
         btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Enviado com sucesso!';
@@ -1180,10 +1325,7 @@ bindClick('btn-ee-enviar-atestado', async (e) => {
         }, 2000);
     } catch(err) { 
         btnRef.innerHTML = "Erro ao enviar!"; 
-        setTimeout(() => { 
-            btnRef.disabled = false; 
-            btnRef.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Atestado'; 
-        }, 2000); 
+        setTimeout(() => { btnRef.disabled = false; btnRef.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Atestado'; }, 2000); 
     }
 });
 
@@ -1197,6 +1339,7 @@ async function carregarAtestadosEE() {
         const res = await getDocs(query(collection(db, "utilizadores", educandoAtualId, "atestados")));
         if (res.empty) { 
             container.innerHTML = getEmptyState('Nenhum comprovativo enviado.', 'fa-file-invoice'); 
+            carregarFaltasParaSelecao(); // <-- TAMBÉM AQUI (caso não haja histórico, carrega as faltas à mesma)
             return; 
         }
         
@@ -1234,4 +1377,57 @@ async function carregarAtestadosEE() {
         
         container.innerHTML = html;
     } catch(e) {}
+
+    // ==========================================
+    // A FRASE VEM PARA AQUI! 
+    // ==========================================
+    carregarFaltasParaSelecao();
+}
+
+// =========================================================================
+// NOVO: CARREGAR FALTAS PENDENTES PARA O E.E. SELECIONAR
+// =========================================================================
+async function carregarFaltasParaSelecao() {
+    let container = document.getElementById('ee-selecao-faltas-container');
+    
+    // Se o contentor ainda não existir no HTML, nós injetamo-lo automaticamente antes da zona de upload
+    if (!container) {
+        const obsInput = document.getElementById('ee-atestado-obs');
+        if (obsInput) {
+            container = document.createElement('div');
+            container.id = 'ee-selecao-faltas-container';
+            container.style.marginBottom = '15px';
+            obsInput.parentNode.insertBefore(container, obsInput);
+        }
+    }
+    if(!container) return;
+
+    container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar faltas pendentes...</p>';
+    
+    try {
+        const qFaltas = query(collection(db, "utilizadores", educandoAtualId, "faltas"), where("justificada", "==", false));
+        const snap = await getDocs(qFaltas);
+        
+        if (snap.empty) {
+            container.innerHTML = '<div style="background:rgba(16, 185, 129, 0.1); border:1px solid var(--success-green); padding:10px; border-radius:6px; text-align:center;"><p style="color:var(--success-green); font-size:0.85rem; margin:0;"><i class="fa-solid fa-check"></i> Sem faltas pendentes para justificar.</p></div>';
+            return;
+        }
+        
+        let html = '<label style="font-size:0.85rem; color:white; font-weight:bold; display:block; margin-bottom:8px;">1. Seleciona a(s) falta(s) a justificar:</label><div style="background:rgba(0,0,0,0.2); border:1px solid #333; border-radius:8px; padding:10px; max-height:180px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">';
+        
+        snap.forEach(d => {
+            const f = d.data();
+            const dataF = f.dataFalta || new Date(f.dataRegisto).toLocaleDateString('pt-PT');
+            html += `
+            <label style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; cursor:pointer; border:1px solid transparent; transition:0.2s;" onchange="this.style.borderColor = this.querySelector('input').checked ? 'var(--primary-green)' : 'transparent';">
+                <span style="color:white; font-size:0.85rem;"><strong>${f.disciplina}</strong> (${f.duracaoBlocos||f.horas||2} tempos) <br><span style="color:var(--text-muted); font-size:0.75rem;">Ocorrida a: ${dataF}</span></span>
+                <input type="checkbox" class="check-falta-justificar" value="${d.id}" style="width:20px; height:20px; accent-color:var(--primary-green);">
+            </label>
+            `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    } catch(e) {
+        container.innerHTML = '<p class="text-danger">Erro ao carregar faltas.</p>';
+    }
 }

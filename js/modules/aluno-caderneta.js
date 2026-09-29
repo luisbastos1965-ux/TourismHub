@@ -126,64 +126,74 @@ async function carregarEvolucaoAluno() {
 
 async function carregarReunioesAluno() {
     const cCont = document.getElementById('aluno-caderneta-content'); if(!cCont) return;
-    const MOMENTOS = ['1ª Intercalar', '1ª Avaliação', '2ª Intercalar', '2ª Avaliação', '3ª Avaliação'];
+    
+    // Mapeamento dos nomes dos botões para os nomes exatos dos documentos no Firebase
+    const MOMENTOS_LABEL = ['1ª Intercalar', '1ª Avaliação', '2ª Intercalar', '2ª Avaliação', '3ª Avaliação'];
+    const MOMENTOS_DB = ['momento_1', 'momento_2', 'momento_3', 'momento_4', 'momento_5'];
     
     try {
         const snap = await getDocs(query(collection(window.db, "utilizadores", window.myUserId, "reunioes"))); 
         let notasReunioes = {};
         
+        // Agrupa as avaliações usando o ID do documento (ex: "momento_1")
         snap.forEach(d => {
-            const o = d.data(); const mom = o.momento || '1ª Intercalar'; 
-            if(!notasReunioes[mom]) notasReunioes[mom] = [];
-            notasReunioes[mom].push(o);
+            notasReunioes[d.id] = d.data();
         });
 
         let html = `<div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:15px; margin-bottom:15px;" class="filter-chips-container" id="reunioes-tabs">`;
-        MOMENTOS.forEach((m, idx) => { html += `<div class="filter-chip ${idx===0?'active':''}" data-momento="${m}">${m}</div>`; });
+        MOMENTOS_LABEL.forEach((m, idx) => { 
+            html += `<div class="filter-chip ${idx===0?'active':''}" data-momento="${MOMENTOS_DB[idx]}">${m}</div>`; 
+        });
         html += `</div><div id="reuniao-detalhe-container"></div>`;
         cCont.innerHTML = html;
 
         const renderMomento = (momentoAtivo) => {
             const cDet = document.getElementById('reuniao-detalhe-container');
-            let dadosMomento = notasReunioes[momentoAtivo] || [];
+            const dadosMomento = notasReunioes[momentoAtivo] || {}; // Se não existir, assume vazio
             
             const disciplinasDoAno = obterDisciplinasDoAno();
             let mHtml = `<div style="display:grid; gap:15px; margin-bottom:20px;">`;
             
             // Renderizar caixa para TODAS AS DISCIPLINAS (Verde Escuro)
             disciplinasDoAno.forEach(disc => {
-                const obsDisc = dadosMomento.find(d => d.disciplina === disc);
-                const texto = obsDisc ? obsDisc.texto : 'Sem comentário (SN)';
+                // Lê da nova estrutura unificada "sinteses_disciplinas"
+                const texto = (dadosMomento.sinteses_disciplinas && dadosMomento.sinteses_disciplinas[disc]) 
+                              ? dadosMomento.sinteses_disciplinas[disc] 
+                              : 'Sem comentário (SN).';
                 
                 mHtml += `<div class="card" style="border-left:4px solid var(--primary-green); margin-bottom:0; background:var(--bg-card); padding:15px; border-radius:8px;">
                             <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
                                 <strong style="color:var(--text-light); font-size:1.05rem;">${disc}</strong>
                             </div>
-                            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0;">${texto}</p>
+                            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0; white-space: pre-wrap;">${texto}</p>
                           </div>`;
             });
             mHtml += `</div>`;
 
             // Renderizar Parecer Global do DT (Caixa Amarela no fundo)
-            const avalGlobal = dadosMomento.find(d => d.disciplina === 'Direção de Turma' || d.isDT === true);
-            const textoGlobal = avalGlobal ? avalGlobal.texto : 'Sem observações globais registadas (SN).';
+            const textoGlobal = dadosMomento.sintese_global || 'Sem observações globais registadas (SN).';
             
             mHtml += `<div class="card" style="border: 1px solid var(--warning-yellow); border-radius:8px; padding:15px; background: transparent;">
                         <h3 style="color:var(--warning-yellow); font-size:1rem; margin-bottom:10px;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3>
-                        <p style="font-size:0.9rem; color:var(--text-light); line-height:1.5; margin-bottom:0;">${textoGlobal}</p>
+                        <p style="font-size:0.9rem; color:var(--text-light); line-height:1.5; margin-bottom:0; white-space: pre-wrap;">${textoGlobal}</p>
                       </div>`;
 
             cDet.innerHTML = mHtml;
         };
 
+        // Adicionar eventos aos botões e arrancar com o Momento 1
         document.querySelectorAll('#reunioes-tabs .filter-chip').forEach(chip => {
             chip.addEventListener('click', (e) => {
                 document.querySelectorAll('#reunioes-tabs .filter-chip').forEach(c => c.classList.remove('active'));
-                e.target.classList.add('active'); renderMomento(e.target.getAttribute('data-momento'));
+                e.target.classList.add('active'); 
+                renderMomento(e.target.getAttribute('data-momento'));
             });
         });
-        renderMomento(MOMENTOS[0]);
-    } catch(e) {}
+        
+        renderMomento(MOMENTOS_DB[0]);
+    } catch(e) {
+        console.error("Erro a carregar as observações do aluno: ", e);
+    }
 }
 
 async function carregarNotasAluno() {

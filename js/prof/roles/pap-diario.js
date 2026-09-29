@@ -4,10 +4,10 @@ import { state, nomeCurto } from "../store.js";
 
 // Estado local
 let modalPresencaAtiva = true; 
-window.cofreAlunoAtual = []; // Guarda os ficheiros do aluno que estamos a inspecionar
+window.cofreAlunoAtual = []; 
 
 // ==========================================
-// FUNÇÕES UTILITÁRIAS (Modais dinâmicos)
+// FUNÇÕES UTILITÁRIAS
 // ==========================================
 function mostrarAlerta(msg, erro = true) {
     const cor = erro ? 'var(--danger-red)' : 'var(--success-green)';
@@ -37,16 +37,20 @@ export async function carregarEcraOrientandos() {
     const listaMeus = document.getElementById('lista-meus-orientandos');
     const listaRestantes = document.getElementById('lista-restantes-alunos-pap');
     
+    if(!listaMeus || !listaRestantes) return;
+
     listaMeus.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar os teus orientandos...</p>';
     listaRestantes.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A ler dados dos colegas...</p>';
 
     try {
         let todosAlunos12 = [];
-        for (const t of state.turmasProfessor) {
-            const ano = parseInt(t.match(/\d+/)?.[0]) || 10;
-            if (ano === 12) {
-                const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
-                snap.forEach(d => todosAlunos12.push({ id: d.id, ...d.data() }));
+        if(state.turmasProfessor) {
+            for (const t of state.turmasProfessor) {
+                const ano = parseInt(t.match(/\d+/)?.[0]) || 10;
+                if (ano === 12) {
+                    const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
+                    snap.forEach(d => todosAlunos12.push({ id: d.id, ...d.data() }));
+                }
             }
         }
 
@@ -56,24 +60,38 @@ export async function carregarEcraOrientandos() {
         todosAlunos12.forEach(al => {
             const tema = (al.pap && al.pap.tema) ? al.pap.tema : 'Tema não definido';
             const orientador = (al.pap && al.pap.orientador) ? al.pap.orientador : 'Sem orientador';
-            const faseAtual = (al.pap && al.pap.faseAtual) ? al.pap.faseAtual : 0;
-            
             const isMeuOrientando = (orientador === state.myUserName || orientador === state.myUserId);
 
             if (isMeuOrientando) {
-                const percProgresso = (faseAtual / 4) * 100;
+                // Sincronização Lógica Coordenador <-> Orientador (Adeus NaN%)
+                const fasesTotais = 5;
+                let fasesConcluidas = 0;
                 
+                if (al.pap?.fases) {
+                    fasesConcluidas = Object.values(al.pap.fases).filter(Boolean).length;
+                } else {
+                    if (al.pap?.faseTema) fasesConcluidas++;
+                    if (al.pap?.faseAprovacao) fasesConcluidas++;
+                    if (al.pap?.faseDesenvolvimento) fasesConcluidas++;
+                    if (al.pap?.faseRelatorio) fasesConcluidas++;
+                    if (al.pap?.faseApresentacao) fasesConcluidas++;
+                }
+                
+                const percProgresso = Math.min(Math.round((fasesConcluidas / fasesTotais) * 100), 100) || 0;
+                const faseAtualLegada = (al.pap && al.pap.faseAtual) ? parseInt(al.pap.faseAtual) || 0 : 0;
+                
+                // Layout Corrigido à prova de temas longos
                 htmlMeus += `
-                <div class="card" style="border-left: 4px solid var(--success-green); padding: 15px;">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 10px;">
-                        <div style="flex:1; padding-right:10px;">
+                <div class="card" style="border-left: 4px solid var(--success-green); padding: 15px; margin-bottom: 12px; display:flex; flex-direction:column; gap:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div style="flex:1; padding-right:10px; min-width:0;">
                             <strong style="color:white; font-size:1.1rem;">${nomeCurto(al.nome)} <span style="font-size:0.75rem; color:var(--text-muted);">(${al.turma})</span></strong>
-                            <div style="color:var(--text-light); font-size:0.85rem; margin-top:5px; line-height:1.4;"><strong>Tema:</strong> ${tema}</div>
+                            <div style="color:var(--text-light); font-size:0.85rem; margin-top:5px; line-height:1.4; word-wrap:break-word;"><strong>Tema:</strong> <span style="color:white;">${tema}</span></div>
                         </div>
-                        <img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=333&color=fff`}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
+                        <img src="${al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=333&color=fff`}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;">
                     </div>
                     
-                    <div style="margin-top: 15px; margin-bottom: 15px;">
+                    <div>
                         <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
                             <span style="font-size: 0.75rem; color: var(--text-muted);">Progresso da PAP:</span>
                             <span style="font-size: 0.75rem; color: var(--success-green); font-weight:bold;">${percProgresso}%</span>
@@ -83,20 +101,20 @@ export async function carregarEcraOrientandos() {
                         </div>
                     </div>
                     
-                    <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-                        <button class="secondary-btn small-btn" onclick="window.abrirModalFasesPAP('${al.id}', ${faseAtual})" style="flex:1; min-width:80px; border-color:#0099ff; color:#0099ff;"><i class="fa-solid fa-bars-progress"></i> Fases</button>
-                        <button class="secondary-btn small-btn" onclick="window.abrirModalCofrePAP('${al.id}', '${nomeCurto(al.nome)}')" style="flex:1; min-width:80px; border-color:var(--primary-green); color:var(--primary-green);"><i class="fa-solid fa-vault"></i> Cofre</button>
-                        <button class="secondary-btn small-btn" onclick="window.abrirModalObservatorioPAP('${al.id}', '${nomeCurto(al.nome)}')" style="flex:1; min-width:90px; border-color:var(--warning-yellow); color:var(--warning-yellow);"><i class="fa-solid fa-eye"></i> Observar</button>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px;">
+                        <button class="secondary-btn small-btn" onclick="window.abrirModalFasesPAP('${al.id}', ${faseAtualLegada})" style="border-color:#0099ff; color:#0099ff; padding: 8px 4px; font-size: 0.8rem;"><i class="fa-solid fa-bars-progress"></i> Fases</button>
+                        <button class="secondary-btn small-btn" onclick="window.abrirModalCofrePAP('${al.id}', '${nomeCurto(al.nome)}')" style="border-color:var(--primary-green); color:var(--primary-green); padding: 8px 4px; font-size: 0.8rem;"><i class="fa-solid fa-vault"></i> Cofre</button>
+                        <button class="secondary-btn small-btn" onclick="window.abrirModalObservatorioPAP('${al.id}', '${nomeCurto(al.nome)}')" style="border-color:var(--warning-yellow); color:var(--warning-yellow); padding: 8px 4px; font-size: 0.8rem;"><i class="fa-solid fa-eye"></i> Observar</button>
                     </div>
                 </div>`;
             } else {
                 htmlRestantes += `
-                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333; opacity:0.8;">
-                    <div>
-                        <strong style="color:white; font-size:0.9rem;">${nomeCurto(al.nome)} <span style="font-size:0.75rem; color:var(--text-muted);">(${al.turma})</span></strong><br>
-                        <span style="font-size:0.75rem; color:var(--text-light);">Tema: ${tema}</span>
+                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid #333; opacity:0.8; margin-bottom:8px;">
+                    <div style="flex:1; min-width:0; padding-right:10px;">
+                        <strong style="color:white; font-size:0.9rem;">${nomeCurto(al.nome)} <span style="font-size:0.75rem; color:var(--text-muted);">(${al.turma})</span></strong>
+                        <div style="font-size:0.75rem; color:var(--text-light); word-wrap:break-word; margin-top:2px;">Tema: ${tema}</div>
                     </div>
-                    <div style="text-align:right;">
+                    <div style="text-align:right; flex-shrink:0;">
                         <span style="font-size:0.7rem; color:var(--text-muted);">Orientador</span><br>
                         <strong style="font-size:0.8rem; color:white;">${nomeCurto(orientador)}</strong>
                     </div>
@@ -108,6 +126,7 @@ export async function carregarEcraOrientandos() {
         listaRestantes.innerHTML = htmlRestantes === '' ? '<p class="text-muted center">Não há outros alunos de 12º ano.</p>' : htmlRestantes;
 
     } catch (err) {
+        console.error(err);
         listaMeus.innerHTML = '<p class="text-danger center">Erro ao carregar orientandos.</p>';
     }
 }
@@ -144,11 +163,27 @@ window.guardarFasePAP = async function(alunoId, btn) {
     const novaFase = Number(document.getElementById('sel-fase-pap').value);
     const originalHTML = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
     try {
-        await updateDoc(doc(db, "utilizadores", alunoId), { "pap.faseAtual": novaFase });
+        // Sincroniza a barra do Orientador (0-4) com as caixas do Coordenador (Booleans)
+        const updateData = {
+            "pap.faseAtual": novaFase,
+            "pap.faseTema": novaFase >= 1,
+            "pap.faseAprovacao": novaFase >= 1,
+            "pap.faseDesenvolvimento": novaFase >= 2,
+            "pap.faseRelatorio": novaFase >= 3,
+            "pap.faseApresentacao": novaFase >= 4,
+            "pap.temaAprovado": novaFase >= 1,
+            "pap.relatorioAprovado": novaFase >= 3
+        };
+        
+        await updateDoc(doc(db, "utilizadores", alunoId), updateData);
         mostrarAlerta("Progresso atualizado com sucesso!", false);
         document.querySelector('.modal-overlay:last-child').remove();
         carregarEcraOrientandos();
-    } catch(e) { mostrarAlerta("Erro ao atualizar a fase."); btn.innerHTML = originalHTML; btn.disabled = false; }
+    } catch(e) { 
+        mostrarAlerta("Erro ao atualizar a fase."); 
+        btn.innerHTML = originalHTML; 
+        btn.disabled = false; 
+    }
 };
 
 // 2. VISUALIZADOR DO COFRE
@@ -238,6 +273,8 @@ window.guardarObservacaoPAP = async function(alunoId, btn) {
 // ==========================================
 export async function carregarEcraDiario() {
     const container = document.getElementById('lista-sessoes-diario');
+    if(!container) return;
+    
     container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar diário...</p>';
 
     try {
@@ -305,13 +342,11 @@ export async function prepararModalNovaSessao() {
         let countOrientandos = 0;
         let optionsHtml = '<option value="">-- Seleciona o Orientando --</option>';
         
-        // Só procura se tiveres turmas
         if (state.turmasProfessor && state.turmasProfessor.length > 0) {
             for (const t of state.turmasProfessor) {
                 const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
                 snap.forEach(d => {
                     const data = d.data();
-                    // Verifica se és o orientador oficial deste aluno
                     if (data.pap && (data.pap.orientador === state.myUserName || data.pap.orientador === state.myUserId)) {
                         optionsHtml += `<option value="${d.id}">${nomeCurto(data.nome)} (${data.turma})</option>`;
                         countOrientandos++;
@@ -320,7 +355,6 @@ export async function prepararModalNovaSessao() {
             }
         }
         
-        // O Toque Mágico: Avisa se não houver alunos!
         if (countOrientandos === 0) {
             selAluno.innerHTML = '<option value="" disabled selected>⚠️ Ainda não tens orientandos atribuídos</option>';
         } else {
@@ -337,6 +371,8 @@ export function atualizarBotoesPresenca() {
     const btnSim = document.getElementById('btn-presenca-sim');
     const btnNao = document.getElementById('btn-presenca-nao');
     
+    if(!btnSim || !btnNao) return;
+
     if (modalPresencaAtiva) {
         btnSim.classList.add('active'); btnSim.style.borderColor = 'var(--success-green)'; btnSim.style.color = 'var(--success-green)'; btnSim.style.background = 'rgba(16,185,129,0.1)';
         btnNao.classList.remove('active'); btnNao.style.borderColor = '#333'; btnNao.style.color = 'var(--text-muted)'; btnNao.style.background = 'transparent';
