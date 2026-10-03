@@ -144,8 +144,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Disparar gatilhos específicos ao mudar de aba
             if(targetId === 'view-aluno-perfil') document.getElementById('badges-wrapper').style.display = 'none';
-            if(targetId === 'view-aluno-caderneta') document.getElementById('tab-aluno-timeline').click();
-            if(targetId === 'view-aluno-agenda') document.getElementById('tab-aluno-eventos').click();
+            if(targetId === 'view-aluno-caderneta') setTimeout(() => document.getElementById('tab-aluno-timeline').click(), 50);
+            if(targetId === 'view-aluno-agenda') setTimeout(() => document.getElementById('tab-aluno-eventos').click(), 50);
             if(targetId === 'view-aluno-forum') {
                 if(window.carregarCanaisForumAluno) window.carregarCanaisForumAluno();
             }

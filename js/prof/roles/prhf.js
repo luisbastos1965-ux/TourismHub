@@ -127,11 +127,14 @@ export async function gerirCliquesPRHF(e) {
                 alunosSelecionados = Array.from(chks).map(c => c.value);
             }
 
-            if (alunosSelecionados.length === 0 || !tDisc || !tMod || tHorasT === '' || !tPrazo || !tDesc) { 
-                errDiv.innerText = "Por favor, preenche todos os campos."; 
-                errDiv.style.display = 'block'; 
+            if (alunosSelecionados.length === 0) {
+                alert("Atenção: Não selecionaste nenhum aluno! Pica os nomes na lista ou clica em 'Selecionar Todos'.");
+                return true;
+            }
+            if (!tDisc || !tMod || tHorasT === '' || !tPrazo || !tDesc) { 
+                alert("Erro: Faltam campos obrigatórios! Verifica o Módulo, as Horas Totais, o Prazo e a Descrição da tarefa.");
                 return true; 
-            } 
+            }
             
             const b = e.target.closest('#btn-gravar-novo-prhf'); 
             b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A gravar...'; 
@@ -147,7 +150,7 @@ export async function gerirCliquesPRHF(e) {
                     for(const aId of alunosSelecionados) {
                         await addDoc(collection(db, "utilizadores", aId, "prhfs"), { 
                             disciplina: tDisc, modulo: Number(tMod), prazo: tPrazo, horasTotais: Number(tHorasT), 
-                            horasPresenciais: Number(tHorasP), descricao: tDesc, status: 'pendente', 
+                            horasPresenciais: Number(tHorasP), descricao: tDesc, status: 'ativa', // <--- CORRIGIDO AQUI!
                             dataCriacao: new Date().toISOString(), professor: state.myUserName, 
                             ficheiroBase64: state.prhfBase64, urgente: urg, presencaValidada: false 
                         }); 
@@ -209,10 +212,6 @@ export async function gerirCliquesPRHF(e) {
 
             document.getElementById('prop-prof-aluno-id').value = alunoId;
             document.getElementById('prop-prof-prhf-id').value = prhfId;
-            document.getElementById('prop-prof-data').value = '';
-            document.getElementById('prop-prof-inicio').value = '';
-            document.getElementById('prop-prof-fim').value = '';
-            document.getElementById('prop-prof-tarefa').value = '';
 
             const modal = document.getElementById('modal-propor-prhf-prof');
             if(modal) modal.style.display = 'flex';
@@ -223,55 +222,57 @@ export async function gerirCliquesPRHF(e) {
             try {
                 const prhfSnap = await getDocs(collection(db, "utilizadores", alunoId, "prhfs"));
                 let compromissos = [];
+                let sessoesAtuaisDoPrhf = [];
                 const hojeStr = new Date().toISOString().split('T')[0];
 
                 prhfSnap.forEach(p => {
                     const dados = p.data();
-                    if (dados.status !== 'concluida') {
-                        let dataAgendada = null;
-                        let horaAgendada = null;
-                        
-                        let propValida = null;
-                        if (dados.propostaProfessor && !dados.propostaLidaDT) propValida = dados.propostaProfessor;
-                        else if (dados.propostaAluno && dados.propostaLidaDT) propValida = dados.propostaProfessor || dados.propostaAluno;
+                    if (p.id === prhfId && dados.sessoesPresenciais && Array.isArray(dados.sessoesPresenciais)) {
+                        sessoesAtuaisDoPrhf = dados.sessoesPresenciais;
+                    }
 
-                        if (propValida) {
-                            const partes = propValida.split(' ');
-                            if(partes.length >= 2) { 
-                                dataAgendada = partes[0]; 
-                                horaAgendada = partes.slice(1).join(' '); 
-                            }
-                        }
-
-                        if (dataAgendada && dataAgendada >= hojeStr) {
-                            compromissos.push({
-                                disciplina: dados.disciplina,
-                                data: dataAgendada,
-                                hora: horaAgendada,
-                                isMeu: dados.disciplina === state.disciplinasProfessor[0] || dados.professor === state.myUserName
+                    if (dados && dados.status !== 'concluida') {
+                        if (dados.sessoesPresenciais && Array.isArray(dados.sessoesPresenciais)) {
+                            dados.sessoesPresenciais.forEach(s => {
+                                if (s && s.data && s.data >= hojeStr) {
+                                    compromissos.push({
+                                        disciplina: dados.disciplina || 'Outra',
+                                        data: s.data,
+                                        hora: `${s.inicio || '--:--'} às ${s.fim || '--:--'}`,
+                                        isMeu: p.id === prhfId
+                                    });
+                                }
                             });
                         }
                     }
                 });
 
+                // Carrega as sessões existentes para as linhas dinâmicas ou cria uma vazia
+                if (sessoesAtuaisDoPrhf.length > 0) {
+                    window.renderizarLinhasSessoes(sessoesAtuaisDoPrhf);
+                } else {
+                    window.renderizarLinhasSessoes([{ data: '', inicio: '', fim: '', tarefa: '' }]);
+                }
+
                 if (compromissos.length === 0) {
                     agendaCont.innerHTML = '<p style="color:var(--success-green); font-size:0.85rem; margin:0; text-align:center;"><i class="fa-solid fa-check"></i> O aluno não tem marcações futuras.</p>';
                 } else {
-                    compromissos.sort((a,b) => a.data.localeCompare(b.data));
+                    compromissos.sort((a,b) => (a.data || '').localeCompare(b.data || ''));
                     let htmlAgenda = '';
                     compromissos.forEach(c => {
                         const cor = c.isMeu ? 'var(--primary-green)' : 'var(--warning-yellow)';
-                        const dataPt = c.data.includes('-') ? c.data.split('-').reverse().join('/') : c.data;
+                        const dataPt = c.data && c.data.includes('-') ? c.data.split('-').reverse().join('/') : (c.data || '');
                         htmlAgenda += `
                         <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:6px 10px; border-radius:6px; border-left: 2px solid ${cor}; margin-bottom:5px;">
                             <span style="color:white; font-size:0.8rem;">${c.disciplina}</span>
-                            <span style="color:var(--text-light); font-size:0.8rem; font-weight:bold;">${dataPt} ${c.hora}</span>
+                            <span style="color:var(--text-light); font-size:0.8rem; font-weight:bold;">${dataPt} (${c.hora})</span>
                         </div>`;
                     });
                     agendaCont.innerHTML = htmlAgenda;
                 }
             } catch(err) {
-                agendaCont.innerHTML = '<p class="text-danger center" style="font-size:0.8rem; margin:0;">Erro ao ler agenda.</p>';
+                console.error("Erro agenda:", err);
+                agendaCont.innerHTML = '<p style="color:var(--warning-yellow); font-size:0.8rem; margin:0; text-align:center;">Sem marcações futuras registadas.</p>';
             }
             return true;
         }

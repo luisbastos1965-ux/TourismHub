@@ -27,12 +27,16 @@ onAuthStateChanged(auth, async (user) => {
                 stateDir.nome = data.nome || data.nomeCompleto || myUserId;
                 stateDir.turmasDirecao = data.turmas || ['10T', '11T', '12T'];
 
-                document.getElementById('dir-user-name').innerText = stateDir.nome;
-                document.getElementById('perfil-nome-dir-view').innerText = stateDir.nome;
+                // Atualiza o nome apenas no cabeçalho
+                if (document.getElementById('dir-user-name')) {
+                    document.getElementById('dir-user-name').innerText = stateDir.nome;
+                }
                 
+                // Atualiza a foto apenas no cabeçalho
                 const fotoUrl = data.fotoPerfil || `https://ui-avatars.com/api/?name=${stateDir.nome.charAt(0)}&background=ff4d4d&color=fff&font-size=0.4`;
-                document.getElementById('dir-avatar-circle').innerHTML = `<img src="${fotoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-                document.getElementById('dir-avatar-img').src = fotoUrl;
+                if (document.getElementById('dir-avatar-circle')) {
+                    document.getElementById('dir-avatar-circle').innerHTML = `<img src="${fotoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+                }
 
                 const selTurmas = document.getElementById('dir-seletor-turmas');
                 if (selTurmas) {
@@ -40,6 +44,7 @@ onAuthStateChanged(auth, async (user) => {
                                           stateDir.turmasDirecao.map(t => `<option value="${t}">Turma ${t}</option>`).join('');
                 }
 
+                // Agora sim, avança para o cálculo sem crashar!
                 await carregarDadosReaisDirecao();
             } else { window.location.href = "index.html"; }
         } catch (e) { 
@@ -51,11 +56,14 @@ onAuthStateChanged(auth, async (user) => {
 // ==========================================
 // BUSCAR DADOS REAIS + LER A SUBCOLEÇÃO DE NOTAS
 // ==========================================
+// ==========================================
+// BUSCAR DADOS REAIS E CRUZAR TODAS AS PASTAS (OTIMIZADO)
+// ==========================================
 async function carregarDadosReaisDirecao() {
     const kpiCont = document.getElementById('dir-kpi-container');
     const alertasCont = document.getElementById('dir-alertas-turmas');
     
-    if(kpiCont) kpiCont.innerHTML = `<p class="text-muted center" style="grid-column: span 2;"><i class="fa-solid fa-spinner fa-spin"></i> A ler base de dados (Alunos e Notas)...</p>`;
+    if(kpiCont) kpiCont.innerHTML = `<p class="text-muted center" style="grid-column: span 2;"><i class="fa-solid fa-spinner fa-spin"></i> A cruzar dados das turmas...</p>`;
 
     try {
         let todosAlunos = [];
@@ -64,39 +72,90 @@ async function carregarDadosReaisDirecao() {
             const q = query(collection(db, "utilizadores"), where("papel", "==", "aluno"), where("turma", "in", stateDir.turmasDirecao));
             const querySnapshot = await getDocs(q);
             
-            for (const alunoDoc of querySnapshot.docs) {
-                let d = alunoDoc.data();
-                
-                // LEITURA DA SUBCOLEÇÃO 'notas'
-                const notasSnap = await getDocs(collection(db, "utilizadores", alunoDoc.id, "notas"));
-                let totalAtrasos = 0;
-                let listaAtrasosAluno = [];
+            const promessasAlunos = querySnapshot.docs.map(async (alunoDoc) => {
+                try {
+                    let d = alunoDoc.data();
+                    
+                    const [notasSnap, avSnap, prhfSnap, ocorrenciasSnap, faltasSnap] = await Promise.all([
+                        getDocs(collection(db, "utilizadores", alunoDoc.id, "notas")),
+                        getDocs(collection(db, "utilizadores", alunoDoc.id, "avaliacoes")),
+                        getDocs(collection(db, "utilizadores", alunoDoc.id, "prhfs")),
+                        getDocs(collection(db, "utilizadores", alunoDoc.id, "ocorrencias")),
+                        getDocs(collection(db, "utilizadores", alunoDoc.id, "faltas"))
+                    ]);
+                    
+                    // 1. Atrasos
+                    let totalAtrasos = 0;
+                    let listaAtrasosAluno = [];
+                    let modulosLidos = new Set(); 
 
-                notasSnap.forEach(nDoc => {
-                    const moduloNome = nDoc.id;
-                    const dadosNota = nDoc.data();
-                    const notaReal = dadosNota.nota; 
+                    const processarNota = (nDoc) => {
+                        const dadosNota = nDoc.data();
+                        const moduloNome = dadosNota.modulo ? dadosNota.modulo.toString().replace(/\D/g, '') : nDoc.id;
+                        const notaReal = dadosNota.nota; 
 
-                    if (notaReal !== undefined && notaReal !== null && notaReal !== "") {
-                        if (notaReal === "REP" || (!isNaN(notaReal) && Number(notaReal) < 10)) {
-                            totalAtrasos++;
-                            listaAtrasosAluno.push({ modulo: moduloNome, nota: notaReal });
+                        if (!modulosLidos.has(moduloNome)) {
+                            modulosLidos.add(moduloNome);
+                            if (notaReal !== undefined && notaReal !== null && notaReal !== "") {
+                                if (notaReal === "REP" || (!isNaN(notaReal) && Number(notaReal) < 10)) {
+                                    totalAtrasos++;
+                                    const nomeDisc = dadosNota.disciplina ? `${dadosNota.disciplina} (M${moduloNome})` : `Módulo ${moduloNome}`;
+                                    listaAtrasosAluno.push({ modulo: nomeDisc, nota: notaReal });
+                                }
+                            }
                         }
-                    }
-                });
+                    };
+                    avSnap.forEach(processarNota);
+                    notasSnap.forEach(processarNota);
 
-                todosAlunos.push({
-                    id: alunoDoc.id,
-                    nome: d.nome || d.nomeCompleto || "Sem Nome",
-                    turma: d.turma,
-                    faltas: d.faltas_injustificadas || 0,
-                    prhfs: d.prhfs ? d.prhfs.length : 0,
-                    prhfUrgente: 0,
-                    ocorrencias: d.ocorrencias || 0,
-                    atrasos: totalAtrasos,
-                    detalhesAtrasos: listaAtrasosAluno 
-                });
-            }
+                    // 2. PRHFs
+                    let prhfAtivos = 0;
+                    let prhfUrgentes = 0;
+                    prhfSnap.forEach(p => { 
+                        const pData = p.data();
+                        if(pData.status !== 'concluida') prhfAtivos++; 
+                        if(pData.urgente) prhfUrgentes++;
+                    });
+
+                    // 3. Ocorrências
+                    let ocorrenciasNegativas = 0;
+                    ocorrenciasSnap.forEach(o => {
+                        if(o.data().tipo === 'negativa') ocorrenciasNegativas++;
+                    });
+
+                    // 4. FALTAS (Cálculo da Taxa de Faltas % real baseada em 1000h)
+                    let horasInjustificadas = 0;
+                    faltasSnap.forEach(fDoc => {
+                        const faltaData = fDoc.data();
+                        if (!faltaData.justificada) {
+                            horasInjustificadas += Number(faltaData.duracaoBlocos || faltaData.horas || 1);
+                        }
+                    });
+
+                    // CÁLCULO: (Horas Injustificadas / Total de Horas do Ano) * 100
+                    // Assumimos 1000 horas anuais como base do Ensino Profissional. 
+                    // Se o teu ano tiver 1100h, podes mudar o 1000 ali em baixo!
+                    let taxaFaltasCalculada = Math.round((horasInjustificadas / 1000) * 100);
+
+                    return {
+                        id: alunoDoc.id,
+                        nome: d.nome || d.nomeCompleto || "Sem Nome",
+                        turma: d.turma,
+                        faltas: taxaFaltasCalculada, // Agora é a PERCENTAGEM real!
+                        horasInjustificadasReais: horasInjustificadas, // Guardamos para referência
+                        prhfs: prhfAtivos,
+                        prhfUrgente: prhfUrgentes,
+                        ocorrencias: ocorrenciasNegativas,
+                        atrasos: totalAtrasos,
+                        detalhesAtrasos: listaAtrasosAluno 
+                    };
+                } catch (innerError) {
+                    return null;
+                }
+            });
+
+            const resultados = await Promise.all(promessasAlunos);
+            todosAlunos = resultados.filter(a => a !== null);
         }
         
         stateDir.alunosCache = todosAlunos;
@@ -104,16 +163,16 @@ async function carregarDadosReaisDirecao() {
         // Calcular KPIs Globais
         const totalAlunos = todosAlunos.length;
         let totalPrhfs = 0;
-        let somaFaltas = 0;
+        let somaTaxasFaltas = 0;
         let totalAtrasos = 0;
 
         todosAlunos.forEach(a => { 
             totalPrhfs += a.prhfs; 
-            somaFaltas += a.faltas;
+            somaTaxasFaltas += a.faltas;
             totalAtrasos += a.atrasos;
         });
 
-        const mediaFaltas = totalAlunos > 0 ? Math.round(somaFaltas / totalAlunos) : 0;
+        const mediaFaltasGlobais = totalAlunos > 0 ? Math.round(somaTaxasFaltas / totalAlunos) : 0;
 
         if(kpiCont) {
             kpiCont.innerHTML = `
@@ -138,41 +197,32 @@ async function carregarDadosReaisDirecao() {
             setTimeout(() => {
                 animarNumero('kpi-alunos', totalAlunos, 1500);
                 animarNumero('kpi-prhfs', totalPrhfs, 1500);
-                animarNumero('kpi-faltas', mediaFaltas, 1500, '%');
+                animarNumero('kpi-faltas', mediaFaltasGlobais, 1500, '%'); // Voltou o % !
                 animarNumero('kpi-atrasos', totalAtrasos, 1500); 
             }, 100);
         }
 
         if (alertasCont) {
             alertasCont.innerHTML = '';
-            
-            if (stateDir.turmasDirecao.length === 0) {
-                alertasCont.innerHTML = '<p class="text-muted center">Sem turmas atribuídas.</p>';
-            }
+            if (stateDir.turmasDirecao.length === 0) alertasCont.innerHTML = '<p class="text-muted center">Sem turmas atribuídas.</p>';
 
             stateDir.turmasDirecao.forEach(turma => {
                 const alunosTurma = todosAlunos.filter(a => a.turma === turma);
-                
-                let statsTurma = { somaFaltas: 0, prhfsTurma: 0, ocorrenciasTurma: 0, atrasosTurma: 0 };
+                let statsTurma = { somaTaxaFaltas: 0, prhfsTurma: 0, ocorrenciasTurma: 0, atrasosTurma: 0 };
                 
                 alunosTurma.forEach(a => {
-                    statsTurma.somaFaltas += a.faltas;
+                    statsTurma.somaTaxaFaltas += a.faltas;
                     statsTurma.prhfsTurma += a.prhfs;
                     statsTurma.ocorrenciasTurma += a.ocorrencias;
                     statsTurma.atrasosTurma += a.atrasos;
                 });
 
-                let taxaFaltasTurma = alunosTurma.length > 0 ? Math.round(statsTurma.somaFaltas / alunosTurma.length) : 0;
+                let taxaFaltasTurma = alunosTurma.length > 0 ? Math.round(statsTurma.somaTaxaFaltas / alunosTurma.length) : 0;
                 
-                // NOVA LÓGICA DE RISCO GLOBAL DA TURMA
+                // Métrica de Risco (Acima de 5% Atenção, Acima de 10% Vermelho)
                 let turmaRisco = 'verde';
-                
-                if (taxaFaltasTurma > 5 || statsTurma.prhfsTurma > 10 || statsTurma.ocorrenciasTurma >= 5 || statsTurma.atrasosTurma > 10) {
-                    turmaRisco = 'amarelo';
-                }
-                if (taxaFaltasTurma > 10 || statsTurma.prhfsTurma > 20 || statsTurma.ocorrenciasTurma > 10 || statsTurma.atrasosTurma > 20) {
-                    turmaRisco = 'vermelho';
-                }
+                if (taxaFaltasTurma >= 5 || statsTurma.prhfsTurma > 10 || statsTurma.ocorrenciasTurma >= 5 || statsTurma.atrasosTurma > 10) turmaRisco = 'amarelo';
+                if (taxaFaltasTurma >= 10 || statsTurma.prhfsTurma > 20 || statsTurma.ocorrenciasTurma > 10 || statsTurma.atrasosTurma > 20) turmaRisco = 'vermelho';
 
                 let cor = turmaRisco === 'vermelho' ? 'var(--danger-red)' : (turmaRisco === 'amarelo' ? 'var(--warning-yellow)' : 'var(--success-green)');
                 let bg = turmaRisco === 'vermelho' ? 'rgba(239, 68, 68, 0.08)' : (turmaRisco === 'amarelo' ? 'rgba(245, 158, 11, 0.08)' : 'rgba(0, 204, 136, 0.08)');
@@ -191,7 +241,7 @@ async function carregarDadosReaisDirecao() {
                             </div>
                         </div>
                         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; background: rgba(255,255,255,0.03); border-radius: 8px; padding: 10px;">
-                            <div style="text-align: center; border-right: 1px solid #333;"><span style="color: ${cor}; font-weight: bold; font-size: 1.1rem;">${taxaFaltasTurma}%</span><br><span style="font-size: 0.55rem; color: var(--text-muted); text-transform: uppercase;">Taxa de Faltas</span></div>
+                            <div style="text-align: center; border-right: 1px solid #333;"><span style="color: ${cor}; font-weight: bold; font-size: 1.1rem;">${taxaFaltasTurma}%</span><br><span style="font-size: 0.55rem; color: var(--text-muted); text-transform: uppercase;">Média Injust.</span></div>
                             <div style="text-align: center; border-right: 1px solid #333;"><span style="color: white; font-weight: bold; font-size: 1.1rem;">${statsTurma.prhfsTurma}</span><br><span style="font-size: 0.55rem; color: var(--text-muted); text-transform: uppercase;">PRHFs</span></div>
                             <div style="text-align: center; border-right: 1px solid #333;"><span style="color: white; font-weight: bold; font-size: 1.1rem;">${statsTurma.ocorrenciasTurma}</span><br><span style="font-size: 0.55rem; color: var(--text-muted); text-transform: uppercase;">Ocorr.</span></div>
                             <div style="text-align: center;"><span style="color: #b82bf2; font-weight: bold; font-size: 1.1rem;">${statsTurma.atrasosTurma}</span><br><span style="font-size: 0.55rem; color: var(--text-muted); text-transform: uppercase;">Módulos em Atraso</span></div>
@@ -202,7 +252,7 @@ async function carregarDadosReaisDirecao() {
             });
         }
     } catch(err) {
-        console.error("Erro ao cruzar dados reais:", err);
+        if(kpiCont) kpiCont.innerHTML = `<p class="text-danger center" style="grid-column: span 2;">Erro ao ler dados: ${err.message}</p>`;
     }
 }
 
@@ -213,14 +263,15 @@ function avaliarRiscoAluno(aluno) {
     let motivosVermelho = [];
     let motivosAmarelo = [];
 
-    if (aluno.faltas > 10) motivosVermelho.push("Faltas > 10%");
+    // Limites de Percentagem (>= 10% é chumbo direto)
+    if (aluno.faltas >= 10) motivosVermelho.push(aluno.faltas + "% Faltas");
     if (aluno.prhfUrgente >= 1) motivosVermelho.push("PRHF Mód. Terminado");
     if (aluno.ocorrencias >= 3) motivosVermelho.push("3+ Ocorrências");
     if (aluno.atrasos >= 3) motivosVermelho.push("3+ Módulos em Atraso");
 
     if (motivosVermelho.length > 0) return { risco: 'vermelho', motivo: "Risco Crítico: " + motivosVermelho.join(" | ") };
 
-    if (aluno.faltas > 5) motivosAmarelo.push("Faltas > 5%");
+    if (aluno.faltas >= 5) motivosAmarelo.push(aluno.faltas + "% Faltas");
     if (aluno.prhfs >= 1) motivosAmarelo.push("1+ PRHF");
     if (aluno.ocorrencias >= 1) motivosAmarelo.push("Ocorrência");
     if (aluno.atrasos >= 1) motivosAmarelo.push("Módulo em Atraso");
@@ -321,7 +372,6 @@ function abrirPerfil360(idAluno) {
     
     let corRisco = aluno.risco === 'vermelho' ? 'var(--danger-red)' : (aluno.risco === 'amarelo' ? 'var(--warning-yellow)' : 'var(--success-green)');
     let textoRisco = aluno.risco === 'vermelho' ? 'Risco Crítico' : (aluno.risco === 'amarelo' ? 'Atenção' : 'Estável');
-    
     let avatarBg = aluno.risco === 'vermelho' ? 'ef4444' : (aluno.risco === 'amarelo' ? 'f59e0b' : '00cc88');
 
     document.getElementById('p360-nome').innerText = aluno.nome;
@@ -336,7 +386,13 @@ function abrirPerfil360(idAluno) {
     document.getElementById('p360-foto').src = `https://ui-avatars.com/api/?name=${aluno.nome.charAt(0)}&background=${avatarBg}&color=fff&font-size=0.4`;
     document.getElementById('p360-foto').style.borderColor = corRisco;
 
-    document.getElementById('p360-faltas').innerText = aluno.faltas + "%";
+    // Atualiza para a Percentagem de Faltas
+    const objFaltas = document.getElementById('p360-faltas');
+    objFaltas.innerText = aluno.faltas + "%";
+    if(objFaltas.nextElementSibling && objFaltas.nextElementSibling.nextElementSibling) {
+        objFaltas.nextElementSibling.nextElementSibling.innerText = "TAXA DE FALTAS";
+    }
+
     document.getElementById('p360-prhfs').innerText = aluno.prhfs;
     document.getElementById('p360-ocorr').innerText = aluno.ocorrencias;
     document.getElementById('p360-atrasos').innerText = aluno.atrasos;
@@ -344,8 +400,8 @@ function abrirPerfil360(idAluno) {
     const listaAtrasosCont = document.getElementById('p360-lista-atrasos');
     if (aluno.detalhesAtrasos && aluno.detalhesAtrasos.length > 0) {
         listaAtrasosCont.innerHTML = aluno.detalhesAtrasos.map(atr => `
-            <div style="background: rgba(255,255,255,0.05); border: 1px solid #333; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: white; font-size: 0.9rem;">${atr.modulo.replace('_', ' ')}</span>
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid #333; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom:8px;">
+                <span style="color: white; font-size: 0.9rem;">${atr.modulo}</span>
                 <span style="background: rgba(239, 68, 68, 0.2); color: var(--danger-red); padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem;">${atr.nota}</span>
             </div>
         `).join('');
@@ -378,59 +434,46 @@ function animarNumero(idTarget, endValue, duration, suffix = '') {
 // CLIQUES E MENUS
 // ==========================================
 document.body.addEventListener('click', (e) => {
-    const nav = e.target.closest('.nav-item');
-    if (nav) {
-        e.preventDefault(); 
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        nav.classList.add('active');
-        
-        document.querySelectorAll('main > div').forEach(v => v.style.display = 'none');
-        
-        const tId = nav.getAttribute('data-target');
-        const targetView = document.getElementById(tId);
-        if (targetView) targetView.style.display = 'block';
-        
-        if (tId === 'view-direcao-turmas' && stateDir.turmaSelecionada) {
-            document.getElementById('dir-seletor-turmas').value = stateDir.turmaSelecionada;
-            document.getElementById('dir-turma-container').style.display = 'block';
-        }
-    }
     
+    // Logout
     if (e.target.closest('#btn-logout-dir')) {
         signOut(auth).then(() => window.location.href = "index.html");
     }
 
+    // Navegar da Escola para o Raio-X da Turma
     if (e.target.classList.contains('btn-ver-raio-x')) {
         const turmaTarget = e.target.getAttribute('data-turma');
         stateDir.turmaSelecionada = turmaTarget;
         
-        document.getElementById('dir-seletor-turmas').value = turmaTarget;
-        document.getElementById('dir-seletor-turmas').dispatchEvent(new Event('change'));
+        // Desenha o Raio-X diretamente em vez de usar o dropdown antigo
+        const container = document.getElementById('dir-turma-container');
+        container.style.display = 'block';
+        renderizarRaioX(turmaTarget, container);
         
-        document.querySelector('.nav-item[data-target="view-direcao-turmas"]').click();
+        // Esconde a dashboard e mostra as turmas
+        document.getElementById('view-direcao-dashboard').style.display = 'none';
+        document.getElementById('view-direcao-turmas').style.display = 'block';
+        window.scrollTo(0,0);
     }
 
+    // Botão Voltar (Do Raio-X para a Escola)
+    if (e.target.closest('#btn-voltar-escola')) {
+        document.getElementById('view-direcao-turmas').style.display = 'none';
+        document.getElementById('view-direcao-dashboard').style.display = 'block';
+        stateDir.turmaSelecionada = null;
+        window.scrollTo(0,0);
+    }
+
+    // Abrir Perfil 360 do Aluno
     if (e.target.closest('.btn-perfil-aluno-dir')) {
         const idAluno = e.target.closest('.btn-perfil-aluno-dir').getAttribute('data-id');
         abrirPerfil360(idAluno);
     }
     
+    // Fechar modais
     if (e.target.closest('.fechar-modal')) {
         const targetId = e.target.closest('.fechar-modal').getAttribute('data-target');
         const modal = document.getElementById(targetId);
         if (modal) modal.style.display = 'none';
-    }
-});
-
-document.getElementById('dir-seletor-turmas')?.addEventListener('change', (e) => {
-    const turma = e.target.value;
-    const container = document.getElementById('dir-turma-container');
-    if (turma) {
-        stateDir.turmaSelecionada = turma;
-        container.style.display = 'block';
-        renderizarRaioX(turma, container);
-    } else {
-        stateDir.turmaSelecionada = null;
-        container.style.display = 'none';
     }
 });

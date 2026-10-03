@@ -3,8 +3,8 @@ import { collection, addDoc, getDocs, getDoc, doc, updateDoc, query, where, arra
 import { state, nomeCurto } from "../store.js";
 
 // Estado local
-let modalPresencaAtiva = true; 
-window.cofreAlunoAtual = []; 
+let modalPresencaAtiva = true;
+window.cofreAlunoAtual = [];
 
 // ==========================================
 // FUNÇÕES UTILITÁRIAS
@@ -27,7 +27,7 @@ function base64ToBlobUrl(base64, mimeType) {
         for (let i = 0; i < byteString.length; i++) { ia[i] = byteString.charCodeAt(i); }
         const blob = new Blob([ab], { type: mimeType });
         return URL.createObjectURL(blob);
-    } catch(e) { return base64; }
+    } catch (e) { return base64; }
 }
 
 // ==========================================
@@ -36,15 +36,15 @@ function base64ToBlobUrl(base64, mimeType) {
 export async function carregarEcraOrientandos() {
     const listaMeus = document.getElementById('lista-meus-orientandos');
     const listaRestantes = document.getElementById('lista-restantes-alunos-pap');
-    
-    if(!listaMeus || !listaRestantes) return;
+
+    if (!listaMeus || !listaRestantes) return;
 
     listaMeus.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar os teus orientandos...</p>';
     listaRestantes.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A ler dados dos colegas...</p>';
 
     try {
         let todosAlunos12 = [];
-        if(state.turmasProfessor) {
+        if (state.turmasProfessor) {
             for (const t of state.turmasProfessor) {
                 const ano = parseInt(t.match(/\d+/)?.[0]) || 10;
                 if (ano === 12) {
@@ -66,7 +66,7 @@ export async function carregarEcraOrientandos() {
                 // Sincronização Lógica Coordenador <-> Orientador (Adeus NaN%)
                 const fasesTotais = 5;
                 let fasesConcluidas = 0;
-                
+
                 if (al.pap?.fases) {
                     fasesConcluidas = Object.values(al.pap.fases).filter(Boolean).length;
                 } else {
@@ -76,10 +76,10 @@ export async function carregarEcraOrientandos() {
                     if (al.pap?.faseRelatorio) fasesConcluidas++;
                     if (al.pap?.faseApresentacao) fasesConcluidas++;
                 }
-                
+
                 const percProgresso = Math.min(Math.round((fasesConcluidas / fasesTotais) * 100), 100) || 0;
                 const faseAtualLegada = (al.pap && al.pap.faseAtual) ? parseInt(al.pap.faseAtual) || 0 : 0;
-                
+
                 // Layout Corrigido à prova de temas longos
                 htmlMeus += `
                 <div class="card" style="border-left: 4px solid var(--success-green); padding: 15px; margin-bottom: 12px; display:flex; flex-direction:column; gap:12px;">
@@ -101,10 +101,13 @@ export async function carregarEcraOrientandos() {
                         </div>
                     </div>
                     
-                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px;">
-                        <button class="secondary-btn small-btn" onclick="window.abrirModalFasesPAP('${al.id}', ${faseAtualLegada})" style="border-color:#0099ff; color:#0099ff; padding: 8px 4px; font-size: 0.8rem;"><i class="fa-solid fa-bars-progress"></i> Fases</button>
-                        <button class="secondary-btn small-btn" onclick="window.abrirModalCofrePAP('${al.id}', '${nomeCurto(al.nome)}')" style="border-color:var(--primary-green); color:var(--primary-green); padding: 8px 4px; font-size: 0.8rem;"><i class="fa-solid fa-vault"></i> Cofre</button>
-                        <button class="secondary-btn small-btn" onclick="window.abrirModalObservatorioPAP('${al.id}', '${nomeCurto(al.nome)}')" style="border-color:var(--warning-yellow); color:var(--warning-yellow); padding: 8px 4px; font-size: 0.8rem;"><i class="fa-solid fa-eye"></i> Observar</button>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                        <button class="secondary-btn small-btn" onclick="window.abrirModalFasesPAP('${al.id}', ${faseAtualLegada})" style="border-color:#0099ff; color:#0099ff; padding: 12px 4px; font-size: 0.8rem;"><i class="fa-solid fa-bars-progress"></i> Fases</button>
+                        <button class="secondary-btn small-btn" onclick="window.abrirModalCofrePAP('${al.id}', '${nomeCurto(al.nome)}')" style="border-color:var(--primary-green); color:var(--primary-green); padding: 12px 4px; font-size: 0.8rem;"><i class="fa-solid fa-vault"></i> Cofre</button>
+                        <button class="secondary-btn small-btn" onclick="window.abrirModalObservatorioPAP('${al.id}', '${nomeCurto(al.nome)}')" style="border-color:var(--warning-yellow); color:var(--warning-yellow); padding: 12px 4px; font-size: 0.8rem;"><i class="fa-solid fa-eye"></i> Observar</button>
+                        <button class="secondary-btn small-btn" style="border-color: #3b82f6; color: #3b82f6; padding: 12px 4px; font-size: 0.8rem;" onclick="window.abrirChatDiretoAluno('${al.id}', '${nomeCurto(al.nome)}')">
+                            <i class="fa-regular fa-comments"></i> Mensagem
+                        </button>
                     </div>
                 </div>`;
             } else {
@@ -136,7 +139,7 @@ export async function carregarEcraOrientandos() {
 // ==========================================
 
 // 1. GESTÃO DE FASES
-window.abrirModalFasesPAP = function(alunoId, faseAtual) {
+window.abrirModalFasesPAP = function (alunoId, faseAtual) {
     const bg = document.createElement('div');
     bg.className = 'modal-overlay'; bg.style.display = 'flex'; bg.style.zIndex = '10000';
     bg.innerHTML = `
@@ -147,11 +150,11 @@ window.abrirModalFasesPAP = function(alunoId, faseAtual) {
             </div>
             <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">A barra de progresso no telemóvel do aluno será atualizada imediatamente.</p>
             <select id="sel-fase-pap" class="input-padrao" style="width:100%; margin-bottom:15px;">
-                <option value="0" ${faseAtual===0?'selected':''}>0% - Definição do Tema</option>
-                <option value="1" ${faseAtual===1?'selected':''}>25% - Aprovação do Anteprojeto</option>
-                <option value="2" ${faseAtual===2?'selected':''}>50% - Desenvolvimento Prático</option>
-                <option value="3" ${faseAtual===3?'selected':''}>75% - Escrita do Relatório Final</option>
-                <option value="4" ${faseAtual===4?'selected':''}>100% - Preparação para a Apresentação</option>
+                <option value="0" ${faseAtual === 0 ? 'selected' : ''}>0% - Definição do Tema</option>
+                <option value="1" ${faseAtual === 1 ? 'selected' : ''}>25% - Aprovação do Anteprojeto</option>
+                <option value="2" ${faseAtual === 2 ? 'selected' : ''}>50% - Desenvolvimento Prático</option>
+                <option value="3" ${faseAtual === 3 ? 'selected' : ''}>75% - Escrita do Relatório Final</option>
+                <option value="4" ${faseAtual === 4 ? 'selected' : ''}>100% - Preparação para a Apresentação</option>
             </select>
             <button class="primary-btn" style="width:100%; background:#0099ff;" onclick="window.guardarFasePAP('${alunoId}', this)">Atualizar Progresso</button>
         </div>`;
@@ -159,7 +162,7 @@ window.abrirModalFasesPAP = function(alunoId, faseAtual) {
     bg.querySelector('.close-dyn-modal').onclick = () => bg.remove();
 };
 
-window.guardarFasePAP = async function(alunoId, btn) {
+window.guardarFasePAP = async function (alunoId, btn) {
     const novaFase = Number(document.getElementById('sel-fase-pap').value);
     const originalHTML = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
     try {
@@ -174,20 +177,20 @@ window.guardarFasePAP = async function(alunoId, btn) {
             "pap.temaAprovado": novaFase >= 1,
             "pap.relatorioAprovado": novaFase >= 3
         };
-        
+
         await updateDoc(doc(db, "utilizadores", alunoId), updateData);
         mostrarAlerta("Progresso atualizado com sucesso!", false);
         document.querySelector('.modal-overlay:last-child').remove();
         carregarEcraOrientandos();
-    } catch(e) { 
-        mostrarAlerta("Erro ao atualizar a fase."); 
-        btn.innerHTML = originalHTML; 
-        btn.disabled = false; 
+    } catch (e) {
+        mostrarAlerta("Erro ao atualizar a fase.");
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
     }
 };
 
 // 2. VISUALIZADOR DO COFRE
-window.abrirModalCofrePAP = async function(alunoId, alunoNome) {
+window.abrirModalCofrePAP = async function (alunoId, alunoNome) {
     const bg = document.createElement('div');
     bg.className = 'modal-overlay'; bg.style.display = 'flex'; bg.style.zIndex = '10000';
     bg.innerHTML = `
@@ -207,7 +210,7 @@ window.abrirModalCofrePAP = async function(alunoId, alunoNome) {
         const snap = await getDoc(doc(db, "utilizadores", alunoId));
         window.cofreAlunoAtual = snap.exists() ? (snap.data().pap?.cofre || []) : [];
         let html = '';
-        if (window.cofreAlunoAtual.length === 0) { html = '<p class="text-muted center">O aluno ainda não submeteu nenhum documento.</p>'; } 
+        if (window.cofreAlunoAtual.length === 0) { html = '<p class="text-muted center">O aluno ainda não submeteu nenhum documento.</p>'; }
         else {
             window.cofreAlunoAtual.forEach((f, idx) => {
                 html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); border-left:3px solid var(--primary-green); padding:10px; border-radius:6px; margin-bottom:10px;">
@@ -220,11 +223,11 @@ window.abrirModalCofrePAP = async function(alunoId, alunoNome) {
             });
         }
         document.getElementById('lista-cofre-dinamica').innerHTML = html;
-    } catch(e) { document.getElementById('lista-cofre-dinamica').innerHTML = '<p class="text-danger center">Erro ao ler o cofre.</p>'; }
+    } catch (e) { document.getElementById('lista-cofre-dinamica').innerHTML = '<p class="text-danger center">Erro ao ler o cofre.</p>'; }
 };
 
-window.verDocCofreProf = function(index) {
-    const f = window.cofreAlunoAtual[index]; if(!f) return;
+window.verDocCofreProf = function (index) {
+    const f = window.cofreAlunoAtual[index]; if (!f) return;
     if (f.base64.startsWith("data:image")) {
         const bg = document.createElement('div');
         bg.className = 'modal-overlay'; bg.style.display = 'flex'; bg.style.zIndex = '10001';
@@ -238,7 +241,7 @@ window.verDocCofreProf = function(index) {
 };
 
 // 3. OBSERVATÓRIO DO ORIENTADOR
-window.abrirModalObservatorioPAP = function(alunoId, alunoNome) {
+window.abrirModalObservatorioPAP = function (alunoId, alunoNome) {
     const bg = document.createElement('div');
     bg.className = 'modal-overlay'; bg.style.display = 'flex'; bg.style.zIndex = '10000';
     bg.innerHTML = `
@@ -255,17 +258,17 @@ window.abrirModalObservatorioPAP = function(alunoId, alunoNome) {
     bg.querySelector('.close-dyn-modal').onclick = () => bg.remove();
 };
 
-window.guardarObservacaoPAP = async function(alunoId, btn) {
+window.guardarObservacaoPAP = async function (alunoId, btn) {
     const texto = document.getElementById('txt-observacao-pap').value.trim();
-    if(!texto) { mostrarAlerta("Escreve algo antes de gravar!"); return; }
-    
+    if (!texto) { mostrarAlerta("Escreve algo antes de gravar!"); return; }
+
     const originalHTML = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
     try {
         const novaObs = { autor: state.myUserName, data: new Date().toLocaleDateString('pt-PT'), texto: texto };
         await updateDoc(doc(db, "utilizadores", alunoId), { "pap.observatorio": arrayUnion(novaObs) });
         mostrarAlerta("Observação afixada com sucesso!", false);
         document.querySelector('.modal-overlay:last-child').remove();
-    } catch(e) { mostrarAlerta("Erro ao afixar observação."); btn.innerHTML = originalHTML; btn.disabled = false; }
+    } catch (e) { mostrarAlerta("Erro ao afixar observação."); btn.innerHTML = originalHTML; btn.disabled = false; }
 };
 
 // ==========================================
@@ -273,18 +276,18 @@ window.guardarObservacaoPAP = async function(alunoId, btn) {
 // ==========================================
 export async function carregarEcraDiario() {
     const container = document.getElementById('lista-sessoes-diario');
-    if(!container) return;
-    
+    if (!container) return;
+
     container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar diário...</p>';
 
     try {
         let todasSessoes = [];
         const qAlunos = await getDocs(query(collection(db, "utilizadores"), where("papel", "==", "aluno")));
-        
+
         for (const docAl of qAlunos.docs) {
             const alData = docAl.data();
             const isMeuOrientando = (alData.pap && (alData.pap.orientador === state.myUserName || alData.pap.orientador === state.myUserId));
-            
+
             if (isMeuOrientando) {
                 const sS = await getDocs(collection(db, "utilizadores", docAl.id, "sessoes_pap"));
                 sS.forEach(s => todasSessoes.push({ id: s.id, alunoId: docAl.id, alunoNome: alData.nome, ...s.data() }));
@@ -328,11 +331,11 @@ export async function carregarEcraDiario() {
 export async function prepararModalNovaSessao() {
     const selAluno = document.getElementById('sessao-pap-aluno');
     selAluno.innerHTML = '<option value="">A carregar alunos...</option>';
-    
+
     const hoje = new Date().toISOString().split('T')[0];
     document.getElementById('sessao-pap-data').value = hoje;
     document.getElementById('sessao-pap-notas').value = '';
-    
+
     modalPresencaAtiva = true;
     if (typeof atualizarBotoesPresenca === 'function') atualizarBotoesPresenca();
 
@@ -341,7 +344,7 @@ export async function prepararModalNovaSessao() {
     try {
         let countOrientandos = 0;
         let optionsHtml = '<option value="">-- Seleciona o Orientando --</option>';
-        
+
         if (state.turmasProfessor && state.turmasProfessor.length > 0) {
             for (const t of state.turmasProfessor) {
                 const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
@@ -354,7 +357,7 @@ export async function prepararModalNovaSessao() {
                 });
             }
         }
-        
+
         if (countOrientandos === 0) {
             selAluno.innerHTML = '<option value="" disabled selected>⚠️ Ainda não tens orientandos atribuídos</option>';
         } else {
@@ -370,8 +373,8 @@ export async function prepararModalNovaSessao() {
 export function atualizarBotoesPresenca() {
     const btnSim = document.getElementById('btn-presenca-sim');
     const btnNao = document.getElementById('btn-presenca-nao');
-    
-    if(!btnSim || !btnNao) return;
+
+    if (!btnSim || !btnNao) return;
 
     if (modalPresencaAtiva) {
         btnSim.classList.add('active'); btnSim.style.borderColor = 'var(--success-green)'; btnSim.style.color = 'var(--success-green)'; btnSim.style.background = 'rgba(16,185,129,0.1)';

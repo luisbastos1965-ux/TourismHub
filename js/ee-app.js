@@ -1,44 +1,44 @@
 import { auth, db } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, collection, getDocs, query, addDoc, onSnapshot, orderBy, where, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-let myUserId = ""; 
-let myUserName = ""; 
-let educandosArray = []; 
-let educandoAtualId = ""; 
+let myUserId = "";
+let myUserName = "";
+let educandosArray = [];
+let educandoAtualId = "";
 let turmaAtual = "";
 let chartMediaEE = null;
 
 // ==========================================
 // FUNÇÕES DE SEGURANÇA PARA CLIQUES
 // ==========================================
-function bindClick(id, fn) { const el = document.getElementById(id); if(el) el.addEventListener('click', fn); }
-function bindChange(id, fn) { const el = document.getElementById(id); if(el) el.addEventListener('change', fn); }
-function safeAddClass(id, className) { const el = document.getElementById(id); if(el) el.classList.add(className); }
-function safeRemoveClass(id, className) { const el = document.getElementById(id); if(el) el.classList.remove(className); }
+function bindClick(id, fn) { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); }
+function bindChange(id, fn) { const el = document.getElementById(id); if (el) el.addEventListener('change', fn); }
+function safeAddClass(id, className) { const el = document.getElementById(id); if (el) el.classList.add(className); }
+function safeRemoveClass(id, className) { const el = document.getElementById(id); if (el) el.classList.remove(className); }
 
 // ==========================================
 // A MATRIZ DE REFERÊNCIA OFICIAL
 // ==========================================
 const matrizAmbos = {
     "Sociocultural": {
-        "PORT": {"1": 33, "2": 34, "3": 33, "4": 33, "5": 34, "6": 33, "7": 40, "8": 40, "9": 40},
-        "ING": {"1": 27, "2": 24, "3": 24, "4": 24, "5": 24, "6": 24, "7": 24, "8": 24, "9": 24},
-        "AI": {"1": 36, "2": 36, "3": 36, "4": 36, "5": 37, "6": 39},
-        "EF": {"1": 10, "2": 8, "3": 10, "4": 10, "5": 10, "6": 12, "7": 6, "8": 12, "9": 8, "10": 10, "11": 12, "12": 8, "13": 6, "14": 10, "15": 6, "16": 2},
-        "TIC": {"1": 25, "2": 25, "3": 25, "4": 25}
+        "PORT": { "1": 33, "2": 34, "3": 33, "4": 33, "5": 34, "6": 33, "7": 40, "8": 40, "9": 40 },
+        "ING": { "1": 27, "2": 24, "3": 24, "4": 24, "5": 24, "6": 24, "7": 24, "8": 24, "9": 24 },
+        "AI": { "1": 36, "2": 36, "3": 36, "4": 36, "5": 37, "6": 39 },
+        "EF": { "1": 10, "2": 8, "3": 10, "4": 10, "5": 10, "6": 12, "7": 6, "8": 12, "9": 8, "10": 10, "11": 12, "12": 8, "13": 6, "14": 10, "15": 6, "16": 2 },
+        "TIC": { "1": 25, "2": 25, "3": 25, "4": 25 }
     },
     "Científica": {
-        "GEO": {"1": 33, "2": 33, "3": 30, "4": 26, "5": 21, "6": 21, "7": 21, "8": 15},
-        "HCA": {"1": 20, "2": 18, "3": 18, "4": 18, "5": 24, "6": 18, "7": 18, "8": 24, "9": 21, "10": 21},
-        "MAT": {"1": 33, "2": 27, "3": 20, "4": 20}
+        "GEO": { "1": 33, "2": 33, "3": 30, "4": 26, "5": 21, "6": 21, "7": 21, "8": 15 },
+        "HCA": { "1": 20, "2": 18, "3": 18, "4": 18, "5": 24, "6": 18, "7": 18, "8": 24, "9": 21, "10": 21 },
+        "MAT": { "1": 33, "2": 27, "3": 20, "4": 20 }
     }
 };
 
 const matrizAntigoTecnica = {
-    "CF": {"1": 24, "2": 21, "3": 21, "4": 21, "5": 21, "6": 21, "7": 9, "8": 15, "9": 15},
-    "TIAT": {"1": 27, "2": 24, "3": 24, "4": 24, "5": 33, "6": 30, "7": 30, "8": 30, "9": 36, "10": 30, "11": 33, "12": 30, "13": 24},
-    "TCAT": {"1": 33, "2": 33, "3": 30, "4": 33, "5": 36, "6": 36, "7": 24},
-    "OTET": {"1": 24, "2": 24, "3": 33, "4": 30, "5": 24, "6": 24, "7": 36, "8": 27, "9": 33, "10": 30, "11": 30, "12": 17}
+    "CF": { "1": 24, "2": 21, "3": 21, "4": 21, "5": 21, "6": 21, "7": 9, "8": 15, "9": 15 },
+    "TIAT": { "1": 27, "2": 24, "3": 24, "4": 24, "5": 33, "6": 30, "7": 30, "8": 30, "9": 36, "10": 30, "11": 33, "12": 30, "13": 24 },
+    "TCAT": { "1": 33, "2": 33, "3": 30, "4": 33, "5": 36, "6": 36, "7": 24 },
+    "OTET": { "1": 24, "2": 24, "3": 33, "4": 30, "5": 24, "6": 24, "7": 36, "8": 27, "9": 33, "10": 30, "11": 30, "12": 17 }
 };
 
 const matrizNovoTecnica = {
@@ -79,7 +79,7 @@ function getMatrizMap() {
 function obterDisciplinasDoAno() {
     const anoMatch = turmaAtual ? turmaAtual.match(/\d+/) : null;
     const ano = anoMatch ? parseInt(anoMatch[0]) : 10;
-    
+
     const base = {
         10: ["PORT", "ING", "AI", "EF", "TIC", "GEO", "HCA", "MAT"],
         11: ["PORT", "ING", "AI", "EF", "GEO", "HCA"],
@@ -95,7 +95,7 @@ function obterDisciplinasDoAno() {
         11: ["AET", "OGOT", "CMET", "LNTT"],
         12: ["AET", "OGOT", "CMET"]
     };
-    
+
     let arr = [...(base[ano] || base[10])];
     if (ano >= 11) arr = [...arr, ...(tecAntigo[ano] || tecAntigo[11])];
     else arr = [...arr, ...(tecNovo[ano] || tecNovo[10])];
@@ -111,15 +111,15 @@ onAuthStateChanged(auth, async (user) => {
         try {
             const docSnap = await getDoc(doc(db, "utilizadores", myUserId));
             if (docSnap.exists() && docSnap.data().papel === 'ee') {
-                const dados = docSnap.data(); 
+                const dados = docSnap.data();
                 myUserName = dados.nome || "Encarregado";
-                
+
                 let arr = [];
-                if (dados.educandos && Array.isArray(dados.educandos)) { arr = dados.educandos; } 
-                else if (dados.educandoId && Array.isArray(dados.educandoId)) { arr = dados.educandoId; } 
-                else if (dados.educandoId && typeof dados.educandoId === 'string') { arr = [dados.educandoId]; } 
+                if (dados.educandos && Array.isArray(dados.educandos)) { arr = dados.educandos; }
+                else if (dados.educandoId && Array.isArray(dados.educandoId)) { arr = dados.educandoId; }
+                else if (dados.educandoId && typeof dados.educandoId === 'string') { arr = [dados.educandoId]; }
                 else if (dados.educando) { arr = [dados.educando]; }
-                
+
                 educandosArray = arr;
 
                 if (educandosArray.length > 0) {
@@ -130,16 +130,16 @@ onAuthStateChanged(auth, async (user) => {
                 }
             } else {
                 window.location.href = "index.html";
-            } 
+            }
         } catch (e) { }
     } else {
         window.location.href = "index.html";
-    } 
+    }
 });
 
 async function construirSeletorEducandos() {
-    const selector = document.getElementById('header-ee-student-selector'); 
-    if(!selector) return;
+    const selector = document.getElementById('header-ee-student-selector');
+    if (!selector) return;
     selector.innerHTML = '';
     for (let id of educandosArray) {
         if (!id) continue;
@@ -147,19 +147,19 @@ async function construirSeletorEducandos() {
             const snap = await getDoc(doc(db, "utilizadores", id));
             if (snap.exists()) {
                 const data = snap.data();
-                const opt = document.createElement('option'); 
-                opt.value = id; 
+                const opt = document.createElement('option');
+                opt.value = id;
                 opt.text = `${data.nome ? data.nome.split(' ')[0] : "Aluno"} (${data.turma || "S/ Turma"})`;
                 selector.appendChild(opt);
             }
-        } catch(e) {}
+        } catch (e) { }
     }
     if (selector.options.length > 0) {
-        educandoAtualId = selector.value; 
+        educandoAtualId = selector.value;
         carregarDadosDoFilhoSelecionado();
-        selector.onchange = (e) => { 
-            educandoAtualId = e.target.value; 
-            carregarDadosDoFilhoSelecionado(); 
+        selector.onchange = (e) => {
+            educandoAtualId = e.target.value;
+            carregarDadosDoFilhoSelecionado();
         };
     } else {
         selector.innerHTML = '<option value="">Alunos não encontrados</option>';
@@ -173,23 +173,23 @@ async function carregarDadosDoFilhoSelecionado() {
     try {
         const docSnap = await getDoc(doc(db, "utilizadores", educandoAtualId));
         if (docSnap.exists()) {
-            turmaAtual = docSnap.data().turma || ""; 
-            carregarResumoDashboard(); 
-            
+            turmaAtual = docSnap.data().turma || "";
+            carregarResumoDashboard();
+
             const anoMatch = turmaAtual.match(/\d+/);
             const ano = anoMatch ? parseInt(anoMatch[0]) : 0;
             const cardProf = document.getElementById('card-percurso-prof');
             if (cardProf) {
                 if (ano < 11) {
                     cardProf.style.display = 'none';
-                } else { 
-                    cardProf.style.display = 'block'; 
-                    carregarPercursoProfissional(docSnap.data()); 
+                } else {
+                    cardProf.style.display = 'block';
+                    carregarPercursoProfissional(docSnap.data());
                 }
             }
 
             preencherFiltrosDisciplinas();
-            
+
             const abaAtivaEl = document.querySelector('.bottom-nav .nav-item.active');
             if (abaAtivaEl) {
                 const abaAtiva = abaAtivaEl.getAttribute('data-target');
@@ -203,14 +203,14 @@ async function carregarDadosDoFilhoSelecionado() {
             // ==========================================
             iniciarEscutaNotificacoes();
         }
-    } catch(e) {}
+    } catch (e) { }
 }
 
 function getUniformCircle(status) {
     if (status === true || status === 'verde') return '🟢';
     if (status === false || status === 'vermelho') return '🔴';
     if (status === 'amarelo') return '🟡';
-    return '⚪'; 
+    return '⚪';
 }
 
 function getRiscoBadge(status) {
@@ -227,34 +227,34 @@ function carregarPercursoProfissional(alunoData) {
     const btnPap = document.getElementById('btn-tab-pap');
     if (!cardResumo) return;
 
-    miniFct.style.display = 'none'; 
-    miniPap.style.display = 'none'; 
-    if(btnPap) btnPap.style.display = 'none';
+    miniFct.style.display = 'none';
+    miniPap.style.display = 'none';
+    if (btnPap) btnPap.style.display = 'none';
     let hasFct = false; let hasPap = false; let riscoGeral = null;
 
     if (alunoData.fct) {
         hasFct = true; miniFct.style.display = 'block';
         const f = alunoData.fct;
-        const hr = f.horasRealizadas !== undefined ? Number(f.horasRealizadas) : 0; 
-        const ht = f.horasTotal !== undefined ? Number(f.horasTotal) : '-'; 
-        const perc = (ht !== '-' && ht > 0) ? Math.round((hr/ht)*100) : 0;
-        
+        const hr = f.horasRealizadas !== undefined ? Number(f.horasRealizadas) : 0;
+        const ht = f.horasTotal !== undefined ? Number(f.horasTotal) : '-';
+        const perc = (ht !== '-' && ht > 0) ? Math.round((hr / ht) * 100) : 0;
+
         document.getElementById('txt-mini-fct').innerText = ht !== '-' ? `${hr}/${ht} h (${perc}%)` : `${hr} h registadas`;
         document.getElementById('fct-horas-txt').innerText = ht !== '-' ? `${hr} / ${ht} h` : `${hr} h`;
         document.getElementById('fct-perc-txt').innerText = ht !== '-' ? `${perc}%` : '';
         document.getElementById('fct-progresso').style.width = ht !== '-' ? `${perc}%` : '0%';
-        document.getElementById('fct-prev').innerText = f.horasPrevistas !== undefined ? f.horasPrevistas : '-'; 
+        document.getElementById('fct-prev').innerText = f.horasPrevistas !== undefined ? f.horasPrevistas : '-';
         document.getElementById('fct-falta').innerText = ht !== '-' ? (ht - hr) : '-';
-        
+
         const riscoF = getRiscoBadge(f.estadoRisco);
-        document.getElementById('fct-badge-risco').innerText = riscoF.txt; 
+        document.getElementById('fct-badge-risco').innerText = riscoF.txt;
         document.getElementById('fct-card-risco').style.borderLeftColor = riscoF.cor;
         riscoGeral = f.estadoRisco || 'branco';
 
         let docsHtml = '';
-        const dNames = { protocolo: 'Protocolo', plano: 'Plano de Estágio', folhas: 'Folhas de Estágio', registos: 'Registos de Visita', avaliacao: 'Avaliação', autoavaliacao: 'Autoavaliação'};
+        const dNames = { protocolo: 'Protocolo', plano: 'Plano de Estágio', folhas: 'Folhas de Estágio', registos: 'Registos de Visita', avaliacao: 'Avaliação', autoavaliacao: 'Autoavaliação' };
         for (let key in dNames) {
-            let st = (f.docs && f.docs[key] !== undefined) ? f.docs[key] : null; 
+            let st = (f.docs && f.docs[key] !== undefined) ? f.docs[key] : null;
             let ic = getUniformCircle(st);
             docsHtml += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #222; padding-bottom:5px;"><span>${dNames[key]}</span> <span style="font-size:1.1rem;">${ic}</span></div>`;
         }
@@ -262,29 +262,29 @@ function carregarPercursoProfissional(alunoData) {
     }
 
     if (alunoData.pap) {
-        hasPap = true; miniPap.style.display = 'block'; 
-        if(btnPap) btnPap.style.display = 'block';
+        hasPap = true; miniPap.style.display = 'block';
+        if (btnPap) btnPap.style.display = 'block';
         const p = alunoData.pap;
-        
+
         document.getElementById('txt-mini-pap').innerText = p.faseAtual || 'A aguardar fase...';
         document.getElementById('pap-tema').innerText = p.tema || 'A aguardar definição de tema...';
         document.getElementById('pap-orientador').innerText = p.orientador || 'Não definido';
         document.getElementById('pap-data').innerText = p.dataDefesa || 'Não definida';
         document.getElementById('pap-obs-txt').innerText = p.notasOrientador || 'Sem observações registadas.';
-        
+
         const riscoP = getRiscoBadge(p.estadoRisco);
-        document.getElementById('pap-badge-risco').innerText = riscoP.txt; 
+        document.getElementById('pap-badge-risco').innerText = riscoP.txt;
         document.getElementById('pap-card-risco').style.borderLeftColor = riscoP.cor;
-        
-        if (riscoGeral !== 'vermelho') { 
+
+        if (riscoGeral !== 'vermelho') {
             if (p.estadoRisco === 'vermelho') riscoGeral = 'vermelho';
             else if (p.estadoRisco === 'amarelo') riscoGeral = 'amarelo';
             else if (!riscoGeral) riscoGeral = p.estadoRisco;
         }
 
         let fasesHtml = '';
-        const fNames = { escolha: 'Escolha do Tema', aprovacao: 'Aprovação', desenvolvimento: 'Desenvolvimento', relatorio: 'Relatório', apresentacao: 'Apresentação'};
-        
+        const fNames = { escolha: 'Escolha do Tema', aprovacao: 'Aprovação', desenvolvimento: 'Desenvolvimento', relatorio: 'Relatório', apresentacao: 'Apresentação' };
+
         for (let key in fNames) {
             let st = (p.fases && p.fases[key] !== undefined) ? p.fases[key] : null;
             let statusVal = null; let prazoVal = "";
@@ -298,38 +298,38 @@ function carregarPercursoProfissional(alunoData) {
 
     if (hasFct || hasPap) {
         cardResumo.style.display = 'block';
-        const rg = getRiscoBadge(riscoGeral || 'branco'); 
+        const rg = getRiscoBadge(riscoGeral || 'branco');
         const b = document.getElementById('badge-risco-geral');
-        if(b) {
+        if (b) {
             let bgColor = rg.cor === 'var(--text-muted)' ? 'rgba(255,255,255,0.05)' : rg.cor === 'var(--success-green)' ? 'rgba(40,167,69,0.1)' : rg.cor === 'var(--warning-yellow)' ? 'rgba(255,204,0,0.1)' : 'rgba(255,77,77,0.1)';
-            b.innerText = rg.txt; b.style.color = rg.cor; b.style.background = bgColor; 
+            b.innerText = rg.txt; b.style.color = rg.cor; b.style.background = bgColor;
             cardResumo.style.borderLeftColor = rg.cor;
         }
     }
 }
 
-bindClick('card-percurso-prof', () => { 
-    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active')); 
-    esconderTodasAsVistas(); 
-    document.getElementById('view-ee-profissional').style.display = 'block'; 
+bindClick('card-percurso-prof', () => {
+    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+    esconderTodasAsVistas();
+    document.getElementById('view-ee-profissional').style.display = 'block';
 });
 
-bindClick('btn-voltar-prof', () => { 
-    esconderTodasAsVistas(); 
-    document.getElementById('ee-dashboard').style.display = 'block'; 
+bindClick('btn-voltar-prof', () => {
+    esconderTodasAsVistas();
+    document.getElementById('ee-dashboard').style.display = 'block';
     safeAddClass(document.querySelector('.nav-item[data-target="ee-dashboard"]'), 'active');
 });
 
-bindClick('btn-tab-fct', () => { 
-    safeAddClass('btn-tab-fct', 'active'); safeRemoveClass('btn-tab-pap', 'active'); 
-    const cFct = document.getElementById('content-prof-fct'); if(cFct) cFct.style.display = 'block'; 
-    const cPap = document.getElementById('content-prof-pap'); if(cPap) cPap.style.display = 'none'; 
+bindClick('btn-tab-fct', () => {
+    safeAddClass('btn-tab-fct', 'active'); safeRemoveClass('btn-tab-pap', 'active');
+    const cFct = document.getElementById('content-prof-fct'); if (cFct) cFct.style.display = 'block';
+    const cPap = document.getElementById('content-prof-pap'); if (cPap) cPap.style.display = 'none';
 });
 
-bindClick('btn-tab-pap', () => { 
-    safeAddClass('btn-tab-pap', 'active'); safeRemoveClass('btn-tab-fct', 'active'); 
-    const cPap = document.getElementById('content-prof-pap'); if(cPap) cPap.style.display = 'block'; 
-    const cFct = document.getElementById('content-prof-fct'); if(cFct) cFct.style.display = 'none'; 
+bindClick('btn-tab-pap', () => {
+    safeAddClass('btn-tab-pap', 'active'); safeRemoveClass('btn-tab-fct', 'active');
+    const cPap = document.getElementById('content-prof-pap'); if (cPap) cPap.style.display = 'block';
+    const cFct = document.getElementById('content-prof-fct'); if (cFct) cFct.style.display = 'none';
 });
 
 // ==========================================
@@ -340,32 +340,43 @@ async function carregarResumoDashboard() {
     let faltasTotais = 0; let nPrhf = 0;
 
     try {
-        const notasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
+        // CORREÇÃO: LER NOTAS ANTIGAS E NOVAS PARA O GRÁFICO DO E.E.
+        const notasNovas = await getDocs(collection(db, "utilizadores", educandoAtualId, "avaliacoes"));
+        const notasAntigas = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
+        const todasAsNotas = [...notasAntigas.docs, ...notasNovas.docs];
+
+        let mapaUnico = {};
+        todasAsNotas.forEach(d => {
+            const n = d.data();
+            const m = n.modulo ? n.modulo.toString().replace(/\D/g, '') : '?';
+            mapaUnico[`${n.disciplina}_${m}`] = n;
+        });
+
         const map = getMatrizMap();
-        
-        notasSnap.forEach(d => {
-            const val = d.data().nota; const disc = d.data().disciplina;
+
+        Object.values(mapaUnico).forEach(n => {
+            const val = n.nota; const disc = n.disciplina;
             if (val !== 'REP' && !isNaN(val)) {
                 const vNum = Number(val); sumG += vNum; countG++;
                 if (map["Sociocultural"].includes(disc)) { sumS += vNum; countS++; }
                 else if (map["Científica"].includes(disc)) { sumC += vNum; countC++; }
-                else { sumT += vNum; countT++; } 
+                else { sumT += vNum; countT++; }
             }
         });
-        
-        const mG = countG > 0 ? (sumG/countG).toFixed(1) : '-';
+
+        const mG = countG > 0 ? (sumG / countG).toFixed(1) : '-';
         document.getElementById('resumo-media').innerText = mG;
         document.getElementById('resumo-media').style.color = (mG !== '-' && mG < 10) ? 'var(--danger-red)' : 'var(--primary-green)';
-        
-        document.getElementById('resumo-med-socio').innerText = countS > 0 ? (sumS/countS).toFixed(1) : '-';
-        document.getElementById('resumo-med-cient').innerText = countC > 0 ? (sumC/countC).toFixed(1) : '-';
-        document.getElementById('resumo-med-tec').innerText = countT > 0 ? (sumT/countT).toFixed(1) : '-';
+
+        document.getElementById('resumo-med-socio').innerText = countS > 0 ? (sumS / countS).toFixed(1) : '-';
+        document.getElementById('resumo-med-cient').innerText = countC > 0 ? (sumC / countC).toFixed(1) : '-';
+        document.getElementById('resumo-med-tec').innerText = countT > 0 ? (sumT / countT).toFixed(1) : '-';
 
         const ctx = document.getElementById('eeChartMedia');
         if (ctx) {
             if (chartMediaEE) chartMediaEE.destroy();
-            const valS = countS > 0 ? sumS/countS : 0; const valC = countC > 0 ? sumC/countC : 0; const valT = countT > 0 ? sumT/countT : 0;
-            
+            const valS = countS > 0 ? sumS / countS : 0; const valC = countC > 0 ? sumC / countC : 0; const valT = countT > 0 ? sumT / countT : 0;
+
             if (valS === 0 && valC === 0 && valT === 0) {
                 chartMediaEE = new Chart(ctx, {
                     type: 'doughnut', data: { labels: ['Sem Notas'], datasets: [{ data: [1], backgroundColor: ['#374151'], borderWidth: 0 }] },
@@ -378,94 +389,110 @@ async function carregarResumoDashboard() {
                 });
             }
         }
-    } catch(e) {}
+    } catch (e) { }
 
     try {
         const uSnap = await getDoc(doc(db, "utilizadores", educandoAtualId));
-        if(uSnap.exists()) {
+        if (uSnap.exists()) {
             const xp = uSnap.data().xp || 0;
             const nivel = Math.floor(xp / 100) + 1;
             document.getElementById('resumo-nivel-xp').innerText = `Nvl ${nivel}`;
         }
-    } catch(e) {}
+    } catch (e) { }
 
     try {
         const faltasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
-        faltasSnap.forEach(d => { faltasTotais += d.data().horas || 0; });
-        document.getElementById('resumo-faltas').innerText = `${faltasTotais}h`;
-    } catch(e) {}
+        faltasSnap.forEach(d => {
+            const faltaData = d.data();
+            // Só soma as faltas se não estiverem justificadas
+            if (faltaData.justificada === false || !faltaData.hasOwnProperty("justificada")) {
+                // Tenta apanhar o novo formato 'duracaoBlocos', se não existir, tenta o antigo 'horas'. Se ambos falharem, assume 0.
+                faltasTotais += Number(faltaData.duracaoBlocos) || Number(faltaData.horas) || 0;
+            }
+        });
+
+        const textElement = document.getElementById('resumo-faltas');
+        textElement.innerText = `${faltasTotais}h`;
+
+        // Bónus visual: Fica vermelho se o aluno tiver faltas injustificadas para chamar a atenção do pai!
+        if (faltasTotais > 0) {
+            textElement.style.color = "var(--danger-red)";
+        } else {
+            textElement.style.color = "white";
+        }
+    } catch (e) { }
 
     try {
         const prhfSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "prhfs"));
         prhfSnap.forEach(d => { if ((d.data().status || 'ativa') === 'ativa') nPrhf++; });
         document.getElementById('resumo-prhfs').innerText = nPrhf;
-    } catch(e) {}
+    } catch (e) { }
 
     try {
         if (turmaAtual) {
             const evSnap = await getDocs(collection(db, "turmas", turmaAtual, "eventos"));
             const hojeIso = new Date().toISOString().split('T')[0];
-            let futuros = []; 
+            let futuros = [];
             evSnap.forEach(d => { if (d.data().data >= hojeIso) futuros.push(d.data()); });
-            
+
             if (futuros.length > 0) {
-                futuros.sort((a,b) => a.data.localeCompare(b.data));
+                futuros.sort((a, b) => a.data.localeCompare(b.data));
                 const dp = futuros[0].data.split('-');
                 document.getElementById('resumo-proximo-evento').innerHTML = `<strong style="color:var(--text-light);">${dp[2]}/${dp[1]}</strong><br><span style="font-size:0.7rem; color:var(--text-muted);">${futuros[0].titulo}</span>`;
             } else {
                 document.getElementById('resumo-proximo-evento').innerText = "Agenda limpa";
             }
         }
-    } catch(e) {}
+    } catch (e) { }
 }
 
 const navItems = document.querySelectorAll('.nav-item');
-const views = [ 'ee-dashboard', 'view-ee-caderneta', 'view-ee-agenda', 'view-ee-horario', 'view-ee-chat', 'view-ee-justificar', 'view-ee-notificacoes', 'view-ee-profissional' ];
+const views = ['ee-dashboard', 'view-ee-caderneta', 'view-ee-agenda', 'view-ee-horario', 'view-ee-chat', 'view-ee-justificar', 'view-ee-notificacoes', 'view-ee-profissional'];
 
-function esconderTodasAsVistas() { 
-    views.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; }); 
+function esconderTodasAsVistas() {
+    views.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
 }
 
 navItems.forEach(item => {
     item.addEventListener('click', (e) => {
-        e.preventDefault(); 
-        navItems.forEach(nav => nav.classList.remove('active')); 
+        e.preventDefault();
+        navItems.forEach(nav => nav.classList.remove('active'));
         e.currentTarget.classList.add('active');
-        
-        esconderTodasAsVistas(); 
-        const targetId = e.currentTarget.getAttribute('data-target'); 
+
+        esconderTodasAsVistas();
+        const targetId = e.currentTarget.getAttribute('data-target');
         const targetView = document.getElementById(targetId);
-        
-        if (targetId === 'view-ee-chat') { if(targetView) targetView.style.display = 'flex'; } 
+
+        if (targetId === 'view-ee-chat') { if (targetView) targetView.style.display = 'flex'; }
         else if (targetView) { targetView.style.display = 'block'; }
-        
+
         if (targetId === 'view-ee-caderneta') ativarTabCadernetaAtual();
         if (targetId === 'view-ee-agenda') carregarAgendaEE();
         if (targetId === 'view-ee-horario') carregarHorarioEE();
     });
 });
 
-bindClick('btn-quick-mensagem', () => { 
-    navItems.forEach(nav => nav.classList.remove('active')); 
-    esconderTodasAsVistas(); 
-    const vw = document.getElementById('view-ee-chat'); if(vw) vw.style.display = 'flex'; 
-    iniciarChatEE(); 
+bindClick('btn-quick-mensagem', () => {
+    navItems.forEach(nav => nav.classList.remove('active'));
+    esconderTodasAsVistas();
+    const vw = document.getElementById('view-ee-chat'); if (vw) vw.style.display = 'flex';
+    iniciarChatEE();
 });
 
-bindClick('btn-quick-justificar', () => { 
-    navItems.forEach(nav => nav.classList.remove('active')); 
-    esconderTodasAsVistas(); 
-    const vw = document.getElementById('view-ee-justificar'); if(vw) vw.style.display = 'block'; 
-    carregarAtestadosEE(); 
+bindClick('btn-quick-justificar', () => {
+    navItems.forEach(nav => nav.classList.remove('active'));
+    esconderTodasAsVistas();
+    const vw = document.getElementById('view-ee-justificar'); if (vw) vw.style.display = 'block';
+    carregarAtestadosEE();
 });
 
 ['btn-voltar-chat-ee', 'btn-voltar-justificar', 'btn-voltar-notificacoes'].forEach(id => {
-    bindClick(id, () => { 
-        navItems.forEach(nav => nav.classList.remove('active')); 
-        const tgt = document.querySelector('.nav-item[data-target="ee-dashboard"]'); if(tgt) tgt.classList.add('active'); 
-        esconderTodasAsVistas(); 
-        const dash = document.getElementById('ee-dashboard'); if(dash) dash.style.display = 'block'; 
-    }); 
+    bindClick(id, () => {
+        navItems.forEach(nav => nav.classList.remove('active'));
+        const tgt = document.querySelector('.nav-item[data-target="ee-dashboard"]'); if (tgt) tgt.classList.add('active');
+        esconderTodasAsVistas();
+        const dash = document.getElementById('ee-dashboard'); if (dash) dash.style.display = 'block';
+    });
 });
 
 // ==========================================
@@ -479,14 +506,14 @@ function iniciarEscutaNotificacoes() {
 
     // Fica a "escutar" a base de dados ao vivo
     const qOco = query(collection(db, "utilizadores", educandoAtualId, "ocorrencias"), orderBy("data", "desc"));
-    
+
     unsubNotificacoes = onSnapshot(qOco, (snap) => {
         let naoLidas = 0;
         let html = '';
 
         snap.forEach(docSnap => {
             const oco = docSnap.data();
-            
+
             // Só conta para o número vermelho se o Professor marcou "Notificar E.E." e se ainda não foi lida
             if (oco.notificarEE && !oco.lidaEE) naoLidas++;
 
@@ -503,11 +530,11 @@ function iniciarEscutaNotificacoes() {
                 </div>
                 <p style="font-size:0.85rem; color:var(--text-light); margin-bottom:8px;">${oco.descricao}</p>
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:0.75rem; color:var(--text-muted);">${new Date(oco.data).toLocaleString('pt-PT', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})} | Prof. ${oco.autor}</span>
-                    ${!oco.lidaEE 
-                        ? `<button class="btn-marcar-lida" data-id="${docSnap.id}" style="background:rgba(255,255,255,0.1); border:1px solid ${cor}; color:${cor}; border-radius:4px; padding:4px 10px; font-size:0.75rem; cursor:pointer; font-weight:bold;"><i class="fa-solid fa-check"></i> Visto</button>` 
-                        : `<span style="font-size:0.75rem; color:var(--text-muted);"><i class="fa-solid fa-check-double"></i> Lido</span>`
-                    }
+                    <span style="font-size:0.75rem; color:var(--text-muted);">${new Date(oco.data).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} | Prof. ${oco.autor}</span>
+                    ${!oco.lidaEE
+                    ? `<button class="btn-marcar-lida" data-id="${docSnap.id}" style="background:rgba(255,255,255,0.1); border:1px solid ${cor}; color:${cor}; border-radius:4px; padding:4px 10px; font-size:0.75rem; cursor:pointer; font-weight:bold;"><i class="fa-solid fa-check"></i> Visto</button>`
+                    : `<span style="font-size:0.75rem; color:var(--text-muted);"><i class="fa-solid fa-check-double"></i> Lido</span>`
+                }
                 </div>
             </div>`;
         });
@@ -527,7 +554,7 @@ function iniciarEscutaNotificacoes() {
         const cont = document.getElementById('ee-notificacoes-container');
         if (cont) {
             cont.innerHTML = html === '' ? getEmptyState('Não há registos disciplinares ou de evolução.', 'fa-bell-slash') : html;
-            
+
             // Lógica do botão "Visto"
             document.querySelectorAll('.btn-marcar-lida').forEach(b => {
                 b.addEventListener('click', async (e) => {
@@ -541,11 +568,11 @@ function iniciarEscutaNotificacoes() {
 }
 
 // Quando o E.E. clica no botão do Sino, abre a janela certa!
-bindClick('btn-open-notificacoes', () => { 
-    navItems.forEach(nav => nav.classList.remove('active')); 
-    esconderTodasAsVistas(); 
-    const vw = document.getElementById('view-ee-notificacoes'); 
-    if(vw) vw.style.display = 'block'; 
+bindClick('btn-open-notificacoes', () => {
+    navItems.forEach(nav => nav.classList.remove('active'));
+    esconderTodasAsVistas();
+    const vw = document.getElementById('view-ee-notificacoes');
+    if (vw) vw.style.display = 'block';
 });
 
 // ==========================================
@@ -563,21 +590,21 @@ function preencherFiltrosDisciplinas() {
 
 bindChange('filtro-caderneta-disc', () => ativarTabCadernetaAtual());
 
-function ativarTabCadernetaAtual() { 
+function ativarTabCadernetaAtual() {
     const el = document.getElementById(currentCadernetaTabId);
-    if(el) el.click();
+    if (el) el.click();
 }
 
-function switchTabConfig(tabId, hideIds, showFilter) { 
-    currentCadernetaTabId = tabId; 
+function switchTabConfig(tabId, hideIds, showFilter) {
+    currentCadernetaTabId = tabId;
     safeAddClass(tabId, 'active');
     hideIds.forEach(id => safeRemoveClass(id, 'active'));
-    
+
     const fCont = document.getElementById('filtro-caderneta-container');
-    if (fCont) fCont.style.display = showFilter ? 'block' : 'none'; 
-    
+    if (fCont) fCont.style.display = showFilter ? 'block' : 'none';
+
     const cadCont = document.getElementById('ee-caderneta-content');
-    if (cadCont) cadCont.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; 
+    if (cadCont) cadCont.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>';
 }
 
 bindClick('tab-ee-timeline', () => { switchTabConfig('tab-ee-timeline', ['tab-ee-notas', 'tab-ee-faltas', 'tab-ee-prhfs', 'tab-ee-evolucao', 'tab-ee-reunioes'], false); carregarTimelineEE(); });
@@ -589,13 +616,13 @@ bindClick('tab-ee-reunioes', () => { switchTabConfig('tab-ee-reunioes', ['tab-ee
 
 async function carregarEvolucaoEE() {
     const cadernetaContent = document.getElementById('ee-caderneta-content');
-    if(!cadernetaContent) return;
+    if (!cadernetaContent) return;
     cadernetaContent.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar evolução...</p>';
 
     try {
         const uSnap = await getDoc(doc(db, "utilizadores", educandoAtualId));
         const data = uSnap.exists() ? uSnap.data() : {};
-        
+
         const getLvl = (xp) => Math.floor((xp || 0) / 100) + 1;
         const getPerc = (xp) => ((xp || 0) % 100);
 
@@ -634,19 +661,19 @@ async function carregarEvolucaoEE() {
         const fDiscEl = document.getElementById('filtro-caderneta-disc');
         const fDisc = fDiscEl ? fDiscEl.value : "";
         const ocSnap = await getDocs(query(collection(db, "utilizadores", educandoAtualId, "ocorrencias")));
-        let regs = []; 
+        let regs = [];
         ocSnap.forEach(d => { if (!fDisc || d.data().disciplina === fDisc) regs.push(d.data()); });
 
-        if(regs.length === 0) {
+        if (regs.length === 0) {
             html += getEmptyState('Sem registos de evolução.', 'fa-star');
         } else {
-            regs.sort((a,b) => b.data.localeCompare(a.data));
+            regs.sort((a, b) => b.data.localeCompare(a.data));
             regs.slice(0, 15).forEach(r => {
                 const isPos = r.tipo === 'positiva';
                 const cor = isPos ? 'var(--success-green)' : 'var(--danger-red)';
                 const bgCor = isPos ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
                 const xpLabel = r.xp ? (r.xp > 0 ? `+${r.xp} XP` : `${r.xp} XP`) : (isPos ? 'Registo Positivo' : 'Registo Negativo');
-                
+
                 html += `
                 <div style="display:flex; align-items:center; justify-content:space-between; background:${bgCor}; border: 1px solid ${cor}; padding: 12px; border-radius: 8px; margin-bottom: 10px;">
                     <div>
@@ -660,9 +687,9 @@ async function carregarEvolucaoEE() {
                 </div>`;
             });
         }
-        
+
         cadernetaContent.innerHTML = html;
-    } catch(e) {
+    } catch (e) {
         console.error("Erro evolução:", e);
         cadernetaContent.innerHTML = '<p class="text-danger center">Erro ao carregar evolução.</p>';
     }
@@ -674,220 +701,307 @@ async function carregarTimelineEE() {
     try {
         let eventos = [];
         const notasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
-        notasSnap.forEach(d => { 
-            const n = d.data(); 
-            eventos.push({ time: new Date(n.data).getTime(), icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação', desc: `${n.disciplina} (Mod. ${n.modulo}): <strong style="color:var(--text-light);">${n.nota}</strong>` }); 
+        notasSnap.forEach(d => {
+            const n = d.data();
+            eventos.push({ time: new Date(n.data).getTime(), icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação', desc: `${n.disciplina} (Mod. ${n.modulo}): <strong style="color:var(--text-light);">${n.nota}</strong>` });
         });
-        
+
         const faltasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
-        faltasSnap.forEach(d => { 
-            const f = d.data(); 
-            eventos.push({ time: new Date(f.criadoEm || f.dataInicio || Date.now()).getTime(), icon: '<i class="fa-solid fa-user-xmark"></i>', cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Falta a ${f.disciplina} (${f.horas}h)`, desc: f.justificada ? `Justificada` : `Falta registada.` }); 
+        faltasSnap.forEach(d => {
+            const f = d.data();
+            eventos.push({ time: new Date(f.criadoEm || f.dataInicio || Date.now()).getTime(), icon: '<i class="fa-solid fa-user-xmark"></i>', cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Falta a ${f.disciplina} (${f.horas}h)`, desc: f.justificada ? `Justificada` : `Falta registada.` });
         });
-        
+
         const ocSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "ocorrencias"));
-        ocSnap.forEach(d => { 
-            const o = d.data(); 
-            eventos.push({ time: o.timestamp || Date.now(), icon: o.tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>', cor: o.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Registo Disciplinar`, desc: `<strong style="color:var(--text-light);">${o.titulo}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">${o.descricao || ''}</span>` }); 
+        ocSnap.forEach(d => {
+            const o = d.data();
+            eventos.push({ time: o.timestamp || Date.now(), icon: o.tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>', cor: o.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Registo Disciplinar`, desc: `<strong style="color:var(--text-light);">${o.titulo}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">${o.descricao || ''}</span>` });
         });
-        
+
         const prhfSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "prhfs"));
-        prhfSnap.forEach(d => { 
-            const p = d.data(); 
-            eventos.push({ time: new Date(p.dataRegisto || Date.now()).getTime(), icon: '<i class="fa-solid fa-book-medical"></i>', cor: 'var(--warning-yellow)', titulo: `Plano de Recuperação Criado`, desc: `${p.disciplina} (Mod. ${p.modulo})` }); 
+        prhfSnap.forEach(d => {
+            const p = d.data();
+            eventos.push({ time: new Date(p.dataRegisto || Date.now()).getTime(), icon: '<i class="fa-solid fa-book-medical"></i>', cor: 'var(--warning-yellow)', titulo: `Plano de Recuperação Criado`, desc: `${p.disciplina} (Mod. ${p.modulo})` });
         });
-        
-        eventos = eventos.filter(ev => !isNaN(ev.time)); 
-        eventos.sort((a,b) => b.time - a.time);
-        
-        if (eventos.length === 0) { 
-            if(cadernetaContent) cadernetaContent.innerHTML = getEmptyState('Nenhuma atividade recente encontrada.', 'fa-timeline'); 
-            return; 
+
+        eventos = eventos.filter(ev => !isNaN(ev.time));
+        eventos.sort((a, b) => b.time - a.time);
+
+        if (eventos.length === 0) {
+            if (cadernetaContent) cadernetaContent.innerHTML = getEmptyState('Nenhuma atividade recente encontrada.', 'fa-timeline');
+            return;
         }
-        
+
         let html = '<div class="timeline">';
-        eventos.forEach(ev => { 
-            html += `<div class="timeline-item"><div class="timeline-icon" style="color: ${ev.cor}; border-color: ${ev.cor};">${ev.icon}</div><div class="timeline-content" style="border-left: 3px solid ${ev.cor};"><span class="timeline-date">${new Date(ev.time).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}</span><strong style="color:var(--text-light); display:block; margin-bottom:5px;">${ev.titulo}</strong><p style="font-size:0.85rem; color:var(--text-light); margin:0;">${ev.desc}</p></div></div>`; 
+        eventos.forEach(ev => {
+            html += `<div class="timeline-item"><div class="timeline-icon" style="color: ${ev.cor}; border-color: ${ev.cor};">${ev.icon}</div><div class="timeline-content" style="border-left: 3px solid ${ev.cor};"><span class="timeline-date">${new Date(ev.time).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}</span><strong style="color:var(--text-light); display:block; margin-bottom:5px;">${ev.titulo}</strong><p style="font-size:0.85rem; color:var(--text-light); margin:0;">${ev.desc}</p></div></div>`;
         });
-        if(cadernetaContent) cadernetaContent.innerHTML = html + '</div>';
-    } catch(e) {}
+        if (cadernetaContent) cadernetaContent.innerHTML = html + '</div>';
+    } catch (e) { }
 }
 
 async function carregarNotasEE() {
     const cadernetaContent = document.getElementById('ee-caderneta-content');
+    if (!cadernetaContent) return;
+
+    cadernetaContent.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar avaliações...</p>';
+
     try {
-        const notasDb = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
+        // 1. Ler as notas das DUAS gavetas
+        const notasNovas = await getDocs(collection(db, "utilizadores", educandoAtualId, "avaliacoes"));
+        const notasAntigas = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
+
         let disciplinasDoAluno = {};
-        notasDb.forEach(d => { 
-            const n = d.data(); 
-            if (!disciplinasDoAluno[n.disciplina]) disciplinasDoAluno[n.disciplina] = []; 
-            disciplinasDoAluno[n.disciplina].push(n); 
+        window.mapNotasCache = {}; // Cache para a pauta global ler super rápido
+
+        // 2. Fundir e organizar tudo
+        [...notasAntigas.docs, ...notasNovas.docs].forEach(d => {
+            const n = d.data();
+            const discNome = (n.disciplina || '').trim(); // Remove espaços em branco perdidos
+            const modF = n.modulo ? n.modulo.toString().replace(/\D/g, '') : '?';
+            n.modulo = modF;
+
+            if (!disciplinasDoAluno[discNome]) disciplinasDoAluno[discNome] = [];
+
+            // Substitui se for uma atualização do mesmo módulo
+            const index = disciplinasDoAluno[discNome].findIndex(x => x.modulo === modF);
+            if (index > -1) {
+                disciplinasDoAluno[discNome][index] = n;
+            } else {
+                disciplinasDoAluno[discNome].push(n);
+            }
+
+            window.mapNotasCache[`${discNome}_${modF}`] = n.nota;
         });
-        
+
         const ordemDisciplinas = obterDisciplinasDoAno();
         let html = `<button id="btn-pauta-global" class="primary-btn" style="margin-bottom: 20px; background-color: transparent; border: 1px solid var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-table-list"></i> Pauta Global</button>`;
-        
+
+        // 3. Desenhar a lista
         ordemDisciplinas.forEach(disc => {
-            if (disciplinasDoAluno[disc] && disciplinasDoAluno[disc].length > 0) {
+            const discTrim = disc.trim();
+            if (disciplinasDoAluno[discTrim] && disciplinasDoAluno[discTrim].length > 0) {
                 let sum = 0; let c = 0; let modsHtml = '';
-                disciplinasDoAluno[disc].forEach(n => {
+
+                // Ordena os módulos (1, 2, 3...)
+                disciplinasDoAluno[discTrim].sort((a, b) => parseInt(a.modulo) - parseInt(b.modulo)).forEach(n => {
                     if (n.nota !== 'REP' && !isNaN(n.nota)) { sum += Number(n.nota); c++; }
                     const cor = (n.nota === 'REP' || Number(n.nota) < 10) ? 'var(--danger-red)' : 'var(--success-green)';
                     const modLabel = n.modulo.toString().startsWith('UC') ? n.modulo : `Módulo ${n.modulo}`;
                     modsHtml += `<div class="modulo-row"><span style="color:var(--text-light);">${modLabel}</span><span style="font-weight:bold; color:${cor};">${n.nota}</span></div>`;
                 });
-                const med = c > 0 ? (sum/c).toFixed(1) : '-';
+
+                const med = c > 0 ? (sum / c).toFixed(1) : '-';
                 const medCor = (med !== '-' && med < 10) ? 'var(--danger-red)' : 'var(--text-light)';
-                
+
                 html += `<div class="disciplina-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'">
-                            <span class="disciplina-title" style="color:var(--text-light);">${disc}</span>
+                            <span class="disciplina-title" style="color:var(--text-light);">${discTrim}</span>
                             <span><span style="font-size:0.75rem; color:var(--text-muted); margin-right:8px;">Média:</span><span class="disciplina-media" style="color:${medCor};">${med}</span> <i class="fa-solid fa-chevron-down" style="font-size:0.8rem; color:var(--text-muted); margin-left:5px;"></i></span>
-                         </div><div class="disciplina-modules">${modsHtml}</div>`;
+                         </div><div class="disciplina-modules" style="display:none;">${modsHtml}</div>`;
             } else {
                 html += `<div class="disciplina-header" style="cursor:default;">
-                            <span class="disciplina-title" style="color:var(--text-muted);">${disc}</span>
+                            <span class="disciplina-title" style="color:var(--text-muted);">${discTrim}</span>
                             <span><span class="disciplina-media" style="color:var(--text-muted); font-size:0.9rem;">SN</span></span>
                          </div>`;
             }
         });
-        
-        if(cadernetaContent) cadernetaContent.innerHTML = html;
-        
-        bindClick('btn-pauta-global', async () => { 
-            const mod = document.getElementById('modal-pauta-global'); if(mod) mod.style.display = 'flex'; 
-            const container = document.getElementById('pauta-global-content'); 
-            try { 
-                const mapNotas = {}; 
-                notasDb.forEach(d => { 
-                    const dt = d.data(); 
-                    mapNotas[`${dt.disciplina}_${dt.modulo}`] = dt.nota; 
-                }); 
-                const matriz = getMatriz(); 
-                let pHtml = ''; 
-                
-                for (const [nomeComponente, disciplinas] of Object.entries(matriz)) { 
-                    pHtml += `<div class="pauta-global-componente"><div class="pauta-global-header">${nomeComponente}</div>`; 
-                    for (const [nomeDisc, modulos] of Object.entries(disciplinas)) { 
-                        pHtml += `<div class="pauta-global-disc"><div class="pauta-global-disc-title">${nomeDisc}</div><div class="pauta-global-notas">`; 
+
+        if (cadernetaContent) cadernetaContent.innerHTML = html;
+
+        // 4. Lógica da Pauta Global
+        bindClick('btn-pauta-global', () => {
+            const mod = document.getElementById('modal-pauta-global'); if (mod) mod.style.display = 'flex';
+            const container = document.getElementById('pauta-global-content');
+            try {
+                const matriz = getMatriz();
+                let pHtml = '';
+
+                for (const [nomeComponente, disciplinas] of Object.entries(matriz)) {
+                    pHtml += `<div class="pauta-global-componente"><div class="pauta-global-header">${nomeComponente}</div>`;
+                    for (const [nomeDisc, modulos] of Object.entries(disciplinas)) {
+                        pHtml += `<div class="pauta-global-disc"><div class="pauta-global-disc-title">${nomeDisc}</div><div class="pauta-global-notas">`;
+
                         const isNumeric = Object.keys(modulos).every(k => !isNaN(k));
-                        const modKeys = isNumeric ? Object.keys(modulos).sort((a,b) => parseInt(a) - parseInt(b)) : Object.keys(modulos);
-                        
-                        for (const mod of modKeys) { 
-                            const nota = mapNotas[`${nomeDisc}_${mod}`] || 'SN'; 
-                            let cor = "sn"; 
-                            if (nota !== 'SN' && nota !== 'REP' && nota >= 10) cor = "positiva"; 
-                            else if (nota === 'REP' || nota < 10) cor = "negativa"; 
+                        const modKeys = isNumeric ? Object.keys(modulos).sort((a, b) => parseInt(a) - parseInt(b)) : Object.keys(modulos);
+
+                        for (const mod of modKeys) {
+                            const nota = window.mapNotasCache[`${nomeDisc.trim()}_${mod}`] || 'SN';
+                            let cor = "sn";
+                            if (nota !== 'SN' && nota !== 'REP' && nota >= 10) cor = "positiva";
+                            else if (nota === 'REP' || nota < 10) cor = "negativa";
                             const modLabel = mod.toString().startsWith('UC') ? mod : `M${mod}`;
-                            pHtml += `<div class="pg-nota-item"><span>${modLabel}</span><span class="pg-nota-val ${cor}">${nota}</span></div>`; 
-                        } 
-                        pHtml += `</div></div>`; 
-                    } 
-                    pHtml += `</div>`; 
-                } 
-                if(container) container.innerHTML = pHtml; 
-            } catch(err) { 
-                if(container) container.innerHTML = '<p class="text-danger center">Erro ao compilar pauta.</p>'; 
-            } 
-        });
-        
-        bindClick('btn-close-pauta', () => {
-            const mod = document.getElementById('modal-pauta-global'); if(mod) mod.style.display = 'none';
+                            pHtml += `<div class="pg-nota-item"><span>${modLabel}</span><span class="pg-nota-val ${cor}">${nota}</span></div>`;
+                        }
+                        pHtml += `</div></div>`;
+                    }
+                    pHtml += `</div>`;
+                }
+                if (container) container.innerHTML = pHtml;
+            } catch (err) {
+                if (container) container.innerHTML = '<p class="text-danger center">Erro ao compilar pauta.</p>';
+            }
         });
 
-    } catch(e) {}
+        bindClick('btn-close-pauta', () => {
+            const mod = document.getElementById('modal-pauta-global'); if (mod) mod.style.display = 'none';
+        });
+
+    } catch (e) {
+        console.error("Erro ao carregar notas EE:", e);
+        if (cadernetaContent) cadernetaContent.innerHTML = '<p class="text-danger center">Erro ao carregar avaliações.</p>';
+    }
 }
 
 async function carregarFaltasEE() {
     const cadernetaContent = document.getElementById('ee-caderneta-content');
+    if (!cadernetaContent) return;
+
+    cadernetaContent.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar faltas e a calcular limites...</p>';
+
     try {
-        const fDiscEl = document.getElementById('filtro-caderneta-disc');
-        const fDisc = fDiscEl ? fDiscEl.value : "";
-        const faltasDb = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
-        let faltasPorDisc = {};
-        
-        faltasDb.forEach(d => {
+        // 1. Puxamos a Matriz para descobrir a carga horária real de cada módulo
+        let matrizCargaHoraria = {};
+        try {
+            if (typeof getMatriz === 'function') {
+                matrizCargaHoraria = getMatriz();
+            }
+        } catch (e) { }
+
+        const faltasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
+        let faltasPorDisciplina = {};
+
+        faltasSnap.forEach(d => {
             const f = d.data();
-            if (!f.justificada && (!fDisc || f.disciplina === fDisc)) {
-                if (!faltasPorDisc[f.disciplina]) faltasPorDisc[f.disciplina] = {};
-                if (!faltasPorDisc[f.disciplina][f.modulo]) faltasPorDisc[f.disciplina][f.modulo] = [];
-                faltasPorDisc[f.disciplina][f.modulo].push(f);
+            const discNome = (f.disciplina || '').trim();
+            const duracao = Number(f.duracaoBlocos) || Number(f.horas) || 0;
+            const moduloNum = f.modulo || "?";
+
+            if (!faltasPorDisciplina[discNome]) {
+                faltasPorDisciplina[discNome] = {
+                    totalInjustificadas: 0,
+                    totalJustificadas: 0,
+                    modulos: {}
+                };
+            }
+
+            if (!faltasPorDisciplina[discNome].modulos[moduloNum]) {
+                faltasPorDisciplina[discNome].modulos[moduloNum] = { horasTotais: 0, detalhes: [] };
+            }
+
+            faltasPorDisciplina[discNome].modulos[moduloNum].horasTotais += duracao;
+            faltasPorDisciplina[discNome].modulos[moduloNum].detalhes.push({ id: d.id, ...f, duracao });
+
+            if (f.justificada === false || !f.hasOwnProperty('justificada')) {
+                faltasPorDisciplina[discNome].totalInjustificadas += duracao;
+            } else {
+                faltasPorDisciplina[discNome].totalJustificadas += duracao;
             }
         });
 
-        if (Object.keys(faltasPorDisc).length === 0) { 
-            if(cadernetaContent) cadernetaContent.innerHTML = getEmptyState('Sem faltas injustificadas.', 'fa-face-smile'); 
-            return; 
-        }
-        
-        let html = '';
         const ordemDisciplinas = obterDisciplinasDoAno();
-        const matriz = getMatriz();
-        
+        let html = '';
+
         ordemDisciplinas.forEach(disc => {
-            if (faltasPorDisc[disc]) {
-                let discHtml = ''; 
-                let totalFaltasDisc = 0;
-                
-                for (let mod of Object.keys(faltasPorDisc[disc]).sort()) {
-                    let sumFaltasMod = 0;
-                    faltasPorDisc[disc][mod].forEach(f => sumFaltasMod += Number(f.horas||0));
-                    totalFaltasDisc += sumFaltasMod;
-                    
-                    let limiteHoras = 0;
-                    let totalHorasMod = 0;
-                    
-                    for (const comp of Object.values(matriz)) { 
-                        if (comp[disc] && comp[disc][mod]) { 
-                            totalHorasMod = comp[disc][mod];
-                            limiteHoras = Math.round(totalHorasMod * 0.1); 
-                            break; 
-                        } 
-                    }
-                    
-                    let corBarra = 'var(--success-green)'; 
-                    let txtRisco = 'Regular'; 
-                    let perc = 0;
-                    
-                    if (totalHorasMod > 0) {
-                        perc = (sumFaltasMod / totalHorasMod) * 100;
-                        if (perc > 100) perc = 100;
+            const discTrim = disc.trim();
+            const dadosFaltas = faltasPorDisciplina[discTrim] || { totalInjustificadas: 0, totalJustificadas: 0, modulos: {} };
 
-                        if (sumFaltasMod > limiteHoras) { 
-                            corBarra = 'var(--danger-red)'; 
-                            txtRisco = '⚠️ Abaixo de 90% (Reprovado)'; 
-                        }
-                        else if (sumFaltasMod === limiteHoras) { 
-                            corBarra = 'var(--warning-yellow)'; 
-                            txtRisco = 'Atenção (No limite dos 90%)'; 
-                        }
-                        else {
-                            corBarra = 'var(--success-green)';
-                            txtRisco = 'Regular (Acima de 90%)';
-                        }
-                    }
+            const totalFaltasDisc = dadosFaltas.totalInjustificadas + dadosFaltas.totalJustificadas;
 
+            let corGlobal = 'var(--text-muted)';
+            if (totalFaltasDisc > 0) {
+                if (dadosFaltas.totalInjustificadas > 0 && dadosFaltas.totalJustificadas === 0) {
+                    corGlobal = 'var(--danger-red)';
+                } else if (dadosFaltas.totalInjustificadas === 0 && dadosFaltas.totalJustificadas > 0) {
+                    corGlobal = 'var(--success-green)';
+                } else {
+                    corGlobal = 'var(--warning-yellow)';
+                }
+            }
+
+            let detalhesHtml = '';
+            const modulosChaves = Object.keys(dadosFaltas.modulos);
+
+            if (modulosChaves.length > 0) {
+                modulosChaves.sort((a, b) => parseInt(a) - parseInt(b)).forEach(mod => {
+                    const dadosMod = dadosFaltas.modulos[mod];
                     const modLabel = mod.toString().startsWith('UC') ? mod : `Módulo ${mod}`;
 
-                    discHtml += `
-                    <div style="background:rgba(0,0,0,0.2); padding:12px; border-radius:8px; border:1px solid #333; margin-bottom:10px;">
-                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                            <strong style="color:var(--text-light);">${modLabel}</strong>
-                            <span style="font-size:0.8rem; font-weight:bold; color:${corBarra};">${sumFaltasMod}h / ${limiteHoras > 0 ? limiteHoras+'h (Limite)' : '?'}</span>
-                        </div>
-                        <div class="progress-bar-bg" style="margin-top:0; margin-bottom:5px; height:6px;"><div class="progress-bar-fill" style="width: ${perc}%; background-color:${corBarra};"></div></div>
-                        <div style="text-align:right; font-size:0.75rem; color:${corBarra};">${txtRisco}</div>
-                    </div>`;
-                }
+                    // 2. A MAGIA MATEMÁTICA DOS 10%
+                    let horasTotaisDoModulo = 0;
+                    for (const comp in matrizCargaHoraria) {
+                        if (matrizCargaHoraria[comp][discTrim] && matrizCargaHoraria[comp][discTrim][mod]) {
+                            horasTotaisDoModulo = Number(matrizCargaHoraria[comp][discTrim][mod]);
+                            break;
+                        }
+                    }
 
-                html += `<div class="disciplina-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'">
-                            <span class="disciplina-title" style="color:var(--text-light);">${disc}</span>
-                            <span><span class="disciplina-media" style="color:var(--danger-red);">${totalFaltasDisc}h</span> <i class="fa-solid fa-chevron-down" style="font-size:0.8rem; color:var(--text-muted); margin-left:5px;"></i></span>
-                         </div><div class="disciplina-modules">${discHtml}</div>`;
+                    let avisoLimite = '';
+                    if (horasTotaisDoModulo > 0) {
+                        // O SEGREDO ESTÁ AQUI: Math.round() arredonda por excesso ou defeito automaticamente!
+                        const limiteFaltas = Math.round(horasTotaisDoModulo * 0.10);
+
+                        if (dadosMod.horasTotais > limiteFaltas) {
+                            avisoLimite = `<span style="color:var(--danger-red); font-size:0.75rem; margin-left:8px; background:rgba(239,68,68,0.1); padding:2px 6px; border-radius:4px;"><i class="fa-solid fa-xmark"></i> Excedeu Limite (Máx: ${limiteFaltas}h)</span>`;
+                        } else if (dadosMod.horasTotais === limiteFaltas) {
+                            avisoLimite = `<span style="color:var(--danger-red); font-size:0.75rem; margin-left:8px; background:rgba(239,68,68,0.1); padding:2px 6px; border-radius:4px;"><i class="fa-solid fa-triangle-exclamation"></i> No Limite Exato (${limiteFaltas}h)</span>`;
+                        } else if (dadosMod.horasTotais >= limiteFaltas - 3) {
+                            avisoLimite = `<span style="color:var(--warning-yellow); font-size:0.75rem; margin-left:8px; background:rgba(245,158,11,0.1); padding:2px 6px; border-radius:4px;"><i class="fa-solid fa-circle-exclamation"></i> Quase no limite (Máx: ${limiteFaltas}h)</span>`;
+                        }
+                    } else {
+                        // Fallback se não encontrar o módulo na base de dados
+                        if (dadosMod.horasTotais >= 6) {
+                            avisoLimite = `<span style="color:var(--danger-red); font-size:0.75rem; margin-left:8px; background:rgba(239,68,68,0.1); padding:2px 6px; border-radius:4px;"><i class="fa-solid fa-triangle-exclamation"></i> Limite em Risco!</span>`;
+                        }
+                    }
+
+                    detalhesHtml += `
+                    <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; border:1px solid #333; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed #444; padding-bottom:8px; margin-bottom:8px;">
+                            <strong style="color:var(--text-light); font-size:0.95rem;">${modLabel} ${avisoLimite}</strong>
+                            <span style="color:white; font-size:0.85rem; font-weight:bold;">Total: ${dadosMod.horasTotais}h</span>
+                        </div>`;
+
+                    dadosMod.detalhes.sort((a, b) => new Date(b.dataFalta || b.dataRegisto || 0) - new Date(a.dataFalta || a.dataRegisto || 0));
+
+                    dadosMod.detalhes.forEach(f => {
+                        const dataF = f.dataFalta || new Date(f.dataRegisto || f.dataInicio).toLocaleDateString('pt-PT');
+                        const isInjustificada = (f.justificada === false || !f.hasOwnProperty('justificada'));
+                        const corLinha = isInjustificada ? 'var(--danger-red)' : 'var(--success-green)';
+                        const lblLinha = isInjustificada ? 'Injustificada' : 'Justificada';
+
+                        detalhesHtml += `
+                            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:8px; border-radius:6px; border-left:3px solid ${corLinha}; margin-bottom:5px;">
+                                <div><span style="font-size:0.8rem; color:var(--text-light);"><i class="fa-regular fa-calendar"></i> ${dataF}</span><br><span style="color:${corLinha}; font-size:0.7rem;">${lblLinha}</span></div>
+                                <span style="color:var(--text-muted); font-size:0.85rem;">${f.duracao}h</span>
+                            </div>`;
+                    });
+
+                    detalhesHtml += `</div>`;
+                });
+            } else {
+                detalhesHtml = '<p class="text-muted" style="font-size:0.85rem; padding: 10px;">Sem registo de faltas nesta disciplina.</p>';
             }
+
+            const totalAmostra = totalFaltasDisc > 0 ? `${totalFaltasDisc}h` : '0h';
+
+            html += `
+            <div class="disciplina-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span class="disciplina-title" style="color:var(--text-light); font-weight:bold;">${discTrim}</span>
+                <span>
+                    <strong style="color:${corGlobal}; font-size:1.1rem; margin-right:8px;">${totalAmostra}</strong> 
+                    <i class="fa-solid fa-chevron-down" style="font-size:0.8rem; color:var(--text-muted);"></i>
+                </span>
+            </div>
+            <div class="disciplina-modules" style="display:none; margin-bottom: 15px;">${detalhesHtml}</div>
+            `;
         });
-        
-        if(cadernetaContent) cadernetaContent.innerHTML = html;
-    } catch(e) {}
+
+        cadernetaContent.innerHTML = html;
+
+    } catch (e) {
+        console.error("Erro ao carregar faltas na caderneta:", e);
+        cadernetaContent.innerHTML = '<p class="text-danger center">Erro ao carregar faltas.</p>';
+    }
 }
 
 async function carregarPrhfsEE() {
@@ -896,41 +1010,41 @@ async function carregarPrhfsEE() {
         const fDiscEl = document.getElementById('filtro-caderneta-disc');
         const fDisc = fDiscEl ? fDiscEl.value : "";
         const prhfsDb = await getDocs(collection(db, "utilizadores", educandoAtualId, "prhfs"));
-        let prhfsArr = []; 
-        prhfsDb.forEach(d => { 
-            const p = d.data(); 
-            if (p.status !== 'concluida' && (!fDisc || p.disciplina === fDisc)) prhfsArr.push(p); 
+        let prhfsArr = [];
+        prhfsDb.forEach(d => {
+            const p = d.data();
+            if (p.status !== 'concluida' && (!fDisc || p.disciplina === fDisc)) prhfsArr.push(p);
         });
-        
-        if (prhfsArr.length === 0) { 
-            if(cadernetaContent) cadernetaContent.innerHTML = getEmptyState('Nenhum PRHF ativo.', 'fa-book-medical'); 
-            return; 
+
+        if (prhfsArr.length === 0) {
+            if (cadernetaContent) cadernetaContent.innerHTML = getEmptyState('Nenhum PRHF ativo.', 'fa-book-medical');
+            return;
         }
-        
-        prhfsArr.sort((a,b) => new Date(a.prazo) - new Date(b.prazo));
+
+        prhfsArr.sort((a, b) => new Date(a.prazo) - new Date(b.prazo));
         let html = '';
         prhfsArr.forEach(p => {
-            const isUrgente = p.moduloTerminado === true || p.moduloTerminado === "true"; 
+            const isUrgente = p.moduloTerminado === true || p.moduloTerminado === "true";
             const cor = isUrgente ? 'var(--danger-red)' : 'var(--warning-yellow)';
             const txtSt = isUrgente ? 'URGENTE (Mód. Terminado)' : 'EM CURSO';
-            html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${cor};"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="color:var(--text-light);">${p.disciplina} (Mod. ${p.modulo})</strong><span style="color:${cor}; font-size:0.75rem; font-weight:bold;">${txtSt}</span></div><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">${p.descricao}</p><div style="font-size:0.8rem; color:var(--text-light);">Data Limite: <strong style="color:${cor};">${p.prazo.split('-').reverse().join('/')}</strong> | Presenciais: <strong style="color:var(--text-light);">${p.horasPresenciais||0}h</strong></div></div>`;
+            html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${cor};"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="color:var(--text-light);">${p.disciplina} (Mod. ${p.modulo})</strong><span style="color:${cor}; font-size:0.75rem; font-weight:bold;">${txtSt}</span></div><p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">${p.descricao}</p><div style="font-size:0.8rem; color:var(--text-light);">Data Limite: <strong style="color:${cor};">${p.prazo.split('-').reverse().join('/')}</strong> | Presenciais: <strong style="color:var(--text-light);">${p.horasPresenciais || 0}h</strong></div></div>`;
         });
-        if(cadernetaContent) cadernetaContent.innerHTML = html;
-    } catch(e) {}
+        if (cadernetaContent) cadernetaContent.innerHTML = html;
+    } catch (e) { }
 }
 
 async function carregarReunioesEE(reuniaoSelecionada = 'momento_1') {
     const cadernetaContent = document.getElementById('ee-caderneta-content');
-    
+
     // Agora apontamos para os IDs reais que os professores gravam na base de dados (momento_1, momento_2, etc)
     const reunioesMenu = [
-        {id: 'momento_1', label: '1ª Intercalar'}, 
-        {id: 'momento_2', label: '1ª Avaliação'},
-        {id: 'momento_3', label: '2ª Intercalar'}, 
-        {id: 'momento_4', label: '2ª Avaliação'},
-        {id: 'momento_5', label: '3ª Avaliação'}
+        { id: 'momento_1', label: '1ª Intercalar' },
+        { id: 'momento_2', label: '1ª Avaliação' },
+        { id: 'momento_3', label: '2ª Intercalar' },
+        { id: 'momento_4', label: '2ª Avaliação' },
+        { id: 'momento_5', label: '3ª Avaliação' }
     ];
-    
+
     let html = '<div style="display:flex; overflow-x:auto; gap:10px; margin-bottom:20px; padding-bottom:10px;">';
     reunioesMenu.forEach(r => {
         const bg = r.id === reuniaoSelecionada ? 'var(--primary-green)' : 'var(--bg-dark)';
@@ -938,22 +1052,22 @@ async function carregarReunioesEE(reuniaoSelecionada = 'momento_1') {
         html += `<button class="btn-select-reuniao" data-id="${r.id}" style="background:${bg}; color:${color}; border:1px solid #333; padding:8px 15px; border-radius:20px; cursor:pointer; font-weight:bold; white-space:nowrap; transition:0.2s; flex-shrink:0;">${r.label}</button>`;
     });
     html += '</div><div id="reuniao-content-area"><p class="text-muted center">A carregar dados...</p></div>';
-    
-    if(cadernetaContent) cadernetaContent.innerHTML = html;
-    
-    document.querySelectorAll('.btn-select-reuniao').forEach(btn => { 
-        btn.addEventListener('click', (e) => { 
-            carregarReunioesEE(e.currentTarget.getAttribute('data-id')); 
-        }); 
+
+    if (cadernetaContent) cadernetaContent.innerHTML = html;
+
+    document.querySelectorAll('.btn-select-reuniao').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            carregarReunioesEE(e.currentTarget.getAttribute('data-id'));
+        });
     });
 
     try {
         const docSnap = await getDoc(doc(db, "utilizadores", educandoAtualId, "reunioes", reuniaoSelecionada));
         let dadosReuniao = docSnap.exists() ? docSnap.data() : {};
-        
+
         const ordemDisciplinas = obterDisciplinasDoAno();
         let contentHtml = '<div style="display:flex; flex-direction:column; gap:10px;">';
-        
+
         if (ordemDisciplinas.length === 0) {
             contentHtml += '<p class="text-muted center">Ainda não existem disciplinas associadas à turma.</p>';
         } else {
@@ -969,20 +1083,20 @@ async function carregarReunioesEE(reuniaoSelecionada = 'momento_1') {
                                 </div>`;
             });
         }
-        
+
         // Renderiza as observações globais do Diretor de Turma (sintese_global)
         const global = dadosReuniao.sintese_global || '<span style="color:var(--text-muted);">Sem observações globais registadas (SN).</span>';
-        
+
         contentHtml += `<div class="card" style="margin-top:15px; border:1px solid var(--warning-yellow); background:rgba(245,204,0,0.05); padding:15px;">
                             <h3 style="color:var(--warning-yellow); margin-bottom:10px; font-size:1.1rem;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3>
                             <p style="color:var(--text-light); font-size:0.95rem; line-height:1.6; margin:0; white-space: pre-wrap;">${global}</p>
                         </div></div>`;
-        
+
         const rArea = document.getElementById('reuniao-content-area');
-        if(rArea) rArea.innerHTML = contentHtml;
-    } catch(e) { 
+        if (rArea) rArea.innerHTML = contentHtml;
+    } catch (e) {
         const rArea = document.getElementById('reuniao-content-area');
-        if(rArea) rArea.innerHTML = '<p class="text-danger center">Erro ao carregar a reunião.</p>'; 
+        if (rArea) rArea.innerHTML = '<p class="text-danger center">Erro ao carregar a reunião.</p>';
     }
 }
 
@@ -992,7 +1106,7 @@ bindChange('filtro-agenda-trabalhos', carregarAgendaEE);
 bindChange('filtro-agenda-outros', carregarAgendaEE);
 
 async function carregarAgendaEE() {
-    const subContainer = document.getElementById('ee-agenda-content'); 
+    const subContainer = document.getElementById('ee-agenda-content');
     if (!subContainer) return;
     subContainer.innerHTML = '<p class="text-muted center">A sincronizar agenda...</p>';
     if (!turmaAtual) return;
@@ -1000,92 +1114,92 @@ async function carregarAgendaEE() {
     const elT = document.getElementById('filtro-agenda-testes');
     const elTr = document.getElementById('filtro-agenda-trabalhos');
     const elO = document.getElementById('filtro-agenda-outros');
-    const mostraT = elT ? elT.checked : true; 
-    const mostraTr = elTr ? elTr.checked : true; 
+    const mostraT = elT ? elT.checked : true;
+    const mostraTr = elTr ? elTr.checked : true;
     const mostraO = elO ? elO.checked : true;
-    
+
     try {
         const evDb = await getDocs(collection(db, "turmas", turmaAtual, "eventos"));
-        if (evDb.empty) { 
-            subContainer.innerHTML = getEmptyState('Sem eventos agendados.', 'fa-calendar-xmark'); 
-            return; 
+        if (evDb.empty) {
+            subContainer.innerHTML = getEmptyState('Sem eventos agendados.', 'fa-calendar-xmark');
+            return;
         }
-        
+
         let evs = [];
-        evDb.forEach(d => { 
-            const e = d.data(); 
-            let bgC = '#8b5cf6'; 
+        evDb.forEach(d => {
+            const e = d.data();
+            let bgC = '#8b5cf6';
             let txtT = 'Evento';
-            
-            if (e.tipo === 'teste' || e.tipo === 'avaliacao') { 
-                if (mostraT) { bgC = '#f59e0b'; txtT = 'Avaliação'; evs.push({...e, cor: bgC, txt: txtT}); } 
-            } 
-            else if (e.tipo === 'trabalho' || e.tipo === 'entrega') { 
-                if (mostraTr) { bgC = '#00d2ff'; txtT = 'Entrega'; evs.push({...e, cor: bgC, txt: txtT}); } 
-            } 
-            else { 
-                if (mostraO) evs.push({...e, cor: bgC, txt: txtT}); 
+
+            if (e.tipo === 'teste' || e.tipo === 'avaliacao') {
+                if (mostraT) { bgC = '#f59e0b'; txtT = 'Avaliação'; evs.push({ ...e, cor: bgC, txt: txtT }); }
+            }
+            else if (e.tipo === 'trabalho' || e.tipo === 'entrega') {
+                if (mostraTr) { bgC = '#00d2ff'; txtT = 'Entrega'; evs.push({ ...e, cor: bgC, txt: txtT }); }
+            }
+            else {
+                if (mostraO) evs.push({ ...e, cor: bgC, txt: txtT });
             }
         });
-        
-        if (evs.length === 0) { 
-            subContainer.innerHTML = getEmptyState('Sem eventos com os filtros atuais.', 'fa-filter'); 
-            return; 
+
+        if (evs.length === 0) {
+            subContainer.innerHTML = getEmptyState('Sem eventos com os filtros atuais.', 'fa-filter');
+            return;
         }
-        
+
         const hoje = new Date().toISOString().split('T')[0];
-        const futuros = evs.filter(e => (e.data || '') >= hoje).sort((a,b) => (a.data || '').localeCompare(b.data || ''));
-        const passados = evs.filter(e => (e.data || '') < hoje).sort((a,b) => (b.data || '').localeCompare(a.data || ''));
-        const mesArr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const futuros = evs.filter(e => (e.data || '') >= hoje).sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+        const passados = evs.filter(e => (e.data || '') < hoje).sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+        const mesArr = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
         let html = '';
 
-        const renderEv = (ev) => { 
+        const renderEv = (ev) => {
             if (!ev.data) return '';
-            const dp = ev.data.split('-'); 
-            const mes = mesArr[parseInt(dp[1])-1]; 
-            return `<div class="calendar-event-card" style="border-left-color:${ev.cor}; margin-bottom:10px;"><div class="calendar-date-box"><span class="day">${dp[2]}</span><span class="month" style="color:${ev.cor};">${mes}</span></div><div class="calendar-info"><h4 style="margin:0; color:var(--text-light);">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt||'evento').toUpperCase()}</span></div></div>`; 
+            const dp = ev.data.split('-');
+            const mes = mesArr[parseInt(dp[1]) - 1];
+            return `<div class="calendar-event-card" style="border-left-color:${ev.cor}; margin-bottom:10px;"><div class="calendar-date-box"><span class="day">${dp[2]}</span><span class="month" style="color:${ev.cor};">${mes}</span></div><div class="calendar-info"><h4 style="margin:0; color:var(--text-light);">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt || 'evento').toUpperCase()}</span></div></div>`;
         };
 
-        if (futuros.length > 0) { 
-            futuros.forEach(e => html += renderEv(e)); 
-        } else { 
-            html += '<p class="text-muted center">Sem eventos futuros.</p>'; 
+        if (futuros.length > 0) {
+            futuros.forEach(e => html += renderEv(e));
+        } else {
+            html += '<p class="text-muted center">Sem eventos futuros.</p>';
         }
-        
-        if (passados.length > 0) { 
-            html += '<div class="calendar-divider" style="margin-top:20px;"><span>Passados</span></div>'; 
-            passados.forEach(e => html += renderEv(e)); 
+
+        if (passados.length > 0) {
+            html += '<div class="calendar-divider" style="margin-top:20px;"><span>Passados</span></div>';
+            passados.forEach(e => html += renderEv(e));
         }
-        
+
         subContainer.innerHTML = html;
-    } catch(e) {}
+    } catch (e) { }
 }
 
-let eeHorarioModo = 'dia'; 
-let eeHorarioDiaOffset = 0; 
+let eeHorarioModo = 'dia';
+let eeHorarioDiaOffset = 0;
 let eeHorarioSemanaOffset = 0;
 
-bindClick('btn-horario-dia', (e) => { 
-    eeHorarioModo = 'dia'; 
+bindClick('btn-horario-dia', (e) => {
+    eeHorarioModo = 'dia';
     safeAddClass('btn-horario-dia', 'active');
     safeRemoveClass('btn-horario-grelha', 'active');
-    carregarHorarioEE(); 
+    carregarHorarioEE();
 });
-bindClick('btn-horario-grelha', (e) => { 
-    eeHorarioModo = 'grelha'; 
+bindClick('btn-horario-grelha', (e) => {
+    eeHorarioModo = 'grelha';
     safeAddClass('btn-horario-grelha', 'active');
     safeRemoveClass('btn-horario-dia', 'active');
-    carregarHorarioEE(); 
+    carregarHorarioEE();
 });
-bindClick('btn-ee-prev-horario', () => { 
-    if (eeHorarioModo === 'dia') eeHorarioDiaOffset--; 
-    else eeHorarioSemanaOffset--; 
-    carregarHorarioEE(); 
+bindClick('btn-ee-prev-horario', () => {
+    if (eeHorarioModo === 'dia') eeHorarioDiaOffset--;
+    else eeHorarioSemanaOffset--;
+    carregarHorarioEE();
 });
-bindClick('btn-ee-next-horario', () => { 
-    if (eeHorarioModo === 'dia') eeHorarioDiaOffset++; 
-    else eeHorarioSemanaOffset++; 
-    carregarHorarioEE(); 
+bindClick('btn-ee-next-horario', () => {
+    if (eeHorarioModo === 'dia') eeHorarioDiaOffset++;
+    else eeHorarioSemanaOffset++;
+    carregarHorarioEE();
 });
 
 const getCorEspecial = (dsc) => {
@@ -1095,146 +1209,152 @@ const getCorEspecial = (dsc) => {
     if (d.includes('vis')) return { c: '#00d2ff', bg: 'rgba(0, 210, 255, 0.1)' };
     if (d.includes('prhf')) return { c: 'var(--danger-red)', bg: 'rgba(239, 68, 68, 0.1)' };
     if (d.includes('pap') || d.includes('fct')) return { c: '#ff9900', bg: 'rgba(255, 153, 0, 0.1)' };
-    if (['reunião','reuniao','livre','estudo'].some(k => d.includes(k))) return { c: 'var(--accent-purple)', bg: 'rgba(139, 92, 246, 0.1)' };
+    if (['reunião', 'reuniao', 'livre', 'estudo'].some(k => d.includes(k))) return { c: 'var(--accent-purple)', bg: 'rgba(139, 92, 246, 0.1)' };
     return { c: 'var(--primary-green)', bg: 'rgba(16, 185, 129, 0.05)' };
 };
 
 async function carregarHorarioEE() {
-    const subContainer = document.getElementById('ee-horario-content'); 
+    const subContainer = document.getElementById('ee-horario-content');
     if (!subContainer) return;
     subContainer.innerHTML = '<p class="text-muted center">A gerar horário...</p>';
     if (!turmaAtual) return;
 
     try {
         const docSnap = await getDoc(doc(db, "turmas", turmaAtual));
-        let hb = {}; 
+        let hb = {};
         if (docSnap.exists() && docSnap.data().horario) hb = docSnap.data().horario;
-        
+
         let profsCache = {};
         const pSnap = await getDocs(query(collection(db, "utilizadores"), where("papel", "==", "professor"), where("turmas", "array-contains", turmaAtual)));
-        pSnap.forEach(d => { 
-            const profData = d.data(); 
-            if (profData.disciplinas) { 
-                profData.disciplinas.forEach(dsc => { 
-                    profsCache[dsc] = profData.nome ? profData.nome.split(' ')[0] : 'Desconhecido'; 
-                }); 
-            } 
+        pSnap.forEach(d => {
+            const profData = d.data();
+            if (profData.disciplinas) {
+                profData.disciplinas.forEach(dsc => {
+                    if (profData.nome) {
+                        // Remove "Prof.", "Profª", etc., e agarra no primeiro nome real
+                        const nomeLimpo = profData.nome.replace(/^(Prof\.?|Profª\.?)\s*/i, '');
+                        profsCache[dsc] = nomeLimpo ? nomeLimpo.split(' ')[0] : profData.nome;
+                    } else {
+                        profsCache[dsc] = 'Desconhecido';
+                    }
+                });
+            }
         });
 
-        const blocosKeys = ['1', '2', '3', '4', '1300', '5', '6', '7']; 
-        const blocosTempo = { '1': '08:30', '2': '09:35', '3': '10:50', '4': '11:55', '1300': '13:00', '5': '14:05', '6': '15:15', '7': '16:20' }; 
-        const diasMap = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']; 
-        const fDt = (dt) => `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;
+        const blocosKeys = ['1', '2', '3', '4', '1300', '5', '6', '7'];
+        const blocosTempo = { '1': '08:30', '2': '09:35', '3': '10:50', '4': '11:55', '1300': '13:00', '5': '14:05', '6': '15:15', '7': '16:20' };
+        const diasMap = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+        const fDt = (dt) => `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}`;
 
         if (eeHorarioModo === 'dia') {
-            let targetDate = new Date(); 
+            let targetDate = new Date();
             targetDate.setDate(targetDate.getDate() + eeHorarioDiaOffset);
             const hd = document.getElementById('ee-horario-display');
-            if(hd) hd.innerText = `${diasMap[targetDate.getDay()]}, ${fDt(targetDate)}`;
+            if (hd) hd.innerText = `${diasMap[targetDate.getDay()]}, ${fDt(targetDate)}`;
 
-            let html = ''; 
+            let html = '';
             let temAulasDia = false;
-            const dataStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth()+1).padStart(2,'0')}-${String(targetDate.getDate()).padStart(2,'0')}`;
+            const dataStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
 
             blocosKeys.forEach(bId => {
                 const disc = hb[`${dataStr}_${bId}`];
                 if (disc) {
-                    const sty = getCorEspecial(disc); 
-                    const profNome = profsCache[disc] ? `Prof. ${profsCache[disc]}` : 'Prof. A Atribuir';
+                    const sty = getCorEspecial(disc);
+                    const profNome = profsCache[disc] ? (profsCache[disc].includes('Prof') ? profsCache[disc] : `Prof. ${profsCache[disc]}`) : 'Prof. A Atribuir';
                     html += `<div class="horario-list-item" style="border-left-color:${sty.c}; background-color:${sty.bg};"><div class="horario-time-col">${blocosTempo[bId]}</div><div class="horario-disc-col"><div class="horario-disc-name">${disc}</div><div class="horario-prof">${profNome}</div></div></div>`;
                     temAulasDia = true;
                 }
             });
             subContainer.innerHTML = temAulasDia ? html : getEmptyState('Sem aulas agendadas para hoje.', 'fa-mug-hot');
         } else {
-            let dtT = new Date(); 
-            dtT.setDate(dtT.getDate() + (eeHorarioSemanaOffset * 7)); 
+            let dtT = new Date();
+            dtT.setDate(dtT.getDate() + (eeHorarioSemanaOffset * 7));
             dtT.setDate(dtT.getDate() - (dtT.getDay() === 0 ? 6 : dtT.getDay() - 1));
-            let dEnd = new Date(dtT); 
+            let dEnd = new Date(dtT);
             dEnd.setDate(dEnd.getDate() + 4);
             const hd = document.getElementById('ee-horario-display');
-            if(hd) hd.innerText = `${fDt(dtT)} a ${fDt(dEnd)}`;
+            if (hd) hd.innerText = `${fDt(dtT)} a ${fDt(dEnd)}`;
 
-            let html = '<div class="horario-grid"><div class="horario-header"></div>'; 
+            let html = '<div class="horario-grid"><div class="horario-header"></div>';
             let dtIter = new Date(dtT);
-            ['SEG','TER','QUA','QUI','SEX'].forEach(d => { 
-                html += `<div class="horario-header">${d}<span>${fDt(dtIter)}</span></div>`; 
-                dtIter.setDate(dtIter.getDate()+1); 
+            ['SEG', 'TER', 'QUA', 'QUI', 'SEX'].forEach(d => {
+                html += `<div class="horario-header">${d}<span>${fDt(dtIter)}</span></div>`;
+                dtIter.setDate(dtIter.getDate() + 1);
             });
-            
+
             blocosKeys.forEach(bId => {
-                html += `<div class="horario-time">${blocosTempo[bId]}</div>`; 
+                html += `<div class="horario-time">${blocosTempo[bId]}</div>`;
                 dtIter = new Date(dtT);
-                for (let i=0; i<5; i++) {
-                    const dStr = `${dtIter.getFullYear()}-${String(dtIter.getMonth()+1).padStart(2,'0')}-${String(dtIter.getDate()).padStart(2,'0')}`; 
+                for (let i = 0; i < 5; i++) {
+                    const dStr = `${dtIter.getFullYear()}-${String(dtIter.getMonth() + 1).padStart(2, '0')}-${String(dtIter.getDate()).padStart(2, '0')}`;
                     const disc = hb[`${dStr}_${bId}`];
-                    if (disc) { 
-                        const sty = getCorEspecial(disc); 
-                        html += `<div class="horario-slot filled" style="border-color:${sty.c}; background-color:${sty.bg};"><strong>${disc}</strong></div>`; 
-                    } 
+                    if (disc) {
+                        const sty = getCorEspecial(disc);
+                        html += `<div class="horario-slot filled" style="border-color:${sty.c}; background-color:${sty.bg};"><strong>${disc}</strong></div>`;
+                    }
                     else {
                         html += `<div class="horario-slot"></div>`;
                     }
-                    dtIter.setDate(dtIter.getDate()+1);
+                    dtIter.setDate(dtIter.getDate() + 1);
                 }
             });
             subContainer.innerHTML = html + '</div>';
         }
-    } catch(e) {}
+    } catch (e) { }
 }
 
 // 6. CHAT E JUSTIFICAÇÕES 
 let chatUnsubscribeEE = null;
 
 function iniciarChatEE() {
-    const chatContainer = document.getElementById('ee-chat-messages-container'); 
-    if (!educandoAtualId || !chatContainer) return; 
-    
+    const chatContainer = document.getElementById('ee-chat-messages-container');
+    if (!educandoAtualId || !chatContainer) return;
+
     if (chatUnsubscribeEE) chatUnsubscribeEE();
-    
+
     chatUnsubscribeEE = onSnapshot(query(collection(db, "utilizadores", educandoAtualId, "chat_dt"), orderBy("timestamp")), (snapshot) => {
         let html = '';
         snapshot.forEach(doc => {
-            const msg = doc.data(); 
-            const isMe = msg.remetente === myUserName || msg.autor === 'ee'; 
-            const classe = isMe ? 'admin' : 'student'; 
+            const msg = doc.data();
+            const isMe = msg.remetente === myUserName || msg.autor === 'ee';
+            const classe = isMe ? 'admin' : 'student';
             const autorLabel = isMe ? 'Tu' : (msg.autor === 'dt' ? 'Diretor de Turma' : msg.remetente);
-            html += `<div class="chat-bubble ${classe}"><strong style="color:var(--text-light);">${autorLabel}</strong><br>${msg.texto}<span class="chat-meta">${new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span></div>`;
+            html += `<div class="chat-bubble ${classe}"><strong style="color:var(--text-light);">${autorLabel}</strong><br>${msg.texto}<span class="chat-meta">${new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>`;
         });
-        
+
         if (html === '') html = getEmptyState('Inicie aqui a comunicação.', 'fa-comments');
-        chatContainer.innerHTML = html; 
+        chatContainer.innerHTML = html;
         chatContainer.scrollTop = chatContainer.scrollHeight;
     });
 }
 
-bindClick('btn-ee-send-msg', async () => { 
-    const inp = document.getElementById('ee-input-chat-msg'); 
+bindClick('btn-ee-send-msg', async () => {
+    const inp = document.getElementById('ee-input-chat-msg');
     if (!inp) return;
-    const txt = inp.value.trim(); 
-    if (!txt || !educandoAtualId) return; 
-    
-    try { 
-        await addDoc(collection(db, "utilizadores", educandoAtualId, "chat_dt"), { 
-            remetente: myUserName, 
-            autor: 'ee', 
-            texto: txt, 
-            timestamp: Date.now() 
-        }); 
-        inp.value = ''; 
-    } catch(e) {} 
+    const txt = inp.value.trim();
+    if (!txt || !educandoAtualId) return;
+
+    try {
+        await addDoc(collection(db, "utilizadores", educandoAtualId, "chat_dt"), {
+            remetente: myUserName,
+            autor: 'ee',
+            texto: txt,
+            timestamp: Date.now()
+        });
+        inp.value = '';
+    } catch (e) { }
 });
 
 let atestadoBase64 = "";
 bindChange('ee-upload-atestado', (e) => {
-    const file = e.target.files[0]; 
-    if (!file) return; 
+    const file = e.target.files[0];
+    if (!file) return;
 
     const fn = document.getElementById('ee-atestado-file-name');
-    if(fn) fn.innerText = "A processar imagem..."; 
+    if (fn) fn.innerText = "A processar imagem...";
     const btnEnv = document.getElementById('btn-ee-enviar-atestado');
-    if(btnEnv) btnEnv.style.display = 'none';
-    
+    if (btnEnv) btnEnv.style.display = 'none';
+
     // A. SE FOR IMAGEM: Comprimir via URL
     if (file.type.startsWith('image/')) {
         const tempUrl = URL.createObjectURL(file);
@@ -1244,51 +1364,51 @@ bindChange('ee-upload-atestado', (e) => {
             const MAX_WIDTH = 800; // Define a largura máxima de 800px
             let width = img.width;
             let height = img.height;
-            
+
             if (width > MAX_WIDTH) {
                 height *= MAX_WIDTH / width;
                 width = MAX_WIDTH;
             }
-            
+
             canvas.width = width;
             canvas.height = height;
-            
+
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            
+
             // Qualidade a 60% para ficheiros ridiculamente pequenos (ex: 80KB)
             atestadoBase64 = canvas.toDataURL('image/jpeg', 0.6);
-            
+
             URL.revokeObjectURL(tempUrl); // Limpa a memória
-            
-            if(fn) fn.innerText = "Imagem pronta (" + file.name + ")"; 
-            if(btnEnv) btnEnv.style.display = 'block';
+
+            if (fn) fn.innerText = "Imagem pronta (" + file.name + ")";
+            if (btnEnv) btnEnv.style.display = 'block';
         };
         img.onerror = () => {
-            if(fn) fn.innerText = "Erro ao processar imagem.";
+            if (fn) fn.innerText = "Erro ao processar imagem.";
         };
         img.src = tempUrl;
-    } 
+    }
     // B. SE FOR PDF: Usar o FileReader normal
     else {
-        if (file.size > 700000) { 
+        if (file.size > 700000) {
             alert("Este documento PDF é demasiado pesado (Max: 700KB). Por favor, tira uma fotografia do documento ou comprime o PDF.");
-            if(fn) fn.innerText = "Ficheiro recusado pelo tamanho.";
+            if (fn) fn.innerText = "Ficheiro recusado pelo tamanho.";
             return;
         }
-        const reader = new FileReader(); 
-        reader.onload = (ev) => { 
+        const reader = new FileReader();
+        reader.onload = (ev) => {
             atestadoBase64 = ev.target.result;
-            if(fn) fn.innerText = "PDF pronto (" + file.name + ")"; 
-            if(btnEnv) btnEnv.style.display = 'block';
+            if (fn) fn.innerText = "PDF pronto (" + file.name + ")";
+            if (btnEnv) btnEnv.style.display = 'block';
         };
         reader.readAsDataURL(file);
     }
 });
 
 bindClick('btn-ee-enviar-atestado', async (e) => {
-    if (!atestadoBase64 || !educandoAtualId) return; 
-    
+    if (!atestadoBase64 || !educandoAtualId) return;
+
     // NOVO: Apanhar apenas as faltas selecionadas pelo E.E.
     const checks = document.querySelectorAll('.check-falta-justificar:checked');
     if (checks.length === 0) {
@@ -1296,74 +1416,74 @@ bindClick('btn-ee-enviar-atestado', async (e) => {
         return;
     }
     const faltasSelecionadas = Array.from(checks).map(c => c.value);
-    
-    const obsEl = document.getElementById('ee-atestado-obs');
+
+    const obsEl = document.getElementById('ee-atestado-obs-novo');
     const obs = obsEl ? obsEl.value.trim() : "";
-    const btnRef = e.currentTarget; 
-    btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A enviar...'; 
+    const btnRef = e.currentTarget;
+    btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A enviar...';
     btnRef.disabled = true;
-    
+
     try {
-        await addDoc(collection(db, "utilizadores", educandoAtualId, "atestados"), { 
-            ficheiroBase64: atestadoBase64, 
-            observacoes: obs, 
-            status: "pendente", 
+        await addDoc(collection(db, "utilizadores", educandoAtualId, "atestados"), {
+            ficheiroBase64: atestadoBase64,
+            observacoes: obs,
+            status: "pendente",
             dataEnvio: new Date().toISOString(),
             faltasAssociadas: faltasSelecionadas // A MAGIA DE GRAVAR OS IDs VAI AQUI!
         });
-        
+
         btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Enviado com sucesso!';
-        
-        setTimeout(() => { 
-            const fn = document.getElementById('ee-atestado-file-name'); if(fn) fn.innerText = ""; 
-            if(obsEl) obsEl.value = ""; 
-            atestadoBase64 = ""; 
-            btnRef.style.display = 'none'; 
-            btnRef.disabled = false; 
-            btnRef.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Atestado'; 
-            carregarAtestadosEE(); 
+
+        setTimeout(() => {
+            const fn = document.getElementById('ee-atestado-file-name'); if (fn) fn.innerText = "";
+            if (obsEl) obsEl.value = "";
+            atestadoBase64 = "";
+            btnRef.style.display = 'none';
+            btnRef.disabled = false;
+            btnRef.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Atestado';
+            carregarAtestadosEE();
         }, 2000);
-    } catch(err) { 
-        btnRef.innerHTML = "Erro ao enviar!"; 
-        setTimeout(() => { btnRef.disabled = false; btnRef.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Atestado'; }, 2000); 
+    } catch (err) {
+        btnRef.innerHTML = "Erro ao enviar!";
+        setTimeout(() => { btnRef.disabled = false; btnRef.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Atestado'; }, 2000);
     }
 });
 
 async function carregarAtestadosEE() {
-    const container = document.getElementById('ee-lista-atestados-container'); 
+    const container = document.getElementById('ee-lista-atestados-container');
     if (!container) return;
     container.innerHTML = '<p class="text-muted center">A procurar histórico...</p>';
     if (!educandoAtualId) return;
-    
+
     try {
         const res = await getDocs(query(collection(db, "utilizadores", educandoAtualId, "atestados")));
-        if (res.empty) { 
-            container.innerHTML = getEmptyState('Nenhum comprovativo enviado.', 'fa-file-invoice'); 
+        if (res.empty) {
+            container.innerHTML = getEmptyState('Nenhum comprovativo enviado.', 'fa-file-invoice');
             carregarFaltasParaSelecao(); // <-- TAMBÉM AQUI (caso não haja histórico, carrega as faltas à mesma)
-            return; 
+            return;
         }
-        
-        let arr = []; 
-        res.forEach(d => arr.push(d.data())); 
-        arr.sort((a,b) => (b.dataEnvio || '').localeCompare(a.dataEnvio || '')); 
-        
+
+        let arr = [];
+        res.forEach(d => arr.push(d.data()));
+        arr.sort((a, b) => (b.dataEnvio || '').localeCompare(a.dataEnvio || ''));
+
         let html = '';
         arr.forEach(a => {
-            let corStatus = 'var(--warning-yellow)'; 
-            let txtStatus = 'Em análise'; 
+            let corStatus = 'var(--warning-yellow)';
+            let txtStatus = 'Em análise';
             let iconStatus = '<i class="fa-regular fa-clock"></i>';
-            
-            if (a.status === 'aprovado' || a.status === 'aceite') { 
-                corStatus = 'var(--success-green)'; 
-                txtStatus = 'Aceite'; 
-                iconStatus = '<i class="fa-solid fa-check-circle"></i>'; 
+
+            if (a.status === 'aprovado' || a.status === 'aceite') {
+                corStatus = 'var(--success-green)';
+                txtStatus = 'Aceite';
+                iconStatus = '<i class="fa-solid fa-check-circle"></i>';
             }
-            if (a.status === 'rejeitado' || a.status === 'recusada') { 
-                corStatus = 'var(--danger-red)'; 
-                txtStatus = 'Recusada'; 
-                iconStatus = '<i class="fa-solid fa-xmark-circle"></i>'; 
+            if (a.status === 'rejeitado' || a.status === 'recusada') {
+                corStatus = 'var(--danger-red)';
+                txtStatus = 'Recusada';
+                iconStatus = '<i class="fa-solid fa-xmark-circle"></i>';
             }
-            
+
             html += `<div class="card" style="margin-bottom:10px; border-left: 4px solid ${corStatus}; display:flex; justify-content:space-between; align-items:center;">
                         <div>
                             <strong style="color:var(--text-light);">Enviado a ${new Date(a.dataEnvio).toLocaleDateString('pt-PT')}</strong><br>
@@ -1374,9 +1494,9 @@ async function carregarAtestadosEE() {
                         </div>
                      </div>`;
         });
-        
+
         container.innerHTML = html;
-    } catch(e) {}
+    } catch (e) { }
 
     // ==========================================
     // A FRASE VEM PARA AQUI! 
@@ -1389,45 +1509,60 @@ async function carregarAtestadosEE() {
 // =========================================================================
 async function carregarFaltasParaSelecao() {
     let container = document.getElementById('ee-selecao-faltas-container');
-    
-    // Se o contentor ainda não existir no HTML, nós injetamo-lo automaticamente antes da zona de upload
+
+    // O SEGREDO: Como apagámos a caixa de texto velha, agora ancoramos no Botão de Enviar!
     if (!container) {
-        const obsInput = document.getElementById('ee-atestado-obs');
-        if (obsInput) {
+        const btnEnviar = document.getElementById('btn-ee-enviar-atestado');
+        if (btnEnviar) {
             container = document.createElement('div');
             container.id = 'ee-selecao-faltas-container';
             container.style.marginBottom = '15px';
-            obsInput.parentNode.insertBefore(container, obsInput);
+            btnEnviar.parentNode.insertBefore(container, btnEnviar);
         }
     }
-    if(!container) return;
+
+    if (!container) return; // Se não encontrar o botão, sai em segurança.
 
     container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar faltas pendentes...</p>';
-    
+
     try {
-        const qFaltas = query(collection(db, "utilizadores", educandoAtualId, "faltas"), where("justificada", "==", false));
+        const qFaltas = query(collection(db, "utilizadores", educandoAtualId, "faltas"));
         const snap = await getDocs(qFaltas);
-        
-        if (snap.empty) {
+
+        let faltasPendentes = [];
+
+        snap.forEach(d => {
+            const f = d.data();
+            if (f.justificada === false || !f.hasOwnProperty("justificada")) {
+                faltasPendentes.push({ id: d.id, ...f });
+            }
+        });
+
+        if (faltasPendentes.length === 0) {
             container.innerHTML = '<div style="background:rgba(16, 185, 129, 0.1); border:1px solid var(--success-green); padding:10px; border-radius:6px; text-align:center;"><p style="color:var(--success-green); font-size:0.85rem; margin:0;"><i class="fa-solid fa-check"></i> Sem faltas pendentes para justificar.</p></div>';
             return;
         }
-        
+
         let html = '<label style="font-size:0.85rem; color:white; font-weight:bold; display:block; margin-bottom:8px;">1. Seleciona a(s) falta(s) a justificar:</label><div style="background:rgba(0,0,0,0.2); border:1px solid #333; border-radius:8px; padding:10px; max-height:180px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">';
-        
-        snap.forEach(d => {
-            const f = d.data();
-            const dataF = f.dataFalta || new Date(f.dataRegisto).toLocaleDateString('pt-PT');
+
+        faltasPendentes.forEach(f => {
+            const dataF = f.dataFalta || new Date(f.dataRegisto || f.dataInicio || Date.now()).toLocaleDateString('pt-PT');
             html += `
             <label style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; cursor:pointer; border:1px solid transparent; transition:0.2s;" onchange="this.style.borderColor = this.querySelector('input').checked ? 'var(--primary-green)' : 'transparent';">
-                <span style="color:white; font-size:0.85rem;"><strong>${f.disciplina}</strong> (${f.duracaoBlocos||f.horas||2} tempos) <br><span style="color:var(--text-muted); font-size:0.75rem;">Ocorrida a: ${dataF}</span></span>
-                <input type="checkbox" class="check-falta-justificar" value="${d.id}" style="width:20px; height:20px; accent-color:var(--primary-green);">
+                <span style="color:white; font-size:0.85rem;"><strong>${f.disciplina}</strong> (${f.duracaoBlocos || f.horas || 2} tempos) <br><span style="color:var(--text-muted); font-size:0.75rem;">Ocorrida a: ${dataF}</span></span>
+                <input type="checkbox" class="check-falta-justificar" value="${f.id}" style="width:20px; height:20px; accent-color:var(--primary-green);">
             </label>
             `;
         });
         html += '</div>';
+
+        html += `
+        <label style="font-size:0.85rem; color:white; font-weight:bold; display:block; margin-top:15px; margin-bottom:8px;">2. Observações (Opcional):</label>
+        <textarea id="ee-atestado-obs-novo" placeholder="Escreva aqui se tiver alguma nota para o Diretor de Turma..." style="width: 100%; min-height: 80px; background: rgba(0,0,0,0.2); border: 1px solid #333; border-radius: 8px; padding: 12px; color: white; font-family: inherit; font-size: 0.9rem; resize: vertical; margin-bottom: 15px; box-sizing: border-box;"></textarea>
+        `;
+
         container.innerHTML = html;
-    } catch(e) {
+    } catch (e) {
         container.innerHTML = '<p class="text-danger">Erro ao carregar faltas.</p>';
     }
 }

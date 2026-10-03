@@ -28,6 +28,10 @@ function getEmptyState(mensagem, icone = "fa-folder-open") {
 }
 
 export function setupCaderneta(dados) {
+    // CORREÇÃO CRÍTICA: Forçar a variável do filtro a começar como 'all' (Tudo) 
+    // para que a Linha Temporal não esconda os eventos no primeiro load!
+    window.timelineFilterCat = 'all';
+
     document.getElementById('tab-aluno-timeline')?.addEventListener('click', (e) => { ativarTab(e); document.getElementById('timeline-filtros').style.display = 'flex'; carregarTimelineAluno(); });
     document.getElementById('tab-aluno-notas')?.addEventListener('click', (e) => { ativarTab(e); document.getElementById('timeline-filtros').style.display = 'none'; carregarNotasAluno(); });
     document.getElementById('tab-aluno-faltas')?.addEventListener('click', (e) => { ativarTab(e); document.getElementById('timeline-filtros').style.display = 'none'; carregarFaltasAluno(); });
@@ -38,43 +42,70 @@ export function setupCaderneta(dados) {
     document.querySelectorAll('#timeline-filtros .filter-chip').forEach(chip => {
         chip.addEventListener('click', (e) => {
             document.querySelectorAll('#timeline-filtros .filter-chip').forEach(c => c.classList.remove('active'));
-            e.target.classList.add('active'); window.timelineFilterCat = e.target.getAttribute('data-cat'); carregarTimelineAluno();
+            e.target.classList.add('active'); 
+            window.timelineFilterCat = e.target.getAttribute('data-cat'); 
+            carregarTimelineAluno();
         });
     });
 }
 
 function ativarTab(e) {
     document.querySelectorAll('.falta-tab-btn').forEach(b => b.classList.remove('active')); 
-    e.target.classList.add('active');
-    document.getElementById('aluno-caderneta-content').innerHTML = '<p class="text-muted center">A carregar...</p>'; 
+    // Utilizar currentTarget garante que a classe 'active' vai sempre para o botão e nunca para o texto lá dentro
+    if (e && e.currentTarget) e.currentTarget.classList.add('active');
+    else if (e && e.target) e.target.classList.add('active');
+    
+    document.getElementById('aluno-caderneta-content').innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar...</p>'; 
 }
 
 async function carregarTimelineAluno() {
     const cCont = document.getElementById('aluno-caderneta-content'); if(!cCont) return;
     try {
         let ev = [];
-        const nS = await getDocs(collection(window.db, "utilizadores", window.myUserId, "notas")); 
-        nS.forEach(d => { const n = d.data(); ev.push({ time: new Date(n.data).getTime(), cat: 'notas', icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação', desc: `${n.disciplina} (M${n.modulo}): <strong style="color:var(--text-light);">${n.nota}</strong>` }); });
         
-        // 👇 A LER AS FALTAS DO NOVO FORMATO 👇
+        // LER NOTAS (NOVAS E ANTIGAS FUNDIDAS)
+        const nS_novas = await getDocs(collection(window.db, "utilizadores", window.myUserId, "avaliacoes"));
+        const nS_antigas = await getDocs(collection(window.db, "utilizadores", window.myUserId, "notas"));
+        
+        [...nS_novas.docs, ...nS_antigas.docs].forEach(d => { 
+            const n = d.data(); 
+            const dataLancamento = n.dataLancamento || n.data || new Date().toISOString();
+            const modLabel = n.modulo ? n.modulo.toString().replace(/\D/g, '') : '?';
+            ev.push({ 
+                time: new Date(dataLancamento).getTime(), 
+                cat: 'notas', 
+                icon: '<i class="fa-solid fa-graduation-cap"></i>', 
+                cor: 'var(--primary-green)', 
+                titulo: 'Nova Avaliação', 
+                desc: `${n.disciplina} (M${modLabel}): <strong style="color:var(--text-light);">${n.nota}</strong>` 
+            }); 
+        });
+        
+        // LER AS FALTAS
         const fS = await getDocs(collection(window.db, "utilizadores", window.myUserId, "faltas")); 
         fS.forEach(d => { 
             const f = d.data(); 
-            // O novo formato usa dataRegisto para ordenar e dataFalta para o texto, duracaoBlocos para horas
             ev.push({ 
                 time: new Date(f.dataRegisto || f.dataInicio).getTime(), 
                 cat: 'faltas', 
                 icon: '<i class="fa-solid fa-user-xmark"></i>', 
                 cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', 
                 titulo: `Falta a ${f.disciplina} (${f.duracaoBlocos || f.horas}h)`, 
-                desc: f.justificada ? `Justificada` : `Injustificada - Falta em ${f.dataFalta ? new Date(f.dataFalta).toLocaleDateString('pt-PT') : (f.dataInicio || 'SN')}` 
+                desc: f.justificada ? `Justificada` : `Injustificada - Ocorrida a ${f.dataFalta ? new Date(f.dataFalta).toLocaleDateString('pt-PT') : (f.dataInicio || 'SN')}` 
             }); 
         });
         
         ev = ev.filter(e => !isNaN(e.time)); ev.sort((a,b) => b.time - a.time); 
         
         let eventos = ev;
-        if(window.timelineFilterCat !== 'all') eventos = eventos.filter(e => e.cat === window.timelineFilterCat);
+        
+        // BLINDAGEM EXTRA: Se a variável por algum motivo se perder, força 'all'
+        window.timelineFilterCat = window.timelineFilterCat || 'all';
+        
+        if(window.timelineFilterCat !== 'all') {
+            eventos = eventos.filter(e => e.cat === window.timelineFilterCat);
+        }
+        
         if(eventos.length === 0) { cCont.innerHTML = getEmptyState('O teu histórico escolar está limpo.', 'fa-clock-rotate-left'); return; }
         
         let html = '<div class="timeline">';
@@ -114,9 +145,17 @@ async function carregarEvolucaoAluno() {
             regs.forEach(r => {
                 const isPos = r.tipo === 'positiva'; const cor = isPos ? 'var(--success-green)' : 'var(--danger-red)'; const bgCor = isPos ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
                 const xpLabel = r.xp ? (r.xp > 0 ? `+${r.xp} XP` : `${r.xp} XP`) : (isPos ? 'Registo Positivo' : 'Registo Negativo');
+                
+                // 👇 MAGIA DA FORMATAÇÃO DA DATA 👇
+                let dataFormatada = r.data;
+                if (typeof dataFormatada === 'string' && dataFormatada.includes('T')) {
+                    // Transforma o formato de computador num formato limpo português
+                    dataFormatada = new Date(dataFormatada).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', ' às');
+                }
+
                 html += `<div style="display:flex; align-items:center; justify-content:space-between; background:${bgCor}; border: 1px solid ${cor}; padding: 12px; border-radius: 8px; margin-bottom: 10px;">
                             <div><strong style="color:${cor}; font-size:1.1rem;">${xpLabel}</strong><br><span style="color:var(--text-light); font-size:0.95rem; font-weight:bold;">${r.titulo}</span>${r.descricao ? `<div style="color:var(--text-muted); font-size:0.85rem; margin-top:3px;">${r.descricao}</div>` : ''}</div>
-                            <div style="text-align:right; font-size:0.75rem; color:var(--text-muted);">${r.data}<br>${r.autor==='App'?'Gamificação':`Prof. ${r.autor}`}</div>
+                            <div style="text-align:right; font-size:0.75rem; color:var(--text-muted);">${dataFormatada}<br>${r.autor==='App'?'Gamificação':`Prof. ${r.autor}`}</div>
                          </div>`;
             });
         }
@@ -199,14 +238,24 @@ async function carregarReunioesAluno() {
 async function carregarNotasAluno() {
     const cCont = document.getElementById('aluno-caderneta-content'); if(!cCont) return;
     try {
-        const notasDb = await getDocs(collection(window.db, "utilizadores", window.myUserId, "notas")); 
+        const notasNovas = await getDocs(collection(window.db, "utilizadores", window.myUserId, "avaliacoes"));
+        const notasAntigas = await getDocs(collection(window.db, "utilizadores", window.myUserId, "notas"));
+        
         let disciplinasDoAluno = {}; window.mapNotasCache = {};
         
-        notasDb.forEach(d => { 
+        [...notasAntigas.docs, ...notasNovas.docs].forEach(d => { 
             const n = d.data(); 
+            const modF = n.modulo ? n.modulo.toString().replace(/\D/g, '') : '?';
+            n.modulo = modF; // Normaliza o módulo para número
+            
             if(!disciplinasDoAluno[n.disciplina]) disciplinasDoAluno[n.disciplina] = []; 
-            disciplinasDoAluno[n.disciplina].push(n); 
-            window.mapNotasCache[`${n.disciplina}_${n.modulo}`] = n.nota; 
+            
+            // Impede que notas antigas dupliquem a mesma nota nova
+            const index = disciplinasDoAluno[n.disciplina].findIndex(x => x.modulo === modF);
+            if (index > -1) { disciplinasDoAluno[n.disciplina][index] = n; } 
+            else { disciplinasDoAluno[n.disciplina].push(n); }
+            
+            window.mapNotasCache[`${n.disciplina}_${modF}`] = n.nota; 
         });
         
         const ordemDisciplinas = obterDisciplinasDoAno();
@@ -217,7 +266,8 @@ async function carregarNotasAluno() {
         ordemDisciplinas.forEach(disc => {
             if(disciplinasDoAluno[disc] && disciplinasDoAluno[disc].length > 0) {
                 let sum = 0; let c = 0; let modsHtml = '';
-                disciplinasDoAluno[disc].forEach(n => {
+                // Ordena os módulos para ficarem na sequência correta
+                disciplinasDoAluno[disc].sort((a,b) => parseInt(a.modulo) - parseInt(b.modulo)).forEach(n => {
                     if(n.nota !== 'REP' && !isNaN(n.nota)) { sum += Number(n.nota); c++; }
                     const cor = (n.nota === 'REP' || Number(n.nota) < 10) ? 'var(--danger-red)' : 'var(--success-green)'; 
                     const modLabel = n.modulo.toString().startsWith('UC') ? n.modulo : `Módulo ${n.modulo}`;
@@ -330,20 +380,273 @@ async function carregarFaltasAluno() {
 async function carregarPRHFsAluno() {
     const cCont = document.getElementById('aluno-caderneta-content'); if(!cCont) return;
     try {
-        const snap = await getDocs(query(collection(window.db, "utilizadores", window.myUserId, "prhfs"))); let pArr = [];
+        const snap = await getDocs(query(collection(window.db, "utilizadores", window.myUserId, "prhfs"))); 
+        let pArr = [];
         snap.forEach(d => pArr.push({id: d.id, ...d.data()})); 
         
-        if(pArr.length === 0) { cCont.innerHTML = getEmptyState('Não tens planos de recuperação.', 'fa-file-shield'); return; }
+        let ativas = pArr.filter(p => p.status === 'ativa' || p.status === 'pendente');
+        let concluidas = pArr.filter(p => p.status === 'concluida');
+
+        if(pArr.length === 0) { 
+            cCont.innerHTML = getEmptyState('Não tens planos de recuperação neste momento.', 'fa-file-shield'); 
+            return; 
+        }
         
         let html = '';
-        pArr.forEach(p => {
-            const st = p.status; let cor = '#333'; let txt = 'Concluído';
-            if(st==='pendente_aluno'){ cor='var(--danger-red)'; txt='Ação Necessária'; }
-            html += `<div class="card" style="border-left:4px solid ${cor}; margin-bottom:15px;">
-                        <strong style="color:var(--text-light);">${p.disciplina}</strong>
-                        <p style="font-size:0.85rem; color:var(--text-muted);">Carga: ${p.horasPresenciais}h</p>
-                     </div>`;
-        });
+
+        // SEÇÃO: ATIVAS
+        if (ativas.length > 0) {
+            html += `<h4 style="color:var(--text-muted); margin-bottom:15px; font-size:0.9rem; text-transform:uppercase;"><i class="fa-solid fa-bolt"></i> PRHFs a Decorrer</h4>`;
+            ativas.forEach(p => {
+                const corCard = p.urgente ? 'var(--danger-red)' : 'var(--warning-yellow)';
+                const txtSt = p.urgente ? 'URGENTE' : 'EM CURSO';
+
+                // Mostrar a Tarefa / Instruções do Professor de forma bem visível
+                let tarefaProfessorHtml = '';
+                if (p.tarefaPresencial || p.descricao) {
+                    tarefaProfessorHtml = `
+                    <div style="background:rgba(0,153,255,0.08); border:1px solid #0099ff; padding:10px; border-radius:8px; margin-bottom:10px;">
+                        <strong style="color:#0099ff; font-size:0.8rem;"><i class="fa-solid fa-book-open"></i> Tarefa / Instruções do Professor:</strong>
+                        <p style="font-size:0.85rem; color:white; margin:5px 0 0 0; white-space: pre-wrap;">${p.tarefaPresencial || p.descricao}</p>
+                    </div>`;
+                }
+
+                let interacaoHtml = '';
+                if (p.propostaProfessor && !p.propostaLidaDT) {
+                    interacaoHtml = `
+                    ${tarefaProfessorHtml}
+                    <div style="background:rgba(0,153,255,0.1); border:1px dashed #0099ff; padding:10px; border-radius:8px; margin-top:10px;">
+                        <strong style="color:#0099ff; font-size:0.85rem;"><i class="fa-solid fa-clock"></i> Sugestão de Horário do Professor:</strong>
+                        <p style="font-size:0.85rem; color:white; margin:5px 0;">${p.propostaProfessor}</p>
+                        <div style="display:flex; gap:10px; margin-top:10px;">
+                            <button class="primary-btn small-btn btn-aceitar-proposta" data-id="${p.id}" style="flex:1; background:var(--success-green); color:black;"><i class="fa-solid fa-check"></i> Aceitar Data</button>
+                        </div>
+                    </div>`;
+                } else if (p.propostaAluno && !p.propostaLidaDT) {
+                    interacaoHtml = `
+                    ${tarefaProfessorHtml}
+                    <div style="background:rgba(255,204,0,0.1); border:1px dashed var(--warning-yellow); padding:10px; border-radius:8px; margin-top:10px;">
+                        <span style="font-size:0.75rem; color:var(--warning-yellow);">A aguardar que o Professor confirme a tua proposta de horários:</span>
+                        <p style="font-size:0.85rem; color:white; margin:5px 0;">${p.propostaAluno}</p>
+                    </div>`;
+                } else if (p.propostaLidaDT) {
+                    interacaoHtml = `
+                    ${tarefaProfessorHtml}
+                    <div style="margin-top:10px; font-size:0.8rem; color:var(--success-green); background:rgba(0,204,136,0.1); border:1px dashed var(--success-green); padding:10px; border-radius:8px;">
+                        <i class="fa-solid fa-calendar-check"></i> <strong>Sessão Presencial Agendada</strong><br>
+                        <span style="color:white;">${p.propostaProfessor || p.propostaAluno}</span>
+                    </div>`;
+                } else if (p.horasPresenciais > 0) {
+                    interacaoHtml = `
+                    ${tarefaProfessorHtml}
+                    <div style="display:flex; gap:10px; margin-top:10px;">
+                        <button class="secondary-btn small-btn btn-abrir-modal-aluno-proposta" data-id="${p.id}" style="flex:1; border-color:var(--warning-yellow); color:var(--warning-yellow);"><i class="fa-regular fa-calendar"></i> Marcar Dias Presenciais</button>
+                    </div>`;
+                }
+
+                // Prazo e Data
+                let estadoPrazoHtml = '';
+                if (p.prazo) {
+                    const hoje = new Date(); hoje.setHours(0,0,0,0);
+                    const limite = new Date(p.prazo);
+                    const dif = limite.getTime() - hoje.getTime();
+                    const dias = Math.ceil(dif / (1000 * 3600 * 24));
+                    
+                    if (dias < 0) estadoPrazoHtml = `<span style="color:var(--danger-red);"><i class="fa-solid fa-triangle-exclamation"></i> ATRASADO</span>`;
+                    else if (dias <= 2) estadoPrazoHtml = `<span style="color:var(--warning-yellow);"><i class="fa-solid fa-clock"></i> Termina em ${dias} dias</span>`;
+                    else estadoPrazoHtml = `<span style="color:var(--text-muted);"><i class="fa-regular fa-calendar"></i> Prazo: ${p.prazo.split('-').reverse().join('/')}</span>`;
+                }
+
+                html += `
+                <div class="card" style="border-left:4px solid ${corCard}; margin-bottom:15px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div>
+                            <strong style="color:white; font-size:1.05rem;">${p.disciplina} <span style="font-size:0.8rem; color:var(--text-muted);">(M${p.modulo})</span></strong>
+                            <div style="color:${corCard}; font-weight:bold; font-size:0.85rem; margin-top:3px;">${txtSt}</div>
+                        </div>
+                    </div>
+                    <p style="font-size:0.85rem; color:var(--text-light); margin:10px 0;">${p.descricao}</p>
+                    <div style="font-size:0.8rem; background:rgba(0,0,0,0.2); padding:6px; border-radius:4px; display:inline-block; margin-bottom:10px;">
+                        ${estadoPrazoHtml} | Presenciais: <strong>${p.horasPresenciais || 0}h</strong>
+                    </div>
+                    ${p.ficheiroBase64 ? `<a href="${p.ficheiroBase64}" download="Anexo_PRHF_${p.disciplina}_Mod${p.modulo}" class="secondary-btn small-btn" style="display:inline-block; margin-bottom:10px; border-color:#0099ff; color:#0099ff;"><i class="fa-solid fa-download"></i> Baixar Anexo</a>` : ''}
+                    ${interacaoHtml}
+                </div>`;
+            });
+        }
+
+        // SEÇÃO: CONCLUÍDAS
+        if (concluidas.length > 0) {
+            html += `<h4 style="color:var(--text-muted); margin-top:25px; margin-bottom:15px; font-size:0.9rem; text-transform:uppercase;"><i class="fa-solid fa-check-double"></i> Histórico Concluído</h4>`;
+            concluidas.forEach(c => {
+                html += `
+                <div style="background:rgba(0,0,0,0.2); border-left: 3px solid var(--success-green); padding:12px; border-radius:6px; margin-bottom:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div>
+                            <strong style="color:white; font-size:0.95rem;">${c.disciplina} <span style="font-size:0.75rem; color:var(--text-muted);">(M${c.modulo})</span></strong><br>
+                            ${c.horasPresenciais > 0 ? `<span style="font-size:0.75rem; color:var(--warning-yellow); display:inline-block; margin-top:3px;"><i class="fa-solid fa-clock"></i> ${c.horasPresenciais}h Presenciais cumpridas</span>` : ''}
+                        </div>
+                        <div style="text-align:right;">
+                            <span style="font-size:0.7rem; color:var(--success-green); font-weight:bold;">Concluído</span>
+                        </div>
+                    </div>
+                    ${c.feedbackProfessor ? `<div style="font-size:0.8rem; color:black; margin-top:8px; background:rgba(0, 204, 136, 0.7); padding:6px; border-radius:4px;"><strong>Feedback do Prof:</strong> ${c.feedbackProfessor}</div>` : ''}
+                </div>`;
+            });
+        }
+
         cCont.innerHTML = html;
-    } catch(e) {}
+
+        // Ouvintes de clique para aceitar data e para abrir o modal de marcação múltipla
+        cCont.querySelectorAll('.btn-aceitar-proposta').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const id = e.currentTarget.getAttribute('data-id');
+                const b = e.currentTarget;
+                b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; b.disabled = true;
+                try {
+                    const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
+                    await updateDoc(doc(window.db, "utilizadores", window.myUserId, "prhfs", id), { propostaLidaDT: true });
+                    carregarPRHFsAluno();
+                } catch(err) { b.innerHTML = "Erro"; b.disabled = false; }
+            });
+        });
+
+        cCont.querySelectorAll('.btn-abrir-modal-aluno-proposta').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.currentTarget.getAttribute('data-id');
+                window.abrirModalPropostaAluno(id);
+            });
+        });
+
+    } catch(e) {
+        console.error("Erro PRHF Aluno:", e);
+        cCont.innerHTML = '<p class="text-danger center">Erro a carregar PRHFs.</p>';
+    }
 }
+
+// =========================================================================
+// MODAL DINÂMICO DE MARCAÇÃO MÚLTIPLA DE DIAS PRESENCIAIS (ALUNO)
+// =========================================================================
+
+window.abrirModalPropostaAluno = async function(prhfId) {
+    let modal = document.getElementById('modal-aluno-proposta-dinamico');
+    if (!modal) {
+        const htmlModal = `
+        <div id="modal-aluno-proposta-dinamico" class="modal-overlay" style="display: flex; z-index: 9999; align-items: center; justify-content: center;">
+            <div class="action-sheet" style="max-width: 450px; width: 90%; padding: 20px; max-height: 90vh; overflow-y: auto; background: var(--bg-card); border: 1px solid #333;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                    <h3 style="color: var(--warning-yellow); margin:0;"><i class="fa-regular fa-calendar"></i> Marcar Dias Presenciais</h3>
+                    <button type="button" onclick="document.getElementById('modal-aluno-proposta-dinamico').style.display='none'" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <input type="hidden" id="aluno-prop-prhf-id" value="${prhfId}">
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">Aqui podes consultar as tuas marcações anteriores e adicionar novos dias caso precises de mais sessões.</p>
+                
+                <div id="aluno-linhas-sessoes-container" style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px;"></div>
+
+                <button type="button" id="aluno-btn-mais-sessao" class="secondary-btn small-btn" style="width:100%; border-color:var(--warning-yellow); color:var(--warning-yellow); margin-bottom:20px;">
+                    <i class="fa-solid fa-plus"></i> Adicionar Outro Dia Disponível
+                </button>
+
+                <button type="button" id="aluno-btn-enviar-multiplas-propostas" class="primary-btn" style="width:100%; background:var(--warning-yellow); color:black;">
+                    <i class="fa-solid fa-paper-plane"></i> Atualizar e Enviar Propostas
+                </button>
+            </div>
+        </div>`;
+        document.body.insertAdjacentHTML('beforeend', htmlModal);
+        
+        document.getElementById('aluno-btn-mais-sessao').addEventListener('click', () => window.adicionarLinhaAlunoModal());
+        document.getElementById('aluno-btn-enviar-multiplas-propostas').addEventListener('click', () => window.enviarPropostasAlunoFirebase());
+    } else {
+        document.getElementById('aluno-prop-prhf-id').value = prhfId;
+        modal.style.display = 'flex';
+    }
+
+    // Lê do Firebase se já existem sessões anteriores guardadas para o aluno poder editá-las ou acrescentar novas
+    try {
+        const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
+        const docSnap = await getDoc(doc(window.db, "utilizadores", window.myUserId, "prhfs", prhfId));
+        if (docSnap.exists()) {
+            const dados = docSnap.data();
+            // Se já tiver um array estruturado de sessões, carrega-as
+            if (dados.sessoesPresenciais && Array.isArray(dados.sessoesPresenciais) && dados.sessoesPresenciais.length > 0) {
+                window.renderizarLinhasAlunoModal(dados.sessoesPresenciais);
+                return;
+            }
+        }
+    } catch(err) {
+        console.error("Erro a ler sessões anteriores:", err);
+    }
+
+    // Fallback se for a primeira vez
+    window.renderizarLinhasAlunoModal([{ data: '', inicio: '', fim: '' }]);
+};
+
+window.renderizarLinhasAlunoModal = function(arr) {
+    const cont = document.getElementById('aluno-linhas-sessoes-container');
+    if (!cont) return;
+    let html = '';
+    arr.forEach((s, idx) => {
+        html += `
+        <div class="aluno-sessao-linha-item" style="background: rgba(0,0,0,0.2); border: 1px solid #444; border-radius: 8px; padding: 12px; position: relative;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-size:0.75rem; color:var(--warning-yellow); font-weight:bold;">Sessão #${idx + 1}</span>
+                <button type="button" onclick="this.closest('.aluno-sessao-linha-item').remove()" style="background:none; border:none; color:var(--danger-red); cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <div style="flex: 2;"><label style="font-size:0.7rem; color:var(--text-muted);">Data</label><input type="date" value="${s.data || ''}" class="input-padrao al-data" style="width:100%; margin:0; font-size:0.85rem;"></div>
+                <div style="flex: 1;"><label style="font-size:0.7rem; color:var(--text-muted);">Início</label><input type="time" value="${s.inicio || ''}" class="input-padrao al-inicio" style="width:100%; margin:0; font-size:0.85rem;"></div>
+                <div style="flex: 1;"><label style="font-size:0.7rem; color:var(--text-muted);">Fim</label><input type="time" value="${s.fim || ''}" class="input-padrao al-fim" style="width:100%; margin:0; font-size:0.85rem;"></div>
+            </div>
+        </div>`;
+    });
+    cont.innerHTML = html;
+};
+
+window.enviarPropostasAlunoFirebase = async function() {
+    const prhfId = document.getElementById('aluno-prop-prhf-id').value;
+    const linhas = document.querySelectorAll('.aluno-sessao-linha-item');
+    let sessoesArray = [];
+    let arrPropostas = [];
+    let erro = false;
+
+    linhas.forEach(l => {
+        const data = l.querySelector('.al-data').value;
+        const inicio = l.querySelector('.al-inicio').value;
+        const fim = l.querySelector('.al-fim').value;
+        if (!data || !inicio || !fim) {
+            erro = true;
+        } else {
+            sessoesArray.push({ data, inicio, fim });
+            const dataPt = data.split('-').reverse().join('/');
+            arrPropostas.push(`${dataPt} das ${inicio} às ${fim}`);
+        }
+    });
+
+    if (erro || sessoesArray.length === 0) {
+        alert("Preenche todas as datas, horas de início e fim das sessões.");
+        return;
+    }
+
+    const btn = document.getElementById('aluno-btn-enviar-multiplas-propostas');
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A atualizar...';
+    btn.disabled = true;
+
+    try {
+        const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
+        await updateDoc(doc(window.db, "utilizadores", window.myUserId, "prhfs", prhfId), {
+            sessoesPresenciais: sessoesArray,
+            propostaAluno: arrPropostas.join(' | '),
+            propostaLidaDT: false
+        });
+
+        document.getElementById('modal-aluno-proposta-dinamico').style.display = 'none';
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Atualizar e Enviar Propostas';
+        btn.disabled = false;
+        carregarPRHFsAluno();
+    } catch(err) {
+        console.error(err);
+        alert("Erro ao atualizar proposta.");
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Atualizar e Enviar Propostas';
+        btn.disabled = false;
+    }
+};

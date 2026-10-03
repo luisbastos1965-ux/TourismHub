@@ -225,16 +225,39 @@
                 <div id="aluno-caderneta-content"><p class="text-muted" style="text-align:center;">A carregar...</p></div>
             </div>
 
-            <!-- VISTA AÇÃO PRHF -->
+            <!-- VISTA AÇÃO PRHF (ALUNO) -->
             <div id="view-aluno-acao-prhf" style="display: none;">
-                <div class="class-header" style="margin-bottom: 10px;"><button id="btn-voltar-acao-prhf" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button></div>
+                <div class="class-header" style="margin-bottom: 10px;">
+                    <button id="btn-voltar-acao-prhf" class="secondary-btn small-btn" style="border: none; background: rgba(255,255,255,0.1); width: auto;"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+                </div>
+                
                 <div class="card" style="margin-bottom: 20px; border-left: 4px solid var(--warning-yellow);">
                     <h3 style="margin-bottom: 5px; font-size: 1.1rem; color: var(--text-light);" id="prhf-acao-titulo">Disciplina</h3>
-                    <div style="display:flex; justify-content:space-between; margin-bottom: 15px; font-size:0.8rem; border-bottom: 1px dashed #333; padding-bottom:10px;"><span>Data Limite: <strong id="prhf-acao-prazo" style="color:var(--warning-yellow);">...</strong></span></div>
-                    <h4 style="font-size: 0.95rem; margin-bottom: 10px; margin-top: 15px; color:var(--primary-green);">Agendar Sessão Presencial</h4>
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px;"><div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Data</label><input type="date" id="aluno-prhf-proposta-data" style="margin:0; width:100%;" class="input-padrao"></div></div>
-                    <div style="display: flex; gap: 10px; margin-bottom: 15px;"><div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Início</label><input type="time" id="aluno-prhf-proposta-hora-inicio" style="margin:0; width:100%;" class="input-padrao"></div><div style="flex:1;"><label style="font-size:0.75rem; color:var(--text-muted);">Fim</label><input type="time" id="aluno-prhf-proposta-hora-fim" style="margin:0; width:100%;" class="input-padrao"></div></div>
-                    <button id="btn-enviar-proposta-prhf" class="primary-btn" style="width:100%; background-color: var(--primary-green);">Enviar Proposta</button>
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 15px; font-size:0.8rem; border-bottom: 1px dashed #333; padding-bottom:10px;">
+                        <span>Data Limite: <strong id="prhf-acao-prazo" style="color:var(--warning-yellow);">...</strong></span>
+                    </div>
+
+                    <!-- TAREFA QUE O PROFESSOR COLOCOU PARA O ALUNO VER -->
+                    <div style="background: rgba(0,0,0,0.2); border: 1px solid #444; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                        <h4 style="font-size: 0.85rem; color: var(--primary-green); margin-bottom: 5px;"><i class="fa-solid fa-book"></i> Tarefa / Instruções do Professor:</h4>
+                        <p id="prhf-acao-descricao-tarefa" style="font-size: 0.85rem; color: var(--text-light); margin: 0; white-space: pre-wrap;">A carregar instruções...</p>
+                    </div>
+
+                    <h4 style="font-size: 0.95rem; margin-bottom: 10px; color:var(--primary-green);">Propor Sessões Presenciais</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Podes marcar um ou mais dias em que estás disponível para cumprir as horas presenciais com o professor.</p>
+
+                    <!-- ZONA DINÂMICA DE DIAS PARA O ALUNO -->
+                    <div id="aluno-container-sessoes-dinamicas" style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px;">
+                        <!-- O JavaScript do aluno injeta as linhas aqui -->
+                    </div>
+
+                    <button id="aluno-btn-adicionar-sessao" class="secondary-btn small-btn" style="width:100%; border-color:var(--primary-green); color:var(--primary-green); margin-bottom:20px;">
+                        <i class="fa-solid fa-plus"></i> Adicionar Outro Dia Disponível
+                    </button>
+
+                    <button id="btn-enviar-proposta-prhf" class="primary-btn" style="width:100%; background-color: var(--primary-green); color:black;">
+                        <i class="fa-solid fa-paper-plane"></i> Enviar Proposta ao Professor
+                    </button>
                 </div>
             </div>
 

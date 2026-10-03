@@ -186,46 +186,79 @@ async function carregarHorarioAluno() {
 
 export async function carregarMateriaisAluno() {
     const c = document.getElementById('aluno-lista-materiais-container'); 
-    c.innerHTML = '<p class="text-muted center">A carregar materiais...</p>'; 
+    c.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A ler o livro de ponto...</p>'; 
     if(!window.minhaTurma) return;
     
     try {
-        const r = await getDocs(query(collection(window.db, "turmas", window.minhaTurma, "materiais"))); 
+        let sum = []; 
         
-        // CORREÇÃO: Força sempre o carregamento de TODAS as disciplinas para o dropdown
+        // 👉 AQUI ESTÁ A CHAVE: Ir ler à coleção "sumarios" onde o Professor acabou de gravar!
+        const rSumarios = await getDocs(query(collection(window.db, "turmas", window.minhaTurma, "sumarios"))); 
+        rSumarios.forEach(d => { 
+            const data = d.data();
+            sum.push({
+                id: d.id, 
+                _tipo: 'sumario', 
+                disciplina: data.disciplina || "Geral",
+                professor: data.professor || "Desconhecido",
+                data: data.dataLancamento ? new Date(data.dataLancamento).toLocaleDateString('pt-PT') : '',
+                timestamp: data.dataLancamento ? new Date(data.dataLancamento).getTime() : 0,
+                titulo: data.titulo || "Aula",
+                descricao: data.texto || "",
+                // O ficheiro que guardámos em Base64
+                ficheiroBase64: data.anexoBase64 || null, 
+                anexoNome: data.anexoNome || null,
+                temAnexo: data.temAnexo || false
+            }); 
+        });
+        
+        // Organizar Filtros de Disciplinas
         const fS = document.getElementById('aluno-filtro-materiais-disc'); 
         if (fS) { 
             const currVal = fS.value;
             let oH = '<option value="">Todas as Disciplinas</option>'; 
             obterDisciplinasDoAno().forEach(dc => oH += `<option value="${dc}">${dc}</option>`); 
             fS.innerHTML = oH; 
-            fS.value = currVal; // Mantém a seleção se o aluno tiver clicado noutra!
+            fS.value = currVal; 
         }
-        
-        if(r.empty) { c.innerHTML = getEmptyState('Nenhum material publicado.', 'fa-book-open'); return; }
-        
-        let sum = []; 
-        r.forEach(d => { const dt = d.data(); sum.push({id: d.id, ...dt}); });
         
         const fA = fS ? fS.value : ""; 
         if(fA) sum = sum.filter(s => s.disciplina === fA); 
-        sum.sort((a,b) => b.timestamp - a.timestamp || (b.data || "").localeCompare(a.data || "")); 
         
-        if(sum.length === 0) { c.innerHTML = getEmptyState('Sem materiais para esta disciplina.', 'fa-filter'); return; }
+        // Ordenar do mais recente para o mais antigo (pela data de lançamento)
+        sum.sort((a,b) => b.timestamp - a.timestamp); 
+        
+        if(sum.length === 0) { c.innerHTML = getEmptyState('Ainda não há sumários registados.', 'fa-filter'); return; }
         
         let html = ''; 
         sum.forEach(s => { 
-            const ficheiro = s.ficheiroBase64 || s.anexoBase64; 
-            const nomeFicheiro = s.anexoNome || 'Material_Anexo';
-            const aB = ficheiro ? `<a href="${ficheiro}" download="${nomeFicheiro}" class="primary-btn small-btn" style="display:block; margin-top:15px; width:100%; text-align:center; padding:10px 12px; background-color:#0099ff; color:white;"><i class="fa-solid fa-download"></i> Baixar Anexo</a>` : ''; 
+            let btnAcao = '';
             
-            html += `<div class="card" style="margin-bottom:15px; border-left: 4px solid #0099ff;">
-                        <span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">${s.data} | ${s.disciplina} | Prof. ${s.professor || ''}</span>
-                        <h4 style="margin:5px 0; color:var(--text-light);">${s.titulo}</h4>
-                        ${s.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-top:5px;">${s.descricao}</p>` : ''}
-                        ${aB}
-                     </div>`; 
+            // Se tem anexo validado, desenha o botão de download
+            if (s.temAnexo && s.ficheiroBase64) {
+                btnAcao = `
+                <div style="margin-top: 15px; border-top: 1px dashed #444; padding-top: 12px;">
+                    <a href="${s.ficheiroBase64}" download="${s.anexoNome || 'Ficha_de_Trabalho'}" 
+                       style="display: inline-flex; align-items: center; justify-content: center; width: 100%; gap: 8px; background: rgba(0, 153, 255, 0.1); border: 1px solid #0099ff; color: #0099ff; padding: 10px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: bold; transition: 0.3s;">
+                        <i class="fa-solid fa-download"></i> Descarregar: ${s.anexoNome || 'Anexo'}
+                    </a>
+                </div>`;
+            }
+            
+            html += `
+            <div class="card" style="margin-bottom:15px; border-left: 4px solid #0099ff; background:rgba(255,255,255,0.02); padding: 15px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 5px;">
+                    <strong style="color:#0099ff; font-size:1rem;">${s.disciplina} - ${s.titulo}</strong>
+                    <span style="color:var(--text-muted); font-size:0.75rem;">${s.data}</span>
+                </div>
+                <span style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:10px;">
+                    <i class="fa-solid fa-user-tie"></i> Prof. ${s.professor}
+                </span>
+                ${s.descricao ? `<p style="font-size:0.85rem; color:var(--text-light); margin-bottom:0; line-height:1.4; white-space:pre-wrap;">${s.descricao}</p>` : ''}
+                
+                ${btnAcao}
+            </div>`; 
         }); 
         c.innerHTML = html;
-    } catch(e) { c.innerHTML = '<p class="text-danger center">Erro ao carregar os dados.</p>'; }
+    } catch(e) { console.error(e); c.innerHTML = '<p class="text-danger center">Erro ao carregar sumários.</p>'; }
 }

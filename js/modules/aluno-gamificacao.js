@@ -41,6 +41,7 @@ export function setupGamificacao(dados) {
     carregarMetas();
     carregarRankingTurma();
     construirDashboardDinamico();
+    carregarMissoesDaTurma();
     
     const objSelect = document.getElementById('obj-disciplina');
     if(objSelect) {
@@ -201,13 +202,22 @@ async function construirDashboardDinamico() {
         const anoLetivo = hj.getMonth() + 1 >= 9 ? hj.getFullYear() : hj.getFullYear() - 1;
         const inicioAnoIso = getISOWeek(`${anoLetivo}-09-01`);
 
-        let tFaltas = 0, pAtivos = 0, mRep = 0, evs = [];
+        let tFaltasHoras = 0, pAtivos = 0, mRep = 0, evs = [];
 
+        // 1. CORREÇÃO DAS FALTAS E FOGUINHO: Agora lê os nomes novos (dataFalta e duracaoBlocos)
         const fS = await getDocs(collection(window.db, "utilizadores", window.myUserId, "faltas")); 
         let semanasComFaltas = new Set();
         fS.forEach(d => { 
-            const f = d.data(); if(!f.justificada && !f.comprovativoEnviado) { 
-                tFaltas++; const iso = getISOWeek(f.dataInicio || f.data); if(iso && iso >= inicioAnoIso) semanasComFaltas.add(iso); 
+            const f = d.data(); 
+            const isInjustificada = (f.justificada === false || !f.hasOwnProperty('justificada'));
+            if(isInjustificada && !f.comprovativoEnviado) { 
+                const duracao = Number(f.duracaoBlocos) || Number(f.horas) || 0;
+                tFaltasHoras += duracao; // Agora soma as HORAS em vez de contar apenas o número de faltas
+                
+                // O segredo do reset do foguinho: encontrar a data correta
+                const dataF = f.dataFalta || f.dataRegisto || f.dataInicio || f.data;
+                const iso = getISOWeek(dataF); 
+                if(iso && iso >= inicioAnoIso) semanasComFaltas.add(iso); 
             } 
         });
 
@@ -215,8 +225,12 @@ async function construirDashboardDinamico() {
         nS.forEach(d => { const n = d.data().nota; if(n === 'REP' || Number(n) < 10) mRep++; });
 
         const pS = await getDocs(collection(window.db, "utilizadores", window.myUserId, "prhfs")); 
-        pS.forEach(d => { if(d.data().status !== 'concluida') pAtivos++; });
+        pS.forEach(d => { 
+            const p = d.data(); 
+            if(!p.concluido && !p.resolvido && p.status !== 'concluida') pAtivos++; 
+        });
 
+        // 2. CÁLCULO DO FOGUINHO (Lógica das 5 Semanas)
         let semanasSemFaltas = 0;
         if(window.minhaTurma) {
             const tSnap = await getDoc(doc(window.db, "turmas", window.minhaTurma));
@@ -224,6 +238,8 @@ async function construirDashboardDinamico() {
                 const hor = tSnap.data().horario || {}; let sAulas = new Set();
                 for (let k in hor) { if (hor[k]) { const iw = getISOWeek(k.split('_')[0]); if (iw >= inicioAnoIso && iw <= getISOWeek(hjIso)) sAulas.add(iw); } }
                 const sOrd = Array.from(sAulas).sort((a, b) => b.localeCompare(a));
+                
+                // Quebra a contagem assim que apanha uma semana na "lista negra" (semanasComFaltas)
                 for (const sem of sOrd) { if (semanasComFaltas.has(sem)) break; semanasSemFaltas++; }
             }
         }
@@ -245,6 +261,7 @@ async function construirDashboardDinamico() {
             }
         }
 
+        // 3. ALERTA DINÂMICO
         if(alertCont) {
             if(window.minhaTurma) {
                 const evSnap = await getDocs(collection(window.db, "turmas", window.minhaTurma, "eventos")); 
@@ -254,11 +271,19 @@ async function construirDashboardDinamico() {
             }
 
             let alertHtml = ''; 
-            if(tFaltas > 0 || pAtivos > 0 || mRep > 0) {
+            if(tFaltasHoras > 0 || pAtivos > 0 || mRep > 0) {
+                // Cria a lista discriminada consoante o que o aluno deve
+                let pendenciasList = [];
+                if(pAtivos > 0) pendenciasList.push(`• <strong>${pAtivos} PRHFs</strong> ativos por resolver.`);
+                if(tFaltasHoras > 0) pendenciasList.push(`• <strong>${tFaltasHoras}h de faltas</strong> por justificar.`);
+                if(mRep > 0) pendenciasList.push(`• <strong>${mRep} avaliações</strong> negativas.`);
+
+                const msgFormatada = pendenciasList.join('<br>');
+
                 alertHtml += `<div class="card" style="background:linear-gradient(135deg,#ef4444,#b91c1c); color:white; border:none; border-radius:16px; margin-bottom:20px;">
                                 <h3 style="margin-bottom:10px; font-size:1.8rem;"><i class="fa-solid fa-triangle-exclamation"></i> Ação Necessária</h3>
-                                <p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9;">Tens pendências urgentes que prejudicam a tua avaliação.</p>
-                                <button class="primary-btn" style="background:white; color:#b91c1c; font-size:1.1rem; padding:15px; width:100%;" onclick="document.querySelector('.nav-item[data-target=\\'view-aluno-caderneta\\']').click()">Ver na Caderneta</button>
+                                <p style="font-size:1.1rem; margin-bottom:15px; opacity:0.9; line-height: 1.5;">Tens pendências que prejudicam a tua avaliação:<br><br>${msgFormatada}</p>
+                                <button class="primary-btn" style="background:white; color:#b91c1c; font-size:1.1rem; padding:15px; width:100%; border:none; border-radius:8px; cursor:pointer;" onclick="document.querySelector('.nav-item[data-target=\\'view-aluno-caderneta\\']').click()">Ver na Caderneta</button>
                               </div>`;
             } else if(evs.length > 0) {
                 const ev = evs[0]; const dF = ev.data.split('-').reverse().join('/');
@@ -274,5 +299,62 @@ async function construirDashboardDinamico() {
             }
             alertCont.innerHTML = alertHtml;
         }
-    } catch(e){}
+    } catch(e){
+        console.error("Erro no Dashboard do Aluno:", e);
+    }
+}
+
+export async function carregarMissoesDaTurma() {
+    const cont = document.getElementById('missoes-container'); // ID exato que tens no HTML
+    if(!cont) return;
+
+    try {
+        const snap = await getDocs(collection(window.db, "turmas", window.minhaTurma, "missoes"));
+        let html = '';
+
+        const hoje = new Date().toISOString().split('T')[0];
+
+        snap.forEach(d => {
+            const missao = d.data();
+            const jaConcluiu = missao.concluidoPor && missao.concluidoPor.includes(window.myUserId);
+            
+            // VERIFICAÇÕES DE TEMPO E ESTADO
+            const expirou = missao.dataLimite && hoje > missao.dataLimite;
+            
+            // Regra de Ouro: Se a missão fechou/expirou e o aluno NÃO a fez, escondemos!
+            if (!jaConcluiu && (missao.status === 'encerrada' || expirou)) {
+                return; 
+            }
+            
+            const corTema = jaConcluiu ? 'var(--success-green)' : '#a855f7'; 
+            const icone = jaConcluiu ? 'fa-circle-check' : 'fa-bolt';
+
+            let infoPrazo = '';
+            if (missao.dataLimite && !jaConcluiu) {
+                infoPrazo = `<span style="display:block; margin-top:5px; font-size:0.75rem; color:var(--warning-yellow);"><i class="fa-regular fa-clock"></i> Termina a: ${missao.dataLimite.split('-').reverse().join('/')}</span>`;
+            }
+
+            html += `
+            <div style="padding:15px; background:rgba(0,0,0,0.2); border-radius:10px; margin-bottom:10px; border-left: 4px solid ${corTema}; display:flex; gap:12px; align-items:center;">
+                <div style="background: rgba(${jaConcluiu ? '16, 185, 129' : '168, 85, 247'}, 0.15); width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i class="fa-solid ${icone}" style="color:${corTema}; font-size:1.3rem;"></i>
+                </div>
+                <div style="flex:1;">
+                    <span style="font-size:1rem; color:${jaConcluiu ? 'var(--text-muted)' : 'white'}; text-decoration:${jaConcluiu ? 'line-through' : 'none'}; font-weight:bold; display:block;">${missao.titulo}</span>
+                    <span style="font-size:0.85rem; color:var(--text-muted); line-height: 1.3;">${missao.descricao}</span>
+                    ${infoPrazo}
+                </div>
+                <div style="text-align: right; flex-shrink: 0;">
+                    <span style="background:rgba(168, 85, 247, 0.1); color:#a855f7; border: 1px solid rgba(168, 85, 247, 0.3); padding:4px 8px; border-radius:8px; font-size:0.85rem; font-weight:bold;">
+                        +${missao.xpRecompensa || 50} XP
+                    </span>
+                    ${jaConcluiu ? '<span style="display:block; font-size:0.7rem; color:var(--success-green); margin-top:5px;">Concluída!</span>' : ''}
+                </div>
+            </div>`;
+        });
+
+        cont.innerHTML = html === '' ? '<div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; text-align: center; color: var(--text-muted); font-size: 0.9rem;">O Professor ainda não lançou nenhuma missão ativa.</div>' : html;
+    } catch(e) {
+        console.error("Erro ao puxar missões:", e);
+    }
 }
