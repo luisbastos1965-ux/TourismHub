@@ -676,26 +676,104 @@ async function carregarListaUtilizadores() {
     } catch(e) { container.innerHTML = '<p class="text-danger center">Erro ao carregar utilizadores.</p>'; }
 }
 
+window.mudarCamposNovoUser = function(papel) {
+    document.getElementById('nu-zona-aluno').style.display = 'none';
+    document.getElementById('nu-zona-professor').style.display = 'none';
+    document.getElementById('nu-zona-ee').style.display = 'none';
+
+    if (papel === 'aluno') document.getElementById('nu-zona-aluno').style.display = 'block';
+    else if (papel === 'professor') document.getElementById('nu-zona-professor').style.display = 'block';
+    else if (papel === 'ee') document.getElementById('nu-zona-ee').style.display = 'block';
+};
+
 document.getElementById('btn-admin-novo-user')?.addEventListener('click', () => {
-    document.getElementById('nu-id').value = ""; document.getElementById('nu-nome').value = ""; document.getElementById('nu-turma').value = "";
+    // Reset dos campos gerais
+    document.getElementById('nu-id').value = ""; 
+    document.getElementById('nu-nome').value = ""; 
+    
+    // Reset Professor
+    document.getElementById('nu-prof-turmas').value = "";
+    document.getElementById('nu-prof-disciplinas').value = "";
+    document.getElementById('nu-prof-capa-dt').checked = false;
+    document.getElementById('nu-prof-turma-dt').value = "";
+    document.getElementById('nu-prof-turma-dt').style.display = 'none';
+    document.getElementById('nu-prof-capa-pap').checked = false;
+    document.getElementById('nu-prof-capa-coord').checked = false;
+
+    // Reset Aluno / EE
+    document.getElementById('nu-turma').value = "";
+    document.getElementById('nu-educandos').value = "";
+
     document.getElementById('nu-papel').value = tabUsersAtiva;
+    window.mudarCamposNovoUser(tabUsersAtiva);
+
     document.getElementById('modal-novo-utilizador').style.display = 'flex';
 });
 
 document.getElementById('btn-gravar-novo-user')?.addEventListener('click', async (e) => {
-    const id = document.getElementById('nu-id').value.trim().toLowerCase(); const nome = document.getElementById('nu-nome').value.trim();
-    const papel = document.getElementById('nu-papel').value; const turma = document.getElementById('nu-turma').value.trim().toUpperCase();
+    const id = document.getElementById('nu-id').value.trim().toLowerCase(); 
+    const nome = document.getElementById('nu-nome').value.trim();
+    const papel = document.getElementById('nu-papel').value; 
+    
     if(!id || !nome) return alert("Tens de preencher pelo menos o ID e o Nome!");
-    if((papel === 'aluno' || papel === 'dt') && !turma) return alert("Alunos e DTs precisam de ter uma Turma preenchida!");
-    const btnRef = e.currentTarget; btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A criar...'; btnRef.disabled = true;
+    
+    const btnRef = e.currentTarget; 
+    btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A criar...'; 
+    btnRef.disabled = true;
+
     try {
-        const novoUser = { nome: nome, papel: papel };
-        if(papel === 'aluno' || papel === 'dt') novoUser.turma = turma;
-        if(papel === 'professor') novoUser.turmas = turma ? [turma] : [];
+        const novoUser = { 
+            nome: nome, 
+            papel: papel,
+            dataCriacao: new Date().toISOString()
+        };
+
+        if (papel === 'aluno') {
+            const turma = document.getElementById('nu-turma').value.trim().toUpperCase();
+            if (!turma) { btnRef.innerHTML = 'Criar Ficha'; btnRef.disabled = false; return alert("Alunos precisam de uma Turma!"); }
+            novoUser.turma = turma;
+            novoUser.xp = 0;
+        } 
+        else if (papel === 'ee') {
+            const educandosStr = document.getElementById('nu-educandos').value;
+            novoUser.educandos = educandosStr ? educandosStr.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) : [];
+        }
+        else if (papel === 'professor') {
+            const turmasStr = document.getElementById('nu-prof-turmas').value;
+            const discStr = document.getElementById('nu-prof-disciplinas').value;
+            
+            novoUser.turmas = turmasStr ? turmasStr.split(',').map(t => t.trim().toUpperCase()).filter(Boolean) : [];
+            novoUser.disciplinas = discStr ? discStr.split(',').map(d => d.trim().toUpperCase()).filter(Boolean) : [];
+            
+            let papeisExtra = ['professor'];
+            
+            if (document.getElementById('nu-prof-capa-dt').checked) {
+                papeisExtra.push('diretor_turma');
+                novoUser.turmaDT = document.getElementById('nu-prof-turma-dt').value.trim().toUpperCase();
+            }
+            if (document.getElementById('nu-prof-capa-pap').checked) papeisExtra.push('orientador_pap');
+            if (document.getElementById('nu-prof-capa-coord').checked) papeisExtra.push('coordenador');
+            
+            if (papeisExtra.length > 1) {
+                novoUser.papeis = papeisExtra; // Usamos array para professor com múltiplas capas
+            }
+        }
+
         await setDoc(doc(db, "utilizadores", id), novoUser);
+        
         btnRef.innerHTML = '<i class="fa-solid fa-check"></i> Perfil Criado!';
-        setTimeout(() => { document.getElementById('modal-novo-utilizador').style.display = 'none'; btnRef.innerHTML = 'Criar Ficha na Base de Dados'; btnRef.disabled = false; carregarListaUtilizadores(); }, 1500);
-    } catch(err) { console.error("Erro a criar perfil", err); btnRef.innerHTML = 'Erro ao criar!'; setTimeout(() => { btnRef.innerHTML = 'Criar Ficha na Base de Dados'; btnRef.disabled = false; }, 2000); }
+        setTimeout(() => { 
+            document.getElementById('modal-novo-utilizador').style.display = 'none'; 
+            btnRef.innerHTML = 'Criar Ficha na Base de Dados'; 
+            btnRef.disabled = false; 
+            carregarListaUtilizadores(); 
+        }, 1500);
+        
+    } catch(err) { 
+        console.error("Erro a criar perfil", err); 
+        btnRef.innerHTML = 'Erro ao criar!'; 
+        setTimeout(() => { btnRef.innerHTML = 'Criar Ficha na Base de Dados'; btnRef.disabled = false; }, 2000); 
+    }
 });
 
 document.getElementById('btn-gravar-edicao-aluno')?.addEventListener('click', async (e) => {

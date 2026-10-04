@@ -468,18 +468,33 @@ export async function analisarEAtualizarTurma(turmaId) {
     const btnPauta = document.getElementById('btn-ver-pauta');
     const btnFaltasGlobal = document.getElementById('btn-ver-faltas-turma');
     const lmsGrid = document.querySelector('.lms-action-grid');
-    const btnAvisoGlobal = document.getElementById('btn-abrir-aviso-global');
+    const btnMateriais = document.getElementById('btn-modal-materiais'); // Botão dos Sumários
     
-    if (btnAvisoGlobal) btnAvisoGlobal.style.display = isDT ? 'block' : 'none';
-    
+    // Lógica de visualização consoante a Capa (DT vs Professor)
     if (state.activeRole === 'professor') { 
         btnPauta.style.display = 'none'; 
         btnFaltasGlobal.style.display = 'none'; 
+        
+        // Professor vê 4 botões (2 colunas)
         lmsGrid.style.display = 'grid'; 
+        lmsGrid.style.setProperty('grid-template-columns', '1fr 1fr', 'important');
+        if (btnMateriais) btnMateriais.style.display = ''; 
+        
     } else if (state.activeRole === 'diretor_turma') { 
         btnPauta.style.display = 'block'; 
         btnFaltasGlobal.style.display = 'block'; 
         lmsGrid.style.display = 'grid'; 
+        
+        if (isDT) {
+            // Se for a TUA turma de DT, o botão de sumário some e forçamos 3 colunas!
+            lmsGrid.style.setProperty('grid-template-columns', '1fr 1fr 1fr', 'important');
+            if (btnMateriais) btnMateriais.style.display = 'none';
+        } else {
+            // Se o DT espreitar outra turma qualquer, volta ao normal
+            lmsGrid.style.setProperty('grid-template-columns', '1fr 1fr', 'important');
+            if (btnMateriais) btnMateriais.style.display = '';
+        }
+        
     } else { 
         btnPauta.style.display = 'block'; 
         btnFaltasGlobal.style.display = 'block'; 
@@ -497,7 +512,7 @@ export async function analisarEAtualizarTurma(turmaId) {
         let totalRepsAtraso = 0;
         let htmlAlunos = '';
 
-        const matVerificar = isDT ? window.ordemDisciplinasGlobal : state.disciplinasProfessor;
+        const matVerificar = isDT ? (typeof ordemDisciplinasGlobal !== 'undefined' ? ordemDisciplinasGlobal : state.disciplinasProfessor) : state.disciplinasProfessor;
 
         // O SEGREDO DA VELOCIDADE: Promise.all() dispara TUDO em paralelo
         const promisesAlunos = state.alunosTurmaRAM.map(async (al) => {
@@ -844,15 +859,6 @@ export async function abrirPerfil360Aluno(alunoId) {
     const elFoto = document.getElementById('p-aluno-foto');
     if (elFoto) elFoto.src = al.fotoPerfil || `https://ui-avatars.com/api/?name=${al.nome.split(' ')[0]}&background=333&color=fff`; 
     
-    const elAcademia = document.getElementById('p-aluno-academia');
-    if (elAcademia) {
-        try { 
-            elAcademia.innerText = (al.academia && ACADEMIAS_INFO[al.academia]) ? ACADEMIAS_INFO[al.academia].nome : 'Sem Academia'; 
-        } catch(err) { 
-            elAcademia.innerText = 'Sem Academia'; 
-        }
-    }
-
     const inputHidden = document.getElementById('perfil-aluno-id-hidden');
     if (inputHidden) inputHidden.value = alunoId;
 
@@ -864,7 +870,10 @@ export async function abrirPerfil360Aluno(alunoId) {
     const togDiv = document.getElementById('dt-graph-toggles'); 
     if (togDiv) togDiv.style.display = isDT ? 'flex' : 'none';
 
-    // 2. MEDIDAS MAAI E MÉDIA
+    // 2. MEDIDAS MAAI E MÉDIA (Zera a média para carregar novo)
+    const elMedia = document.getElementById('p-aluno-media');
+    if (elMedia) elMedia.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size:0.8rem;"></i>';
+
     const elMaai = document.getElementById('badge-maai-aluno');
     if (elMaai) {
         let maaiHtml = '<span style="background:#333; color:var(--text-muted); padding:4px 8px; border-radius:4px; font-size:0.75rem;">Nenhuma Medida Ativa</span>';
@@ -874,8 +883,30 @@ export async function abrirPerfil360Aluno(alunoId) {
         elMaai.innerHTML = maaiHtml;
     }
 
-    const elMedia = document.getElementById('p-aluno-media');
-    if (elMedia) elMedia.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size:0.8rem;"></i>';
+    // ================================================================
+    // O SEGREDO DA ACADEMIA: Leitura segura blindada a maiúsculas/minúsculas
+    // ================================================================
+    const elAcademia = document.getElementById('p-aluno-academia');
+    if (elAcademia) {
+        if (al.academia && typeof al.academia === 'string' && al.academia.trim() !== '') {
+            // Normalizamos para minúsculas para encontrar na ACADEMIAS_INFO do store.js
+            const academiaChave = al.academia.toLowerCase().trim();
+            
+            if (typeof ACADEMIAS_INFO !== 'undefined' && ACADEMIAS_INFO[academiaChave]) {
+                elAcademia.innerText = `Academia ${ACADEMIAS_INFO[academiaChave].nome}`;
+                elAcademia.style.color = "var(--primary-green)";
+            } else {
+                // Fallback: se a academia não existir no store, mas estiver na base de dados
+                const nomeCapitalizado = al.academia.charAt(0).toUpperCase() + al.academia.slice(1).toLowerCase();
+                elAcademia.innerText = `Academia ${nomeCapitalizado}`;
+                elAcademia.style.color = "var(--primary-green)";
+            }
+        } else {
+            elAcademia.innerText = "Sem Academia";
+            elAcademia.style.color = "var(--text-muted)";
+        }
+    }
+    // ================================================================
 
     // 3. DROPDOWN DE DISCIPLINAS E SÍNTESES
     let discSelect = document.getElementById('perfil-disc-select');
@@ -1118,7 +1149,6 @@ export async function carregarTarefasProf() {
     const tabPrhf = document.getElementById('tab-tarefas-prhf');
     const tabPassaporte = document.getElementById('tab-tarefas-passaporte');
     
-    // Proteção: Se a aba existir, verifica. Se não existir, assume que estamos a ver os PRHFs
     if (tabPrhf) {
         isPRHFTab = tabPrhf.classList.contains('active');
         const canSeePassaporteTab = (state.activeRole === 'diretor_turma' || state.activeRole === 'orientador_pap' || state.activeRole === 'coordenador');
@@ -1128,15 +1158,210 @@ export async function carregarTarefasProf() {
 
     if (isPRHFTab) {
         const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
-        const btnRadar = document.getElementById('btn-radar-conflitos');
         const dtToggles = document.getElementById('prhf-dt-toggles');
         
+        // Agora não dependemos de um botão com ID fixo que causa erro
+        const btnRadar = document.getElementById('btn-radar-conflitos');
         if(isDT) { 
-            if(btnRadar) btnRadar.style.display = 'block'; 
-            if(dtToggles) dtToggles.style.display = 'flex'; 
+            if(btnRadar) {
+                btnRadar.style.display = 'block';
+                btnRadar.onclick = async () => {
+                    let modal = document.getElementById('modal-radar-conflitos');
+                    if (!modal) {
+                        const html = `
+                        <div id="modal-radar-conflitos" class="modal-overlay" style="display: flex; z-index: 9999; align-items: center; justify-content: center;">
+                            <div class="action-sheet" style="max-width: 700px; width: 95%; padding: 20px; max-height: 90vh; overflow-y: auto; background: var(--bg-card); border: 1px solid #333;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                                    <h3 style="color: var(--warning-yellow); margin:0;"><i class="fa-solid fa-satellite-dish"></i> Agenda Global de Presenciais (Turma ${state.minhaTurmaDT})</h3>
+                                    <button type="button" onclick="document.getElementById('modal-radar-conflitos').style.display='none'" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                                </div>
+                                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">Usa os filtros abaixo para encontrar sobreposições ou consultar o horário das sessões por disciplina ou aluno.</p>
+                                
+                                <div style="display:flex; gap:10px; margin-bottom: 15px; flex-wrap: wrap; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px solid #444;">
+                                    <select id="radar-filtro-aluno" class="input-padrao" style="flex:1; min-width: 150px; margin:0;" onchange="window.renderRadarData()">
+                                        <option value="">Todos os Alunos</option>
+                                    </select>
+                                    <select id="radar-filtro-disc" class="input-padrao" style="flex:1; min-width: 150px; margin:0;" onchange="window.renderRadarData()">
+                                        <option value="">Todas as Disciplinas</option>
+                                    </select>
+                                    <select id="radar-sort" class="input-padrao" style="flex:1; min-width: 150px; margin:0;" onchange="window.renderRadarData()">
+                                        <option value="data_desc">Mais Recentes (Data)</option>
+                                        <option value="data_asc">Mais Antigas (Data)</option>
+                                        <option value="aluno">Agrupar por Aluno (A-Z)</option>
+                                        <option value="disc">Agrupar por Disciplina (A-Z)</option>
+                                    </select>
+                                </div>
+
+                                <div id="radar-conflitos-conteudo"><p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A mapear horários...</p></div>
+                            </div>
+                        </div>`;
+                        document.body.insertAdjacentHTML('beforeend', html);
+                        modal = document.getElementById('modal-radar-conflitos');
+
+                        window.renderRadarData = function() {
+                            const cont = document.getElementById('radar-conflitos-conteudo');
+                            if (!cont) return;
+
+                            const fAluno = document.getElementById('radar-filtro-aluno').value;
+                            const fDisc = document.getElementById('radar-filtro-disc').value;
+                            const sortModo = document.getElementById('radar-sort').value;
+
+                            if (!window.radarAgendaData || window.radarAgendaData.length === 0) {
+                                cont.innerHTML = '<div class="empty-state"><i class="fa-solid fa-calendar-check empty-state-icon" style="color:var(--success-green);"></i><p class="empty-state-desc">Nenhuma sessão presencial agendada na tua turma.</p></div>';
+                                return;
+                            }
+
+                            let filtered = window.radarAgendaData.filter(s => {
+                                if (fAluno && s.alunoNome !== fAluno) return false;
+                                if (fDisc && s.disciplina !== fDisc) return false;
+                                return true;
+                            });
+
+                            filtered.sort((a, b) => {
+                                if (sortModo === 'data_desc') {
+                                    if (a.data !== b.data) return b.data.localeCompare(a.data);
+                                    return b.inicio.localeCompare(a.inicio);
+                                } else if (sortModo === 'data_asc') {
+                                    if (a.data !== b.data) return a.data.localeCompare(b.data);
+                                    return a.inicio.localeCompare(b.inicio);
+                                } else if (sortModo === 'aluno') {
+                                    if (a.alunoNome !== b.alunoNome) return a.alunoNome.localeCompare(b.alunoNome);
+                                    return b.data.localeCompare(a.data); 
+                                } else if (sortModo === 'disc') {
+                                    if (a.disciplina !== b.disciplina) return a.disciplina.localeCompare(b.disciplina);
+                                    const modA = parseInt(a.modulo) || 0;
+                                    const modB = parseInt(b.modulo) || 0;
+                                    if (modA !== modB) return modA - modB;
+                                    return b.data.localeCompare(a.data); 
+                                }
+                                return 0;
+                            });
+
+                            if (filtered.length === 0) {
+                                cont.innerHTML = '<p class="text-muted center" style="margin-top:20px;">Nenhuma sessão encontrada com os filtros atuais.</p>';
+                                return;
+                            }
+
+                            let htmlStr = '<div style="display:flex; flex-direction:column; gap:10px;">';
+                            let lastGroup = '';
+
+                            filtered.forEach(s => {
+                                let currentGroup = '';
+                                let headerText = '';
+
+                                if (sortModo.startsWith('data')) {
+                                    currentGroup = s.data;
+                                    const datePrint = s.data && s.data.includes('-') ? s.data.split('-').reverse().join('/') : s.data;
+                                    headerText = `<i class="fa-regular fa-calendar-days"></i> ${datePrint}`;
+                                } else if (sortModo === 'aluno') {
+                                    currentGroup = s.alunoNome;
+                                    const nm = typeof nomeCurto === 'function' ? nomeCurto(s.alunoNome) : s.alunoNome;
+                                    headerText = `<i class="fa-solid fa-user"></i> ${nm}`;
+                                } else if (sortModo === 'disc') {
+                                    currentGroup = `${s.disciplina} - M${s.modulo}`;
+                                    headerText = `<i class="fa-solid fa-book"></i> ${s.disciplina} (Módulo ${s.modulo})`;
+                                }
+
+                                if (currentGroup !== lastGroup) {
+                                    htmlStr += `<h4 style="color:white; margin:15px 0 5px 0; border-bottom:1px solid #333; padding-bottom:5px;">${headerText}</h4>`;
+                                    lastGroup = currentGroup;
+                                }
+
+                                const isAceite = s.status === 'aceite';
+                                const corBorda = isAceite ? 'var(--success-green)' : 'var(--warning-yellow)';
+                                const bgCor = isAceite ? 'rgba(0,204,136,0.08)' : 'rgba(255,204,0,0.08)';
+                                const icone = isAceite ? '<i class="fa-solid fa-check"></i> Confirmado' : '<i class="fa-solid fa-clock"></i> Pendente';
+                                const nomeSeguro = typeof nomeCurto === 'function' ? nomeCurto(s.alunoNome) : s.alunoNome;
+                                const datePrint = s.data && s.data.includes('-') ? s.data.split('-').reverse().join('/') : s.data;
+
+                                htmlStr += `
+                                <div style="background:${bgCor}; border-left:4px solid ${corBorda}; padding:10px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+                                    <div>
+                                        <strong style="color:white; font-size:0.95rem;">${nomeSeguro}</strong> <span style="font-size:0.8rem; color:var(--text-muted);">(${s.disciplina} - M${s.modulo})</span>
+                                        <div style="font-size:0.85rem; color:var(--text-light); margin-top:3px;"><strong><i class="fa-regular fa-calendar"></i> ${datePrint} das ${s.inicio} às ${s.fim}</strong> (${s.horas}h)</div>
+                                    </div>
+                                    <div style="text-align:right;">
+                                        <span style="font-size:0.75rem; color:${corBorda}; font-weight:bold;">${icone}</span>
+                                    </div>
+                                </div>`;
+                            });
+
+                            htmlStr += '</div>';
+                            cont.innerHTML = htmlStr;
+                        };
+                    } else {
+                        modal.style.display = 'flex';
+                        document.getElementById('radar-conflitos-conteudo').innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A mapear horários...</p>';
+                        document.getElementById('radar-filtro-aluno').innerHTML = '<option value="">Todos os Alunos</option>';
+                        document.getElementById('radar-filtro-disc').innerHTML = '<option value="">Todas as Disciplinas</option>';
+                        document.getElementById('radar-sort').value = 'data_desc';
+                    }
+
+                    try {
+                        const { getDocs, query, collection, where } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
+                        const alunosSnap = await getDocs(query(collection(window.db || db, "utilizadores"), where("turma", "==", state.minhaTurmaDT), where("papel", "==", "aluno")));
+                        let agenda = [];
+
+                        const promises = [];
+                        alunosSnap.forEach(docAl => {
+                            const al = { id: docAl.id, ...docAl.data() };
+                            promises.push(
+                                getDocs(collection(window.db || db, "utilizadores", al.id, "prhfs")).then(pSnap => {
+                                    pSnap.forEach(pDoc => {
+                                        const p = pDoc.data();
+                                        if (p.status !== 'concluida' && p.sessoesPresenciais && Array.isArray(p.sessoesPresenciais)) {
+                                            p.sessoesPresenciais.forEach(s => {
+                                                if (s.data && s.inicio && s.fim) {
+                                                    agenda.push({
+                                                        alunoNome: al.nome,
+                                                        disciplina: p.disciplina,
+                                                        modulo: p.modulo,
+                                                        data: s.data,
+                                                        inicio: s.inicio,
+                                                        fim: s.fim,
+                                                        horas: s.horas || 1,
+                                                        status: s.status || 'aceite',
+                                                        tarefa: s.tarefa || ''
+                                                    });
+                                                }
+                                            });
+                                        }
+                                    });
+                                })
+                            );
+                        });
+
+                        await Promise.all(promises);
+                        window.radarAgendaData = agenda;
+
+                        const alunosSet = new Set();
+                        const discSet = new Set();
+                        agenda.forEach(s => {
+                            alunosSet.add(s.alunoNome);
+                            discSet.add(s.disciplina);
+                        });
+
+                        const selectAluno = document.getElementById('radar-filtro-aluno');
+                        const selectDisc = document.getElementById('radar-filtro-disc');
+
+                        Array.from(alunosSet).sort((a, b) => a.localeCompare(b)).forEach(a => {
+                            selectAluno.insertAdjacentHTML('beforeend', `<option value="${a}">${typeof nomeCurto === 'function' ? nomeCurto(a) : a}</option>`);
+                        });
+
+                        Array.from(discSet).sort((a, b) => a.localeCompare(b)).forEach(d => {
+                            selectDisc.insertAdjacentHTML('beforeend', `<option value="${d}">${d}</option>`);
+                        });
+
+                        window.renderRadarData();
+
+                    } catch (err) {
+                        console.error("Erro no Radar:", err);
+                        document.getElementById('radar-conflitos-conteudo').innerHTML = '<p class="text-danger center">Erro ao mapear a agenda.</p>';
+                    }
+                };
+            }
         } else { 
-            if(btnRadar) btnRadar.style.display = 'none'; 
-            if(dtToggles) dtToggles.style.display = 'none'; 
+            if(btnRadar) btnRadar.style.display = 'none';
         }
 
         const container = document.getElementById('lista-prhfs-professor'); 
@@ -1148,9 +1373,24 @@ export async function carregarTarefasProf() {
         // LER OS NOVOS FILTROS
         const turmaFiltroEl = document.getElementById('filtro-curso-turma');
         const moduloFiltroEl = document.getElementById('filtro-curso-modulo');
+        const discFiltroEl = document.getElementById('filtro-curso-disciplina'); 
+        
         const turmaFiltro = turmaFiltroEl ? turmaFiltroEl.value : '';
         const moduloFiltro = moduloFiltroEl ? moduloFiltroEl.value : '';
+        const discFiltro = discFiltroEl ? discFiltroEl.value : ''; 
         
+        // POPULA A CAIXA DE DISCIPLINAS COM BASE NA TURMA ESCOLHIDA
+        if (discFiltroEl && discFiltroEl.options.length <= 1 && state.turmasProfessor && state.turmasProfessor.length > 0) {
+            const turminha = turmaFiltro || state.turmasProfessor[0];
+            const discValidas = isDT ? (typeof ordemDisciplinasGlobal !== 'undefined' ? ordemDisciplinasGlobal : state.disciplinasProfessor) : state.disciplinasProfessor;
+            const validForTurma = typeof filtrarDisciplinasDoAno === 'function' ? filtrarDisciplinasDoAno(turminha, discValidas) : discValidas;
+            
+            let opts = '<option value="">Todas as Disciplinas</option>';
+            validForTurma.forEach(d => opts += `<option value="${d}">${d}</option>`);
+            discFiltroEl.innerHTML = opts;
+            discFiltroEl.value = discFiltro; 
+        }
+
         if(!container || !histContainer) return;
 
         container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A procurar PRHFs...</p>';
@@ -1164,10 +1404,8 @@ export async function carregarTarefasProf() {
         
         try {
             let todosAlunos = []; 
-            // SE HOUVER FILTRO DE TURMA, PROCURA SÓ NESSA TURMA
             let turmasParaProcurar = turmaFiltro ? [turmaFiltro] : state.turmasProfessor;
 
-            // 👉 ACELERAÇÃO 1: Pesquisar todos os alunos de todas as turmas EM PARALELO
             const promessasTurmas = turmasParaProcurar.map(t => 
                 getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")))
             );
@@ -1177,7 +1415,6 @@ export async function carregarTarefasProf() {
                 snap.forEach(d => todosAlunos.push({ id: d.id, ...d.data() })); 
             });
 
-            // 👉 ACELERAÇÃO 2: Pesquisar os PRHFs de todos os alunos EM PARALELO
             let todosPrhfs = [];
             const promessasPrhfs = todosAlunos.map(async (al) => {
                 const pSnap = await getDocs(collection(db, "utilizadores", al.id, "prhfs"));
@@ -1195,16 +1432,22 @@ export async function carregarTarefasProf() {
                 return new Date(a.prazo || 0) - new Date(b.prazo || 0);
             }); 
             
-            const matVerificar = (isDT && state.prhfViewMode === 'todas') ? ordemDisciplinasGlobal : state.disciplinasProfessor;
+            const matVerificar = (isDT && state.prhfViewMode === 'todas') ? (typeof ordemDisciplinasGlobal !== 'undefined' ? ordemDisciplinasGlobal : state.disciplinasProfessor) : state.disciplinasProfessor;
             let pendentes = todosPrhfs.filter(p => p.status !== 'concluida' && matVerificar.includes(p.disciplina));
             let concluidos = todosPrhfs.filter(p => p.status === 'concluida' && matVerificar.includes(p.disciplina));
             
-            // APLICAR OS NOVOS FILTROS (WORKFLOW + MÓDULO)
+            // APLICAR OS NOVOS FILTROS
             if (workflowFiltro === 'acao_prof') {
-                pendentes = pendentes.filter(p => p.propostaAluno && !p.propostaLidaDT);
+                pendentes = pendentes.filter(p => {
+                    if (p.sessoesPresenciais) return p.sessoesPresenciais.some(s => s.status === 'pendente');
+                    return p.propostaAluno && !p.propostaLidaDT;
+                });
             }
             if (moduloFiltro) {
                 pendentes = pendentes.filter(p => String(p.modulo) === moduloFiltro);
+            }
+            if (discFiltro) { // <-- FILTRO APLICADO AQUI!
+                pendentes = pendentes.filter(p => p.disciplina === discFiltro);
             }
 
             let h = ''; 
@@ -1216,47 +1459,69 @@ export async function carregarTarefasProf() {
                 const souOProfessorDoPRHF = state.disciplinasProfessor.includes(p.disciplina) || p.professor === state.myUserName;
                 let acoesProposta = '';
                 let progresso = 25;
+                let caixasSessoesHtml = '';
+                let sessoesList = [];
+                let temPendentes = false;
+                let totalHorasMarcadas = 0; // NOVO CONTADOR DO PROFESSOR
                 
-                if (p.propostaProfessor) { 
-                    acoesProposta = `
-                    <div style="background:rgba(0,153,255,0.1); border:1px dashed #0099ff; padding:10px; border-radius:8px; margin-top:10px; position:relative;">
-                        ${souOProfessorDoPRHF ? `<button class="btn-eliminar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="position:absolute; top:10px; right:10px; background:none; border:none; color:var(--danger-red); cursor:pointer;"><i class="fa-solid fa-trash"></i></button>` : ''}
-                        <strong style="color:#0099ff; font-size:0.85rem;"><i class="fa-solid fa-clock"></i> Sugestão do Professor:</strong>
-                        <p style="font-size:0.85rem; color:white; margin:5px 0;">${p.propostaProfessor.includes('-') ? p.propostaProfessor.split(' ')[0].split('-').reverse().join('/') + ' ' + p.propostaProfessor.split(' ').slice(1).join(' ') : p.propostaProfessor}</p>
-                        ${p.tarefaPresencial ? `<p style="font-size:0.8rem; color:var(--text-light); margin:5px 0;"><strong>Tarefa na Aula:</strong> ${p.tarefaPresencial}</p>` : ''}
-                        <span style="font-size:0.75rem; color:var(--text-muted);">A aguardar que o aluno aceite.</span>
-                    </div>`; 
+                if (p.sessoesPresenciais && Array.isArray(p.sessoesPresenciais)) {
+                    sessoesList = p.sessoesPresenciais;
+                } else if (p.propostaProfessor) {
+                    sessoesList = [{ data: 'Acordado', inicio: '', fim: '', tarefa: p.propostaProfessor, status: 'aceite', horas: p.horasPresenciais || 1 }];
+                } else if (p.propostaAluno) {
+                    sessoesList = [{ data: 'Proposto', inicio: '', fim: '', tarefa: p.propostaAluno, status: (p.propostaLidaDT ? 'aceite' : 'pendente'), horas: p.horasPresenciais || 1 }];
+                }
+
+                if (sessoesList.length > 0) {
                     progresso = 40;
-                } else if (p.propostaAluno && p.propostaLidaDT === false) { 
-                    acoesProposta = `
-                    <div style="background:rgba(255,204,0,0.1); border:1px dashed var(--warning-yellow); padding:10px; border-radius:8px; margin-top:10px; position:relative;">
-                        ${souOProfessorDoPRHF ? `<button class="btn-eliminar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="position:absolute; top:10px; right:10px; background:none; border:none; color:var(--danger-red); cursor:pointer;"><i class="fa-solid fa-trash"></i></button>` : ''}
-                        <strong style="color:var(--warning-yellow); font-size:0.85rem;"><i class="fa-solid fa-clock"></i> Aluno sugere:</strong>
-                        <p style="font-size:0.85rem; color:white; margin:5px 0;">${p.propostaAluno}</p>
-                        <div style="display:flex; gap:10px; margin-top:10px;">
-                            ${souOProfessorDoPRHF ? `<button class="primary-btn small-btn btn-aceitar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1; background:var(--success-green);"><i class="fa-solid fa-check"></i> Aceitar</button><button class="secondary-btn small-btn btn-rejeitar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-xmark"></i> Rejeitar</button>` : `<span style="font-size:0.75rem; color:var(--warning-yellow);">A aguardar aprovação do prof. ${p.disciplina}</span>`}
-                        </div>
-                    </div>`; 
+                    sessoesList.forEach((s, idx) => {
+                        const sHoras = Number(s.horas || 1);
+                        totalHorasMarcadas += sHoras; // SOMA AS HORAS DESTA CAIXA
+
+                        const dataFormatada = s.data && s.data.includes('-') ? s.data.split('-').reverse().join('/') : (s.data || '');
+                        const horaFormatada = s.inicio && s.fim ? `das ${s.inicio} às ${s.fim}` : '';
+                        const horasTotaisTxt = ` — <strong>${sHoras}h</strong>`;
+                        
+                        const isAceite = s.status === 'aceite' || p.propostaLidaDT === true;
+                        if (!isAceite) temPendentes = true;
+
+                        const corBorda = isAceite ? 'var(--success-green)' : 'var(--warning-yellow)';
+                        const bgCor = isAceite ? 'rgba(0,204,136,0.08)' : 'rgba(255,204,0,0.08)';
+                        const iconeStatus = isAceite ? '<i class="fa-solid fa-calendar-check" style="color:var(--success-green);"></i>' : '<i class="fa-solid fa-clock" style="color:var(--warning-yellow);"></i>';
+                        const labelStatus = isAceite ? 'Sessão Confirmada' : 'A aguardar a tua validação';
+                        const labelSugestao = isAceite ? 'Agendado' : 'Aluno Sugere';
+                        const tarefaInfo = s.tarefa ? `<p style="font-size:0.8rem; color:var(--text-light); margin:5px 0 0 0;"><strong>Nota/Tarefa:</strong> ${s.tarefa}</p>` : '';
+
+                        caixasSessoesHtml += `
+                        <div style="background:${bgCor}; border:1px dashed ${corBorda}; padding:10px; border-radius:8px; margin-top:10px; position:relative;">
+                            ${souOProfessorDoPRHF ? `<button class="btn-eliminar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="position:absolute; top:10px; right:10px; background:none; border:none; color:var(--danger-red); cursor:pointer;"><i class="fa-solid fa-trash"></i></button>` : ''}
+                            <strong style="color:${corBorda}; font-size:0.85rem;">${iconeStatus} ${labelSugestao} (Sessão #${idx + 1})</strong>
+                            <p style="font-size:0.85rem; color:white; margin:5px 0; font-weight:bold;">${dataFormatada} ${horaFormatada}${horasTotaisTxt}</p>
+                            ${tarefaInfo}
+                            <span style="font-size:0.75rem; color:var(--text-muted);">${labelStatus}</span>
+                        </div>`;
+                    });
+                }
+
+                if (temPendentes) {
                     progresso = 50;
-                } else if (p.propostaAluno && p.propostaLidaDT === true) { 
-                    acoesProposta = `
-                    <div style="margin-top:10px; font-size:0.8rem; color:var(--success-green); background:rgba(0,204,136,0.1); border:1px dashed var(--success-green); padding:10px; border-radius:8px; position:relative;">
-                        ${souOProfessorDoPRHF ? `<button class="btn-eliminar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="position:absolute; top:10px; right:10px; background:none; border:none; color:var(--danger-red); cursor:pointer;"><i class="fa-solid fa-trash"></i></button>` : ''}
-                        <i class="fa-solid fa-calendar-check"></i> <strong>Sessão Presencial Agendada</strong><br>
-                        <span style="color:white;">${p.propostaProfessor || p.propostaAluno}</span>
-                        ${p.tarefaPresencial ? `<p style="font-size:0.8rem; color:var(--text-light); margin:5px 0 0 0;"><strong>Tarefa na Aula:</strong> ${p.tarefaPresencial}</p>` : ''}
-                    </div>`; 
+                    if (souOProfessorDoPRHF) {
+                        caixasSessoesHtml += `
+                        <div style="display:flex; gap:10px; margin-top:10px;">
+                            <button class="primary-btn small-btn btn-aceitar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1; background:var(--success-green);"><i class="fa-solid fa-check"></i> Aceitar Novas</button>
+                            <button class="secondary-btn small-btn btn-rejeitar-proposta" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-xmark"></i> Rejeitar</button>
+                        </div>`;
+                    }
+                } else if (sessoesList.length > 0) {
                     progresso = 75;
                 }
 
+                acoesProposta = caixasSessoesHtml;
                 if(p.presencaValidada) progresso = 90;
 
                 let conflitoTag = ''; 
                 if(isDT && p.propostaLidaDT) { 
-                    const allDataDesc = todosPrhfs.filter(px => px.id !== p.id && px.propostaLidaDT).map(px => px.propostaProfessor || px.propostaAluno); 
-                    if(allDataDesc.includes(p.propostaProfessor || p.propostaAluno)) { 
-                        conflitoTag = `<span style="background:var(--danger-red); color:white; font-size:0.6rem; padding:2px 6px; border-radius:4px; font-weight:bold; margin-left:8px;">⚠️ CONFLITO</span>`; 
-                    } 
+                    conflitoTag = ''; 
                 }
 
                 const isUrgente = p.urgente; 
@@ -1269,10 +1534,19 @@ export async function carregarTarefasProf() {
                 const estadoPrazo = obterEstadoPrazo(p.prazo);
 
                 let btnAction = '';
+                let btnSugerir = '';
+
                 if(souOProfessorDoPRHF) { 
                     if (hPres > 0) { 
-                        if (!p.propostaLidaDT) { 
-                            btnAction = `<button class="secondary-btn small-btn" disabled style="width:100%; opacity:0.5;"><i class="fa-solid fa-clock"></i> Aguarda Horário</button>`; 
+                        // GESTÃO DO BOTÃO COM BASE NO LIMITE DE HORAS
+                        if (totalHorasMarcadas < hPres) {
+                            btnSugerir = `<button class="secondary-btn small-btn btn-propor-prof" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1;"><i class="fa-regular fa-calendar"></i> Sugerir (${totalHorasMarcadas}/${hPres}h)</button>`; 
+                        } else {
+                            btnSugerir = `<button class="secondary-btn small-btn" disabled style="flex:1; opacity:0.5; border-color:var(--success-green); color:var(--success-green); cursor:not-allowed;"><i class="fa-solid fa-calendar-check"></i> Horas Preenchidas (${hPres}h)</button>`;
+                        }
+
+                        if (!p.propostaLidaDT && temPendentes) { 
+                            btnAction = `<button class="secondary-btn small-btn" disabled style="width:100%; opacity:0.5;"><i class="fa-solid fa-clock"></i> Aguarda Validação</button>`; 
                         } else if (!p.presencaValidada) { 
                             btnAction = `<button class="primary-btn small-btn btn-validar-presenca" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="width:100%; background:var(--warning-yellow); color:black;"><i class="fa-solid fa-user-check"></i> Validar Presença</button>`; 
                         } else { 
@@ -1299,7 +1573,7 @@ export async function carregarTarefasProf() {
                     </p>
                     ${acoesProposta} 
                     <div style="display:flex; gap:10px; margin-top:10px;">
-                        ${souOProfessorDoPRHF ? `<button class="secondary-btn small-btn btn-propor-prof" data-aluno="${p.alunoId}" data-prhf="${p.id}" style="flex:1;"><i class="fa-regular fa-calendar"></i> Sugerir</button>` : ''} 
+                        ${btnSugerir} 
                         ${btnAction}
                     </div>
                 </div>`;
@@ -1313,8 +1587,12 @@ export async function carregarTarefasProf() {
             
             let concluidosFiltrados = concluidos;
             
-            if(mFiltro) concluidosFiltrados = concluidosFiltrados.filter(c => c.modulo == mFiltro);
-            concluidosFiltrados.sort((a,b) => { 
+            // FILTROS ATUALIZADOS PARA O HISTÓRICO
+            if (turmaFiltro) concluidosFiltrados = concluidosFiltrados.filter(c => c.turma === turmaFiltro);
+            if (discFiltro) concluidosFiltrados = concluidosFiltrados.filter(c => c.disciplina === discFiltro);
+            if (mFiltro) concluidosFiltrados = concluidosFiltrados.filter(c => c.modulo == mFiltro);
+            
+            concluidosFiltrados.sort((a,b) => {
                 const da = a.dataCriacao ? new Date(a.dataCriacao) : 0; 
                 const db = b.dataCriacao ? new Date(b.dataCriacao) : 0; 
                 return dFiltro === 'desc' ? db - da : da - db; 
@@ -1358,6 +1636,7 @@ export async function carregarTarefasProf() {
             histContainer.innerHTML = '<p class="text-danger center">Erro ao carregar histórico.</p>';
         }
     } else {
+        // ... (código FCT e PAP permanece igual)
         const container = document.getElementById('lista-passaportes-professor'); 
         if(!container) return;
         container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar passaportes...</p>';

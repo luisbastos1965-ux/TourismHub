@@ -47,10 +47,77 @@ export async function gerirCliquesPRHF(e) {
             document.getElementById('prhf-file-name').innerText = 'Toca para PDF ou Imagem';
             document.getElementById('prhf-horas-totais').value = ''; 
             document.getElementById('prhf-horas-presenciais').value = '';
+
+            document.getElementById('btn-apagar-prhf-definitivo').style.display = 'none';
             
             document.getElementById('modal-criar-prhf').style.display = 'flex'; 
             return true;
         }
+
+    // 1. ABRIR O MODAL BONITO DE ELIMINAR PRHF
+    if (e.target.closest('#btn-apagar-prhf-definitivo')) {
+        e.preventDefault();
+        const prhfId = document.getElementById('prhf-edit-id').value;
+        const alunoId = document.getElementById('prhf-edit-aluno-id').value;
+
+        if (!prhfId || !alunoId) return true;
+
+        // Passa os dados para os inputs invisíveis do nosso novo modal
+        document.getElementById('apagar-prhf-aluno-id').value = alunoId;
+        document.getElementById('apagar-prhf-id').value = prhfId;
+        
+        // Esconde o modal de edição normal e abre o de confirmação vermelho
+        document.getElementById('modal-criar-prhf').style.display = 'none';
+        document.getElementById('modal-confirm-apagar-prhf').style.display = 'flex';
+        return true;
+    }
+
+    // 2. EXECUTAR A ELIMINAÇÃO NA BASE DE DADOS (COM REFRESH INSTANTÂNEO)
+    if (e.target.closest('#btn-executar-apagar-prhf')) {
+        e.preventDefault();
+        const btn = e.target.closest('#btn-executar-apagar-prhf');
+        const alunoId = document.getElementById('apagar-prhf-aluno-id').value;
+        const prhfId = document.getElementById('apagar-prhf-id').value;
+
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+
+        try {
+            const { deleteDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
+            
+            // Apaga da base de dados
+            await deleteDoc(doc(window.db || db, "utilizadores", alunoId, "prhfs", prhfId));
+            
+            // Fecha o modal de confirmação
+            document.getElementById('modal-confirm-apagar-prhf').style.display = 'none';
+            btn.innerHTML = 'Sim, Eliminar';
+            btn.disabled = false;
+            
+            // --- MAGIA INSTANTÂNEA ---
+            // 1. Remove o cartão visualmente do ecrã de imediato (sem esperar pelo fetch)
+            // (Procura o cartão que tinha o botão de editar com este id de aluno/prhf e apaga-o)
+            const cartaoPRHF = document.querySelector(`.btn-edit-prhf[data-prhf="${prhfId}"]`)?.closest('.card');
+            if (cartaoPRHF) {
+                cartaoPRHF.style.transition = '0.3s';
+                cartaoPRHF.style.transform = 'scale(0.9)';
+                cartaoPRHF.style.opacity = '0';
+                setTimeout(() => cartaoPRHF.remove(), 300);
+            }
+
+            // 2. Dispara a função para revalidar a lista de fundo em background
+            if (window.carregarTarefasProf) {
+                window.carregarTarefasProf();
+            }
+            // --------------------------
+
+        } catch(err) {
+            console.error("Erro ao apagar PRHF:", err);
+            alert("Erro ao tentar eliminar o PRHF da base de dados.");
+            btn.innerHTML = 'Sim, Eliminar';
+            btn.disabled = false;
+        }
+        return true;
+    }
 
         if (e.target.closest('.btn-edit-prhf')) {
             const btn = e.target.closest('.btn-edit-prhf');
@@ -69,6 +136,8 @@ export async function gerirCliquesPRHF(e) {
             nameCont.style.display = 'block';
             nameCont.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A carregar dados...';
             
+            document.getElementById('btn-apagar-prhf-definitivo').style.display = 'block';
+
             document.getElementById('modal-criar-prhf').style.display = 'flex';
             
             try {
@@ -150,7 +219,7 @@ export async function gerirCliquesPRHF(e) {
                     for(const aId of alunosSelecionados) {
                         await addDoc(collection(db, "utilizadores", aId, "prhfs"), { 
                             disciplina: tDisc, modulo: Number(tMod), prazo: tPrazo, horasTotais: Number(tHorasT), 
-                            horasPresenciais: Number(tHorasP), descricao: tDesc, status: 'ativa', // <--- CORRIGIDO AQUI!
+                            horasPresenciais: Number(tHorasP), descricao: tDesc, status: 'ativa',
                             dataCriacao: new Date().toISOString(), professor: state.myUserName, 
                             ficheiroBase64: state.prhfBase64, urgente: urg, presencaValidada: false 
                         }); 
@@ -163,7 +232,6 @@ export async function gerirCliquesPRHF(e) {
                     }
                 }
                 
-                // --- INÍCIO DA GRAVAÇÃO DE TEMPLATES ---
                 const querGuardarTemplate = document.getElementById('prhf-save-template').checked;
                 const nomeTemplate = document.getElementById('prhf-nome-template').value.trim();
                 
@@ -177,12 +245,8 @@ export async function gerirCliquesPRHF(e) {
                             horasPresenciais: Number(tHorasP),
                             dataCriacao: new Date().toISOString()
                         });
-                        console.log("Template guardado com sucesso!");
-                    } catch (err) {
-                        console.error("Erro ao guardar template:", err);
-                    }
+                    } catch (err) {}
                 }
-                // --- FIM DA GRAVAÇÃO DE TEMPLATES ---
 
                 b.innerHTML = '<i class="fa-solid fa-check"></i> ' + (isEdit ? 'Atualizado!' : 'Criados!'); 
                 setTimeout(() => { 
@@ -202,7 +266,7 @@ export async function gerirCliquesPRHF(e) {
         }
 
         // ==========================================
-        // FLUXO DE NEGOCIAÇÃO DE HORÁRIO
+        // FLUXO DE NEGOCIAÇÃO DE HORÁRIO (MÚLTIPLOS DIAS)
         // ==========================================
         
         if (e.target.closest('.btn-propor-prof')) {
@@ -212,6 +276,10 @@ export async function gerirCliquesPRHF(e) {
 
             document.getElementById('prop-prof-aluno-id').value = alunoId;
             document.getElementById('prop-prof-prhf-id').value = prhfId;
+            document.getElementById('prop-prof-data').value = '';
+            document.getElementById('prop-prof-inicio').value = '';
+            document.getElementById('prop-prof-fim').value = '';
+            document.getElementById('prop-prof-tarefa').value = '';
 
             const modal = document.getElementById('modal-propor-prhf-prof');
             if(modal) modal.style.display = 'flex';
@@ -222,15 +290,10 @@ export async function gerirCliquesPRHF(e) {
             try {
                 const prhfSnap = await getDocs(collection(db, "utilizadores", alunoId, "prhfs"));
                 let compromissos = [];
-                let sessoesAtuaisDoPrhf = [];
                 const hojeStr = new Date().toISOString().split('T')[0];
 
                 prhfSnap.forEach(p => {
                     const dados = p.data();
-                    if (p.id === prhfId && dados.sessoesPresenciais && Array.isArray(dados.sessoesPresenciais)) {
-                        sessoesAtuaisDoPrhf = dados.sessoesPresenciais;
-                    }
-
                     if (dados && dados.status !== 'concluida') {
                         if (dados.sessoesPresenciais && Array.isArray(dados.sessoesPresenciais)) {
                             dados.sessoesPresenciais.forEach(s => {
@@ -239,7 +302,8 @@ export async function gerirCliquesPRHF(e) {
                                         disciplina: dados.disciplina || 'Outra',
                                         data: s.data,
                                         hora: `${s.inicio || '--:--'} às ${s.fim || '--:--'}`,
-                                        isMeu: p.id === prhfId
+                                        isMeu: p.id === prhfId,
+                                        tarefa: s.tarefa || ''
                                     });
                                 }
                             });
@@ -247,31 +311,25 @@ export async function gerirCliquesPRHF(e) {
                     }
                 });
 
-                // Carrega as sessões existentes para as linhas dinâmicas ou cria uma vazia
-                if (sessoesAtuaisDoPrhf.length > 0) {
-                    window.renderizarLinhasSessoes(sessoesAtuaisDoPrhf);
-                } else {
-                    window.renderizarLinhasSessoes([{ data: '', inicio: '', fim: '', tarefa: '' }]);
-                }
-
                 if (compromissos.length === 0) {
                     agendaCont.innerHTML = '<p style="color:var(--success-green); font-size:0.85rem; margin:0; text-align:center;"><i class="fa-solid fa-check"></i> O aluno não tem marcações futuras.</p>';
                 } else {
-                    compromissos.sort((a,b) => (a.data || '').localeCompare(b.data || ''));
                     let htmlAgenda = '';
                     compromissos.forEach(c => {
                         const cor = c.isMeu ? 'var(--primary-green)' : 'var(--warning-yellow)';
                         const dataPt = c.data && c.data.includes('-') ? c.data.split('-').reverse().join('/') : (c.data || '');
                         htmlAgenda += `
                         <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:6px 10px; border-radius:6px; border-left: 2px solid ${cor}; margin-bottom:5px;">
-                            <span style="color:white; font-size:0.8rem;">${c.disciplina}</span>
+                            <span style="color:white; font-size:0.8rem;">${c.disciplina} (${c.isMeu ? 'Este Plano' : 'Outro'})</span>
                             <span style="color:var(--text-light); font-size:0.8rem; font-weight:bold;">${dataPt} (${c.hora})</span>
                         </div>`;
+                        if (c.tarefa) {
+                            htmlAgenda += `<div style="font-size:0.75rem; color:var(--text-muted); padding-left:10px; margin-bottom:5px;">Tarefa: ${c.tarefa}</div>`;
+                        }
                     });
                     agendaCont.innerHTML = htmlAgenda;
                 }
             } catch(err) {
-                console.error("Erro agenda:", err);
                 agendaCont.innerHTML = '<p style="color:var(--warning-yellow); font-size:0.8rem; margin:0; text-align:center;">Sem marcações futuras registadas.</p>';
             }
             return true;
@@ -283,25 +341,80 @@ export async function gerirCliquesPRHF(e) {
             const data = document.getElementById('prop-prof-data').value;
             const inicio = document.getElementById('prop-prof-inicio').value;
             const fim = document.getElementById('prop-prof-fim').value;
-            const tarefa = document.getElementById('prop-prof-tarefa').value.trim();
+            const tarefa = document.getElementById('prop-prof-tarefa').value ? document.getElementById('prop-prof-tarefa').value.trim() : "";
 
             if (!data || !inicio || !fim) {
                 alert("Preenche a data, hora de início e hora de fim.");
                 return true;
             }
 
+            // Calcular horas da sessão (arredondadas com proteção para a meia-noite)
+            const [hIni, mIni] = inicio.split(':').map(Number);
+            const [hFim, mFim] = fim.split(':').map(Number);
+            
+            let hI = hIni, hF = hFim;
+            if (hF < hI) hF += 24; 
+            
+            const diffMinutos = (hF * 60 + mFim) - (hI * 60 + mIni);
+            const horasSessao = Math.max(1, Math.round(diffMinutos / 60));
+
+            // --- VALIDAÇÃO DE CONFLITOS ESTRITA ---
+            try {
+                const prhfSnap = await getDocs(collection(db, "utilizadores", alunoId, "prhfs"));
+                let conflitoEncontrado = false;
+
+                prhfSnap.forEach(p => {
+                    const dados = p.data();
+                    if (dados && dados.status !== 'concluida') {
+                        let blocosComparacao = [];
+                        if (dados.sessoesPresenciais && Array.isArray(dados.sessoesPresenciais)) {
+                            blocosComparacao = dados.sessoesPresenciais;
+                        }
+
+                        blocosComparacao.forEach(existente => {
+                            if (p.id === prhfId) return; // Permite acumular no mesmo plano
+                            if (existente && existente.data === data && existente.inicio && existente.fim) {
+                                // Verifica sobreposição de horários
+                                if (inicio < existente.fim && existente.inicio < fim) {
+                                    conflitoEncontrado = true;
+                                }
+                            }
+                        });
+                    }
+                });
+
+                if (conflitoEncontrado) {
+                    alert("⚠️️ Conflito de Horário Detetado!\n\nO aluno já tem outra sessão presencial agendada para esse mesmo dia e horário noutro plano.");
+                    return true;
+                }
+            } catch(err) {
+                console.error("Erro na validação de conflitos:", err);
+            }
+            // ---------------------------------------
+
             const btn = e.target.closest('#btn-confirmar-proposta-prof');
             const txtOriginal = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A gravar...';
             btn.disabled = true;
 
-            const propostaString = `${data} das ${inicio} às ${fim}`;
-
             try {
-                await updateDoc(doc(db, "utilizadores", alunoId, "prhfs", prhfId), {
+                const prhfRef = doc(db, "utilizadores", alunoId, "prhfs", prhfId);
+                const docSnap = await getDoc(prhfRef);
+                let sessoesAtuais = [];
+
+                if (docSnap.exists() && docSnap.data().sessoesPresenciais && Array.isArray(docSnap.data().sessoesPresenciais)) {
+                    sessoesAtuais = [...docSnap.data().sessoesPresenciais];
+                }
+
+                // Adiciona a nova sessão proposta pelo professor como 'aceite' (verde) e empilha na lista
+                sessoesAtuais.push({ data, inicio, fim, tarefa, horas: horasSessao, status: 'aceite' });
+                const propostaString = sessoesAtuais.map(s => `${s.data} das ${s.inicio} às ${s.fim} (${s.horas}h)`).join(' | ');
+
+                await updateDoc(prhfRef, {
+                    sessoesPresenciais: sessoesAtuais,
                     propostaProfessor: propostaString,
-                    tarefaPresencial: tarefa,
-                    propostaLidaDT: false 
+                    tarefaPresencial: tarefa || (docSnap.exists() ? docSnap.data().tarefaPresencial : ''),
+                    propostaLidaDT: true // Fica imediatamente validado porque foi o professor a mandar
                 });
                 
                 document.getElementById('modal-propor-prhf-prof').style.display = 'none';
@@ -309,8 +422,10 @@ export async function gerirCliquesPRHF(e) {
                 btn.disabled = false;
                 carregarTarefasProf(); 
             } catch(err) {
-                btn.innerHTML = 'Erro!';
-                setTimeout(() => { btn.innerHTML = txtOriginal; btn.disabled = false; }, 2000);
+                console.error("Erro ao gravar sugestão:", err);
+                alert("Erro ao gravar sugestão. Tenta novamente.");
+                btn.innerHTML = txtOriginal;
+                btn.disabled = false;
             }
             return true;
         }
@@ -363,7 +478,17 @@ export async function gerirCliquesPRHF(e) {
             const pId = btn.getAttribute('data-prhf');
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
             try {
-                await updateDoc(doc(db, "utilizadores", aId, "prhfs", pId), { propostaLidaDT: true }); 
+                const prhfRef = doc(db, "utilizadores", aId, "prhfs", pId);
+                const docSnap = await getDoc(prhfRef);
+                let updateData = { propostaLidaDT: true };
+                
+                if (docSnap.exists() && docSnap.data().sessoesPresenciais) {
+                    // Passa todas as sessões para estado 'aceite'
+                    const sessoes = docSnap.data().sessoesPresenciais.map(s => ({...s, status: 'aceite'}));
+                    updateData.sessoesPresenciais = sessoes;
+                }
+                
+                await updateDoc(prhfRef, updateData); 
                 carregarTarefasProf();
             } catch(err) { btn.innerHTML = "Erro"; btn.disabled = false; }
             return true;
@@ -375,7 +500,17 @@ export async function gerirCliquesPRHF(e) {
             const pId = btn.getAttribute('data-prhf');
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
             try {
-                await updateDoc(doc(db, "utilizadores", aId, "prhfs", pId), { propostaAluno: null });
+                const prhfRef = doc(db, "utilizadores", aId, "prhfs", pId);
+                const docSnap = await getDoc(prhfRef);
+                let updateData = { propostaAluno: null };
+                
+                if (docSnap.exists() && docSnap.data().sessoesPresenciais) {
+                    // Retira apenas as pendentes e mantém as que já tinham sido aceites!
+                    const sessoes = docSnap.data().sessoesPresenciais.filter(s => s.status === 'aceite');
+                    updateData.sessoesPresenciais = sessoes;
+                }
+                
+                await updateDoc(prhfRef, updateData);
                 carregarTarefasProf();
             } catch(err) { btn.innerHTML = "Erro"; btn.disabled = false; }
             return true;
@@ -422,3 +557,58 @@ export async function gerirCliquesPRHF(e) {
         return false;
     }
 }
+
+// ==========================================
+// FUNÇÕES AUXILIARES DE SESSÕES MÚLTIPLAS
+// ==========================================
+window.renderizarLinhasSessoes = function(arraySessoes) {
+    const container = document.getElementById('container-sessoes-dinamicas');
+    if (!container) return;
+
+    let html = '';
+    arraySessoes.forEach((s, idx) => {
+        html += `
+        <div class="sessao-item-linha" style="background: rgba(0,0,0,0.2); border: 1px solid #444; border-radius: 8px; padding: 12px; position: relative; margin-bottom: 8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-size:0.75rem; color:var(--primary-green); font-weight:bold;">Sessão Presencial #${idx + 1}</span>
+                <button type="button" class="btn-remover-sessao-linha" style="background:none; border:none; color:var(--danger-red); cursor:pointer; font-size:0.9rem;" title="Remover"><i class="fa-solid fa-trash"></i></button>
+            </div>
+            
+            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                <div style="flex: 2;"><label style="font-size:0.7rem; color:var(--text-muted);">Data</label><input type="date" value="${s.data || ''}" class="input-padrao input-data-sessao" style="width:100%; margin:0; font-size:0.85rem;"></div>
+                <div style="flex: 1;"><label style="font-size:0.7rem; color:var(--text-muted);">Início</label><input type="time" value="${s.inicio || ''}" class="input-padrao input-inicio-sessao" style="width:100%; margin:0; font-size:0.85rem;"></div>
+                <div style="flex: 1;"><label style="font-size:0.7rem; color:var(--text-muted);">Fim</label><input type="time" value="${s.fim || ''}" class="input-padrao input-fim-sessao" style="width:100%; margin:0; font-size:0.85rem;"></div>
+            </div>
+            
+            <label style="font-size:0.7rem; color:var(--text-muted); display:block; margin-bottom:3px;">Tarefa para esta aula específica (Opcional)</label>
+            <input type="text" value="${s.tarefa || ''}" placeholder="Ex: Resolver exercícios 1 a 5 da ficha..." class="input-padrao input-tarefa-sessao" style="width:100%; margin:0; font-size:0.85rem;">
+        </div>`;
+    });
+    container.innerHTML = html;
+};
+
+window.adicionarLinhaSessaoModal = function() {
+    const container = document.getElementById('container-sessoes-dinamicas');
+    if (!container) return;
+
+    const div = document.createElement('div');
+    const idx = container.querySelectorAll('.sessao-item-linha').length + 1;
+    div.className = 'sessao-item-linha';
+    div.style.cssText = 'background: rgba(0,0,0,0.2); border: 1px solid #444; border-radius: 8px; padding: 12px; position: relative; margin-bottom: 8px;';
+    div.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-size:0.75rem; color:var(--primary-green); font-weight:bold;">Sessão Presencial #${idx}</span>
+            <button type="button" class="btn-remover-sessao-linha" style="background:none; border:none; color:var(--danger-red); cursor:pointer; font-size:0.9rem;" title="Remover"><i class="fa-solid fa-trash"></i></button>
+        </div>
+        
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <div style="flex: 2;"><label style="font-size:0.7rem; color:var(--text-muted);">Data</label><input type="date" class="input-padrao input-data-sessao" style="width:100%; margin:0; font-size:0.85rem;"></div>
+            <div style="flex: 1;"><label style="font-size:0.7rem; color:var(--text-muted);">Início</label><input type="time" class="input-padrao input-inicio-sessao" style="width:100%; margin:0; font-size:0.85rem;"></div>
+            <div style="flex: 1;"><label style="font-size:0.7rem; color:var(--text-muted);">Fim</label><input type="time" class="input-padrao input-fim-sessao" style="width:100%; margin:0; font-size:0.85rem;"></div>
+        </div>
+        
+        <label style="font-size:0.7rem; color:var(--text-muted); display:block; margin-bottom:3px;">Tarefa para esta aula específica (Opcional)</label>
+        <input type="text" placeholder="Ex: Resolver exercícios 1 a 5 da ficha..." class="input-padrao input-tarefa-sessao" style="width:100%; margin:0; font-size:0.85rem;">
+    `;
+    container.appendChild(div);
+};

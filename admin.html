@@ -658,23 +658,56 @@
     </div>
     <div id="modal-novo-utilizador" class="modal-overlay" style="display: none;">
         <div class="action-sheet" style="border-radius: 12px; max-width: 400px; margin: auto;">
-            <h3 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-user-plus"></i> Novo
-                Perfil</h3>
-            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Nota: O Email e Password devem
-                ser criados separadamente no painel de Authentication do Firebase.</p>
-            <div class="form-group"><input type="text" id="nu-id" placeholder="ID (ex: a1234, prof_joao)"
-                    class="input-padrao" style="margin-bottom:10px;"></div>
-            <div class="form-group"><input type="text" id="nu-nome" placeholder="Nome Completo" class="input-padrao"
-                    style="margin-bottom:10px;"></div>
-            <div class="form-group"><select id="nu-papel" class="input-padrao" style="margin-bottom:10px;">
+            <h3 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-user-plus"></i> Novo Perfil</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Nota: O Email e Password devem ser criados separadamente no painel de Authentication do Firebase.</p>
+            
+            <div class="form-group"><input type="text" id="nu-id" placeholder="ID (ex: a1234, prof_joao)" class="input-padrao" style="margin-bottom:10px;"></div>
+            <div class="form-group"><input type="text" id="nu-nome" placeholder="Nome Completo" class="input-padrao" style="margin-bottom:10px;"></div>
+            <div class="form-group">
+                <select id="nu-papel" class="input-padrao" style="margin-bottom:10px;" onchange="window.mudarCamposNovoUser(this.value)">
                     <option value="aluno">Aluno</option>
                     <option value="professor">Professor</option>
                     <option value="ee">Enc. de Educação</option>
-                </select></div>
-            <div class="form-group"><input type="text" id="nu-turma" placeholder="Turma Principal (ex: 10T)"
-                    class="input-padrao" style="margin-bottom:10px;"></div><button id="btn-gravar-novo-user"
-                class="primary-btn">Criar Ficha na Base de Dados</button><button class="secondary-btn btn-fechar-modal"
-                style="margin-top:10px;">Cancelar</button>
+                </select>
+            </div>
+            
+            <!-- Zona: Aluno -->
+            <div id="nu-zona-aluno" class="form-group">
+                <input type="text" id="nu-turma" placeholder="Turma (ex: 10T)" class="input-padrao" style="margin-bottom:10px;">
+            </div>
+
+            <!-- Zona: E.E. -->
+            <div id="nu-zona-ee" class="form-group" style="display: none;">
+                <label style="color: var(--text-muted); font-size: 0.75rem;">ID do(s) Educando(s) - Separar por vírgula se mais que um</label>
+                <input type="text" id="nu-educandos" placeholder="ex: a1234, a5678" class="input-padrao" style="margin-bottom:10px;">
+            </div>
+
+            <!-- Zona: Professor -->
+            <div id="nu-zona-professor" style="display: none; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 8px; border: 1px dashed #444; margin-bottom: 15px;">
+                <label style="color: var(--text-muted); font-size: 0.75rem;">Turmas que leciona (ex: 10T, 11T)</label>
+                <input type="text" id="nu-prof-turmas" class="input-padrao" placeholder="ex: 10T, 11T" style="width: 100%; margin-bottom: 10px;">
+                
+                <label style="color: var(--text-muted); font-size: 0.75rem;">Disciplinas (ex: PORT, MAT)</label>
+                <input type="text" id="nu-prof-disciplinas" class="input-padrao" placeholder="ex: PORT, MAT" style="width: 100%; margin-bottom: 15px;">
+                
+                <label style="color: white; font-size: 0.85rem; font-weight: bold; display: block; margin-bottom: 8px;">Capas de Gestão Extra:</label>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <label style="display:flex; align-items:center; gap:8px; color:var(--text-light); font-size:0.85rem; cursor:pointer;">
+                        <input type="checkbox" id="nu-prof-capa-dt" value="diretor_turma" style="width:16px; height:16px; accent-color:var(--warning-yellow);" onchange="document.getElementById('nu-prof-turma-dt').style.display = this.checked ? 'block' : 'none'"> Diretor de Turma
+                    </label>
+                    <input type="text" id="nu-prof-turma-dt" class="input-padrao" placeholder="De que turma? (ex: 10T)" style="width: 100%; margin-bottom: 10px; display: none; font-size: 0.8rem; padding: 6px 10px;">
+                    
+                    <label style="display:flex; align-items:center; gap:8px; color:var(--text-light); font-size:0.85rem; cursor:pointer;">
+                        <input type="checkbox" id="nu-prof-capa-pap" value="orientador_pap" style="width:16px; height:16px; accent-color:var(--success-green);"> Orientador de PAP
+                    </label>
+                    <label style="display:flex; align-items:center; gap:8px; color:var(--text-light); font-size:0.85rem; cursor:pointer;">
+                        <input type="checkbox" id="nu-prof-capa-coord" value="coordenador" style="width:16px; height:16px; accent-color:#9333ea;"> Coordenador de Curso
+                    </label>
+                </div>
+            </div>
+
+            <button id="btn-gravar-novo-user" class="primary-btn" style="width: 100%;">Criar Ficha na Base de Dados</button>
+            <button class="secondary-btn btn-fechar-modal" style="margin-top:10px; width: 100%;">Cancelar</button>
         </div>
     </div>
 

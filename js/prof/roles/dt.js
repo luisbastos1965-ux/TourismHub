@@ -39,89 +39,154 @@ export async function carregarPainelDT() {
     const faltasContainer = document.getElementById('dt-alertas-faltas-container');
     faltasContainer.innerHTML = '<p class="text-muted center" style="margin:0;"><i class="fa-solid fa-spinner fa-spin"></i> A cruzar dados da turma...</p>';
 
-    let totalModulosAtraso = 0;
-    let totalPlanosAtivos = 0;
-    let alertasFaltasHTML = '';
-    let dadosParaAta = []; // Cofre invisível para alimentar o botão do resumo!
-
     try {
+        // Precisamos da função da Matriz para saber o teto de faltas real
+        let matrizDeHoras = {};
+        try {
+            const { getMatriz } = await import("../../js/modules/aluno-caderneta.js");
+            matrizDeHoras = getMatriz();
+        } catch(e) {}
+
         // 2. Procurar todos os alunos desta turma
         const alunosSnap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turma), where("papel", "==", "aluno")));
         
-        for (const docAl of alunosSnap.docs) {
+        // 3. A ACELERAÇÃO: Criar uma "Promessa" para cada aluno correr em simultâneo
+        const promessasAlunos = alunosSnap.docs.map(async (docAl) => {
             const alunoId = docAl.id;
             const alunoNome = nomeCurto(docAl.data().nome);
+            
             let alunoTemAtrasos = 0;
             let alunoTemPlanos = 0;
+            let faltasPorDisc = {};
+
+            // Executar consultas de PRHFs, Notas e Faltas em paralelo para ESTE aluno
+            const [prhfsSnap, avalSnap, faltasSnap] = await Promise.all([
+                getDocs(collection(db, "utilizadores", alunoId, "prhfs")),
+                getDocs(collection(db, "utilizadores", alunoId, "avaliacoes")),
+                getDocs(collection(db, "utilizadores", alunoId, "faltas"))
+            ]);
 
             // -- A. Contar Planos (PRHFs) Ativos --
-            const prhfsSnap = await getDocs(collection(db, "utilizadores", alunoId, "prhfs"));
             prhfsSnap.forEach(p => {
                 if (p.data().status !== 'concluida') {
-                    totalPlanosAtivos++;
                     alunoTemPlanos++;
                 }
             });
 
-            // -- B. Contar Módulos em Atraso (Classificações REP - À prova de Excel) --
-            const avalSnap = await getDocs(collection(db, "utilizadores", alunoId, "avaliacoes"));
+            // -- B. Contar Módulos em Atraso --
             avalSnap.forEach(a => {
-                const dadosAval = a.data();
-                // Apanha o campo 'nota', 'Nota' ou 'NOTA' e converte tudo para texto limpo e maiúsculo
-                const valorNota = String(dadosAval.nota || dadosAval.Nota || "").trim().toUpperCase();
-                
+                const valorNota = String(a.data().nota || a.data().Nota || "").trim().toUpperCase();
                 if (valorNota === 'REP') {
-                    totalModulosAtraso++;
                     alunoTemAtrasos++;
                 }
             });
 
-            // -- C. O CÁLCULO DOS 10% DE FALTAS --
-            const faltasSnap = await getDocs(collection(db, "utilizadores", alunoId, "faltas"));
-            let faltasPorDisc = {};
+            // -- C. Tratar Faltas (Novo Formato) --
             faltasSnap.forEach(f => {
                 const d = f.data();
                 const disc = d.disciplina;
-                // Previne erros definindo 50 como horas fallback se não existirem
-                if (!faltasPorDisc[disc]) faltasPorDisc[disc] = { horasTotais: parseInt(d.horasTotaisDisciplina || 50), horasFaltadas: 0 };
-                faltasPorDisc[disc].horasFaltadas += parseInt(d.duracao || 0);
+                const mod = d.modulo || '?';
+                const duracaoDaFalta = parseInt(d.duracaoBlocos) || parseInt(d.horas) || 0;
+                
+                // Se a falta NÃO estiver justificada
+                if (d.justificada === false || !d.hasOwnProperty('justificada')) {
+                    if (!faltasPorDisc[disc]) faltasPorDisc[disc] = { horasFaltadas: 0, modulos: {} };
+                    if (!faltasPorDisc[disc].modulos[mod]) faltasPorDisc[disc].modulos[mod] = 0;
+                    
+                    faltasPorDisc[disc].horasFaltadas += duracaoDaFalta;
+                    faltasPorDisc[disc].modulos[mod] += duracaoDaFalta;
+                }
             });
 
+            // Retorna um "Pacote" consolidado deste aluno
+            return {
+                id: alunoId,
+                nome: alunoNome,
+                atrasos: alunoTemAtrasos,
+                planos: alunoTemPlanos,
+                faltas: faltasPorDisc
+            };
+        });
+
+        // Espera que TODOS os alunos acabem os seus cálculos ao mesmo tempo
+        const alunosProcessados = await Promise.all(promessasAlunos);
+
+        // 4. Processar resultados para o ecrã
+        let totalModulosAtraso = 0;
+        let totalPlanosAtivos = 0;
+        let alertasFaltasHTML = '';
+        let dadosParaAta = [];
+
+        alunosProcessados.forEach(aluno => {
+            totalModulosAtraso += aluno.atrasos;
+            totalPlanosAtivos += aluno.planos;
+            dadosParaAta.push({ nome: aluno.nome, atrasos: aluno.atrasos, planos: aluno.planos });
+
             let alertasDesteAluno = [];
-            for (const [disc, dados] of Object.entries(faltasPorDisc)) {
-                // A Tua Regra: 10% com arredondamento ao inteiro mais próximo
-                const limite = Math.round(dados.horasTotais * 0.10);
-                
-                if (dados.horasFaltadas > limite) {
-                    alertasDesteAluno.push(`<strong>${disc}</strong>: <span style="color:var(--danger-red);">${dados.horasFaltadas}h</span> (Ultrapassou limite de ${limite}h)`);
-                } else if (dados.horasFaltadas === limite) {
-                    alertasDesteAluno.push(`<strong>${disc}</strong>: <span style="color:var(--warning-yellow);">${dados.horasFaltadas}h</span> (Bateu no teto de ${limite}h)`);
-                } else if (dados.horasFaltadas >= limite - 2) {
-                    alertasDesteAluno.push(`<strong>${disc}</strong>: ${dados.horasFaltadas}h (Em risco. Limite: ${limite}h)`);
+            let gravidadeMaximaAluno = 0;
+
+            for (const [disc, dados] of Object.entries(aluno.faltas)) {
+                for (const [mod, horasFaltadas] of Object.entries(dados.modulos)) {
+                    let cargaHorariaDoModulo = 0;
+                    
+                    for (const comp in matrizDeHoras) {
+                        if (matrizDeHoras[comp][disc] && matrizDeHoras[comp][disc][mod]) {
+                            cargaHorariaDoModulo = Number(matrizDeHoras[comp][disc][mod]);
+                            break;
+                        }
+                    }
+
+                    const limite = cargaHorariaDoModulo > 0 ? Math.round(cargaHorariaDoModulo * 0.10) : 3;
+                    const modLabel = mod.toString().startsWith('UC') ? mod : `M${mod}`;
+
+                    if (horasFaltadas > limite) {
+                        alertasDesteAluno.push({ disc: disc, mod: modLabel, hFalta: horasFaltadas, limite: limite, cor: 'var(--danger-red)', bg: 'rgba(239, 68, 68, 0.1)', icon: 'fa-xmark' });
+                        gravidadeMaximaAluno = Math.max(gravidadeMaximaAluno, 2);
+                    } else if (horasFaltadas === limite) {
+                        alertasDesteAluno.push({ disc: disc, mod: modLabel, hFalta: horasFaltadas, limite: limite, cor: 'var(--warning-yellow)', bg: 'rgba(245, 158, 11, 0.1)', icon: 'fa-exclamation' });
+                        gravidadeMaximaAluno = Math.max(gravidadeMaximaAluno, 1);
+                    }
                 }
             }
 
             if (alertasDesteAluno.length > 0) {
+                alertasDesteAluno.sort((a, b) => {
+                    if (a.cor === 'var(--danger-red)' && b.cor !== 'var(--danger-red)') return -1;
+                    if (a.cor !== 'var(--danger-red)' && b.cor === 'var(--danger-red)') return 1;
+                    return 0;
+                });
+
+                let tagsDisciplinas = '';
+                alertasDesteAluno.forEach(a => {
+                    tagsDisciplinas += `
+                    <div style="background: ${a.bg}; border: 1px solid ${a.cor}; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; color: ${a.cor}; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                        <span><i class="fa-solid ${a.icon}" style="margin-right: 4px;"></i> <strong>${a.disc}</strong> (${a.mod})</span>
+                        <span style="font-weight: bold; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 10px;">${a.hFalta}/${a.limite}h</span>
+                    </div>`;
+                });
+
+                const corBordaCard = gravidadeMaximaAluno === 2 ? 'var(--danger-red)' : 'var(--warning-yellow)';
+                
                 alertasFaltasHTML += `
-                <div style="background:rgba(239, 68, 68, 0.1); border: 1px solid var(--danger-red); padding: 10px; border-radius: 6px; margin-bottom: 8px;">
-                    <strong style="color: white; font-size: 0.9rem;">${alunoNome}</strong>
-                    <div style="font-size: 0.8rem; color: var(--text-light); margin-top: 4px; line-height: 1.5;">
-                        ${alertasDesteAluno.join('<br>')}
+                <div style="background: rgba(0,0,0,0.2); border: 1px solid #333; border-left: 4px solid ${corBordaCard}; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 10px;">
+                        <strong style="color: white; font-size: 1rem;"><i class="fa-solid fa-user" style="color: var(--text-muted); margin-right: 5px;"></i> ${aluno.nome}</strong>
+                        <span style="font-size: 0.75rem; color: ${corBordaCard}; font-weight: bold; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 12px;">${alertasDesteAluno.length} Alerta(s)</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px;">
+                        ${tagsDisciplinas}
                     </div>
                 </div>`;
             }
+        });
 
-            // 3. Guardar memória para o modal de resumo
-            dadosParaAta.push({ nome: docAl.data().nome, atrasos: alunoTemAtrasos, planos: alunoTemPlanos });
-        }
-
-        // 4. Imprimir resultados finais no ecrã
+        // 5. Imprimir resultados finais no ecrã
         document.getElementById('dt-modulos-atraso').innerText = totalModulosAtraso;
         document.getElementById('dt-planos-ativos').innerText = totalPlanosAtivos;
         
         faltasContainer.innerHTML = alertasFaltasHTML === '' 
             ? '<p class="text-success center" style="margin:0;"><i class="fa-solid fa-shield-halved"></i> Assiduidade da turma estável e dentro dos limites.</p>' 
-            : alertasFaltasHTML;
+            : `<div style="display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; padding-right: 5px;">${alertasFaltasHTML}</div>`;
 
         window.memoriaAtaDT = dadosParaAta;
 

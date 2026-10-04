@@ -167,7 +167,8 @@
                 </div>
 
                 <!-- OS AVISOS BUROCRÁTICOS FICAM AGORA AQUI (Com margem para afastar dos botões) -->
-                <div id="avisos-dt-dashboard-container" style="display:grid; grid-template-columns: 1fr; gap:10px; margin-bottom: 20px;">
+                <div id="avisos-dt-dashboard-container"
+                    style="display:grid; grid-template-columns: 1fr; gap:10px; margin-bottom: 20px;">
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
@@ -230,14 +231,12 @@
                 </div>
 
                 <div id="turma-ativa-container" style="display: none;">
-                    <div class="card"
-                        style="background: linear-gradient(135deg, rgba(0, 204, 136, 0.1), rgba(0, 0, 0, 0.2)); border: 1px solid var(--primary-green); margin-bottom: 20px; position:relative;">
-                        <button id="btn-abrir-aviso-global" class="primary-btn small-btn"
-                            style="position:absolute; top:15px; right:15px; background:var(--warning-yellow); color:black; padding:5px 10px; border:none; display:none;"
-                            title="Aviso Global"><i class="fa-solid fa-bullhorn"></i></button>
-                        <h3 style="font-size: 1.1rem; margin-bottom: 10px; color: var(--primary-green);"><i
-                                class="fa-solid fa-robot"></i> Assistente da Turma <span id="badge-dt-turma"
-                                class="dt-badge">DT</span></h3>
+                <div class="card"
+                    style="background: linear-gradient(135deg, rgba(0, 204, 136, 0.1), rgba(0, 0, 0, 0.2)); border: 1px solid var(--primary-green); margin-bottom: 20px; position:relative;">
+                    
+                    <h3 style="font-size: 1.1rem; margin-bottom: 10px; color: var(--primary-green);"><i
+                            class="fa-solid fa-robot"></i> Assistente da Turma <span id="badge-dt-turma"
+                            class="dt-badge">DT</span></h3>
                         <div id="assistente-aula-texto"
                             style="font-size: 0.9rem; color: var(--text-light); line-height: 1.5; padding-right:40px;">A
                             analisar dados da turma...</div>
@@ -332,18 +331,16 @@
     <!-- VISTA 3: PRHF -->
     <div id="view-prof-tarefas" style="display: none;">
         <div id="sec-tarefas-prhf">
-            <div id="prhf-dt-toggles" class="falta-tabs" style="display:none; margin-bottom:15px;">
-                <button class="falta-tab-btn active" id="btn-prhf-minha">Minha Disciplina</button>
-                <button class="falta-tab-btn" id="btn-prhf-todas">Todas as Disciplinas</button>
-            </div>
-
             <div style="display:flex; gap:10px; margin-bottom:15px;">
                 <button id="btn-novo-prhf" class="primary-btn"
                     style="flex:2; background:var(--bg-dark); color:var(--primary-green); border:1px dashed var(--primary-green);"><i
                         class="fa-solid fa-plus"></i> Criar PRHF</button>
-                <button id="btn-radar-conflitos" class="secondary-btn"
-                    style="flex:1; border-color:var(--danger-red); color:var(--danger-red); display:none;"><i
-                        class="fa-solid fa-satellite-dish"></i> Radar</button>
+
+                <!-- O NOVO BOTÃO DO RADAR SEM ONCLICK -->
+                <button id="btn-radar-conflitos" class="primary-btn small-btn"
+                    style="display: none; margin-left: auto; background: var(--warning-yellow); color: black;">
+                    <i class="fa-solid fa-satellite-dish"></i> Agenda do DT
+                </button>
             </div>
 
             <h3 style="font-size: 1.1rem; color: white; margin: 20px 0 10px 0;">Planos em Curso</h3>
@@ -362,6 +359,10 @@
                     <select id="filtro-curso-turma" class="input-padrao filtro-prhf-curso"
                         style="flex:1; margin:0; padding:8px 10px; font-size:0.85rem; background-color: #1a1a1a; color: white; border: 1px solid #444;">
                         <option value="">Todas as Turmas</option>
+                    </select>
+                    <select id="filtro-curso-disciplina" class="input-padrao filtro-prhf-curso"
+                        style="flex:1; margin:0; padding:8px 10px; font-size:0.85rem; background-color: #1a1a1a; color: white; border: 1px solid #444;">
+                        <option value="">Todas as Disciplinas</option>
                     </select>
                     <select id="filtro-curso-modulo" class="input-padrao filtro-prhf-curso"
                         style="flex:1; margin:0; padding:8px 10px; font-size:0.85rem; background-color: #1a1a1a; color: white; border: 1px solid #444;">
@@ -672,9 +673,12 @@
                     style="display:none; width:100%; margin-bottom:15px; border-color:var(--primary-green);">
             </div>
 
-            <div class="sticky-action-bar">
-                <button id="btn-gravar-novo-prhf" class="primary-btn" style="background:var(--danger-red);"><i
+            <div class="sticky-action-bar" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button id="btn-gravar-novo-prhf" class="primary-btn" style="flex: 2; background:var(--danger-red);"><i
                         class="fa-solid fa-paper-plane"></i> Atribuir PRHF</button>
+                <!-- NOVO BOTÃO AQUI -->
+                <button id="btn-apagar-prhf-definitivo" class="secondary-btn" style="flex: 1; border-color:var(--danger-red); color:var(--danger-red); display:none;"><i
+                        class="fa-solid fa-trash"></i> Eliminar</button>
             </div>
         </div>
     </div>
@@ -1137,6 +1141,26 @@
         </div>
     </div>
 
+    <!-- MODAL CONFIRMAR APAGAR PRHF -->
+    <div id="modal-confirm-apagar-prhf" class="modal-overlay" style="z-index: 6000; display: none;">
+        <div class="action-sheet"
+            style="max-width:350px; border-radius:12px; margin:20px; text-align: center; padding: 20px;">
+            <i class="fa-solid fa-trash"
+                style="font-size: 3rem; color: var(--danger-red); margin-bottom: 15px;"></i>
+            <h3 style="margin-bottom: 10px; color: white;">Eliminar Plano?</h3>
+            <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;">Tens a certeza que queres
+                eliminar permanentemente este PRHF? Todo o histórico associado será perdido.</p>
+            <input type="hidden" id="apagar-prhf-aluno-id">
+            <input type="hidden" id="apagar-prhf-id">
+            <div style="display:flex; gap:10px;">
+                <button class="secondary-btn fechar-modal" data-target="modal-confirm-apagar-prhf"
+                    style="flex:1;">Cancelar</button>
+                <button id="btn-executar-apagar-prhf" class="primary-btn"
+                    style="flex:1; background:var(--danger-red); color:white; border:none;">Sim, Eliminar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAIS DE TABELAS (PAUTA E FALTAS) -->
     <div id="modal-pauta-turma" class="modal-overlay" style="z-index: 2000; display: none;">
         <div class="action-sheet" style="max-width: 600px; padding: 20px;">
@@ -1281,7 +1305,8 @@
             <div style="margin-bottom: 15px;">
                 <h4
                     style="color:var(--primary-green); font-size:0.95rem; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">
-                    <i class="fa-solid fa-globe"></i> Medidas Universais</h4>
+                    <i class="fa-solid fa-globe"></i> Medidas Universais
+                </h4>
                 <div style="display:flex; flex-direction:column; gap:8px;">
 
                     <div style="background:rgba(0,0,0,0.2); border:1px solid #333; border-radius:6px; padding:10px;">
@@ -1384,7 +1409,8 @@
             <div style="margin-bottom: 15px;">
                 <h4
                     style="color:var(--warning-yellow); font-size:0.95rem; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">
-                    <i class="fa-solid fa-filter"></i> Medidas Seletivas</h4>
+                    <i class="fa-solid fa-filter"></i> Medidas Seletivas
+                </h4>
                 <div style="display:flex; flex-direction:column; gap:8px;">
 
                     <div style="background:rgba(0,0,0,0.2); border:1px solid #333; border-radius:6px; padding:10px;">
@@ -1488,7 +1514,8 @@
             <div style="margin-bottom: 20px;">
                 <h4
                     style="color:var(--danger-red); font-size:0.95rem; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">
-                    <i class="fa-solid fa-layer-group"></i> Medidas Adicionais</h4>
+                    <i class="fa-solid fa-layer-group"></i> Medidas Adicionais
+                </h4>
                 <div style="display:flex; flex-direction:column; gap:8px;">
 
                     <div style="background:rgba(0,0,0,0.2); border:1px solid #333; border-radius:6px; padding:10px;">
@@ -1877,90 +1904,65 @@
             <div id="grid-sinteses-alunos" style="display:flex; flex-direction:column; gap:6px;">
                 <p class="text-muted center" style="padding:15px; font-size:0.85rem;">A carregar lista...</p>
             </div>
+
+            <!-- NOVA ZONA DE PUBLICAÇÃO PARA O DT -->
+            <div id="area-publicar-sinteses-dt" style="display:none; margin-top: 25px; padding-top: 20px; border-top: 1px dashed #444;">
+                <h4 style="color: var(--warning-yellow); margin: 0 0 10px 0; font-size: 1rem;"><i class="fa-solid fa-lock-open"></i> Visibilidade das Sínteses</h4>
+                <p style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 15px;">Ao clicares neste botão, as sínteses e o parecer global deste momento passam a estar visíveis nas aplicações dos Alunos e Encarregados de Educação.</p>
+                <button id="btn-publicar-sinteses-turma" class="primary-btn" style="width:100%; background: #b82bf2; color: white; padding: 12px; font-size: 0.95rem;">
+                    <i class="fa-solid fa-bullhorn"></i> Publicar Sínteses na App Familiar
+                </button>
+            </div>
+
         </div>
     </div>
 
     <!-- MODAL GERADOR DE SÍNTESE IA -->
     <div id="modal-gerador-sintese" class="modal-overlay" style="z-index: 2500; display: none;">
-        <div class="action-sheet" style="max-width: 450px; padding: 20px;">
+        <div class="action-sheet" style="max-width: 550px; width: 95%; padding: 25px; max-height: 90vh; overflow-y: auto;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                <h3 style="color: #3b82f6; margin:0;"><i class="fa-solid fa-wand-magic-sparkles"></i> IA
-                    Assistente</h3>
-                <button class="fechar-modal" data-target="modal-gerador-sintese"
-                    style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i
-                        class="fa-solid fa-xmark"></i></button>
+                <h3 style="color: #3b82f6; margin:0;"><i class="fa-solid fa-wand-magic-sparkles"></i> IA Assistente</h3>
+                <button class="fechar-modal" data-target="modal-gerador-sintese" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
             </div>
 
             <input type="hidden" id="sintese-aluno-id-atual">
-            <div
-                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px;">
-                <button id="btn-sint-anterior"
-                    style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.2rem; padding:5px;"><i
-                        class="fa-solid fa-chevron-left"></i></button>
-                <h4 id="nome-aluno-sintese-atual"
-                    style="color: white; margin: 0; font-size: 1.1rem; text-align: center; flex:1;">Nome do
-                    Aluno</h4>
-                <button id="btn-sint-seguinte"
-                    style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.2rem; padding:5px;"><i
-                        class="fa-solid fa-chevron-right"></i></button>
+            
+            <div style="display: flex; justify-content: center; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px;">
+                <h4 id="nome-aluno-sintese-atual" style="color: white; margin: 0; font-size: 1.1rem; text-align: center;">Nome do Aluno</h4>
             </div>
 
-            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin-bottom:15px;">
-                <div>
-                    <label style="font-size:0.7rem; color:var(--text-muted);">Assiduidade</label>
-                    <select id="sint-assid" class="input-padrao" style="margin:0; padding:8px; font-size:0.85rem;">
-                        <option>Sempre</option>
-                        <option selected>Geralmente</option>
-                        <option>Falhas</option>
-                    </select>
-                </div>
-                <div>
-                    <label style="font-size:0.7rem; color:var(--text-muted);">Empenho</label>
-                    <select id="sint-emp" class="input-padrao" style="margin:0; padding:8px; font-size:0.85rem;">
-                        <option>Elevado</option>
-                        <option selected>Bom</option>
-                        <option>Suficiente</option>
-                        <option>Fraco</option>
-                    </select>
-                </div>
-                <div>
-                    <label style="font-size:0.7rem; color:var(--text-muted);">Participação</label>
-                    <select id="sint-part" class="input-padrao" style="margin:0; padding:8px; font-size:0.85rem;">
-                        <option>Ativa</option>
-                        <option selected>Regular</option>
-                        <option>Pouca</option>
-                        <option>Passiva</option>
-                    </select>
-                </div>
+            <!-- ÁREA DE AVALIAÇÃO QUALITATIVA PASSO A PASSO -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-size:0.9rem; color:white; font-weight:bold;">
+                    <i class="fa-solid fa-list-check" style="color:#3b82f6;"></i> Avaliação Qualitativa
+                </span>
+                <span id="passo-indicador-contador" style="font-size:0.8rem; color:var(--warning-yellow); font-weight:bold;">Passo 1 de 12</span>
+            </div>
+            
+            <!-- CAIXA QUE VAI CRESCER AUTOMATICAMENTE SEM ESMAGAR -->
+            <div id="container-dimensoes-qualitativas" style="background: rgba(0,0,0,0.2); border: 1px solid #444; padding: 20px; border-radius: 8px; margin-bottom: 20px; min-height: 380px; display: flex; flex-direction: column;">
+                <!-- O JavaScript injeta a dimensão atual aqui -->
             </div>
 
-            <div
-                style="display:flex; flex-direction:column; gap:8px; margin-bottom:15px; background: rgba(0,0,0,0.2); border: 1px solid #333; padding: 10px; border-radius: 8px;">
-                <label
-                    style="display:flex; align-items:center; gap:10px; color:white; font-size:0.85rem; cursor:pointer;">
-                    <input type="checkbox" id="sint-check-prhfs" style="width:18px; height:18px; accent-color:#3b82f6;">
-                    Mencionar PRHFs ativos (se
-                    houver)
+            <!-- CHECKBOXES -->
+            <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:20px; background: rgba(0,0,0,0.2); border: 1px solid #333; padding: 12px; border-radius: 8px;">
+                <label style="display:flex; align-items:center; gap:10px; color:white; font-size:0.85rem; cursor:pointer;">
+                    <input type="checkbox" id="sint-check-prhfs" style="width:18px; height:18px; accent-color:#3b82f6;"> Mencionar PRHFs ativos (se houver)
                 </label>
-                <label
-                    style="display:flex; align-items:center; gap:10px; color:white; font-size:0.85rem; cursor:pointer;">
-                    <input type="checkbox" id="sint-check-atrasos"
-                        style="width:18px; height:18px; accent-color:#3b82f6;"> Mencionar módulos em atraso
+                <label style="display:flex; align-items:center; gap:10px; color:white; font-size:0.85rem; cursor:pointer;">
+                    <input type="checkbox" id="sint-check-atrasos" style="width:18px; height:18px; accent-color:#3b82f6;"> Mencionar módulos em atraso
                 </label>
             </div>
 
-            <button id="btn-auto-gerar-sintese" class="secondary-btn"
-                style="width:100%; margin-bottom:15px; border-color:#3b82f6; color:#3b82f6;">
-                <i class="fa-solid fa-robot"></i> Gerar Texto Base
+            <button id="btn-auto-gerar-sintese" class="secondary-btn" style="width:100%; margin-bottom:15px; border-color:#3b82f6; color:#3b82f6; padding: 12px;">
+                <i class="fa-solid fa-robot"></i> Gerar Síntese com IA
             </button>
 
-            <textarea id="texto-sintese-final" class="input-padrao"
-                style="min-height:100px; width:100%; margin-bottom:15px;"
-                placeholder="O texto gerado aparecerá aqui para poderes afinar..."></textarea>
+            <textarea id="texto-sintese-final" class="input-padrao" style="min-height:120px; width:100%; margin-bottom:15px;" placeholder="O texto gerado aparecerá aqui para poderes afinar..."></textarea>
 
-            <button id="btn-salvar-sintese-bd" class="primary-btn"
-                style="width:100%; background:#3b82f6; color:white;"><i class="fa-solid fa-floppy-disk"></i>
-                Guardar e Avançar</button>
+            <button id="btn-salvar-sintese-bd" class="primary-btn" style="width:100%; background:#3b82f6; color:white; padding: 12px;">
+                <i class="fa-solid fa-floppy-disk"></i> Guardar e Avançar
+            </button>
         </div>
     </div>
 

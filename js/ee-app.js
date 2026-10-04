@@ -1065,8 +1065,26 @@ async function carregarReunioesEE(reuniaoSelecionada = 'momento_1') {
         const docSnap = await getDoc(doc(db, "utilizadores", educandoAtualId, "reunioes", reuniaoSelecionada));
         let dadosReuniao = docSnap.exists() ? docSnap.data() : {};
 
-        const ordemDisciplinas = obterDisciplinasDoAno();
         let contentHtml = '<div style="display:flex; flex-direction:column; gap:10px;">';
+
+        // =========================================================================
+        // O CADEADO: Verifica se o Diretor de Turma já publicou as sínteses!
+        // =========================================================================
+        if (dadosReuniao.publicado !== true) {
+            contentHtml += `
+                <div style="text-align: center; padding: 40px 20px; border: 1px dashed #444; border-radius: 8px; background: rgba(0,0,0,0.2);">
+                    <i class="fa-solid fa-lock" style="font-size: 3rem; color: #555; margin-bottom: 15px;"></i>
+                    <h4 style="color: var(--text-light); font-size: 1.1rem; margin-bottom: 8px;">Reunião Em Processamento</h4>
+                    <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0;">As sínteses e os pareceres deste momento de avaliação ainda não foram disponibilizados pelo Diretor de Turma.</p>
+                </div>
+            </div>`;
+            const rArea = document.getElementById('reuniao-content-area');
+            if (rArea) rArea.innerHTML = contentHtml;
+            return; // Aborta e não desenha as disciplinas!
+        }
+        // =========================================================================
+
+        const ordemDisciplinas = obterDisciplinasDoAno();
 
         if (ordemDisciplinas.length === 0) {
             contentHtml += '<p class="text-muted center">Ainda não existem disciplinas associadas à turma.</p>';

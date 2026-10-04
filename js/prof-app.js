@@ -2281,6 +2281,10 @@ document.body.addEventListener('click', async (e) => {
         const turma = state.selectedTurma;
         if (!turma) { alert("Seleciona primeiro uma turma no menu superior."); return; }
 
+        const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
+        const areaPublicar = document.getElementById('area-publicar-sinteses-dt');
+        if (areaPublicar) areaPublicar.style.display = isDT ? 'block' : 'none';
+
         // NOVO: Preencher as disciplinas do Professor
         const discSelectModal = document.getElementById('lancar-sintese-disciplina');
         if (discSelectModal) {
@@ -2343,33 +2347,36 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('#btn-auto-gerar-sintese')) {
         const btn = e.target.closest('#btn-auto-gerar-sintese');
         const originalIcon = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A analisar dados...';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A compilar avaliação...';
 
         setTimeout(async () => {
-            const assid = document.getElementById('sint-assid').value;
-            const emp = document.getElementById('sint-emp').value;
-            const part = document.getElementById('sint-part').value;
             const alunoId = document.getElementById('sintese-aluno-id-atual').value;
+            let partesTexto = [];
 
-            let texto = "";
+            // Costura as frases qualitativas com base nas escalas tocadas pelo professor
+            if (estadoEscalasAluno.assiduidade && estadoEscalasAluno.pontualidade) {
+                partesTexto.push(`O aluno revela-se um elemento ${estadoEscalasAluno.assiduidade.toLowerCase()} e ${estadoEscalasAluno.pontualidade.toLowerCase()}.`);
+            }
+            if (estadoEscalasAluno.interesse && estadoEscalasAluno.empenho) {
+                partesTexto.push(`Demonstra-se ${estadoEscalasAluno.interesse.toLowerCase()} face à disciplina, evidenciando um perfil ${estadoEscalasAluno.empenho.toLowerCase()} nas tarefas propostas.`);
+            }
+            if (estadoEscalasAluno.participacao && estadoEscalasAluno.autonomia) {
+                partesTexto.push(`A sua participação em aula tem sido ${estadoEscalasAluno.participacao.toLowerCase()}, mostrando-se ${estadoEscalasAluno.autonomia.toLowerCase()} na resolução das atividades.`);
+            }
+            if (estadoEscalasAluno.responsabilidade && estadoEscalasAluno.comportamento) {
+                partesTexto.push(`A nível comportamental adota uma postura ${estadoEscalasAluno.comportamento.toLowerCase()}, revelando-se ${estadoEscalasAluno.responsabilidade.toLowerCase()} perante os deveres escolares.`);
+            }
+            if (estadoEscalasAluno.tarefas && estadoEscalasAluno.organizacao) {
+                partesTexto.push(`No que respeita ao trabalho autónomo, ${estadoEscalasAluno.tarefas.toLowerCase()} e apresenta um nível ${estadoEscalasAluno.organizacao.toLowerCase()} na organização.`);
+            }
+            if (estadoEscalasAluno.relacao && estadoEscalasAluno.evolucao) {
+                partesTexto.push(`Relativamente à dinâmica relacional, demonstra ser ${estadoEscalasAluno.relacao.toLowerCase()}, registando-se ${estadoEscalasAluno.evolucao.toLowerCase()} ao longo do período.`);
+            }
 
-            // Lógica de Fraseado Dinâmico e Humano
-            if (assid === 'Sempre') texto += "O aluno tem revelado uma postura exemplar, sendo assíduo e pontual. ";
-            else if (assid === 'Geralmente') texto += "O aluno é, na generalidade, assíduo e pontual às sessões letivas. ";
-            else texto += "O aluno tem apresentado algumas falhas na sua assiduidade e/ou pontualidade que prejudicam a fluidez letiva. ";
+            let textoFinal = partesTexto.join(" ");
 
-            if (emp === 'Elevado') texto += "Demonstra um elevado nível de empenho e interesse pelas atividades desenvolvidas na disciplina, ";
-            else if (emp === 'Bom') texto += "Demonstra um bom nível de empenho e interesse pelas atividades da disciplina, ";
-            else if (emp === 'Suficiente') texto += "Apresenta um nível aceitável de empenho, cumprindo os mínimos propostos, ";
-            else texto += "Revela um reduzido nível de empenho e fraco interesse face às propostas da disciplina, ";
-
-            if (part === 'Ativa') texto += "mantendo sempre uma participação ativa, pertinente e construtiva na dinâmica da turma.";
-            else if (part === 'Regular') texto += "mantendo uma participação regular e adequada ao esperado.";
-            else if (part === 'Pouca') texto += "no entanto, a sua participação oral construtiva é pouco frequente.";
-            else texto += "assumindo muitas vezes uma postura passiva e de inexistente participação na aula.";
-
-            // Extrair PRHFs da Base de Dados na Hora!
-            if (document.getElementById('sint-check-prhfs').checked) {
+            // --- MANTER AS FUNÇÕES DE PRHFS E MÓDULOS EM ATRASO ---
+            if (document.getElementById('sint-check-prhfs')?.checked) {
                 try {
                     const disciplinaAtual = state.disciplinasProfessor[0];
                     let prhfsAtivos = 0;
@@ -2377,18 +2384,18 @@ document.body.addEventListener('click', async (e) => {
                     pS.forEach(p => { if (p.data().status !== 'concluida' && p.data().disciplina === disciplinaAtual) prhfsAtivos++; });
 
                     if (prhfsAtivos > 0) {
-                        texto += `\n\nNeste momento, o aluno tem ativados ${prhfsAtivos} Plano(s) de Recuperação (PRHF) na disciplina, encontrando-se num processo de recuperação de aprendizagens.`;
+                        textoFinal += `\n\nNeste momento, o aluno tem ativados ${prhfsAtivos} Plano(s) de Recuperação (PRHF) na disciplina, encontrando-se em processo de recuperação de aprendizagens.`;
                     }
                 } catch (err) { }
             }
 
-            if (document.getElementById('sint-check-atrasos').checked) {
-                texto += `\nDe salientar que o aluno possui módulos em atraso que carecem de recuperação.`;
+            if (document.getElementById('sint-check-atrasos')?.checked) {
+                textoFinal += `\nDe salientar que o aluno possui módulos em atraso que carecem de recuperação.`;
             }
 
-            document.getElementById('texto-sintese-final').value = texto;
+            document.getElementById('texto-sintese-final').value = textoFinal;
             btn.innerHTML = originalIcon;
-        }, 800); // pequeno delay para dar sensação de IA a pensar
+        }, 600);
         return;
     }
 
@@ -2460,6 +2467,11 @@ document.body.addEventListener('click', async (e) => {
             document.getElementById('sintese-aluno-id-atual').value = alunoId;
             document.getElementById('nome-aluno-sintese-atual').innerText = nomeAluno;
             document.getElementById('texto-sintese-final').value = ""; // Limpa a caixa
+
+            // Desenha as 12 escalas interativas imediatamente
+            if (window.renderizarDimensoesQualitativas) {
+                window.renderizarDimensoesQualitativas();
+            }
 
             const discSelectModal = document.getElementById('lancar-sintese-disciplina');
             const disciplina = discSelectModal ? discSelectModal.value : state.disciplinasProfessor[0];
@@ -2603,11 +2615,24 @@ document.body.addEventListener('click', async (e) => {
         const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
 
         if (!textoF) { alert("A síntese está vazia."); return; }
+        if (!disciplina && !isDT) { alert("Erro: Nenhuma disciplina detetada."); return; }
 
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A gravar...';
         btn.disabled = true;
 
         try {
+            const docRef = doc(db, "utilizadores", alunoId, "reunioes", momento);
+            
+            // 1. Ler a "gaveta" primeiro para NÃO APAGAR as sínteses dos colegas!
+            const snapAtual = await getDoc(docRef);
+            let sintesesExistentes = {};
+            if (snapAtual.exists() && snapAtual.data().sinteses_disciplinas) {
+                sintesesExistentes = snapAtual.data().sinteses_disciplinas;
+            }
+
+            // 2. Adicionar apenas a tua disciplina ao pacote
+            sintesesExistentes[disciplina] = textoF;
+
             const updateData = {
                 turma: state.selectedTurma,
                 atualizadoEm: new Date().toISOString()
@@ -2617,15 +2642,15 @@ document.body.addEventListener('click', async (e) => {
                 updateData.sintese_global = textoF;
                 updateData.dt = state.myUserName;
             } else {
-                // CORREÇÃO CRÍTICA: Enviar como um objeto "pasta" para o Firebase arrumar no sítio certo
-                updateData.sinteses_disciplinas = {
-                    [disciplina]: textoF
-                };
+                // Guarda o pacote inteiro (antigas + a nova) de forma segura
+                updateData.sinteses_disciplinas = sintesesExistentes;
                 updateData.professor = state.myUserName;
             }
 
-            await setDoc(doc(db, "utilizadores", alunoId, "reunioes", momento), updateData, { merge: true });
+            // 3. Gravar na base de dados
+            await setDoc(docRef, updateData, { merge: true });
 
+            // Atualização Visual (Dá o "Visto" verde na lista de alunos)
             const linhas = Array.from(document.querySelectorAll('.aluno-sintese-row'));
             const indexAtual = linhas.findIndex(r => r.getAttribute('data-id') === alunoId);
 
@@ -2645,8 +2670,70 @@ document.body.addEventListener('click', async (e) => {
             btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar e Avançar';
             btn.disabled = false;
         } catch (err) {
+            console.error("Erro ao guardar síntese: ", err);
             btn.innerHTML = 'Erro!';
             setTimeout(() => { btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar e Avançar'; btn.disabled = false; }, 2000);
+        }
+        return;
+    }
+
+    // ==========================================
+    // PUBLICAR SÍNTESES (CONTROLO DE VISIBILIDADE PARA E.E.)
+    // ==========================================
+    if (e.target.closest('#btn-publicar-sinteses-turma')) {
+        const btn = e.target.closest('#btn-publicar-sinteses-turma');
+        const turma = state.selectedTurma;
+        const momentoSelect = document.getElementById('lancar-sintese-momento-global');
+        const momentoNome = momentoSelect.options[momentoSelect.selectedIndex].text;
+        const momento = momentoSelect.value;
+
+        // O DT tem a escolha de PUBLICAR ou OCULTAR com um único botão
+        const resposta = confirm(`Vais alterar a visibilidade do [${momentoNome}].\n\nClica em [OK] para PUBLICAR e permitir que Pais e Alunos leiam os pareceres na app deles.\n\nClica em [CANCELAR] se quiseres OCULTAR e proteger as sínteses.`);
+
+        const txtOriginal = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A aplicar na base de dados...';
+        btn.disabled = true;
+
+        try {
+            // Vai buscar todos os alunos da turma
+            const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turma), where("papel", "==", "aluno")));
+            
+            const operacoes = [];
+            cS.forEach(d => {
+                // Injeta a permissão "publicado" na avaliação deste momento para cada aluno
+                operacoes.push(
+                    setDoc(doc(db, "utilizadores", d.id, "reunioes", momento), {
+                        publicado: resposta,
+                        dataPublicacao: resposta ? new Date().toISOString() : null
+                    }, { merge: true })
+                );
+            });
+
+            // Grava tudo de uma vez (Hyper Rápido)
+            await Promise.all(operacoes);
+
+            if (resposta) {
+                btn.innerHTML = '<i class="fa-solid fa-check-double"></i> Sínteses Publicadas com Sucesso!';
+                btn.style.background = 'var(--success-green)';
+                btn.style.color = 'black';
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Sínteses Ocultadas e Protegidas!';
+                btn.style.background = '#555';
+                btn.style.color = 'white';
+            }
+
+            // Restaura o botão ao estado normal após 3 segundos
+            setTimeout(() => {
+                btn.innerHTML = txtOriginal;
+                btn.style.background = '#b82bf2';
+                btn.style.color = 'white';
+                btn.disabled = false;
+            }, 3500);
+
+        } catch (err) {
+            console.error("Erro ao publicar sínteses:", err);
+            btn.innerHTML = 'Erro na publicação!';
+            setTimeout(() => { btn.innerHTML = txtOriginal; btn.disabled = false; }, 2000);
         }
         return;
     }
@@ -3548,10 +3635,13 @@ window.carregarAlunoNoMiniModalSintese = function (linhaHTML) {
     document.getElementById('sintese-aluno-id-atual').value = alunoId;
     document.getElementById('nome-aluno-sintese-atual').innerText = alunoNome;
 
-    // Reset visual
-    document.getElementById('sint-assid').value = 'Geralmente';
-    document.getElementById('sint-emp').value = 'Bom';
-    document.getElementById('sint-part').value = 'Regular';
+    // Reset Visual das 12 Escalas
+    estadoEscalasAluno = {}; // Limpa as opções guardadas
+    
+    // Volta a desenhar o Assistente do zero, começando pelo Passo 1
+    if (window.renderizarDimensoesQualitativas) {
+        window.renderizarDimensoesQualitativas();
+    }
 
     // Verifica se já tinha texto escondido no card e carrega
     const txtGuardado = linhaHTML.querySelector('.input-sintese-hidden').value;
@@ -3960,3 +4050,146 @@ document.addEventListener('click', function (e) {
             console.error("Erro ao alternar alerta:", e);
         }
     };
+
+    // ==========================================
+// 12 DIMENSÕES QUALITATIVAS (ESCALAS DE SÍNTESE)
+// ==========================================
+const DIMENSOES_AVALIACAO = [
+    { id: 'assiduidade', categoria: '1. Dinâmica Diária', nome: 'Assiduidade', niveis: ['Assíduo', 'Assiduidade irregular', 'Assiduidade muito irregular'] },
+    { id: 'pontualidade', categoria: '1. Dinâmica Diária', nome: 'Pontualidade', niveis: ['Pontual', 'Pontualidade irregular', 'Frequentemente atrasado'] },
+    { id: 'participacao', categoria: '1. Dinâmica Diária', nome: 'Participação', niveis: ['Muito participativo', 'Participativo', 'Pouco participativo', 'Não participativo'] },
+    { id: 'interesse', categoria: '1. Dinâmica Diária', nome: 'Interesse / Motivação', niveis: ['Muito interessado', 'Interessado', 'Pouco interessado', 'Desinteressado'] },
+    
+    { id: 'empenho', categoria: '2. Postura e Trabalho', nome: 'Empenho', niveis: ['Muito empenhado', 'Empenhado', 'Pouco empenhado', 'Sem empenho'] },
+    { id: 'autonomia', categoria: '2. Postura e Trabalho', nome: 'Autonomia', niveis: ['Muito autónomo', 'Autónomo', 'Necessita de orientação', 'Muito dependente'] },
+    { id: 'responsabilidade', categoria: '2. Postura e Trabalho', nome: 'Responsabilidade', niveis: ['Muito responsável', 'Responsável', 'Irregular', 'Pouco responsável'] },
+    { id: 'comportamento', categoria: '2. Postura e Trabalho', nome: 'Comportamento / Atitude', niveis: ['Exemplar', 'Adequado', 'Irregular', 'Inadequado'] },
+    
+    { id: 'relacao', categoria: '3. Relação e Evolução', nome: 'Relação com pares', niveis: ['Muito colaborativo', 'Colaborativo', 'Pouco colaborativo', 'Conflituoso'] },
+    { id: 'organizacao', categoria: '3. Relação e Evolução', nome: 'Organização', niveis: ['Muito organizado', 'Organizado', 'Pouco organizado', 'Desorganizado'] },
+    { id: 'tarefas', categoria: '3. Relação e Evolução', nome: 'Cumprimento de tarefas', niveis: ['Cumpre sempre', 'Cumpre habitualmente', 'Cumpre irregularmente', 'Não cumpre'] },
+    { id: 'evolucao', categoria: '3. Relação e Evolução', nome: 'Evolução / Progresso', niveis: ['Evolução muito significativa', 'Evolução significativa', 'Evolução pouco significativa', 'Sem evolução significativa'] }
+];
+
+let estadoEscalasAluno = {};
+let passoAtualIndex = 0; // Controla qual a dimensão visível de 0 a 11
+
+window.renderizarDimensoesQualitativas = function() {
+    passoAtualIndex = 0; // Sempre que abre o modal, começa na primeira dimensão
+    desenharPassoAtual();
+};
+
+function desenharPassoAtual() {
+    const container = document.getElementById('container-dimensoes-qualitativas');
+    const contador = document.getElementById('passo-indicador-contador');
+    if (!container) return;
+
+    if (contador) {
+        contador.innerText = `Passo ${passoAtualIndex + 1} de ${DIMENSOES_AVALIACAO.length}`;
+    }
+
+    // Efeito de Fade-Out rápido antes de mudar o conteúdo
+    container.style.opacity = '0';
+    container.style.transform = 'translateY(5px)';
+    container.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+
+    // Atraso de 150ms para deixar a caixa apagar e depois desenhar o novo conteúdo
+    setTimeout(() => {
+        if (passoAtualIndex >= DIMENSOES_AVALIACAO.length) {
+            container.innerHTML = `
+            <div style="text-align: center; padding: 20px 5px; display: flex; flex-direction: column; justify-content: center; height: 100%;">
+                <i class="fa-solid fa-circle-check" style="font-size: 3.5rem; color: var(--success-green); margin-bottom: 15px;"></i>
+                <h4 style="color: white; font-size: 1.2rem; margin-bottom: 8px;">Avaliação Concluída!</h4>
+                <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 25px;">Todas as 12 dimensões foram registadas com sucesso.</p>
+                <button type="button" onclick="passoAtualIndex = 0; desenharPassoAtual();" class="secondary-btn small-btn" style="border-color: #3b82f6; color: #3b82f6; padding: 10px 18px; font-size: 0.85rem; align-self: center;">
+                    <i class="fa-solid fa-rotate-left"></i> Rever Respostas
+                </button>
+            </div>`;
+        } else {
+            const dim = DIMENSOES_AVALIACAO[passoAtualIndex];
+
+            let html = `
+            <div style="margin-bottom: 15px;">
+                <span style="font-size: 0.8rem; color: var(--warning-yellow); text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 6px; letter-spacing: 0.5px;">
+                    <i class="fa-solid fa-layer-group"></i> ${dim.categoria}
+                </span>
+                <h4 style="color: white; font-size: 1.2rem; margin: 0; font-weight: 700;">${dim.nome}</h4>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;" data-dimensao="${dim.id}">
+            `;
+
+            dim.niveis.forEach((nivel) => {
+                const isSelected = estadoEscalasAluno[dim.id] === nivel;
+                const bg = isSelected ? 'rgba(59, 130, 246, 0.25)' : 'rgba(255,255,255,0.03)';
+                const color = isSelected ? 'white' : 'var(--text-light)';
+                const border = isSelected ? '#3b82f6' : '#444';
+
+                html += `
+                <button type="button" class="btn-nivel-escala-passo" data-dimensao="${dim.id}" data-nivel="${nivel}" style="background: ${bg}; color: ${color}; border: 1px solid ${border}; border-radius: 8px; padding: 14px 15px; font-size: 0.95rem; cursor: pointer; transition: 0.2s; text-align: left; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.15);">
+                    <span style="font-weight: 500;">${nivel}</span>
+                    ${isSelected ? '<i class="fa-solid fa-check-circle" style="color: #3b82f6; font-size: 1.2rem;"></i>' : '<i class="fa-regular fa-circle" style="color: #555; font-size: 1.2rem;"></i>'}
+                </button>`;
+            });
+
+            html += `</div>`;
+
+            // Botões de navegação inferior com MARGIN-TOP: AUTO para serem empurrados até ao fundo da caixa
+            html += `
+            <div style="display: flex; justify-content: space-between; margin-top: auto; padding-top: 25px;">
+                <button type="button" id="btn-passo-ant" ${passoAtualIndex === 0 ? 'style="opacity:0; pointer-events:none;"' : 'style="padding: 8px 15px; font-size: 0.85rem;"'} class="secondary-btn small-btn">
+                    <i class="fa-solid fa-arrow-left"></i> Anterior
+                </button>
+                <span style="font-size: 0.75rem; color: var(--text-muted); align-self: center;">Clica para avançar</span>
+                <button type="button" id="btn-passo-seguinte" class="secondary-btn small-btn" style="padding: 8px 15px; font-size: 0.85rem; border-color: #3b82f6; color: #3b82f6;">
+                    Seguinte <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // Fade-In suave com a nova dimensão carregada
+        container.style.opacity = '1';
+        container.style.transform = 'translateY(0)';
+    }, 150);
+}
+
+// Evento de clique num nível (guarda e avança automaticamente para o próximo passo)
+document.body.addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-nivel-escala-passo');
+    if (!btn) return;
+
+    const dimId = btn.getAttribute('data-dimensao');
+    const nivelVal = btn.getAttribute('data-nivel');
+
+    estadoEscalasAluno[dimId] = nivelVal;
+
+    // Pintar o botão instantaneamente para o utilizador sentir que clicou
+    btn.style.background = 'rgba(59, 130, 246, 0.25)';
+    btn.style.borderColor = '#3b82f6';
+    btn.querySelector('i').className = 'fa-solid fa-check-circle';
+    btn.querySelector('i').style.color = '#3b82f6';
+
+    // Avança automaticamente para a dimensão seguinte após 250ms (dá tempo para ver o clique)
+    setTimeout(() => {
+        passoAtualIndex++;
+        desenharPassoAtual();
+    }, 250);
+});
+
+// Eventos dos botões de navegação "Anterior" e "Seguinte"
+document.body.addEventListener('click', (e) => {
+    if (e.target.closest('#btn-passo-ant')) {
+        if (passoAtualIndex > 0) {
+            passoAtualIndex--;
+            desenharPassoAtual();
+        }
+    }
+    if (e.target.closest('#btn-passo-seguinte')) {
+        if (passoAtualIndex < DIMENSOES_AVALIACAO.length) {
+            passoAtualIndex++;
+            desenharPassoAtual();
+        }
+    }
+});
