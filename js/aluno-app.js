@@ -8,7 +8,7 @@ import { setupGamificacao, aplicarTemaAcademia } from "./modules/aluno-gamificac
 import { setupCaderneta } from "./modules/aluno-caderneta.js";
 import { setupHorario, carregarMateriaisAluno } from "./modules/aluno-horario.js";
 import { setupComunicacao } from "./modules/aluno-comunicacao.js";
-import { setupPassaporte } from "./modules/aluno-passaporte.js"; // <-- NOVO MÓDULO IMPORTADO
+import { setupPassaporte } from "./modules/aluno-passaporte.js";
 
 // Partilhar variáveis globalmente para os módulos usarem
 window.db = db;
@@ -507,5 +507,35 @@ document.body.addEventListener('click', (e) => {
 
     if (e.target.closest('#btn-open-notificacoes')) {
         setTimeout(renderizarNotificacoesAluno, 150); 
+    }
+
+    // ==========================================
+    // CLIQUE BLINDADO DO FCT / PAP (COM RENDERIZAÇÃO)
+    // ==========================================
+    if (e.target.closest('#btn-abrir-passaporte')) {
+        document.querySelectorAll('.app-content > div:not(.modal-overlay)').forEach(d => d.style.display = 'none');
+        const view = document.getElementById('view-aluno-passaporte');
+        if (view) view.style.display = 'block';
+        
+        // Dispara a função global ou cria o conteúdo diretamente se a função não estiver no escopo global
+        if (window.recarregarViewPassaporte) {
+            window.recarregarViewPassaporte();
+        } else {
+            // Plano B: Se a função não estiver exposta globalmente, disparamos a lógica diretamente
+            import("./modules/aluno-passaporte.js").then(m => {
+                // Força o carregamento do dashboard através do módulo importado
+                if (window.db && window.myUserId) {
+                    import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js").then(async ({ doc, getDoc }) => {
+                        const mMatch = window.minhaTurma ? window.minhaTurma.match(/\d+/) : null;
+                        const ano = mMatch ? parseInt(mMatch[0]) : 12;
+                        const snap = await getDoc(doc(window.db, "utilizadores", window.myUserId));
+                        const dados = snap.exists() ? snap.data() : {};
+                        
+                        // Executa a função interna do passaporte se existir no objeto global
+                        if (window.recarregarViewPassaporte) window.recarregarViewPassaporte();
+                    });
+                }
+            });
+        }
     }
 });

@@ -465,40 +465,21 @@ export async function analisarEAtualizarTurma(turmaId) {
         document.getElementById('badge-dt-turma').style.display = 'none'; 
     }
     
-    const btnPauta = document.getElementById('btn-ver-pauta');
-    const btnFaltasGlobal = document.getElementById('btn-ver-faltas-turma');
+    // VISUAL DOS BOTÕES INFERIORES LIMPO
     const lmsGrid = document.querySelector('.lms-action-grid');
-    const btnMateriais = document.getElementById('btn-modal-materiais'); // Botão dos Sumários
+    const btnMateriais = document.getElementById('btn-modal-materiais');
     
-    // Lógica de visualização consoante a Capa (DT vs Professor)
-    if (state.activeRole === 'professor') { 
-        btnPauta.style.display = 'none'; 
-        btnFaltasGlobal.style.display = 'none'; 
-        
-        // Professor vê 4 botões (2 colunas)
-        lmsGrid.style.display = 'grid'; 
-        lmsGrid.style.setProperty('grid-template-columns', '1fr 1fr', 'important');
-        if (btnMateriais) btnMateriais.style.display = ''; 
-        
-    } else if (state.activeRole === 'diretor_turma') { 
-        btnPauta.style.display = 'block'; 
-        btnFaltasGlobal.style.display = 'block'; 
-        lmsGrid.style.display = 'grid'; 
-        
-        if (isDT) {
-            // Se for a TUA turma de DT, o botão de sumário some e forçamos 3 colunas!
-            lmsGrid.style.setProperty('grid-template-columns', '1fr 1fr 1fr', 'important');
+    if (lmsGrid) {
+        lmsGrid.style.display = 'grid';
+        if (state.activeRole === 'diretor_turma' && isDT) {
+            // Se for DT na sua turma, só mostra Faltas e Notas (esconde sumário)
+            lmsGrid.style.setProperty('grid-template-columns', '1fr 1fr', 'important');
             if (btnMateriais) btnMateriais.style.display = 'none';
         } else {
-            // Se o DT espreitar outra turma qualquer, volta ao normal
-            lmsGrid.style.setProperty('grid-template-columns', '1fr 1fr', 'important');
+            // Se for Professor base, mostra Faltas, Notas e Sumário (3 colunas/botoes)
+            lmsGrid.style.setProperty('grid-template-columns', '1fr 1fr', 'important'); // Mantém igual
             if (btnMateriais) btnMateriais.style.display = '';
         }
-        
-    } else { 
-        btnPauta.style.display = 'block'; 
-        btnFaltasGlobal.style.display = 'block'; 
-        lmsGrid.style.display = 'none'; 
     }
 
     try {

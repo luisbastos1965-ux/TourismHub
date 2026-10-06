@@ -637,6 +637,21 @@ document.body.addEventListener('click', async (e) => {
     // MEDIDAS INCLUSIVAS (MUSAI - DL 54/2018) - A LÓGICA MESTRA
     // =========================================================================
 
+    // ABRIR MODAL DE AGENDAR EVENTO A PARTIR DO HORÁRIO DO DT (COM PRIORIDADE DE Z-INDEX)
+    if (e.target.closest('#btn-dt-abrir-agenda')) {
+        const discSelect = document.getElementById('agendar-disciplina');
+        if (discSelect && state.disciplinasProfessor) {
+            discSelect.innerHTML = state.disciplinasProfessor.map(d => `<option value="${d}">${d}</option>`).join('');
+            discSelect.style.display = 'block';
+        }
+        const modal = document.getElementById('modal-agendar-evento');
+        if (modal) {
+            modal.style.zIndex = '3000'; // Sobe o nível para ficar acima do modal do horário (2500)
+            modal.style.display = 'flex';
+        }
+        return;
+    }
+
     // ABRIR O MODAL MUSAI A PARTIR DO PAINEL DO DT (Abre o aluno rápido)
     if (e.target.closest('#btn-dt-dashboard-musai')) {
         e.preventDefault();
@@ -847,6 +862,179 @@ document.body.addEventListener('click', async (e) => {
         return;
     }
 
+    // ==========================================
+    // ABRIR O MODAL DE CONTACTOS (MODO LEITURA - SÓ DT)
+    // ==========================================
+    if (e.target.closest('#btn-abrir-contactos-360')) {
+        const alunoId = document.getElementById('perfil-aluno-id-hidden').value;
+        if (!alunoId) return;
+
+        const modal = document.getElementById('modal-contactos-aluno');
+        const btn = document.getElementById('btn-abrir-contactos-360');
+        
+        if (!modal) {
+            alert("Erro: O HTML do modal de contactos não está no prof.html!");
+            return;
+        }
+
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size: 1.3rem;"></i> <span style="font-size: 0.9rem; text-align: center; line-height: 1.2;">A carregar...</span>';
+        
+        try {
+            const snap = await getDoc(doc(db, "utilizadores", alunoId));
+            if (snap.exists()) {
+                const dados = snap.data();
+                
+                // 1. Guardar o ID no input escondido
+                document.getElementById('contactos-aluno-id').value = alunoId;
+                
+                // 2. Preencher a zona de LEITURA (Spans)
+                document.getElementById('display-info-morada').innerText = dados.morada || "-";
+                document.getElementById('display-info-tel').innerText = dados.telAluno || "-";
+                document.getElementById('display-info-idade').innerText = dados.idade ? `${dados.idade} Anos` : "-";
+                document.getElementById('display-info-email').innerText = dados.emailAluno || "-";
+                document.getElementById('display-info-ee-nome').innerText = dados.nomeEE || "-";
+                document.getElementById('display-info-ee-filiacao').innerText = dados.filiacaoEE || "-";
+                document.getElementById('display-info-ee-tel').innerText = dados.telEE || "-";
+                document.getElementById('display-info-ee-email').innerText = dados.emailEE || "-";
+
+                // 3. Preencher a zona de EDIÇÃO (Inputs) para estarem prontos se o user quiser editar
+                document.getElementById('info-aluno-morada').value = dados.morada || "";
+                document.getElementById('info-aluno-tel').value = dados.telAluno || "";
+                document.getElementById('info-aluno-idade').value = dados.idade || "";
+                document.getElementById('info-ee-nome').value = dados.nomeEE || "";
+                document.getElementById('info-ee-filiacao').value = dados.filiacaoEE || "";
+                document.getElementById('info-ee-tel').value = dados.telEE || "";
+                document.getElementById('info-ee-email').value = dados.emailEE || "";
+            }
+            
+            // 4. Forçar o modal a abrir no estado inicial (Leitura)
+            const painelLeitura = document.getElementById('contactos-modo-leitura');
+            const painelEdicao = document.getElementById('contactos-modo-edicao');
+            const btnToggle = document.getElementById('btn-toggle-edicao-contactos');
+            
+            if(painelLeitura && painelEdicao && btnToggle) {
+                painelLeitura.style.display = 'block';
+                painelEdicao.style.display = 'none';
+                btnToggle.innerHTML = '<i class="fa-solid fa-pen"></i> Editar Informações';
+                btnToggle.setAttribute('data-mode', 'leitura');
+            }
+
+            btn.innerHTML = originalHtml;
+            modal.style.display = 'flex';
+        } catch (err) {
+            console.error("Erro ao carregar contactos:", err);
+            btn.innerHTML = 'Erro!';
+            setTimeout(() => { btn.innerHTML = originalHtml; }, 2000);
+        }
+        return;
+    }
+
+    // ==========================================
+    // BOTÃO MÁGICO: ALTERNAR ENTRE LEITURA E GUARDAR (CONTACTOS)
+    // ==========================================
+    if (e.target.closest('#btn-toggle-edicao-contactos')) {
+        const btn = e.target.closest('#btn-toggle-edicao-contactos');
+        const modoAtual = btn.getAttribute('data-mode');
+        const alunoId = document.getElementById('contactos-aluno-id').value;
+
+        if (modoAtual === 'leitura') {
+            document.getElementById('contactos-modo-leitura').style.display = 'none';
+            document.getElementById('contactos-modo-edicao').style.display = 'block';
+            
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar Alterações';
+            btn.setAttribute('data-mode', 'edicao');
+        } 
+        else {
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A gravar...';
+            btn.disabled = true;
+
+            try {
+                // 1. Grava na BD
+                await setDoc(doc(db, "utilizadores", alunoId), {
+                    morada: document.getElementById('info-aluno-morada').value.trim(),
+                    telAluno: document.getElementById('info-aluno-tel').value.trim(),
+                    idade: document.getElementById('info-aluno-idade').value.trim(),
+                    nomeEE: document.getElementById('info-ee-nome').value.trim(),
+                    filiacaoEE: document.getElementById('info-ee-filiacao').value.trim(),
+                    telEE: document.getElementById('info-ee-tel').value.trim(),
+                    emailEE: document.getElementById('info-ee-email').value.trim()
+                }, { merge: true });
+
+                // 2. Atualiza os spans visuais
+                document.getElementById('display-info-morada').innerText = document.getElementById('info-aluno-morada').value.trim() || "-";
+                document.getElementById('display-info-tel').innerText = document.getElementById('info-aluno-tel').value.trim() || "-";
+                document.getElementById('display-info-idade').innerText = document.getElementById('info-aluno-idade').value.trim() ? `${document.getElementById('info-aluno-idade').value.trim()} Anos` : "-";
+                document.getElementById('display-info-ee-nome').innerText = document.getElementById('info-ee-nome').value.trim() || "-";
+                document.getElementById('display-info-ee-filiacao').innerText = document.getElementById('info-ee-filiacao').value.trim() || "-";
+                document.getElementById('display-info-ee-tel').innerText = document.getElementById('info-ee-tel').value.trim() || "-";
+                document.getElementById('display-info-ee-email').innerText = document.getElementById('info-ee-email').value.trim() || "-";
+
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> Gravado!';
+                
+                setTimeout(() => {
+                    document.getElementById('contactos-modo-leitura').style.display = 'block';
+                    document.getElementById('contactos-modo-edicao').style.display = 'none';
+                    
+                    btn.innerHTML = '<i class="fa-solid fa-pen"></i> Editar Informações';
+                    btn.setAttribute('data-mode', 'leitura');
+                    btn.disabled = false;
+                }, 1000);
+
+            } catch (err) {
+                console.error("Erro a guardar:", err);
+                btn.innerHTML = 'Erro!';
+                setTimeout(() => { btn.innerHTML = originalHtml; btn.disabled = false; }, 2000);
+            }
+        }
+        return;
+    }
+
+    // ==========================================
+    // CLIQUES NOS CONTACTOS (TELEFONE / EMAIL)
+    // ==========================================
+    if (e.target.closest('.clickable-contact')) {
+        const el = e.target.closest('.clickable-contact');
+        const tipo = el.getAttribute('data-type'); 
+        const valor = el.innerText; 
+        
+        if (valor === "-" || valor === "") return; 
+        
+        if (tipo === 'tel') { 
+            document.getElementById('action-ligar').href = `tel:${valor.replace(/\s+/g, '')}`; 
+            document.getElementById('modal-telefone').style.display = 'flex'; 
+        } else if (tipo === 'email') { 
+            document.getElementById('action-enviar-email').href = `mailto:${valor}`; 
+            document.getElementById('modal-email').style.display = 'flex'; 
+        }
+        return;
+    }
+
+    // ==========================================
+    // EXTRA NATIVO: CRIAR CONTACTO NO TLF
+    // ==========================================
+    if (e.target.closest('#action-guardar-vcard')) {
+        const href = document.getElementById('action-ligar').getAttribute('href');
+        if (!href) return;
+        const phone = href.replace('tel:', '');
+        const nomeAluno = document.getElementById('p-aluno-nome').innerText || "Aluno";
+        
+        // Cria um ficheiro vCard virtual para o telemóvel adicionar à lista telefónica!
+        const vcard = `BEGIN:VCARD\nVERSION:3.0\nFN:${nomeAluno} (Turma PRO)\nTEL;TYPE=CELL:${phone}\nEND:VCARD`;
+        const blob = new Blob([vcard], { type: "text/vcard" });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Contacto_${nomeAluno.replace(/\s+/g, '_')}.vcf`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        document.getElementById('modal-telefone').style.display = 'none';
+        return;
+    }
+
     // TROCA DE ABAS DO MEGA-CARTÃO UNIFICADO
     if (e.target.closest('.mega-tab-btn')) {
         const btnClicado = e.target.closest('.mega-tab-btn');
@@ -966,7 +1154,10 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('.fechar-modal')) {
         const targetId = e.target.closest('.fechar-modal').getAttribute('data-target');
         const modal = document.getElementById(targetId);
-        if (modal) modal.style.display = 'none';
+        if (modal) {
+            modal.style.display = 'none';
+            if (targetId === 'modal-agendar-evento') modal.style.zIndex = '2000'; // Restaura o valor original
+        }
         return;
     }
 
@@ -1077,12 +1268,12 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('#btn-confirmar-rejeicao-pap')) { const motivo = document.getElementById('rej-pap-motivo').value.trim(); if (!motivo) return alert("Indica o motivo."); rejeitarTemaPAPExecutar(document.getElementById('rej-pap-aluno-id').value, motivo, e.target.closest('#btn-confirmar-rejeicao-pap')); return; }
     if (e.target.closest('.btn-aprovar-relatorio')) { aprovarRelatorioPAP(e.target.closest('.btn-aprovar-relatorio').getAttribute('data-id'), e.target.closest('.btn-aprovar-relatorio')); return; }
 
-    // --- BOTÕES DA VISTA TURMAS ---
-    if (e.target.closest('#btn-ver-pauta')) {
+    // --- BOTÕES DA VISTA TURMAS E ATALHOS DOS MODAIS ---
+    if (e.target.closest('#btn-ver-pauta') || e.target.closest('#btn-atalho-ver-pauta')) {
         renderizarPautaTurma();
         return;
     }
-    if (e.target.closest('#btn-ver-faltas-turma')) {
+    if (e.target.closest('#btn-ver-faltas-turma') || e.target.closest('#btn-atalho-ver-faltas')) {
         renderizarFaltasTurma();
         return;
     }
@@ -1134,170 +1325,27 @@ document.body.addEventListener('click', async (e) => {
         return;
     }
 
-    // ABRIR MODAL DE MARCAR FALTAS
-    if (e.target.closest('#btn-modal-faltas')) {
-        const turma = state.selectedTurma;
-        if (!turma) {
-            alert("Seleciona primeiro uma turma no menu superior.");
-            return;
-        }
-
-        const turmaSelect = document.getElementById('lancar-falta-turma');
-        if (turmaSelect) turmaSelect.innerHTML = `<option value="${turma}">Turma ${turma}</option>`;
-
-        const discSelect = document.getElementById('lancar-falta-disciplina');
-        if (discSelect && state.disciplinasProfessor) {
-            discSelect.innerHTML = state.disciplinasProfessor.map(d => `<option value="${d}">${d}</option>`).join('');
-            discSelect.style.display = 'block';
-
-            if (state.disciplinasProfessor.length > 0) {
-                atualizarDropdownModulos(turma, state.disciplinasProfessor[0], document.getElementById('falta-modulo-select'));
-            }
-        }
-
-        const dataInput = document.getElementById('falta-data-input');
-        if (dataInput) {
-            const hoje = new Date().toISOString().split('T')[0];
-            dataInput.value = hoje;
-        }
-
-        const cCont = document.getElementById('lista-metralhadora-faltas');
-        if (cCont) {
-            cCont.innerHTML = '<p class="text-muted center" style="font-size:0.8rem;"><i class="fa-solid fa-spinner fa-spin"></i> A carregar alunos...</p>';
-
-            try {
-                const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turma), where("papel", "==", "aluno")));
-                let arr = [];
-                cS.forEach(d => arr.push({ id: d.id, ...d.data() }));
-                arr.sort((a, b) => a.nome.localeCompare(b.nome));
-
-                let cH = '';
-                arr.forEach(d => {
-                    cH += `
-                    <label style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:rgba(0,0,0,0.2); border:1px solid #333; border-radius:6px; cursor:pointer; transition: 0.2s;">
-                        <span style="color:white; font-size:0.85rem;">${nomeCurto(d.nome)}</span>
-                        <input type="checkbox" class="falta-aluno-check" value="${d.id}" style="width:18px; height:18px; accent-color:var(--danger-red); margin:0;">
-                    </label>`;
-                });
-                cCont.innerHTML = cH === '' ? '<p class="text-muted center" style="font-size:0.8rem;">Turma vazia.</p>' : cH;
-            } catch (err) {
-                console.error("Erro ao carregar alunos:", err);
-                cCont.innerHTML = '<p class="text-danger center" style="font-size:0.8rem;">Erro ao carregar alunos.</p>';
-            }
-        }
-
-        const modal = document.getElementById('modal-marcar-faltas');
-        if (modal) modal.style.display = 'flex';
-        return;
-    }
-
-    // --- GRAVAR FALTAS NA BASE DE DADOS (O REMENDO!) ---
-    if (e.target.closest('#btn-confirmar-faltas')) {
-        const btn = e.target.closest('#btn-confirmar-faltas');
-        const turma = document.getElementById('lancar-falta-turma').value;
-        const disciplina = document.getElementById('lancar-falta-disciplina').value;
-        const modulo = document.getElementById('falta-modulo-select').value;
-        const dataFalta = document.getElementById('falta-data-input').value;
-        const duracao = parseInt(document.getElementById('falta-aula-select').value) || 2;
-
-        // Vai buscar todas as checkboxes de alunos que foram selecionadas (marcadas com falta)
-        const checksFaltas = document.querySelectorAll('.falta-aluno-check:checked');
-
-        if (checksFaltas.length === 0) {
-            alert("Atenção: Não selecionaste nenhum aluno para marcar falta.");
-            return;
-        }
-
-        const txtOriginal = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A gravar...';
-        btn.disabled = true;
-
+    // APAGAR FALTA INDIVIDUAL NO MAPA DE FALTAS
+    if (e.target.closest('.btn-apagar-falta')) {
+        const btn = e.target.closest('.btn-apagar-falta');
+        const faltaId = btn.getAttribute('data-id');
+        const alunoId = btn.getAttribute('data-aluno');
+        
+        if(!confirm("Tens a certeza que queres eliminar permanentemente esta falta?")) return;
+        
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         try {
-            // Cria um pacote (promessa) para cada aluno que levou falta
-            const gravacoes = Array.from(checksFaltas).map(chk => {
-                const alunoId = chk.value;
-                return addDoc(collection(db, "utilizadores", alunoId, "faltas"), {
-                    turma: turma,
-                    disciplina: disciplina,
-                    modulo: modulo,
-                    dataFalta: dataFalta,
-                    duracaoBlocos: duracao,
-                    dataRegisto: new Date().toISOString(),
-                    professor: state.myUserName,
-                    justificada: false
-                });
-            });
-
-            // Dispara todos os pacotes para a Firebase ao mesmo tempo!
-            await Promise.all(gravacoes);
-
-            // Regista no log do professor
-            if (window.registarAtividadeProfessor) {
-                await window.registarAtividadeProfessor('falta', `Faltas marcadas a ${checksFaltas.length} aluno(s)`, `Turma ${turma} | ${disciplina}`);
-            }
-
-            btn.innerHTML = '<i class="fa-solid fa-check"></i> Faltas Gravadas!';
-            setTimeout(() => {
-                btn.innerHTML = txtOriginal;
-                btn.disabled = false;
-                document.getElementById('modal-marcar-faltas').style.display = 'none';
-            }, 2000);
-
-        } catch (err) {
-            console.error(err);
-            btn.innerHTML = 'Erro ao gravar!';
-            setTimeout(() => { btn.innerHTML = txtOriginal; btn.disabled = false; }, 2000);
+            const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
+            await deleteDoc(doc(db, "utilizadores", alunoId, "faltas", faltaId));
+            
+            // Remove a linha da tabela visualmente de imediato
+            const row = btn.closest('tr');
+            if(row) row.remove();
+            
+        } catch(err) {
+            console.error("Erro ao apagar falta:", err);
+            btn.innerHTML = '<i class="fa-solid fa-trash"></i>';
         }
-        return;
-    }
-
-    // ABRIR MODAL DE NOTAS COM BOTÃO DE ATRIBUIR E ESCOLHER NOTA
-    if (e.target.closest('#btn-modal-notas')) {
-        const turma = state.selectedTurma;
-        if (!turma) { alert("Seleciona primeiro uma turma."); return; }
-
-        const discSelect = document.getElementById('lancar-nota-disciplina');
-        if (discSelect && state.disciplinasProfessor) {
-            discSelect.innerHTML = state.disciplinasProfessor.map(d => `<option value="${d}">${d}</option>`).join('');
-            if (state.disciplinasProfessor.length > 0) {
-                atualizarDropdownModulos(turma, state.disciplinasProfessor[0], document.getElementById('lancar-nota-modulo'));
-            }
-        }
-
-        const grid = document.getElementById('grid-notas-alunos');
-        if (grid) {
-            grid.innerHTML = '<p class="text-muted center" style="padding:15px; font-size:0.85rem;"><i class="fa-solid fa-spinner fa-spin"></i> A carregar alunos...</p>';
-
-            try {
-                const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turma), where("papel", "==", "aluno")));
-                let arr = [];
-                cS.forEach(d => arr.push({ id: d.id, ...d.data() }));
-                arr.sort((a, b) => a.nome.localeCompare(b.nome));
-
-                let cH = '';
-                arr.forEach(d => {
-                    cH += `
-                    <div class="aluno-nota-row" data-id="${d.id}" style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.2); border:1px solid #333; border-radius:6px;">
-                        <span style="color:white; font-size:0.85rem; flex: 1;">${nomeCurto(d.nome)}</span>
-                        
-                        <div style="display: flex; gap: 5px; align-items: center;">
-                            <button class="btn-limpar-nota" data-id="${d.id}" style="display: none; width: 35px; height: 35px; border-radius: 6px; background: rgba(239, 68, 68, 0.15); border: 1px solid var(--danger-red); color: var(--danger-red); cursor: pointer; align-items: center; justify-content: center; padding: 0;"><i class="fa-solid fa-trash"></i></button>
-                            <button class="btn-abrir-escolha-nota secondary-btn small-btn" data-id="${d.id}" data-nome="${nomeCurto(d.nome)}" style="min-width: 80px; height: 35px; font-weight: bold; color: var(--primary-green);">Atribuir</button>
-                        </div>
-                        
-                        <input type="hidden" class="input-nota-aluno-hidden" value="">
-                        <input type="hidden" class="input-motivo-aluno-hidden" value="">
-                    </div>`;
-                });
-                grid.innerHTML = cH === '' ? '<p class="text-muted center" style="font-size:0.8rem;">Turma vazia.</p>' : cH;
-            } catch (err) {
-                console.error("Erro ao carregar:", err);
-                grid.innerHTML = '<p class="text-danger center" style="font-size:0.8rem;">Erro ao carregar alunos.</p>';
-            }
-        }
-
-        const modal = document.getElementById('modal-lancamento-notas');
-        if (modal) modal.style.display = 'flex';
         return;
     }
 
@@ -3072,70 +3120,13 @@ document.body.addEventListener('click', async (e) => {
         return;
     }
 
-    // 1. ABRIR MODAL E CARREGAR ATESTADOS PENDENTES OU FORÇAR JUSTIFICAÇÃO
+    // ==========================================
+    // 1. ABRIR MODAL DOS ATESTADOS DIGITAIS PENDENTES (DIRETO)
+    // ==========================================
     if (e.target.closest('#btn-justificar-faltas')) {
         const alunoId = document.getElementById('perfil-aluno-id-hidden').value;
-        const nomeAluno = document.getElementById('p-aluno-nome').innerText;
         if (!alunoId) return;
 
-        // Se o DT quiser forçar a justificação manual (Papel escrito, Reunião presencial, etc)
-        const forcar = confirm(`Queres abrir os Comprovativos Digitais enviados pelo E.E. ou Justificar Manualmente as Faltas deste aluno? \n\n[OK] = Ver Atestados Digitais\n[Cancelar] = Justificação Manual / Papel`);
-
-        if (!forcar) {
-            // Caminho de Justificação Forçada Manual (O DT justificou com um papel na mão)
-            const motivoManual = prompt(`A justificar faltas de ${nomeAluno}.\nIndica o motivo da justificação (Ex: "Atestado Médico Entregue em Papel"):`);
-
-            if (motivoManual) {
-                const btnPrincipal = document.getElementById('btn-justificar-faltas');
-                const txtOriginalBtn = btnPrincipal.innerHTML;
-                btnPrincipal.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A gravar justificação...';
-
-                try {
-                    // Vai buscar todas as faltas injustificadas
-                    const qFaltas = query(collection(db, "utilizadores", alunoId, "faltas"), where("justificada", "==", false));
-                    const faltasSnap = await getDocs(qFaltas);
-
-                    if (faltasSnap.empty) {
-                        alert(`O aluno ${nomeAluno} não tem faltas injustificadas no sistema.`);
-                        btnPrincipal.innerHTML = txtOriginalBtn;
-                        return;
-                    }
-
-                    const gravacoesFaltas = [];
-                    faltasSnap.forEach(fDoc => {
-                        gravacoesFaltas.push(setDoc(doc(db, "utilizadores", alunoId, "faltas", fDoc.id), {
-                            justificada: true,
-                            justificadaEm: new Date().toISOString(),
-                            justificadaPorDT: state.myUserName,
-                            motivoPapel: motivoManual
-                        }, { merge: true }));
-                    });
-
-                    await Promise.all(gravacoesFaltas);
-
-                    if (window.registarAtividadeProfessor) {
-                        await window.registarAtividadeProfessor('falta', `Forçou a justificação de ${gravacoesFaltas.length} falta(s) a ${nomeAluno}.`, `Motivo: ${motivoManual}`);
-                    }
-
-                    alert(`Sucesso! ${gravacoesFaltas.length} faltas injustificadas de ${nomeAluno} foram dadas como justificadas.`);
-
-                    // Se o modal do Perfil 360 do Aluno estiver aberto, fechamo-lo para dar a sensação de refresh
-                    const btnFecharPerfil = document.querySelector('#modal-perfil-aluno .fechar-modal');
-                    if (btnFecharPerfil) btnFecharPerfil.click();
-
-                    btnPrincipal.innerHTML = txtOriginalBtn;
-                } catch (e) {
-                    console.error("Erro ao justificar faltas manualmente:", e);
-                    alert("Erro ao tentar justificar as faltas manualmente.");
-                    btnPrincipal.innerHTML = txtOriginalBtn;
-                }
-                return;
-            } else {
-                return; // Cancelou o prompt
-            }
-        }
-
-        // --- DAQUI PARA BAIXO É O CÓDIGO ORIGINAL QUE JÁ TINHAS (O Caminho Normal dos Atestados) ---
         const btnPrincipal = document.getElementById('btn-justificar-faltas');
         const modal = document.getElementById('modal-justificar-faltas');
         const container = document.getElementById('lista-atestados-pendentes');
@@ -3145,19 +3136,17 @@ document.body.addEventListener('click', async (e) => {
         container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A ler base de dados...</p>';
 
         try {
-            // Vai à gaveta dos atestados procurar os que estão pendentes
             const qAtestados = query(collection(db, "utilizadores", alunoId, "atestados"), where("status", "==", "pendente"));
             const snap = await getDocs(qAtestados);
 
-            // CORREÇÃO 2: ATUALIZA O BOTÃO EXTERIOR NA HORA (Limpa o aviso se já tiveres validado tudo!)
             if (btnPrincipal) {
                 if (snap.empty) {
-                    btnPrincipal.innerHTML = `<i class="fa-solid fa-file-signature"></i> Histórico de Comprovativos`;
+                    btnPrincipal.innerHTML = `<i class="fa-solid fa-file-signature" style="font-size: 1.3rem;"></i> <span style="font-size: 0.9rem; font-weight: bold; text-align: center;">Justificações</span>`;
                     btnPrincipal.style.background = 'var(--warning-yellow)';
                     btnPrincipal.style.color = 'black';
                     btnPrincipal.style.borderColor = 'var(--warning-yellow)';
                 } else {
-                    btnPrincipal.innerHTML = `<i class="fa-solid fa-bell fa-shake"></i> Analisar Comprovativos (${snap.size} pendente(s))`;
+                    btnPrincipal.innerHTML = `<i class="fa-solid fa-bell fa-shake" style="font-size: 1.3rem;"></i> <span style="font-size: 0.9rem; font-weight: bold; text-align: center;">Justificações<br>(${snap.size} novo!)</span>`;
                     btnPrincipal.style.background = 'var(--danger-red)';
                     btnPrincipal.style.color = 'white';
                     btnPrincipal.style.borderColor = 'var(--danger-red)';
@@ -3170,7 +3159,6 @@ document.body.addEventListener('click', async (e) => {
             }
 
             let html = '';
-            // CORREÇÃO 1: Fazer o cruzamento de dados para mostrar os dias/horas das faltas ao DT
             for (const docSnap of snap.docs) {
                 const atestado = docSnap.data();
                 const docId = docSnap.id;
@@ -3184,7 +3172,6 @@ document.body.addEventListener('click', async (e) => {
 
                 const nomeFicheiro = `comprovativo_${alunoId}_${docId}.${extensao}`;
 
-                // --- MAGIA: IR BUSCAR OS DETALHES EXATOS DAS FALTAS SELECIONADAS ---
                 let detalhesFaltas = "";
                 if (atestado.faltasAssociadas && atestado.faltasAssociadas.length > 0) {
                     detalhesFaltas = `<ul style="margin: 5px 0 0 20px; padding: 0; color: var(--warning-yellow); font-size: 0.85rem; line-height: 1.4;">`;
@@ -3200,9 +3187,7 @@ document.body.addEventListener('click', async (e) => {
                 } else {
                     detalhesFaltas = `<span style="color:var(--danger-red); font-size: 0.8rem;"><br>(Aviso: Atestado genérico. Ao aceitar, justificará TODAS as faltas pendentes)</span>`;
                 }
-                // -------------------------------------------------------------
 
-                // Constrói o "Card" do atestado para o Diretor de Turma
                 html += `
                 <div class="card" style="border-left: 4px solid var(--warning-yellow); margin-bottom: 0; background: rgba(0,0,0,0.2);">
                     <div style="display:flex; justify-content:space-between; margin-bottom: 10px;">
@@ -3215,7 +3200,6 @@ document.body.addEventListener('click', async (e) => {
                         ${detalhesFaltas}
                     </div>
                     
-                    <!-- PRÉ-VISUALIZAÇÃO DO DOCUMENTO -->
                     <div style="margin-bottom: 10px; border-radius: 8px; border: 1px solid #444; background:#111; overflow:hidden;">
                         ${anexo && anexo.startsWith('data:image')
                         ? `<img src="${anexo}" style="width:100%; max-height:200px; object-fit:contain; display:block;">`
@@ -3223,14 +3207,12 @@ document.body.addEventListener('click', async (e) => {
                     }
                     </div>
 
-                    <!-- BOTÃO DE DESCARREGAR PARA IMPRIMIR -->
                     <div style="margin-bottom: 15px;">
-                        <a href="${anexo}" download="${nomeFicheiro}" style="display:block; text-align:center; padding:8px; background:rgba(255,255,255,0.1); color:white; text-decoration:none; border-radius:6px; font-size:0.85rem; border:1px solid #555; transition: 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+                        <a href="${anexo}" download="${nomeFicheiro}" style="display:block; text-align:center; padding:8px; background:rgba(255,255,255,0.1); color:white; text-decoration:none; border-radius:6px; font-size:0.85rem; border:1px solid #555; transition: 0.2s;">
                             <i class="fa-solid fa-download" style="margin-right: 5px;"></i> Descarregar Documento Original
                         </a>
                     </div>
 
-                    <!-- BOTÕES DE DECISÃO -->
                     <div style="display:flex; gap: 10px;">
                         <button class="primary-btn btn-aprovar-atestado" data-id="${docId}" data-aluno="${alunoId}" style="flex:1; background:var(--success-green); border-color:var(--success-green); color:black;"><i class="fa-solid fa-check"></i> Aceitar</button>
                         <button class="secondary-btn btn-rejeitar-atestado" data-id="${docId}" data-aluno="${alunoId}" style="flex:1; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-xmark"></i> Recusar</button>
@@ -3576,49 +3558,48 @@ window.abrirPerfilCompletoAluno = async function (alunoId, alunoNome, alunoFoto)
         document.getElementById('p-aluno-prhfs').innerText = "1";   // Substitui depois pela query real de PRHFs
 
         // ==========================================
-        // MAGIA DO BOTÃO DE JUSTIFICAR FALTAS (DT)
+        // MAGIA DO BOTÃO DE JUSTIFICAR FALTAS E CONTACTOS (DT)
         // ==========================================
-        let btnJustificar = document.getElementById('btn-justificar-faltas');
+        const btnJustificar = document.getElementById('btn-justificar-faltas');
+        const btnContactos = document.getElementById('btn-abrir-contactos-360');
 
-        // Se o botão não existir no HTML, o JavaScript cria-o na hora!
-        if (!btnJustificar) {
-            btnJustificar = document.createElement('button');
-            btnJustificar.id = 'btn-justificar-faltas';
-            btnJustificar.className = 'primary-btn';
-            btnJustificar.style.width = '100%';
-            btnJustificar.style.marginBottom = '15px';
+        // Esconde os botões por defeito (modo Professor)
+        if (btnJustificar) btnJustificar.style.display = 'none';
+        if (btnContactos) btnContactos.style.display = 'none';
 
-            // Coloca o botão perfeitamente acima da caixa das Sínteses
-            const areaSintese = document.getElementById('area-sintese-prof');
-            if (areaSintese) {
-                areaSintese.parentNode.insertBefore(btnJustificar, areaSintese);
+        // Lê a lista de turmas em que o professor é efetivamente DT
+        let turmasDoDT = [];
+        if (Array.isArray(state.profData.turmaDT)) turmasDoDT = state.profData.turmaDT;
+        else if (state.profData.turmaDT) turmasDoDT = [state.profData.turmaDT];
+        else if (state.profData.turmasDT) turmasDoDT = state.profData.turmasDT;
+        else turmasDoDT = state.turmasProfessor;
+
+        // Verifica se a capa é de DT e se a turma que está aberta pertence às turmas dele
+        const isDT = (state.activeRole === 'diretor_turma' && turmasDoDT.includes(state.selectedTurma));
+
+        if (isDT) {
+            if (btnJustificar) {
+                btnJustificar.style.display = 'block';
+                btnJustificar.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> A verificar comprovativos...`;
             }
-        }
-
-        // Esconde o botão por defeito para os Professores
-        btnJustificar.style.display = 'none';
-
-        // Se o utilizador tiver a capa de Diretor de Turma vestida:
-        if (state.activeRole === 'diretor_turma') {
-            btnJustificar.style.display = 'block';
-            btnJustificar.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> A verificar comprovativos...`;
-            btnJustificar.style.background = 'var(--bg-dark)';
-            btnJustificar.style.color = 'white';
+            if (btnContactos) {
+                btnContactos.style.display = 'flex'; // Exibe o botão roxo
+            }
 
             // Vai à base de dados ver se o Pai enviou documentos novos
             const qAtestados = query(collection(db, "utilizadores", alunoId, "atestados"), where("status", "==", "pendente"));
             const snapAtestados = await getDocs(qAtestados);
 
-            if (!snapAtestados.empty) {
-                // Há documentos novos! Fica VERMELHO a piscar.
-                btnJustificar.innerHTML = `<i class="fa-solid fa-bell fa-shake"></i> Analisar Comprovativos (${snapAtestados.size} novo!)`;
-                btnJustificar.style.background = 'var(--danger-red)';
-                btnJustificar.style.color = 'white';
-            } else {
-                // Está tudo em dia! Fica AMARELO pacífico.
-                btnJustificar.innerHTML = `<i class="fa-solid fa-file-signature"></i> Histórico de Comprovativos`;
-                btnJustificar.style.background = 'var(--warning-yellow)';
-                btnJustificar.style.color = 'black';
+            if (btnJustificar) {
+                if (!snapAtestados.empty) {
+                    btnJustificar.innerHTML = `<i class="fa-solid fa-bell fa-shake"></i> Justificações (${snapAtestados.size} novo!)`;
+                    btnJustificar.style.background = 'var(--danger-red)';
+                    btnJustificar.style.color = 'white';
+                } else {
+                    btnJustificar.innerHTML = `<i class="fa-solid fa-file-signature"></i> Justificações`;
+                    btnJustificar.style.background = 'var(--warning-yellow)';
+                    btnJustificar.style.color = 'black';
+                }
             }
         }
 
@@ -3658,42 +3639,52 @@ if (modalPerfilGlobal) {
             // Deteta se o modal acabou de ficar visível (display: flex)
             if (mutation.attributeName === 'style' && modalPerfilGlobal.style.display === 'flex') {
 
-                // Dá um pequeno atraso (200ms) para garantir que o ui.js acabou de preencher os dados do aluno
+                // Dá um pequeno atraso (200ms) para garantir que os dados preencheram
                 setTimeout(async () => {
                     const btnJustificar = document.getElementById('btn-justificar-faltas');
+                    const btnContactos = document.getElementById('btn-abrir-contactos-360');
                     const alunoId = document.getElementById('perfil-aluno-id-hidden').value;
 
                     if (btnJustificar && alunoId) {
-                        const isDT = (state.activeRole === 'diretor_turma' && state.selectedTurma === state.minhaTurmaDT);
+                        
+                        // Nova lógica blindada para quem tem múltiplas turmas de direção
+                        let turmasDoDT = [];
+                        if (Array.isArray(state.profData.turmaDT)) turmasDoDT = state.profData.turmaDT;
+                        else if (state.profData.turmaDT) turmasDoDT = [state.profData.turmaDT];
+                        else if (state.profData.turmasDT) turmasDoDT = state.profData.turmasDT;
+                        else turmasDoDT = state.turmasProfessor;
+
+                        const isDT = (state.activeRole === 'diretor_turma' && turmasDoDT.includes(state.selectedTurma));
 
                         if (isDT) {
                             btnJustificar.style.display = 'block';
                             btnJustificar.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> A verificar atestados...`;
+                            if (btnContactos) btnContactos.style.display = 'flex'; // Mostra botão ao DT
 
                             try {
-                                // Espreita a base de dados em tempo real
                                 const qAtestados = query(collection(db, "utilizadores", alunoId, "atestados"), where("status", "==", "pendente"));
                                 const snapAtestados = await getDocs(qAtestados);
 
                                 if (!snapAtestados.empty) {
-                                    // Atestados Novos! Fica Vermelho e a tremer
-                                    btnJustificar.innerHTML = `<i class="fa-solid fa-bell fa-shake"></i> Analisar Comprovativos (${snapAtestados.size} novo!)`;
+                                    // Atestados Novos! Fica Vermelho e a tremer (Mantendo a estrutura ícone em cima, texto em baixo)
+                                    btnJustificar.innerHTML = `<i class="fa-solid fa-bell fa-shake" style="font-size: 1.3rem;"></i> <span style="font-size: 0.9rem; font-weight: bold; text-align: center;">Justificações<br>(${snapAtestados.size} novo!)</span>`;
                                     btnJustificar.style.background = 'var(--danger-red)';
                                     btnJustificar.style.color = 'white';
                                     btnJustificar.style.borderColor = 'var(--danger-red)';
                                 } else {
                                     // Tudo lido! Fica Amarelo normal
-                                    btnJustificar.innerHTML = `<i class="fa-solid fa-file-signature"></i> Histórico de Comprovativos`;
+                                    btnJustificar.innerHTML = `<i class="fa-solid fa-file-signature" style="font-size: 1.3rem;"></i> <span style="font-size: 0.9rem; font-weight: bold; text-align: center;">Justificações</span>`;
                                     btnJustificar.style.background = 'var(--warning-yellow)';
                                     btnJustificar.style.color = 'black';
                                     btnJustificar.style.borderColor = 'var(--warning-yellow)';
                                 }
                             } catch (e) {
-                                btnJustificar.innerHTML = `<i class="fa-solid fa-file-signature"></i> Comprovativos`;
+                                btnJustificar.innerHTML = `<i class="fa-solid fa-file-signature" style="font-size: 1.3rem;"></i> <span style="font-size: 0.9rem; font-weight: bold; text-align: center;">Justificações</span>`;
                             }
                         } else {
-                            // Se for só o professor da disciplina, esconde o botão
+                            // Se for só o professor da disciplina, esconde os botões (O segurança atua corretamente)
                             btnJustificar.style.display = 'none';
+                            if (btnContactos) btnContactos.style.display = 'none';
                         }
                     }
                 }, 200);
@@ -4191,5 +4182,922 @@ document.body.addEventListener('click', (e) => {
             passoAtualIndex++;
             desenharPassoAtual();
         }
+    }
+});
+
+// ============================================================================
+// HORÁRIO DO DIRETOR DE TURMA (COM CLONE AUTOMÁTICO DE SEMANAS E EDIÇÃO PONTUAL)
+// ============================================================================
+let dtModoEdicaoHorario = false; 
+let dtSlotSelecionado = null;
+let dtDataInicioSemana = new Date(); 
+// Acerta sempre para a Segunda-feira da semana atual
+dtDataInicioSemana.setDate(dtDataInicioSemana.getDate() - (dtDataInicioSemana.getDay() === 0 ? 6 : dtDataInicioSemana.getDay() - 1));
+
+function formatarDataDT(dt) { const dp = String(dt.getDate()).padStart(2,'0'); const mp = String(dt.getMonth()+1).padStart(2,'0'); return `${dp}/${mp}`; }
+function dataStringDbDT(dt) { const y = dt.getFullYear(); const m = String(dt.getMonth()+1).padStart(2,'0'); const d = String(dt.getDate()).padStart(2,'0'); return `${y}-${m}-${d}`; }
+
+window.carregarHorarioDT = async function() {
+    const diasUIAbrv = ['seg', 'ter', 'qua', 'qui', 'sex'];
+    const grid = document.getElementById('dt-grid-horario-turma');
+    if (!grid) return;
+    
+    let endOfWeek = new Date(dtDataInicioSemana); 
+    endOfWeek.setDate(endOfWeek.getDate() + 4);
+    document.getElementById('dt-week-display').innerText = `${formatarDataDT(dtDataInicioSemana)} a ${formatarDataDT(endOfWeek)}`;
+    
+    let iterDate = new Date(dtDataInicioSemana);
+    
+    // Desenha o Cabeçalho (Dias da Semana)
+    let html = `<div></div>`;
+    for(let i=0; i<5; i++) {
+        html += `<div class="horario-header">${diasUIAbrv[i].toUpperCase()} <span style="font-size:0.75rem; display:block; color:var(--text-muted);">${formatarDataDT(iterDate)}</span></div>`;
+        iterDate.setDate(iterDate.getDate() + 1);
+    }
+
+    const blocos = [
+        {id: 1, label: "08:30<br>09:30"}, {id: 2, label: "09:35<br>10:35"},
+        {id: 3, label: "10:50<br>11:50"}, {id: 4, label: "11:55<br>12:55"},
+        {id: 5, label: "13:00<br>14:00"}, {id: 6, label: "14:05<br>15:05"},
+        {id: 7, label: "15:15<br>16:15"}, {id: 8, label: "16:20<br>17:20"}
+    ];
+
+    iterDate = new Date(dtDataInicioSemana);
+    let datasSemana = [];
+    for(let i=0; i<5; i++) {
+        datasSemana.push(dataStringDbDT(iterDate));
+        iterDate.setDate(iterDate.getDate() + 1);
+    }
+
+    // Desenha a grelha de blocos
+    blocos.forEach(bloco => {
+        html += `<div class="horario-time">${bloco.label}</div>`;
+        for(let i=0; i<5; i++) {
+            html += `<div class="horario-slot dt-h-slot" data-datareal="${datasSemana[i]}" data-hora="${bloco.id}"></div>`;
+        }
+    });
+
+    grid.innerHTML = html;
+
+    // Busca os dados gravados e preenche a grelha para a semana que estamos a ver
+    try {
+        const docSnap = await getDoc(doc(db, "turmas", state.selectedTurma));
+        if(docSnap.exists() && docSnap.data().horario) {
+            const horarioBase = docSnap.data().horario;
+            for(const key in horarioBase) {
+                const [dataReal, hora] = key.split('_'); 
+                const disc = horarioBase[key]; 
+                const slot = document.querySelector(`.dt-h-slot[data-datareal="${dataReal}"][data-hora="${hora}"]`);
+                if(slot && disc) { 
+                    slot.innerHTML = `<strong>${disc}</strong>`; 
+                    aplicarEstiloSlotHorario(slot, disc); 
+                }
+            }
+        }
+    } catch(e) { console.error(e); }
+
+    // Re-aplica as classes de edição se estiver em modo de edição
+    if(dtModoEdicaoHorario) {
+        document.querySelectorAll('.dt-h-slot').forEach(s => s.classList.add('edit-mode'));
+    }
+};
+
+// Evento que escuta toda a página de forma contínua
+document.body.addEventListener('click', async (e) => {
+
+    // ABRIR MODAL PRINCIPAL
+    if (e.target.closest('#btn-abrir-gestao-horario-dt')) {
+        if (!state.selectedTurma) return alert("Selecione uma turma primeiro.");
+        document.getElementById('modal-gestao-horario').style.display = 'flex';
+        dtModoEdicaoHorario = false;
+        document.getElementById('btn-dt-editar-horario').style.display = 'flex';
+        document.getElementById('btn-dt-salvar-horario').style.display = 'none';
+        window.carregarHorarioDT();
+        return;
+    }
+
+    // NAVEGAÇÃO DE SEMANAS
+    if (e.target.closest('#btn-dt-prev-week')) { dtDataInicioSemana.setDate(dtDataInicioSemana.getDate() - 7); window.carregarHorarioDT(); return; }
+    if (e.target.closest('#btn-dt-next-week')) { dtDataInicioSemana.setDate(dtDataInicioSemana.getDate() + 7); window.carregarHorarioDT(); return; }
+
+    // LIGAR / DESLIGAR MODO EDIÇÃO
+    if (e.target.closest('#btn-dt-editar-horario')) {
+        dtModoEdicaoHorario = true;
+        e.target.closest('#btn-dt-editar-horario').style.display = 'none';
+        document.getElementById('btn-dt-salvar-horario').style.display = 'flex';
+        document.querySelectorAll('.dt-h-slot').forEach(s => s.classList.add('edit-mode'));
+        return;
+    }
+    if (e.target.closest('#btn-dt-salvar-horario')) {
+        dtModoEdicaoHorario = false;
+        e.target.closest('#btn-dt-salvar-horario').style.display = 'none';
+        document.getElementById('btn-dt-editar-horario').style.display = 'flex';
+        document.querySelectorAll('.dt-h-slot').forEach(s => s.classList.remove('edit-mode'));
+        return;
+    }
+
+    // CLICAR NUM BLOCO PARA EDITAR
+    if (e.target.closest('.dt-h-slot')) {
+        if (!dtModoEdicaoHorario) return;
+        dtSlotSelecionado = e.target.closest('.dt-h-slot');
+        
+        let opt = '<option value="">Sem Aula (Limpar)</option>';
+        try {
+            const snapEstrutura = await getDocs(collection(db, "estrutura_modular"));
+            let disciplinasUnicas = new Set();
+            snapEstrutura.forEach(docSnap => { if(docSnap.data().disciplina) disciplinasUnicas.add(docSnap.data().disciplina); });
+            const disciplinasOrdenadas = Array.from(disciplinasUnicas).sort();
+            disciplinasOrdenadas.forEach(disc => { opt += `<option value="${disc}">${disc}</option>`; });
+        } catch (err) {}
+        
+        opt += `<option disabled>──────────</option><option value="ALM">Almoço</option><option value="Visita">Visita Estudo</option><option value="FCT">FCT</option><option value="PAP">PAP</option><option value="PRHF">PRHF</option>`;
+        
+        document.getElementById('dt-ed-horario-disc').innerHTML = opt; 
+        document.getElementById('modal-dt-editar-bloco').style.display = 'flex';
+        return;
+    }
+
+    // CONFIRMAR EDIÇÃO DE UM BLOCO E GRAVAR
+    if (e.target.closest('#btn-dt-gravar-bloco')) {
+        if(!dtSlotSelecionado) return; 
+        const novaDisc = document.getElementById('dt-ed-horario-disc').value;
+        const dataReal = dtSlotSelecionado.getAttribute('data-datareal'); 
+        const horaId = dtSlotSelecionado.getAttribute('data-hora');
+        const btnRef = e.target.closest('#btn-dt-gravar-bloco'); 
+        
+        btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try { 
+            // Atualizamos a base de dados apenas PARA AQUELE DIA ESPECÍFICO
+            await setDoc(doc(db, "turmas", state.selectedTurma), { horario: { [`${dataReal}_${horaId}`]: novaDisc } }, {merge:true}); 
+            document.getElementById('modal-dt-editar-bloco').style.display = 'none'; 
+            btnRef.innerText = "Confirmar"; 
+            window.carregarHorarioDT(); 
+        } catch(err) { btnRef.innerText = "Erro!"; }
+        return;
+    }
+
+    // =========================================================================
+    // MULTIPLICAR HORÁRIO (CLONE EXATO)
+    // =========================================================================
+    if (e.target.closest('#btn-dt-repeat-week')) {
+        const btn = e.target.closest('#btn-dt-repeat-week');
+        const endDateStr = document.getElementById('dt-horario-repeat-date').value;
+        
+        if(!endDateStr) return alert("Indica primeiro na caixa de data até quando queres multiplicar esta semana!");
+        
+        const endDataLimit = new Date(endDateStr);
+        let currDataIter = new Date(dtDataInicioSemana);
+        currDataIter.setDate(currDataIter.getDate() + 7); // Começa a colar a partir da PRÓXIMA semana
+        
+        if(currDataIter > endDataLimit) return alert("A data limite tem de ser no futuro (próximas semanas)!");
+
+        const resposta = confirm("Atenção: A aplicação vai copiar o modelo exato desta semana e colar por cima das semanas seguintes até à data limite. Tudo o que já estiver marcado nessas futuras datas será substituído pelo molde atual. Avançar?");
+        if (!resposta) return;
+
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A clonar...';
+        btn.disabled = true;
+        
+        try {
+            const docSnap = await getDoc(doc(db, "turmas", state.selectedTurma));
+            let horarioDB = docSnap.exists() ? (docSnap.data().horario || {}) : {};
+
+            // 1. O Molde - Tirar "fotografia" à semana que está na janela agora
+            let templateSemana = []; 
+            let tempIter = new Date(dtDataInicioSemana);
+            for(let i=0; i<5; i++) {
+                const dateStr = dataStringDbDT(tempIter);
+                for(let h=1; h<=8; h++) {
+                    const k = `${dateStr}_${h}`;
+                    if(horarioDB[k] !== undefined) {
+                        // Guardamos não só as aulas, mas os "brancos" para apagar aulas passadas, garantindo que o molde é exato
+                        templateSemana.push({ diaOffset: i, hora: h, disc: horarioDB[k] });
+                    }
+                }
+                tempIter.setDate(tempIter.getDate() + 1);
+            }
+
+            if(templateSemana.length === 0) {
+                btn.innerHTML = '<i class="fa-solid fa-copy"></i> Multiplicar Horário';
+                btn.disabled = false;
+                return alert("A semana que estás a visualizar está vazia. Preenche pelo menos um bloco antes de replicar.");
+            }
+
+            let blocosClonados = 0;
+
+            // 2. Colar o Molde nas semanas que se seguem (ignorando o passado e parando na data final)
+            while (currDataIter <= endDataLimit) {
+                let thisWeekStart = new Date(currDataIter);
+                for(const item of templateSemana) {
+                    let targetDay = new Date(thisWeekStart);
+                    targetDay.setDate(targetDay.getDate() + item.diaOffset);
+                    
+                    if(targetDay <= endDataLimit) { 
+                        const tk = `${dataStringDbDT(targetDay)}_${item.hora}`;
+                        horarioDB[tk] = item.disc; 
+                        blocosClonados++;
+                    }
+                }
+                currDataIter.setDate(currDataIter.getDate() + 7); 
+            }
+
+            // 3. Atualizar Firebase
+            await setDoc(doc(db, "turmas", state.selectedTurma), { horario: horarioDB }, { merge: true });
+            
+            alert(`Sucesso! Foram processados ${blocosClonados} blocos para as próximas semanas. Se quiseres mudar um dia pontual, basta navegar para essa data e editar.`);
+            window.carregarHorarioDT();
+
+        } catch(err) {
+            console.error(err);
+            alert("Erro ao clonar o horário.");
+        }
+        btn.innerHTML = '<i class="fa-solid fa-copy"></i> Multiplicar Horário';
+        btn.disabled = false;
+        return;
+    }
+});
+
+function aplicarEstiloSlotHorario(slotElement, disc) {
+    if (!slotElement || !disc) return;
+    
+    // Remove classes anteriores para evitar conflitos
+    slotElement.classList.remove('slot-alm', 'slot-visita', 'slot-pap', 'slot-fct', 'slot-prhf', 'filled');
+    
+    const dUpper = disc.toUpperCase();
+    if (dUpper === 'ALM') {
+        slotElement.classList.add('slot-alm');
+    } else if (dUpper.includes('VISITA')) {
+        slotElement.classList.add('slot-visita');
+    } else if (dUpper.includes('PAP')) {
+        slotElement.classList.add('slot-pap');
+    } else if (dUpper.includes('FCT')) {
+        slotElement.classList.add('slot-fct');
+    } else if (dUpper.includes('PRHF')) {
+        slotElement.classList.add('slot-prhf');
+    } else {
+        slotElement.classList.add('filled'); // Disciplinas normais mantêm o verde/cor padrão
+    }
+}
+
+// ============================================================================
+// GESTOR CENTRAL DE FALTAS DO DIRETOR DE TURMA
+// ============================================================================
+window.dtFaltasGerais = [];
+
+window.abrirGestaoFaltasDT = async function(turma) {
+    const cLista = document.getElementById('dt-faltas-lista');
+    cLista.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A reunir registos de faltas...</p>';
+    window.dtFaltaLimparFormulario();
+
+    try {
+        // 1. Preencher Dropdown de Disciplinas do Curso
+        const snapEstrutura = await getDocs(collection(db, "estrutura_modular"));
+        let discUnicas = new Set();
+        snapEstrutura.forEach(d => { if(d.data().disciplina) discUnicas.add(d.data().disciplina); });
+        document.getElementById('dt-falta-form-disc').innerHTML = Array.from(discUnicas).sort().map(d => `<option value="${d}">${d}</option>`).join('');
+
+        // 2. Preencher Dropdown de Alunos
+        const snapAl = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turma), where("papel", "==", "aluno")));
+        let alunosHtml = '<option value="">-- Escolher Aluno --</option>';
+        let alunosIds = [];
+        snapAl.forEach(d => { 
+            const n = d.data().nome;
+            alunosHtml += `<option value="${d.id}">${n}</option>`; 
+            alunosIds.push({id: d.id, nome: n});
+        });
+        document.getElementById('dt-falta-form-aluno').innerHTML = alunosHtml;
+
+        // 3. Buscar todas as Faltas de todos os alunos da Turma
+        window.dtFaltasGerais = [];
+        const promessas = alunosIds.map(async (al) => {
+            const fSnap = await getDocs(collection(db, "utilizadores", al.id, "faltas"));
+            fSnap.forEach(f => {
+                const fd = f.data();
+                window.dtFaltasGerais.push({
+                    id: f.id,
+                    alunoId: al.id,
+                    alunoNome: al.nome,
+                    disciplina: fd.disciplina,
+                    modulo: fd.modulo,
+                    dataFalta: fd.dataFalta || fd.dataRegisto.split('T')[0],
+                    duracaoBlocos: fd.duracaoBlocos || fd.horas || 2,
+                    justificada: fd.justificada || false
+                });
+            });
+        });
+        await Promise.all(promessas);
+        
+        // 4. Iniciar Filtros (Padrão: Ver por Data)
+        document.getElementById('dt-faltas-filtro-tipo').value = 'data';
+        window.dtFaltasAtualizarFiltros();
+
+    } catch (e) {
+        console.error(e);
+        cLista.innerHTML = '<p class="text-danger center">Erro a ler base de dados.</p>';
+    }
+};
+
+window.dtFaltasAtualizarFiltros = function() {
+    const tipo = document.getElementById('dt-faltas-filtro-tipo').value;
+    const selVal = document.getElementById('dt-faltas-filtro-valor');
+    
+    let valoresUnicos = new Set();
+    window.dtFaltasGerais.forEach(f => {
+        if (tipo === 'data') valoresUnicos.add(f.dataFalta);
+        else if (tipo === 'aluno') valoresUnicos.add(f.alunoNome);
+        else if (tipo === 'disciplina') valoresUnicos.add(f.disciplina);
+    });
+
+    let sorted = Array.from(valoresUnicos).sort();
+    if(tipo === 'data') sorted.reverse(); // As datas mais recentes aparecem primeiro
+
+    selVal.innerHTML = sorted.length > 0 
+        ? sorted.map(v => `<option value="${v}">${tipo === 'data' && v.includes('-') ? v.split('-').reverse().join('/') : v}</option>`).join('')
+        : '<option value="">Sem registos disponíveis</option>';
+
+    window.dtFaltasRenderLista();
+};
+
+window.dtFaltasRenderLista = function() {
+    const tipo = document.getElementById('dt-faltas-filtro-tipo').value;
+    const valor = document.getElementById('dt-faltas-filtro-valor').value;
+    const container = document.getElementById('dt-faltas-lista');
+
+    let filtradas = window.dtFaltasGerais.filter(f => {
+        if (tipo === 'data') return f.dataFalta === valor;
+        if (tipo === 'aluno') return f.alunoNome === valor;
+        if (tipo === 'disciplina') return f.disciplina === valor;
+        return true;
+    });
+
+    // Se estivermos a ver por Aluno ou Disciplina, convém ordenar por data (as mais recentes em cima)
+    if (tipo !== 'data') {
+        filtradas.sort((a,b) => b.dataFalta.localeCompare(a.dataFalta));
+    }
+
+    if (filtradas.length === 0) {
+        container.innerHTML = '<p class="text-muted center" style="margin-top:20px;">Nenhuma falta encontrada para este filtro.</p>';
+        return;
+    }
+
+    let html = '';
+    filtradas.forEach(f => {
+        const cor = f.justificada ? 'var(--success-green)' : 'var(--danger-red)';
+        const bgCor = f.justificada ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)';
+        const dataStr = f.dataFalta.includes('-') ? f.dataFalta.split('-').reverse().join('/') : f.dataFalta;
+        
+        let subtexto = '';
+        if (tipo === 'data') subtexto = `<strong>${f.alunoNome}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${f.disciplina} (Mod ${f.modulo})</span>`;
+        if (tipo === 'aluno') subtexto = `<strong>${f.disciplina} (Mod ${f.modulo})</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${dataStr}</span>`;
+        if (tipo === 'disciplina') subtexto = `<strong>${f.alunoNome}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${dataStr} - Mod ${f.modulo}</span>`;
+
+        html += `
+        <div style="background:${bgCor}; border:1px solid ${cor}; border-left:4px solid ${cor}; padding:10px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <p style="margin:0; font-size:0.9rem; color:white;">${subtexto}</p>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-weight:bold; color:${cor}; font-size:0.85rem;">${f.duracaoBlocos}h</span>
+                <button class="secondary-btn small-btn btn-dt-editar-falta-item" data-id="${f.id}" style="padding:4px 8px; border-color:${cor}; color:${cor};"><i class="fa-solid fa-pen"></i></button>
+            </div>
+        </div>`;
+    });
+    container.innerHTML = html;
+};
+
+window.dtFaltaLimparFormulario = function() {
+    document.getElementById('dt-falta-edit-id').value = '';
+    document.getElementById('dt-falta-edit-alunoid').value = '';
+    document.getElementById('dt-falta-form-aluno').disabled = false;
+    document.getElementById('dt-falta-form-data').value = new Date().toISOString().split('T')[0];
+    document.getElementById('dt-falta-form-justificada').checked = false;
+    
+    document.getElementById('dt-faltas-form-title').innerHTML = '<i class="fa-solid fa-plus"></i> Registar Nova Falta';
+    document.getElementById('btn-dt-falta-cancelar').style.display = 'none';
+};
+
+// --- EVENTOS DO NOVO PAINEL ---
+document.body.addEventListener('change', (e) => {
+    if (e.target.id === 'dt-faltas-filtro-tipo') { window.dtFaltasAtualizarFiltros(); }
+    if (e.target.id === 'dt-faltas-filtro-valor') { window.dtFaltasRenderLista(); }
+});
+
+document.body.addEventListener('click', async (e) => {
+    // 1. CARREGAR DADOS PARA O FORMULÁRIO DE EDIÇÃO
+    if (e.target.closest('.btn-dt-editar-falta-item')) {
+        const btn = e.target.closest('.btn-dt-editar-falta-item');
+        const faltaId = btn.getAttribute('data-id');
+        const faltaData = window.dtFaltasGerais.find(f => f.id === faltaId);
+        if (!faltaData) return;
+
+        document.getElementById('dt-faltas-form-title').innerHTML = '<i class="fa-solid fa-pen"></i> Editar Falta';
+        document.getElementById('dt-falta-edit-id').value = faltaData.id;
+        document.getElementById('dt-falta-edit-alunoid').value = faltaData.alunoId;
+        
+        document.getElementById('dt-falta-form-aluno').value = faltaData.alunoId;
+        document.getElementById('dt-falta-form-aluno').disabled = true; // Não deixa mudar o aluno ao editar
+        
+        document.getElementById('dt-falta-form-disc').value = faltaData.disciplina;
+        document.getElementById('dt-falta-form-mod').value = faltaData.modulo;
+        document.getElementById('dt-falta-form-duracao').value = faltaData.duracaoBlocos;
+        document.getElementById('dt-falta-form-data').value = faltaData.dataFalta;
+        document.getElementById('dt-falta-form-justificada').checked = faltaData.justificada;
+
+        document.getElementById('btn-dt-falta-cancelar').style.display = 'block';
+        return;
+    }
+
+    // 2. CANCELAR EDIÇÃO E VOLTAR A "REGISTAR NOVA"
+    if (e.target.closest('#btn-dt-falta-cancelar')) {
+        window.dtFaltaLimparFormulario();
+        return;
+    }
+
+    // 3. GRAVAR (CRIAR NOVA OU ATUALIZAR EXISTENTE)
+    if (e.target.closest('#btn-dt-falta-gravar')) {
+        const btn = e.target.closest('#btn-dt-falta-gravar');
+        const editId = document.getElementById('dt-falta-edit-id').value;
+        const formAlunoId = document.getElementById('dt-falta-form-aluno').value;
+        const alunoIdFinal = editId ? document.getElementById('dt-falta-edit-alunoid').value : formAlunoId;
+
+        const disc = document.getElementById('dt-falta-form-disc').value;
+        const mod = document.getElementById('dt-falta-form-mod').value;
+        const duracao = document.getElementById('dt-falta-form-duracao').value;
+        const dataF = document.getElementById('dt-falta-form-data').value;
+        const just = document.getElementById('dt-falta-form-justificada').checked;
+
+        if (!alunoIdFinal || !disc || !dataF) return alert("Preenche Aluno, Disciplina e Data!");
+
+        const btnTxt = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+
+        try {
+            const dataToSave = {
+                turma: state.selectedTurma,
+                disciplina: disc,
+                modulo: mod,
+                dataFalta: dataF,
+                duracaoBlocos: parseInt(duracao),
+                justificada: just,
+                dataRegisto: new Date().toISOString(),
+                professor: state.myUserName
+            };
+
+            if (editId) {
+                // ATUALIZAR
+                await setDoc(doc(db, "utilizadores", alunoIdFinal, "faltas", editId), dataToSave, { merge: true });
+            } else {
+                // CRIAR NOVA
+                await addDoc(collection(db, "utilizadores", alunoIdFinal, "faltas"), dataToSave);
+            }
+
+            // Recarregar os dados do zero para garantir que tudo está perfeito
+            await window.abrirGestaoFaltasDT(state.selectedTurma);
+            
+            btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+            setTimeout(() => { btn.innerHTML = btnTxt; btn.disabled = false; }, 1000);
+
+        } catch (err) {
+            console.error(err);
+            btn.innerHTML = 'Erro!';
+            setTimeout(() => { btn.innerHTML = btnTxt; btn.disabled = false; }, 2000);
+        }
+        return;
+    }
+});
+
+// ============================================================================
+// GATILHOS DE ABERTURA: FALTAS E NOTAS (DIRECIONA CONFORME A CAPA)
+// ============================================================================
+document.body.addEventListener('click', async (e) => {
+    
+    // 1. ABRIR FALTAS
+    if (e.target.closest('#btn-modal-faltas')) {
+        const turma = state.selectedTurma;
+        if (!turma) return alert("Seleciona primeiro uma turma no menu superior.");
+
+        let turmasDoDT = Array.isArray(state.profData.turmaDT) ? state.profData.turmaDT : [state.profData.turmaDT || ""];
+        const isDT = (state.activeRole === 'diretor_turma' && turmasDoDT.includes(turma));
+
+        if (isDT) {
+            // O DIRETOR DE TURMA VAI DIRETAMENTE PARA O DASHBOARD MODERNO
+            document.getElementById('modal-dt-gestao-faltas').style.display = 'flex';
+            if (window.abrirGestaoFaltasDT) window.abrirGestaoFaltasDT(turma);
+            return;
+        }
+
+        // PROFESSOR NORMAL (Modal Antigo)
+        const turmaSelect = document.getElementById('lancar-falta-turma');
+        if (turmaSelect) turmaSelect.innerHTML = `<option value="${turma}">Turma ${turma}</option>`;
+
+        const discSelect = document.getElementById('lancar-falta-disciplina');
+        if (discSelect && state.disciplinasProfessor) {
+            discSelect.innerHTML = state.disciplinasProfessor.map(d => `<option value="${d}">${d}</option>`).join('');
+            if (state.disciplinasProfessor.length > 0) import('./prof/ui.js').then(m => m.atualizarDropdownModulos(turma, state.disciplinasProfessor[0], document.getElementById('falta-modulo-select')));
+        }
+
+        const dataInput = document.getElementById('falta-data-input');
+        if (dataInput) dataInput.value = new Date().toISOString().split('T')[0];
+
+        const cCont = document.getElementById('lista-metralhadora-faltas');
+        if (cCont) {
+            cCont.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar alunos...</p>';
+            try {
+                const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turma), where("papel", "==", "aluno")));
+                let arr = []; cS.forEach(d => arr.push({ id: d.id, ...d.data() }));
+                arr.sort((a, b) => a.nome.localeCompare(b.nome));
+
+                let cH = '';
+                arr.forEach(d => {
+                    cH += `<label style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:rgba(0,0,0,0.2); border:1px solid #333; border-radius:6px; cursor:pointer;"><span style="color:white; font-size:0.85rem;">${nomeCurto(d.nome)}</span><input type="checkbox" class="falta-aluno-check" value="${d.id}" style="width:18px; height:18px; accent-color:var(--danger-red); margin:0;"></label>`;
+                });
+                cCont.innerHTML = cH === '' ? '<p class="text-muted center">Turma vazia.</p>' : cH;
+            } catch (err) { cCont.innerHTML = '<p class="text-danger center">Erro.</p>'; }
+        }
+        document.getElementById('modal-marcar-faltas').style.display = 'flex';
+        return;
+    }
+
+    // 2. ABRIR NOTAS
+    if (e.target.closest('#btn-modal-notas')) {
+        const turma = state.selectedTurma;
+        if (!turma) return alert("Seleciona primeiro uma turma.");
+
+        let turmasDoDT = Array.isArray(state.profData.turmaDT) ? state.profData.turmaDT : [state.profData.turmaDT || ""];
+        const isDT = (state.activeRole === 'diretor_turma' && turmasDoDT.includes(turma));
+
+        if (isDT) {
+            // O DIRETOR DE TURMA VAI DIRETAMENTE PARA O DASHBOARD MODERNO
+            document.getElementById('modal-dt-gestao-notas').style.display = 'flex';
+            if (window.abrirGestaoNotasDT) window.abrirGestaoNotasDT(turma);
+            return;
+        }
+
+        // PROFESSOR NORMAL (Modal Antigo)
+        const discSelect = document.getElementById('lancar-nota-disciplina');
+        if (discSelect && state.disciplinasProfessor) {
+            discSelect.innerHTML = state.disciplinasProfessor.map(d => `<option value="${d}">${d}</option>`).join('');
+            if (state.disciplinasProfessor.length > 0) import('./prof/ui.js').then(m => m.atualizarDropdownModulos(turma, state.disciplinasProfessor[0], document.getElementById('lancar-nota-modulo')));
+        }
+
+        const grid = document.getElementById('grid-notas-alunos');
+        if (grid) {
+            grid.innerHTML = '<p class="text-muted center" style="padding:15px; font-size:0.85rem;"><i class="fa-solid fa-spinner fa-spin"></i> A carregar alunos...</p>';
+            try {
+                const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turma), where("papel", "==", "aluno")));
+                let arr = []; cS.forEach(d => arr.push({ id: d.id, ...d.data() }));
+                arr.sort((a, b) => a.nome.localeCompare(b.nome));
+
+                let cH = '';
+                arr.forEach(d => {
+                    cH += `<div class="aluno-nota-row" data-id="${d.id}" style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.2); border:1px solid #333; border-radius:6px;"><span style="color:white; font-size:0.85rem; flex: 1;">${nomeCurto(d.nome)}</span><div style="display: flex; gap: 5px; align-items: center;"><button class="btn-limpar-nota" data-id="${d.id}" style="display: none; width: 35px; height: 35px; border-radius: 6px; background: rgba(239, 68, 68, 0.15); border: 1px solid var(--danger-red); color: var(--danger-red); cursor: pointer; align-items: center; justify-content: center; padding: 0;"><i class="fa-solid fa-trash"></i></button><button class="btn-abrir-escolha-nota secondary-btn small-btn" data-id="${d.id}" data-nome="${nomeCurto(d.nome)}" style="min-width: 80px; height: 35px; font-weight: bold; color: var(--primary-green);">Atribuir</button></div><input type="hidden" class="input-nota-aluno-hidden" value=""><input type="hidden" class="input-motivo-aluno-hidden" value=""></div>`;
+                });
+                grid.innerHTML = cH === '' ? '<p class="text-muted center">Turma vazia.</p>' : cH;
+            } catch (err) { grid.innerHTML = '<p class="text-danger center">Erro.</p>'; }
+        }
+        document.getElementById('modal-lancamento-notas').style.display = 'flex';
+        return;
+    }
+});
+
+// ============================================================================
+// LÓGICA: GESTÃO CENTRAL DE FALTAS (DT)
+// ============================================================================
+window.dtFaltasGerais = [];
+
+window.abrirGestaoFaltasDT = async function(turma) {
+    const cLista = document.getElementById('dt-faltas-lista');
+    cLista.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A reunir registos de faltas...</p>';
+    window.dtFaltaLimparFormulario();
+
+    try {
+        const snapEstrutura = await getDocs(collection(db, "estrutura_modular"));
+        let discUnicas = new Set();
+        snapEstrutura.forEach(d => { if(d.data().disciplina) discUnicas.add(d.data().disciplina); });
+        document.getElementById('dt-falta-form-disc').innerHTML = Array.from(discUnicas).sort().map(d => `<option value="${d}">${d}</option>`).join('');
+
+        const snapAl = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turma), where("papel", "==", "aluno")));
+        let alunosHtml = '<option value="">-- Escolher Aluno --</option>';
+        let alunosIds = [];
+        snapAl.forEach(d => { 
+            alunosHtml += `<option value="${d.id}">${d.data().nome}</option>`; 
+            alunosIds.push({id: d.id, nome: d.data().nome});
+        });
+        document.getElementById('dt-falta-form-aluno').innerHTML = alunosHtml;
+
+        window.dtFaltasGerais = [];
+        const promessas = alunosIds.map(async (al) => {
+            const fSnap = await getDocs(collection(db, "utilizadores", al.id, "faltas"));
+            fSnap.forEach(f => {
+                const fd = f.data();
+                window.dtFaltasGerais.push({
+                    id: f.id, alunoId: al.id, alunoNome: al.nome, disciplina: fd.disciplina,
+                    modulo: fd.modulo, dataFalta: fd.dataFalta || fd.dataRegisto.split('T')[0],
+                    duracaoBlocos: fd.duracaoBlocos || fd.horas || 2, justificada: fd.justificada || false
+                });
+            });
+        });
+        await Promise.all(promessas);
+        
+        document.getElementById('dt-faltas-filtro-tipo').value = 'data';
+        window.dtFaltasAtualizarFiltros();
+    } catch (e) { cLista.innerHTML = '<p class="text-danger center">Erro a ler base de dados.</p>'; }
+};
+
+window.dtFaltasAtualizarFiltros = function() {
+    const tipo = document.getElementById('dt-faltas-filtro-tipo').value;
+    const selVal = document.getElementById('dt-faltas-filtro-valor');
+    let vUnicos = new Set();
+    window.dtFaltasGerais.forEach(f => {
+        if (tipo === 'data') vUnicos.add(f.dataFalta);
+        else if (tipo === 'aluno') vUnicos.add(f.alunoNome);
+        else if (tipo === 'disciplina') vUnicos.add(f.disciplina);
+    });
+
+    let sorted = Array.from(vUnicos).sort();
+    if(tipo === 'data') sorted.reverse(); 
+
+    selVal.innerHTML = sorted.length > 0 ? sorted.map(v => `<option value="${v}">${tipo === 'data' && v.includes('-') ? v.split('-').reverse().join('/') : v}</option>`).join('') : '<option value="">Sem registos</option>';
+    window.dtFaltasRenderLista();
+};
+
+window.dtFaltasRenderLista = function() {
+    const tipo = document.getElementById('dt-faltas-filtro-tipo').value;
+    const valor = document.getElementById('dt-faltas-filtro-valor').value;
+    const container = document.getElementById('dt-faltas-lista');
+
+    let filtradas = window.dtFaltasGerais.filter(f => {
+        if (tipo === 'data') return f.dataFalta === valor;
+        if (tipo === 'aluno') return f.alunoNome === valor;
+        if (tipo === 'disciplina') return f.disciplina === valor;
+        return true;
+    });
+
+    if (tipo !== 'data') filtradas.sort((a,b) => b.dataFalta.localeCompare(a.dataFalta));
+
+    if (filtradas.length === 0) return container.innerHTML = '<p class="text-muted center" style="margin-top:20px;">Nenhuma falta encontrada.</p>';
+
+    let html = '';
+    filtradas.forEach(f => {
+        const cor = f.justificada ? 'var(--success-green)' : 'var(--danger-red)';
+        const bgCor = f.justificada ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)';
+        const dataStr = f.dataFalta.includes('-') ? f.dataFalta.split('-').reverse().join('/') : f.dataFalta;
+        
+        let sub = '';
+        if (tipo === 'data') sub = `<strong>${f.alunoNome}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${f.disciplina} (Mod ${f.modulo})</span>`;
+        if (tipo === 'aluno') sub = `<strong>${f.disciplina} (Mod ${f.modulo})</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${dataStr}</span>`;
+        if (tipo === 'disciplina') sub = `<strong>${f.alunoNome}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${dataStr} - Mod ${f.modulo}</span>`;
+
+        html += `<div style="background:${bgCor}; border:1px solid ${cor}; border-left:4px solid ${cor}; padding:10px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;"><div><p style="margin:0; font-size:0.9rem; color:white;">${sub}</p></div><div style="display:flex; align-items:center; gap:10px;"><span style="font-weight:bold; color:${cor}; font-size:0.85rem;">${f.duracaoBlocos}h</span><button class="secondary-btn small-btn btn-dt-editar-falta-item" data-id="${f.id}" style="padding:4px 8px; border-color:${cor}; color:${cor};"><i class="fa-solid fa-pen"></i></button></div></div>`;
+    });
+    container.innerHTML = html;
+};
+
+window.dtFaltaLimparFormulario = function() {
+    document.getElementById('dt-falta-edit-id').value = '';
+    document.getElementById('dt-falta-edit-alunoid').value = '';
+    document.getElementById('dt-falta-form-aluno').disabled = false;
+    document.getElementById('dt-falta-form-data').value = new Date().toISOString().split('T')[0];
+    document.getElementById('dt-falta-form-justificada').checked = false;
+    
+    document.getElementById('dt-faltas-form-title').innerHTML = '<i class="fa-solid fa-plus"></i> Registar Nova Falta';
+    document.getElementById('btn-dt-falta-cancelar').style.display = 'none';
+    document.getElementById('btn-dt-falta-apagar').style.display = 'none';
+};
+
+// ============================================================================
+// LÓGICA: GESTÃO CENTRAL DE NOTAS (DT)
+// ============================================================================
+window.dtNotasGerais = [];
+
+window.abrirGestaoNotasDT = async function(turma) {
+    const cLista = document.getElementById('dt-notas-lista');
+    cLista.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A reunir avaliações...</p>';
+    window.dtNotaLimparFormulario();
+
+    try {
+        const snapEstrutura = await getDocs(collection(db, "estrutura_modular"));
+        let discUnicas = new Set();
+        snapEstrutura.forEach(d => { if(d.data().disciplina) discUnicas.add(d.data().disciplina); });
+        document.getElementById('dt-nota-form-disc').innerHTML = Array.from(discUnicas).sort().map(d => `<option value="${d}">${d}</option>`).join('');
+
+        const snapAl = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turma), where("papel", "==", "aluno")));
+        let alunosHtml = '<option value="">-- Escolher Aluno --</option>';
+        let alunosIds = [];
+        snapAl.forEach(d => { 
+            alunosHtml += `<option value="${d.id}">${d.data().nome}</option>`; 
+            alunosIds.push({id: d.id, nome: d.data().nome});
+        });
+        document.getElementById('dt-nota-form-aluno').innerHTML = alunosHtml;
+
+        window.dtNotasGerais = [];
+        const promessas = alunosIds.map(async (al) => {
+            const avalSnap = await getDocs(collection(db, "utilizadores", al.id, "avaliacoes"));
+            const notasOldSnap = await getDocs(collection(db, "utilizadores", al.id, "notas"));
+            const todosDocs = [...avalSnap.docs, ...notasOldSnap.docs];
+
+            todosDocs.forEach(n => {
+                const nd = n.data();
+                const modRaw = nd.modulo || nd.mod || nd.ufcd;
+                const modFormatado = parseInt(String(modRaw).replace(/\D/g, '')) || modRaw;
+                
+                if (!window.dtNotasGerais.some(e => e.alunoId === al.id && e.disciplina === nd.disciplina && e.modulo == modFormatado)) {
+                    window.dtNotasGerais.push({
+                        id: n.id, alunoId: al.id, alunoNome: al.nome, disciplina: nd.disciplina,
+                        modulo: modFormatado, nota: String(nd.nota || '').toUpperCase(), motivoREP: nd.motivoREP || ''
+                    });
+                }
+            });
+        });
+        await Promise.all(promessas);
+        
+        document.getElementById('dt-notas-filtro-tipo').value = 'aluno';
+        window.dtNotasAtualizarFiltros();
+    } catch (e) { cLista.innerHTML = '<p class="text-danger center">Erro a ler base de dados.</p>'; }
+};
+
+window.dtNotasAtualizarFiltros = function() {
+    const tipo = document.getElementById('dt-notas-filtro-tipo').value;
+    const selVal = document.getElementById('dt-notas-filtro-valor');
+    let vUnicos = new Set();
+    window.dtNotasGerais.forEach(n => {
+        if (tipo === 'aluno') vUnicos.add(n.alunoNome);
+        else if (tipo === 'disciplina') vUnicos.add(n.disciplina);
+    });
+
+    let sorted = Array.from(vUnicos).sort();
+    selVal.innerHTML = sorted.length > 0 ? sorted.map(v => `<option value="${v}">${v}</option>`).join('') : '<option value="">Sem registos</option>';
+    window.dtNotasRenderLista();
+};
+
+window.dtNotasRenderLista = function() {
+    const tipo = document.getElementById('dt-notas-filtro-tipo').value;
+    const valor = document.getElementById('dt-notas-filtro-valor').value;
+    const container = document.getElementById('dt-notas-lista');
+
+    let filtradas = window.dtNotasGerais.filter(n => {
+        if (tipo === 'aluno') return n.alunoNome === valor;
+        if (tipo === 'disciplina') return n.disciplina === valor;
+        return true;
+    });
+
+    filtradas.sort((a,b) => a.modulo - b.modulo);
+
+    if (filtradas.length === 0) return container.innerHTML = '<p class="text-muted center" style="margin-top:20px;">Nenhuma avaliação encontrada.</p>';
+
+    let html = '';
+    filtradas.forEach(n => {
+        const isRep = n.nota === 'REP';
+        const isNegativa = isRep || (!isNaN(n.nota) && parseInt(n.nota) < 10);
+        const cor = isNegativa ? 'var(--danger-red)' : 'var(--success-green)';
+        const bgCor = isNegativa ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)';
+        
+        let sub = '';
+        if (tipo === 'aluno') sub = `<strong>${n.disciplina}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Módulo ${n.modulo}</span>`;
+        if (tipo === 'disciplina') sub = `<strong>${nomeCurto(n.alunoNome)}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Módulo ${n.modulo}</span>`;
+
+        html += `<div style="background:${bgCor}; border:1px solid ${cor}; border-left:4px solid ${cor}; padding:10px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;"><div><p style="margin:0; font-size:0.9rem; color:white;">${sub}</p></div><div style="display:flex; align-items:center; gap:10px;"><span style="font-weight:bold; color:${cor}; font-size:1.1rem; min-width:30px; text-align:right;">${n.nota}</span><button class="secondary-btn small-btn btn-dt-editar-nota-item" data-id="${n.id}" data-alunoid="${n.alunoId}" style="padding:4px 8px; border-color:${cor}; color:${cor};"><i class="fa-solid fa-pen"></i></button></div></div>`;
+    });
+    container.innerHTML = html;
+};
+
+window.dtNotaLimparFormulario = function() {
+    document.getElementById('dt-nota-edit-id').value = '';
+    document.getElementById('dt-nota-edit-alunoid').value = '';
+    document.getElementById('dt-nota-form-aluno').disabled = false;
+    document.getElementById('dt-nota-form-disc').disabled = false;
+    document.getElementById('dt-nota-form-mod').disabled = false;
+    document.getElementById('dt-nota-form-valor').value = '10';
+    document.getElementById('dt-nota-form-rep-container').style.display = 'none';
+    
+    document.getElementById('dt-notas-form-title').innerHTML = '<i class="fa-solid fa-plus"></i> Lançar Nova Nota';
+    document.getElementById('btn-dt-nota-cancelar').style.display = 'none';
+    document.getElementById('btn-dt-nota-apagar').style.display = 'none';
+};
+
+// ============================================================================
+// EVENTOS DOS DASHBOARDS (Change & Click Global)
+// ============================================================================
+document.body.addEventListener('change', (e) => {
+    if (e.target.id === 'dt-faltas-filtro-tipo') { window.dtFaltasAtualizarFiltros(); }
+    if (e.target.id === 'dt-faltas-filtro-valor') { window.dtFaltasRenderLista(); }
+    if (e.target.id === 'dt-notas-filtro-tipo') { window.dtNotasAtualizarFiltros(); }
+    if (e.target.id === 'dt-notas-filtro-valor') { window.dtNotasRenderLista(); }
+    if (e.target.id === 'dt-nota-form-valor') {
+        document.getElementById('dt-nota-form-rep-container').style.display = e.target.value === 'REP' ? 'block' : 'none';
+    }
+});
+
+document.body.addEventListener('click', async (e) => {
+    
+    // --- LÓGICA DO CLIQUE: FALTAS ---
+    if (e.target.closest('.btn-dt-editar-falta-item')) {
+        const faltaId = e.target.closest('.btn-dt-editar-falta-item').getAttribute('data-id');
+        const faltaData = window.dtFaltasGerais.find(f => f.id === faltaId);
+        if (!faltaData) return;
+        document.getElementById('dt-faltas-form-title').innerHTML = '<i class="fa-solid fa-pen"></i> Editar Falta';
+        document.getElementById('dt-falta-edit-id').value = faltaData.id;
+        document.getElementById('dt-falta-edit-alunoid').value = faltaData.alunoId;
+        document.getElementById('dt-falta-form-aluno').value = faltaData.alunoId;
+        document.getElementById('dt-falta-form-aluno').disabled = true;
+        document.getElementById('dt-falta-form-disc').value = faltaData.disciplina;
+        document.getElementById('dt-falta-form-mod').value = faltaData.modulo;
+        document.getElementById('dt-falta-form-duracao').value = faltaData.duracaoBlocos;
+        document.getElementById('dt-falta-form-data').value = faltaData.dataFalta;
+        document.getElementById('dt-falta-form-justificada').checked = faltaData.justificada;
+        document.getElementById('btn-dt-falta-cancelar').style.display = 'block';
+        document.getElementById('btn-dt-falta-apagar').style.display = 'block';
+        return;
+    }
+
+    if (e.target.closest('#btn-dt-falta-cancelar')) { window.dtFaltaLimparFormulario(); return; }
+
+    if (e.target.closest('#btn-dt-falta-apagar')) {
+        const idF = document.getElementById('dt-falta-edit-id').value;
+        const idA = document.getElementById('dt-falta-edit-alunoid').value;
+        if(!confirm("Eliminar esta falta para sempre?")) return;
+        e.target.closest('button').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try {
+            const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
+            await deleteDoc(doc(db, "utilizadores", idA, "faltas", idF));
+            await window.abrirGestaoFaltasDT(state.selectedTurma);
+        } catch(err) {}
+        return;
+    }
+
+    if (e.target.closest('#btn-dt-falta-gravar')) {
+        const btn = e.target.closest('#btn-dt-falta-gravar');
+        const editId = document.getElementById('dt-falta-edit-id').value;
+        const alunoIdFinal = editId ? document.getElementById('dt-falta-edit-alunoid').value : document.getElementById('dt-falta-form-aluno').value;
+        const disc = document.getElementById('dt-falta-form-disc').value;
+        const mod = document.getElementById('dt-falta-form-mod').value;
+        const duracao = document.getElementById('dt-falta-form-duracao').value;
+        const dataF = document.getElementById('dt-falta-form-data').value;
+        const just = document.getElementById('dt-falta-form-justificada').checked;
+
+        if (!alunoIdFinal || !disc || !dataF) return alert("Preenche Aluno, Disciplina e Data!");
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try {
+            const dSave = { turma: state.selectedTurma, disciplina: disc, modulo: mod, dataFalta: dataF, duracaoBlocos: parseInt(duracao), justificada: just, dataRegisto: new Date().toISOString(), professor: state.myUserName };
+            if (editId) await setDoc(doc(db, "utilizadores", alunoIdFinal, "faltas", editId), dSave, { merge: true });
+            else await addDoc(collection(db, "utilizadores", alunoIdFinal, "faltas"), dSave);
+            await window.abrirGestaoFaltasDT(state.selectedTurma);
+        } catch (err) {}
+        return;
+    }
+
+    // --- LÓGICA DO CLIQUE: NOTAS ---
+    if (e.target.closest('.btn-dt-editar-nota-item')) {
+        const btn = e.target.closest('.btn-dt-editar-nota-item');
+        const notaData = window.dtNotasGerais.find(n => n.id === btn.getAttribute('data-id') && n.alunoId === btn.getAttribute('data-alunoid'));
+        if (!notaData) return;
+        document.getElementById('dt-notas-form-title').innerHTML = '<i class="fa-solid fa-pen"></i> Editar Nota';
+        document.getElementById('dt-nota-edit-id').value = notaData.id;
+        document.getElementById('dt-nota-edit-alunoid').value = notaData.alunoId;
+        document.getElementById('dt-nota-form-aluno').value = notaData.alunoId; document.getElementById('dt-nota-form-aluno').disabled = true;
+        document.getElementById('dt-nota-form-disc').value = notaData.disciplina; document.getElementById('dt-nota-form-disc').disabled = true;
+        document.getElementById('dt-nota-form-mod').value = notaData.modulo; document.getElementById('dt-nota-form-mod').disabled = true;
+        document.getElementById('dt-nota-form-valor').value = notaData.nota;
+        const isRep = notaData.nota === 'REP';
+        document.getElementById('dt-nota-form-rep-container').style.display = isRep ? 'block' : 'none';
+        if(isRep) document.getElementById('dt-nota-form-rep-motivo').value = notaData.motivoREP;
+        document.getElementById('btn-dt-nota-cancelar').style.display = 'block';
+        document.getElementById('btn-dt-nota-apagar').style.display = 'block';
+        return;
+    }
+
+    if (e.target.closest('#btn-dt-nota-cancelar')) { window.dtNotaLimparFormulario(); return; }
+
+    if (e.target.closest('#btn-dt-nota-apagar')) {
+        const idN = document.getElementById('dt-nota-edit-id').value;
+        const idA = document.getElementById('dt-nota-edit-alunoid').value;
+        if(!confirm("Eliminar esta nota para sempre?")) return;
+        e.target.closest('button').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try {
+            const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
+            await deleteDoc(doc(db, "utilizadores", idA, "avaliacoes", idN));
+            try { await deleteDoc(doc(db, "utilizadores", idA, "notas", idN)); } catch(e){}
+            await window.abrirGestaoNotasDT(state.selectedTurma);
+        } catch(err) {}
+        return;
+    }
+
+    if (e.target.closest('#btn-dt-nota-gravar')) {
+        const btn = e.target.closest('#btn-dt-nota-gravar');
+        const isEdit = document.getElementById('dt-nota-edit-id').value !== '';
+        const idAl = document.getElementById('dt-nota-form-aluno').value;
+        const disc = document.getElementById('dt-nota-form-disc').value;
+        const mod = document.getElementById('dt-nota-form-mod').value;
+        const nota = document.getElementById('dt-nota-form-valor').value;
+        if (!idAl || !disc || !mod) return alert("Preenche Aluno, Disciplina e Módulo!");
+        
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try {
+            const nId = `${disc}_${mod}`;
+            const dSave = { turma: state.selectedTurma, disciplina: disc, modulo: mod, nota: nota, motivoREP: nota === 'REP' ? document.getElementById('dt-nota-form-rep-motivo').value : null, dataLancamento: new Date().toISOString(), professor: state.myUserName };
+            await setDoc(doc(db, "utilizadores", idAl, "avaliacoes", nId), dSave, { merge: true });
+            await window.abrirGestaoNotasDT(state.selectedTurma);
+        } catch (err) {}
+        return;
     }
 });

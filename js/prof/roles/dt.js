@@ -43,7 +43,8 @@ export async function carregarPainelDT() {
         // Precisamos da função da Matriz para saber o teto de faltas real
         let matrizDeHoras = {};
         try {
-            const { getMatriz } = await import("../../js/modules/aluno-caderneta.js");
+            // Caminho corrigido para ler do directório principal js/
+            const { getMatriz } = await import("../aluno-caderneta.js");
             matrizDeHoras = getMatriz();
         } catch(e) {}
 

@@ -358,3 +358,193 @@ export async function carregarMissoesDaTurma() {
         console.error("Erro ao puxar missões:", e);
     }
 }
+
+// ==================================================
+// O "CHAPÉU SELETOR" DAS ACADEMIAS
+// ==================================================
+const PERGUNTAS_QUIZ = [
+    {
+        q: "Qual é o teu papel num trabalho de grupo?",
+        opcoes: [
+            { txt: "Organizo as tarefas e faço o plano de ação.", valor: "estrategas" },
+            { txt: "Falo com toda a gente e apresento o trabalho no fim.", valor: "embaixadores" },
+            { txt: "Sou o primeiro a querer ir ao terreno e começar a fazer.", valor: "exploradores" },
+            { txt: "Dou ideias criativas para tornar o trabalho diferente e inovador.", valor: "visionarios" }
+        ]
+    },
+    {
+        q: "Imagina que trabalhas num hotel e há um problema com a reserva de um cliente stressado. Como ages?",
+        opcoes: [
+            { txt: "Verifico a política de devoluções no sistema para propor a solução mais viável.", valor: "estrategas" },
+            { txt: "Peço imensa desculpa, acalmo-o com um sorriso e ofereço-lhe um café.", valor: "embaixadores" },
+            { txt: "Agarro nas malas dele e levo-o logo para outro quarto disponível.", valor: "exploradores" },
+            { txt: "Ofereço-lhe uma experiência turística diferente na cidade para compensar.", valor: "visionarios" }
+        ]
+    },
+    {
+        q: "No teu tempo livre e nas tuas viagens, o que preferes fazer?",
+        opcoes: [
+            { txt: "Fazer um roteiro detalhado com tudo o que quero visitar.", valor: "estrategas" },
+            { txt: "Estar num café cheio de gente a conviver.", valor: "embaixadores" },
+            { txt: "Fazer um trilho novo na natureza.", valor: "exploradores" },
+            { txt: "Tirar fotografias originais e visitar exposições.", valor: "visionarios" }
+        ]
+    },
+    {
+        q: "No final do curso, se pudesses escolher o teu emprego de sonho, qual seria?",
+        opcoes: [
+            { txt: "Diretor/a de Gestão ou Planeamento Turístico.", valor: "estrategas" },
+            { txt: "Rececionista, Hospedeira ou Relações Públicas.", valor: "embaixadores" },
+            { txt: "Guia ou Animador/a de Turismo Aventura.", valor: "exploradores" },
+            { txt: "Criador/a de Eventos ou Especialista em Marketing Turístico.", valor: "visionarios" }
+        ]
+    }
+];
+
+let currentQuizIndex = 0;
+let quizRespostas = [];
+
+export function inicializarQuizAcademias() {
+    const container = document.getElementById('quiz-perguntas');
+    const progressDots = document.getElementById('quiz-progress-dots');
+    if (!container) return;
+
+    currentQuizIndex = 0;
+    quizRespostas = [];
+
+    // Criar as bolinhas de progresso
+    if (progressDots) {
+        progressDots.innerHTML = PERGUNTAS_QUIZ.map((_, i) => 
+            `<div id="dot-${i}" style="width: 10px; height: 10px; border-radius: 50%; background: ${i === 0 ? 'var(--primary-green)' : '#333'}; transition: all 0.3s ease;"></div>`
+        ).join('');
+    }
+
+    mostrarPergunta(0);
+}
+
+function mostrarPergunta(index) {
+    const container = document.getElementById('quiz-perguntas');
+    const pergunta = PERGUNTAS_QUIZ[index];
+    
+    // Atualizar as bolinhas
+    PERGUNTAS_QUIZ.forEach((_, i) => {
+        const dot = document.getElementById(`dot-${i}`);
+        if (dot) {
+            dot.style.background = i === index ? 'var(--primary-green)' : (i < index ? 'rgba(0, 204, 136, 0.4)' : '#333');
+            dot.style.transform = i === index ? 'scale(1.3)' : 'scale(1)';
+        }
+    });
+
+    // Efeito de desvanecimento na troca de perguntas
+    container.style.opacity = 0;
+    
+    setTimeout(() => {
+        let html = `
+        <div class="pergunta-bloco" style="animation: fadeSlide 0.4s ease-out forwards;">
+            <h3 style="color: white; font-size: 1.1rem; margin-bottom: 25px; line-height: 1.4; text-align: center;">${pergunta.q}</h3>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                ${pergunta.opcoes.map((op, opIdx) => `
+                    <button class="quiz-opcao-btn" data-valor="${op.valor}" style="background: var(--bg-dark); border: 1px solid #333; color: var(--text-light); padding: 16px 15px; border-radius: 12px; cursor: pointer; text-align: left; font-size: 0.95rem; transition: all 0.2s; line-height: 1.4; display: flex; align-items: center; justify-content: space-between;">
+                        <span style="flex: 1; padding-right: 10px;">${op.txt}</span>
+                        <i class="fa-regular fa-circle" style="color: #555; font-size: 1.2rem; flex-shrink: 0;"></i>
+                    </button>
+                `).join('')}
+            </div>
+        </div>`;
+        
+        container.innerHTML = html;
+        container.style.opacity = 1;
+
+        // Adicionar a lógica de clique aos botões das opções
+        const botoes = container.querySelectorAll('.quiz-opcao-btn');
+        botoes.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Impede que o aluno clique em vários botões ao mesmo tempo
+                botoes.forEach(b => b.style.pointerEvents = 'none');
+                
+                const selecionado = e.currentTarget;
+                const valor = selecionado.getAttribute('data-valor');
+                
+                // Brilho visual no botão clicado
+                selecionado.style.borderColor = 'var(--primary-green)';
+                selecionado.style.background = 'rgba(0, 204, 136, 0.15)';
+                selecionado.style.color = 'white';
+                selecionado.style.transform = 'scale(1.02)';
+                
+                const icone = selecionado.querySelector('i');
+                icone.classList.remove('fa-circle');
+                icone.classList.add('fa-circle-check');
+                icone.style.color = 'var(--primary-green)';
+
+                // Guardar a resposta
+                quizRespostas.push(valor);
+
+                // Pequeno atraso dramático antes de passar à próxima (600ms)
+                setTimeout(() => {
+                    currentQuizIndex++;
+                    if (currentQuizIndex < PERGUNTAS_QUIZ.length) {
+                        mostrarPergunta(currentQuizIndex);
+                    } else {
+                        processarResultadoQuiz();
+                    }
+                }, 600);
+            });
+        });
+    }, 300); // Tempo para o fade-out
+}
+
+function processarResultadoQuiz() {
+    const contagem = { estrategas: 0, embaixadores: 0, exploradores: 0, visionarios: 0 };
+    quizRespostas.forEach(r => contagem[r]++);
+    
+    // Descobre a academia mais votada
+    let academiaVencedora = Object.keys(contagem).reduce((a, b) => contagem[a] >= contagem[b] ? a : b);
+    const acInfo = ACADEMIAS_INFO[academiaVencedora];
+
+    // Transição suave para a Revelação
+    document.getElementById('quiz-step-container').style.display = 'none';
+    const revealContainer = document.getElementById('quiz-reveal-container');
+    revealContainer.style.display = 'block';
+
+    // Injetar os dados e cores da Academia Vencedora
+    const iconWrapper = document.getElementById('reveal-icon-wrapper');
+    iconWrapper.style.background = `linear-gradient(135deg, ${acInfo.cor}30, transparent)`;
+    iconWrapper.style.border = `2px solid ${acInfo.cor}`;
+    iconWrapper.style.boxShadow = `0 0 40px ${acInfo.cor}60`;
+    
+    const icone = document.getElementById('reveal-icon');
+    icone.className = `fa-solid ${acInfo.icon}`;
+    icone.style.color = acInfo.cor;
+
+    const tituloNome = document.getElementById('reveal-nome');
+    tituloNome.innerText = acInfo.nome;
+    tituloNome.style.color = acInfo.cor;
+    
+    document.getElementById('reveal-desc').innerText = `Tu és ${acInfo.desc.toLowerCase()} Esta é a tua nova casa!`;
+
+    const btnAceitar = document.getElementById('btn-aceitar-academia');
+    btnAceitar.style.background = acInfo.cor;
+    btnAceitar.style.color = '#fff';
+    btnAceitar.style.border = 'none';
+
+    // Guardar na Base de Dados ao clicar
+    btnAceitar.onclick = async () => {
+        btnAceitar.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A preparar o teu perfil...';
+        btnAceitar.disabled = true;
+        try {
+            await updateDoc(doc(window.db, "utilizadores", window.myUserId), {
+                academia: academiaVencedora
+            });
+            window.myAcademia = academiaVencedora;
+            aplicarTemaAcademia(academiaVencedora);
+            document.getElementById('modal-academia-quiz').style.display = 'none';
+        } catch (e) {
+            console.error("Erro ao guardar academia:", e);
+            btnAceitar.innerHTML = 'Erro. Tenta de novo.';
+            btnAceitar.disabled = false;
+        }
+    };
+}
+
+// Injetamos a chamada da inicialização quando o módulo arranca
+setTimeout(inicializarQuizAcademias, 500);
