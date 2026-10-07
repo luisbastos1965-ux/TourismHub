@@ -420,32 +420,36 @@
 
     <div id="view-prof-diario" style="display: none;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
-            <h3 style="font-size: 1.2rem; color: white;">Diário de Sessões</h3>
-            <button id="btn-nova-sessao-pap" class="primary-btn small-btn" style="background: var(--success-green);"><i
-                    class="fa-solid fa-plus"></i> Nova</button>
+            <h3 style="font-size: 1.2rem; color: white;"><i class="fa-solid fa-book-journal-whills" style="color: var(--success-green);"></i> Diário de Sessões</h3>
+            <button id="btn-nova-sessao-pap" class="primary-btn small-btn" style="background: var(--success-green); color: black; font-weight: bold;"><i class="fa-solid fa-plus"></i> Nova Sessão</button>
         </div>
-        <div style="margin-bottom: 15px;"><select id="filtro-diario-aluno" class="input-padrao" style="width: 100%;">
-                <option value="todos">Todos os meus orientandos</option>
-            </select></div>
-        <div id="lista-sessoes-diario" style="display: flex; flex-direction: column; gap: 12px;"></div>
+        
+        <!-- Novos Filtros Dinâmicos -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid #333;">
+            <div style="flex: 1;">
+                <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Orientador</label>
+                <select id="filtro-diario-orientador" class="input-padrao" style="margin: 0; padding: 8px; font-size: 0.85rem;">
+                    <option value="todos">Todos os Orientadores</option>
+                </select>
+            </div>
+            <div style="flex: 1;">
+                <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Aluno</label>
+                <select id="filtro-diario-aluno" class="input-padrao" style="margin: 0; padding: 8px; font-size: 0.85rem;">
+                    <option value="todos">Todos os Alunos</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="lista-sessoes-diario" style="display: flex; flex-direction: column; gap: 12px; padding-bottom: 30px;">
+            <p class="text-muted center">A carregar diário...</p>
+        </div>
     </div>
 
     <div id="view-coord-projetos" style="display: none;">
-        <div class="card"
-            style="background: linear-gradient(135deg, rgba(147, 51, 234, 0.15), rgba(0, 0, 0, 0.3)); border: 1px solid #9333ea; margin-bottom: 20px; position:relative;">
-            <button id="btn-abrir-aviso-global-coord" class="primary-btn small-btn"
-                style="position:absolute; top:15px; right:15px; background:var(--warning-yellow); color:black; padding:5px 10px; border:none;"
-                title="Aviso Global"><i class="fa-solid fa-bullhorn"></i></button>
-            <h3 style="font-size: 1.1rem; margin-bottom: 5px; color: #9333ea;"><i class="fa-solid fa-briefcase"></i>
-                Gestão de Estágios e PAPs</h3>
-            <p style="font-size: 0.85rem; color: var(--text-light); padding-right:40px;">Visão global de todos
-                os alunos de 11º e 12º ano do curso.</p>
-        </div>
-        <div class="falta-tabs" style="margin-bottom: 15px;">
-            <button class="falta-tab-btn active" id="tab-coord-fct" style="border-color: #9333ea;">Estágios
-                (FCT)</button>
-            <button class="falta-tab-btn" id="tab-coord-pap" style="border-color: #9333ea;">Projetos Finais
-                (PAP)</button>
+        
+        <div class="falta-tabs" style="display: none;">
+            <button class="falta-tab-btn active" id="tab-coord-fct">Estágios</button>
+            <button class="falta-tab-btn" id="tab-coord-pap">Projetos</button>
         </div>
 
         <select id="coord-filtro-turma" class="input-padrao"
@@ -2755,6 +2759,40 @@
         </div>
     </div>
 
+    <!-- MODAL NOVA SESSÃO PAP (Multi-Aluno / Sem Sumário) -->
+    <div id="modal-nova-sessao-pap" class="modal-overlay" style="z-index: 3000; display: none;">
+        <div class="action-sheet" style="max-width: 500px; padding: 20px; max-height: 90vh; overflow-y: auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                <h3 id="pap-sessao-modal-title" style="color: var(--success-green); margin:0;"><i class="fa-solid fa-calendar-plus"></i> Registar Sessão PAP</h3>
+                <button class="fechar-modal" data-target="modal-nova-sessao-pap" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <!-- Campos ocultos para a magia da edição -->
+            <input type="hidden" id="pap-sessao-edit-id">
+            <input type="hidden" id="pap-sessao-edit-turma">
+
+            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                <div style="flex:1;">
+                    <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 3px;">Data da Sessão</label>
+                    <input type="date" id="pap-sessao-data" class="input-padrao" style="margin: 0; width: 100%; border-color: var(--success-green);">
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;">
+                <label style="font-size: 0.85rem; color: white; font-weight: bold;">Alunos Presentes</label>
+                <span style="font-size: 0.7rem; color: var(--warning-yellow); background: rgba(245, 158, 11, 0.1); padding: 2px 6px; border-radius: 4px;">Máx: 4h / Aluno</span>
+            </div>
+            
+            <div id="pap-sessao-alunos-lista" style="max-height: 350px; overflow-y: auto; background: rgba(0,0,0,0.2); border: 1px solid #333; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+                <p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A procurar alunos...</p>
+            </div>
+
+            <div class="sticky-action-bar">
+                <button id="btn-gravar-sessao-pap" class="primary-btn" style="background: var(--success-green); color: black; width: 100%;"><i class="fa-solid fa-floppy-disk"></i> Gravar Registo</button>
+            </div>
+        </div>
+    </div>
+
     <!-- BARRA DE NAVEGAÇÃO INFERIOR -->
     <nav class="bottom-nav" id="main-bottom-nav">
         <!-- CAPA: PROFESSOR BASE -->
@@ -2779,19 +2817,25 @@
         <a href="#" class="nav-item nav-role-dt" data-target="view-prof-forum" style="display: none;"><i
                 class="fa-regular fa-comments"></i><span>Fórum</span></a>
 
-        <!-- CAPA: ORIENTADOR PAP -->
-        <a href="#" class="nav-item nav-role-pap" data-target="view-prof-orientandos" style="display: none;"><i
-                class="fa-solid fa-user-graduate"></i><span>Orientandos</span></a>
-        <a href="#" class="nav-item nav-role-pap" data-target="view-prof-diario" style="display: none;"><i
-                class="fa-solid fa-book-journal-whills"></i><span>Diário</span></a>
-        <a href="#" class="nav-item nav-role-pap" data-target="view-prof-forum" style="display: none;"><i
-                class="fa-regular fa-comments"></i><span>Fórum</span></a>
+        <!-- CAPA: ORIENTADOR PAP (Sem botão Turmas) -->
+        <a href="#" class="nav-item nav-role-pap" data-target="view-prof-orientandos" id="nav-pap-orientandos" style="display: none;">
+            <i class="fa-solid fa-users"></i>
+            <span>Orientandos</span>
+        </a>
+        <a href="#" class="nav-item nav-role-pap" data-target="view-prof-diario" id="nav-pap-diario" style="display: none;">
+            <i class="fa-solid fa-book-open"></i>
+            <span>Diário PAP</span>
+        </a>
 
-        <!-- CAPA: COORDENADOR -->
-        <a href="#" class="nav-item nav-role-coord" data-target="view-prof-turmas" style="display: none;"><i
-                class="fa-solid fa-users"></i><span>Turmas</span></a>
-        <a href="#" class="nav-item nav-role-coord" data-target="view-coord-projetos" style="display: none;"><i
-                class="fa-solid fa-briefcase"></i><span>FCT/PAP</span></a>
+        <!-- CAPA: COORDENADOR (Sem botão Turmas) -->
+        <a href="#" class="nav-item nav-role-coord" data-target="view-coord-projetos" id="nav-coord-fct" style="display: none;">
+            <i class="fa-solid fa-briefcase"></i>
+            <span>Estágio FCT</span>
+        </a>
+        <a href="#" class="nav-item nav-role-coord" data-target="view-coord-projetos" id="nav-coord-pap" style="display: none;">
+            <i class="fa-solid fa-medal"></i>
+            <span>Projetos PAP</span>
+        </a>
     </nav>
     </div>
 

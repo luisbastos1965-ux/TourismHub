@@ -709,7 +709,16 @@ async function carregarTimelineEE() {
         const faltasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
         faltasSnap.forEach(d => {
             const f = d.data();
-            eventos.push({ time: new Date(f.criadoEm || f.dataInicio || Date.now()).getTime(), icon: '<i class="fa-solid fa-user-xmark"></i>', cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Falta a ${f.disciplina} (${f.horas}h)`, desc: f.justificada ? `Justificada` : `Falta registada.` });
+            // Lógica blindada: Lê a duracao de qualquer chave onde ela esteja guardada e mete sempre "h" no fim.
+            const horasFalta = f.duracaoBlocos || f.duracao || f.horas || 2; 
+            
+            eventos.push({ 
+                time: new Date(f.criadoEm || f.dataRegisto || f.dataInicio || Date.now()).getTime(), 
+                icon: '<i class="fa-solid fa-user-xmark"></i>', 
+                cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', 
+                titulo: `Falta a ${f.disciplina} (${horasFalta}h)`, 
+                desc: f.justificada ? `Justificada` : `Falta registada.` 
+            });
         });
 
         const ocSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "ocorrencias"));

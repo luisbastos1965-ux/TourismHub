@@ -1,10 +1,11 @@
 import { db } from "../../firebase.js";
-import { collection, addDoc, getDocs, getDoc, doc, updateDoc, query, where, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { collection, addDoc, getDocs, getDoc, doc, updateDoc, query, where, arrayUnion, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { state, nomeCurto } from "../store.js";
 
 // Estado local
 let modalPresencaAtiva = true;
 window.cofreAlunoAtual = [];
+let sessoesDiarioMemoria = [];
 
 // ==========================================
 // FUNÇÕES UTILITÁRIAS
@@ -271,147 +272,353 @@ window.guardarObservacaoPAP = async function (alunoId, btn) {
     } catch (e) { mostrarAlerta("Erro ao afixar observação."); btn.innerHTML = originalHTML; btn.disabled = false; }
 };
 
-// ==========================================
-// ECRÃ DO DIÁRIO DE BORDO
-// ==========================================
+// ========================================================
+// 1. CARREGAR E RENDERIZAR O DIÁRIO COM FILTROS
+// ========================================================
 export async function carregarEcraDiario() {
     const container = document.getElementById('lista-sessoes-diario');
     if (!container) return;
 
-    container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar diário...</p>';
+    container.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A ler diários de sessões...</p>';
 
     try {
-        let todasSessoes = [];
-        const qAlunos = await getDocs(query(collection(db, "utilizadores"), where("papel", "==", "aluno")));
+        sessoesDiarioMemoria = [];
+        let orientadoresUnicos = new Set();
+        let alunosUnicos = new Map();
 
-        for (const docAl of qAlunos.docs) {
-            const alData = docAl.data();
-            const isMeuOrientando = (alData.pap && (alData.pap.orientador === state.myUserName || alData.pap.orientador === state.myUserId));
-
-            if (isMeuOrientando) {
-                const sS = await getDocs(collection(db, "utilizadores", docAl.id, "sessoes_pap"));
-                sS.forEach(s => todasSessoes.push({ id: s.id, alunoId: docAl.id, alunoNome: alData.nome, ...s.data() }));
-            }
-        }
-
-        todasSessoes.sort((a, b) => new Date(b.data || 0) - new Date(a.data || 0));
-
-        let html = '';
-        if (todasSessoes.length === 0) {
-            html = '<p class="text-muted center">Ainda não registaste nenhuma sessão de orientação.</p>';
-        } else {
-            todasSessoes.forEach(s => {
-                const corPresenca = s.compareceu ? 'var(--success-green)' : 'var(--danger-red)';
-                const iconPresenca = s.compareceu ? 'fa-check' : 'fa-xmark';
-                const txtPresenca = s.compareceu ? 'Compareceu' : 'Faltou';
-                const dataFormatada = s.data ? s.data.split('-').reverse().join('/') : 'S/ Data';
-
-                html += `
-                <div style="background:rgba(0,0,0,0.2); border-left:4px solid ${corPresenca}; padding:15px; border-radius:8px; border-top:1px solid #333; border-right:1px solid #333; border-bottom:1px solid #333;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <strong style="color:white; font-size:1rem;">${nomeCurto(s.alunoNome)}</strong>
-                        <span style="font-size:0.8rem; color:var(--text-muted);"><i class="fa-regular fa-calendar"></i> ${dataFormatada}</span>
-                    </div>
-                    <div style="font-size:0.75rem; color:${corPresenca}; margin-bottom:8px; font-weight:bold;">
-                        <i class="fa-solid ${iconPresenca}"></i> ${txtPresenca}
-                    </div>
-                    <p style="font-size:0.85rem; color:var(--text-light); line-height:1.4; margin:0;">
-                        ${s.notas || 'Sem observações.'}
-                    </p>
-                </div>`;
-            });
-        }
-        container.innerHTML = html;
-
-    } catch (err) {
-        container.innerHTML = '<p class="text-danger center">Erro ao carregar o diário de bordo.</p>';
-    }
-}
-
-export async function prepararModalNovaSessao() {
-    const selAluno = document.getElementById('sessao-pap-aluno');
-    selAluno.innerHTML = '<option value="">A carregar alunos...</option>';
-
-    const hoje = new Date().toISOString().split('T')[0];
-    document.getElementById('sessao-pap-data').value = hoje;
-    document.getElementById('sessao-pap-notas').value = '';
-
-    modalPresencaAtiva = true;
-    if (typeof atualizarBotoesPresenca === 'function') atualizarBotoesPresenca();
-
-    document.getElementById('modal-nova-sessao-pap').style.display = 'flex';
-
-    try {
-        let countOrientandos = 0;
-        let optionsHtml = '<option value="">-- Seleciona o Orientando --</option>';
-
+        // LER TODAS AS TURMAS DO PROFESSOR (Elimina a necessidade de escolher no topo)
         if (state.turmasProfessor && state.turmasProfessor.length > 0) {
             for (const t of state.turmasProfessor) {
-                const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
-                snap.forEach(d => {
-                    const data = d.data();
-                    if (data.pap && (data.pap.orientador === state.myUserName || data.pap.orientador === state.myUserId)) {
-                        optionsHtml += `<option value="${d.id}">${nomeCurto(data.nome)} (${data.turma})</option>`;
-                        countOrientandos++;
+                const q = query(collection(db, "turmas", t, "pap_sessoes"), orderBy("timestamp", "desc"));
+                const snap = await getDocs(q);
+                
+                snap.forEach(doc => {
+                    const sessao = doc.data();
+                    sessoesDiarioMemoria.push({ id: doc.id, turma: t, ...sessao });
+                    orientadoresUnicos.add(sessao.orientador);
+                    
+                    if (sessao.alunos) {
+                        sessao.alunos.forEach(al => alunosUnicos.set(al.id, al.nome));
                     }
                 });
             }
         }
 
-        if (countOrientandos === 0) {
-            selAluno.innerHTML = '<option value="" disabled selected>⚠️ Ainda não tens orientandos atribuídos</option>';
-        } else {
-            selAluno.innerHTML = optionsHtml;
+        // Ordenar tudo globalmente por data
+        sessoesDiarioMemoria.sort((a, b) => b.timestamp - a.timestamp);
+
+        // Preencher as Caixas de Filtros
+        const selOrientador = document.getElementById('filtro-diario-orientador');
+        const selAluno = document.getElementById('filtro-diario-aluno');
+        
+        // Mantém as seleções atuais se o utilizador já tiver escolhido algo
+        const currOrientador = selOrientador ? selOrientador.value : 'todos';
+        const currAluno = selAluno ? selAluno.value : 'todos';
+
+        if (selOrientador) {
+            selOrientador.innerHTML = '<option value="todos">Todos os Orientadores</option>' + 
+                Array.from(orientadoresUnicos).sort().map(o => `<option value="${o}">${o}</option>`).join('');
+            selOrientador.value = Array.from(selOrientador.options).some(o => o.value === currOrientador) ? currOrientador : 'todos';
+        }
+            
+        if (selAluno) {
+            selAluno.innerHTML = '<option value="todos">Todos os Alunos</option>' + 
+                Array.from(alunosUnicos).sort((a,b) => a[1].localeCompare(b[1])).map(a => `<option value="${a[0]}">${nomeCurto(a[1])}</option>`).join('');
+            selAluno.value = Array.from(selAluno.options).some(o => o.value === currAluno) ? currAluno : 'todos';
         }
 
+        // Renderiza a lista consoante os filtros aplicados
+        window.renderizarListaSessoes();
+
     } catch (err) {
-        console.error("Erro ao preparar sessão:", err);
-        selAluno.innerHTML = '<option value="">Erro ao carregar lista</option>';
+        console.error("Erro ao carregar diário: ", err);
+        container.innerHTML = '<p class="text-danger center">Erro a carregar registos.</p>';
     }
 }
 
-export function atualizarBotoesPresenca() {
-    const btnSim = document.getElementById('btn-presenca-sim');
-    const btnNao = document.getElementById('btn-presenca-nao');
+// O Motor que filtra e desenha os cartões
+window.renderizarListaSessoes = function() {
+    const container = document.getElementById('lista-sessoes-diario');
+    const fOrientador = document.getElementById('filtro-diario-orientador') ? document.getElementById('filtro-diario-orientador').value : 'todos';
+    const fAluno = document.getElementById('filtro-diario-aluno') ? document.getElementById('filtro-diario-aluno').value : 'todos';
 
-    if (!btnSim || !btnNao) return;
+    let filtradas = sessoesDiarioMemoria.filter(s => {
+        let orientadorOk = (fOrientador === 'todos' || s.orientador === fOrientador);
+        let alunoOk = (fAluno === 'todos' || (s.alunos && s.alunos.some(a => a.id === fAluno)));
+        return orientadorOk && alunoOk;
+    });
 
-    if (modalPresencaAtiva) {
-        btnSim.classList.add('active'); btnSim.style.borderColor = 'var(--success-green)'; btnSim.style.color = 'var(--success-green)'; btnSim.style.background = 'rgba(16,185,129,0.1)';
-        btnNao.classList.remove('active'); btnNao.style.borderColor = '#333'; btnNao.style.color = 'var(--text-muted)'; btnNao.style.background = 'transparent';
-    } else {
-        btnNao.classList.add('active'); btnNao.style.borderColor = 'var(--danger-red)'; btnNao.style.color = 'var(--danger-red)'; btnNao.style.background = 'rgba(239,68,68,0.1)';
-        btnSim.classList.remove('active'); btnSim.style.borderColor = '#333'; btnSim.style.color = 'var(--text-muted)'; btnSim.style.background = 'transparent';
+    if (filtradas.length === 0) {
+        container.innerHTML = '<div class="empty-state" style="text-align:center; padding: 20px;"><i class="fa-solid fa-folder-open empty-state-icon" style="font-size:3rem; margin-bottom:10px; color:var(--text-muted);"></i><div class="empty-state-title" style="color:white; font-size:1.1rem;">Nenhum Registo</div><div class="empty-state-desc" style="color:var(--text-muted); font-size:0.85rem;">Ainda não existem sessões registadas para estes filtros.</div></div>';
+        return;
     }
-}
 
-export async function gravarSessaoPAP(e) {
-    const alunoId = document.getElementById('sessao-pap-aluno').value;
-    const data = document.getElementById('sessao-pap-data').value;
-    const notas = document.getElementById('sessao-pap-notas').value.trim();
+    let html = '';
+    filtradas.forEach(s => {
+        const dataFormatada = s.data.split('-').reverse().join('/');
+        
+        let tagsAlunos = '';
+        if (s.alunos && s.alunos.length > 0) {
+            tagsAlunos = s.alunos.map(a => `
+                <span style="display:inline-block; font-size:0.75rem; color:var(--text-light); background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:12px; margin-right:5px; margin-bottom:5px; border:1px solid #444;">
+                    <i class="fa-solid fa-user" style="color:var(--text-muted); margin-right:4px;"></i>${nomeCurto(a.nome)} 
+                    <strong style="color:var(--success-green); margin-left:4px;">${a.horas}h</strong>
+                </span>
+            `).join('');
+        }
 
-    if (!alunoId || !data) { return alert("Por favor, seleciona o aluno e a data da sessão."); }
+        // NOVO: Renderiza os botões apenas se a sessão for tua
+        const isOwner = (s.orientador === state.myUserName);
+        const acoesHtml = isOwner ? `
+            <div style="display:flex; gap:8px;">
+                <button class="secondary-btn small-btn" onclick="window.editarSessaoPAP('${s.id}')" style="padding:4px 8px; border-color:#0099ff; color:#0099ff;"><i class="fa-solid fa-pen"></i></button>
+                <button class="secondary-btn small-btn" onclick="window.apagarSessaoPAP('${s.id}', '${s.turma}')" style="padding:4px 8px; border-color:var(--danger-red); color:var(--danger-red);"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        ` : '';
 
-    const btn = e.target.closest('#btn-gravar-sessao-pap');
-    const originalHtml = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
+        html += `
+        <div class="card" style="border-left: 4px solid var(--success-green); margin-bottom: 12px; padding: 15px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 10px;">
+                <div>
+                    <strong style="color:white; font-size:1.05rem;"><i class="fa-regular fa-calendar-check" style="color:var(--success-green); margin-right:6px;"></i> Sessão a ${dataFormatada}</strong>
+                    <div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">Orientador: <strong style="color:var(--primary-green);">${s.orientador}</strong></div>
+                </div>
+                ${acoesHtml}
+            </div>
+            <div style="border-top:1px dashed #444; padding-top:10px;">
+                <span style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:8px; text-transform:uppercase; font-weight:bold;">Alunos Presentes</span>
+                <div>${tagsAlunos || '<span style="font-size:0.8rem; color:#888;">Sem alunos marcados.</span>'}</div>
+            </div>
+        </div>`;
+    });
+
+    container.innerHTML = html;
+};
+
+// ========================================================
+// 2. PREPARAR O MODAL DE NOVA SESSÃO E FUNÇÕES DE EDIÇÃO
+// ========================================================
+export async function prepararModalNovaSessao() {
+    // Reset para modo "Nova Sessão"
+    document.getElementById('pap-sessao-edit-id').value = '';
+    document.getElementById('pap-sessao-edit-turma').value = '';
+    const tituloModal = document.getElementById('pap-sessao-modal-title');
+    if(tituloModal) tituloModal.innerHTML = '<i class="fa-solid fa-calendar-plus"></i> Registar Sessão PAP';
+
+    document.getElementById('pap-sessao-data').value = new Date().toISOString().split('T')[0];
+    const listaAlunos = document.getElementById('pap-sessao-alunos-lista');
+    
+    listaAlunos.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A procurar alunos...</p>';
+    document.getElementById('modal-nova-sessao-pap').style.display = 'flex';
 
     try {
-        await addDoc(collection(db, "utilizadores", alunoId, "sessoes_pap"), { data: data, compareceu: modalPresencaAtiva, notas: notas, registadoEm: Date.now(), orientador: state.myUserName });
-
-        if (!modalPresencaAtiva) {
-            await addDoc(collection(db, "utilizadores", alunoId, "ocorrencias"), { titulo: "Falta a Sessão de Orientação (PAP)", descricao: "O aluno não compareceu à sessão agendada. " + notas, tipo: "negativa", autor: state.myUserName, timestamp: Date.now(), data: data.split('-').reverse().join('/') });
+        let arr = [];
+        if (state.turmasProfessor && state.turmasProfessor.length > 0) {
+            for (const t of state.turmasProfessor) {
+                const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
+                snap.forEach(d => { arr.push({ id: d.id, ...d.data() }); });
+            }
         }
+        arr.sort((a, b) => a.nome.localeCompare(b.nome));
 
-        btn.innerHTML = '<i class="fa-solid fa-check"></i> Gravado';
-        setTimeout(() => { btn.innerHTML = originalHtml; btn.disabled = false; document.getElementById('modal-nova-sessao-pap').style.display = 'none'; carregarEcraDiario(); }, 1500);
+        let html = '';
+        arr.forEach(d => {
+            const isMeuOrientando = (d.pap && (d.pap.orientador === state.myUserName || d.pap.orientador === state.myUserId));
+            const fontColor = isMeuOrientando ? 'var(--success-green)' : 'white';
+            const fontWeight = isMeuOrientando ? 'bold' : 'normal';
+            const estrela = isMeuOrientando ? '<i class="fa-solid fa-star" style="color:var(--warning-yellow); font-size:0.7rem; margin-left:5px;" title="Teu Orientando"></i>' : '';
 
-    } catch (err) {
-        btn.innerHTML = 'Erro!'; setTimeout(() => { btn.innerHTML = originalHtml; btn.disabled = false; }, 2000);
+            html += `
+            <div class="row-aluno-sessao" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); border:1px solid #444; padding:8px 12px; border-radius:6px; transition:0.2s; margin-bottom:8px;">
+                <label style="display:flex; align-items:center; gap:10px; cursor:pointer; flex:1;">
+                    <input type="checkbox" class="check-aluno-sessao" value="${d.id}" data-nome="${d.nome}" data-turma="${d.turma}" style="width:18px; height:18px; accent-color:var(--success-green); margin:0;">
+                    <span style="color:${fontColor}; font-weight:${fontWeight}; font-size:0.9rem;">${nomeCurto(d.nome)} ${estrela} <span style="font-size:0.7rem; color:var(--text-muted); font-weight:normal;">(${d.turma})</span></span>
+                </label>
+                <select class="select-horas-sessao input-padrao" disabled style="width: auto; padding: 4px 8px; font-size: 0.85rem; margin: 0; background-color: rgba(0,0,0,0.5); border-color: #444;">
+                    <option value="1">1 Hora</option>
+                    <option value="2">2 Horas</option>
+                    <option value="3">3 Horas</option>
+                    <option value="4" selected>4 Horas</option>
+                </select>
+            </div>`;
+        });
+        
+        listaAlunos.innerHTML = html === '' ? '<p class="text-muted center" style="margin-top:10px;">Não há alunos registados nas tuas turmas.</p>' : html;
+    } catch (e) {
+        listaAlunos.innerHTML = '<p class="text-danger center">Erro a carregar alunos.</p>';
     }
 }
 
-document.addEventListener('click', (e) => {
-    if (e.target.closest('#btn-presenca-sim')) { modalPresencaAtiva = true; atualizarBotoesPresenca(); }
-    if (e.target.closest('#btn-presenca-nao')) { modalPresencaAtiva = false; atualizarBotoesPresenca(); }
-    if (e.target.closest('#btn-gravar-sessao-pap')) { gravarSessaoPAP(e); }
+window.editarSessaoPAP = async function(sessaoId) {
+    const sessao = sessoesDiarioMemoria.find(s => s.id === sessaoId);
+    if (!sessao) return;
+
+    // Configura o modal para modo de "Edição"
+    document.getElementById('pap-sessao-edit-id').value = sessao.id;
+    document.getElementById('pap-sessao-edit-turma').value = sessao.turma;
+    document.getElementById('pap-sessao-data').value = sessao.data;
+    
+    const tituloModal = document.getElementById('pap-sessao-modal-title');
+    if(tituloModal) tituloModal.innerHTML = '<i class="fa-solid fa-pen"></i> Editar Sessão PAP';
+
+    const listaAlunos = document.getElementById('pap-sessao-alunos-lista');
+    listaAlunos.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar dados...</p>';
+    document.getElementById('modal-nova-sessao-pap').style.display = 'flex';
+
+    try {
+        let arr = [];
+        if (state.turmasProfessor && state.turmasProfessor.length > 0) {
+            for (const t of state.turmasProfessor) {
+                const snap = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", t), where("papel", "==", "aluno")));
+                snap.forEach(d => { arr.push({ id: d.id, ...d.data() }); });
+            }
+        }
+        arr.sort((a, b) => a.nome.localeCompare(b.nome));
+
+        let html = '';
+        arr.forEach(d => {
+            const isMeuOrientando = (d.pap && (d.pap.orientador === state.myUserName || d.pap.orientador === state.myUserId));
+            const fontColor = isMeuOrientando ? 'var(--success-green)' : 'white';
+            const fontWeight = isMeuOrientando ? 'bold' : 'normal';
+            const estrela = isMeuOrientando ? '<i class="fa-solid fa-star" style="color:var(--warning-yellow); font-size:0.7rem; margin-left:5px;"></i>' : '';
+
+            // Verifica se o aluno estava presente nesta sessão
+            const alunoSessao = sessao.alunos ? sessao.alunos.find(a => a.id === d.id) : null;
+            const isChecked = alunoSessao ? 'checked' : '';
+            const horasValue = alunoSessao ? alunoSessao.horas : 4;
+            const selectDisabled = alunoSessao ? '' : 'disabled';
+            const rowStyle = alunoSessao ? 'border-color: var(--success-green); background: rgba(16, 185, 129, 0.1);' : 'border-color: #444; background: rgba(255,255,255,0.03);';
+            const selectStyle = alunoSessao ? 'background-color: #222; color: white;' : 'background-color: rgba(0,0,0,0.5); color: var(--text-muted); border-color: #444;';
+
+            html += `
+            <div class="row-aluno-sessao" style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-radius:6px; transition:0.2s; margin-bottom:8px; border: 1px solid; ${rowStyle}">
+                <label style="display:flex; align-items:center; gap:10px; cursor:pointer; flex:1;">
+                    <input type="checkbox" class="check-aluno-sessao" value="${d.id}" data-nome="${d.nome}" data-turma="${d.turma}" ${isChecked} style="width:18px; height:18px; accent-color:var(--success-green); margin:0;">
+                    <span style="color:${fontColor}; font-weight:${fontWeight}; font-size:0.9rem;">${nomeCurto(d.nome)} ${estrela} <span style="font-size:0.7rem; color:var(--text-muted); font-weight:normal;">(${d.turma})</span></span>
+                </label>
+                <select class="select-horas-sessao input-padrao" ${selectDisabled} style="width: auto; padding: 4px 8px; font-size: 0.85rem; margin: 0; ${selectStyle}">
+                    <option value="1" ${horasValue == 1 ? 'selected' : ''}>1 Hora</option>
+                    <option value="2" ${horasValue == 2 ? 'selected' : ''}>2 Horas</option>
+                    <option value="3" ${horasValue == 3 ? 'selected' : ''}>3 Horas</option>
+                    <option value="4" ${horasValue == 4 ? 'selected' : ''}>4 Horas</option>
+                </select>
+            </div>`;
+        });
+        
+        listaAlunos.innerHTML = html === '' ? '<p class="text-muted center">Não há alunos registados.</p>' : html;
+    } catch (e) {
+        listaAlunos.innerHTML = '<p class="text-danger center">Erro a carregar alunos.</p>';
+    }
+};
+
+window.apagarSessaoPAP = async function(sessaoId, turma) {
+    if(!confirm("Tens a certeza que queres eliminar esta sessão do diário? A ação é irreversível.")) return;
+    
+    try {
+        const { deleteDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
+        await deleteDoc(doc(db, "turmas", turma, "pap_sessoes", sessaoId));
+        carregarEcraDiario(); // Recarrega o diário no ecrã
+    } catch(e) {
+        console.error(e);
+        alert("Erro ao eliminar a sessão da base de dados.");
+    }
+};
+
+// ========================================================
+// 3. EVENT LISTENERS GLOBAIS DESTE MÓDULO
+// ========================================================
+
+// Ativar/Desativar as horas conforme se clica no aluno
+document.body.addEventListener('change', (e) => {
+    // Filtros do Diário
+    if (e.target.id === 'filtro-diario-orientador' || e.target.id === 'filtro-diario-aluno') {
+        if(typeof window.renderizarListaSessoes === 'function') window.renderizarListaSessoes();
+    }
+
+    // Checkbox dos Alunos na Nova Sessão
+    if (e.target.classList.contains('check-aluno-sessao')) {
+        const row = e.target.closest('.row-aluno-sessao');
+        const selectBox = row.querySelector('.select-horas-sessao');
+        
+        if (e.target.checked) {
+            selectBox.disabled = false;
+            row.style.borderColor = 'var(--success-green)';
+            row.style.background = 'rgba(16, 185, 129, 0.1)';
+            selectBox.style.background = '#222';
+            selectBox.style.color = 'white';
+        } else {
+            selectBox.disabled = true;
+            row.style.borderColor = '#444';
+            row.style.background = 'rgba(255,255,255,0.03)';
+            selectBox.style.background = 'rgba(0,0,0,0.5)';
+            selectBox.style.color = 'var(--text-muted)';
+        }
+    }
+});
+
+// Botão de Gravar a Sessão
+document.body.addEventListener('click', async (e) => {
+    if (e.target.closest('#btn-gravar-sessao-pap')) {
+        const btn = e.target.closest('#btn-gravar-sessao-pap');
+        const dataSessao = document.getElementById('pap-sessao-data').value;
+        const editId = document.getElementById('pap-sessao-edit-id').value;
+        const editTurma = document.getElementById('pap-sessao-edit-turma').value;
+        
+        let alunosPresentes = [];
+        let turmaDaSessao = editTurma || null;
+
+        document.querySelectorAll('.check-aluno-sessao:checked').forEach(chk => {
+            const row = chk.closest('.row-aluno-sessao');
+            const selectHoras = row.querySelector('.select-horas-sessao');
+            
+            // Vamos guardar na turma do 1º aluno selecionado se não estivermos a editar
+            if (!turmaDaSessao) turmaDaSessao = chk.getAttribute('data-turma'); 
+
+            alunosPresentes.push({
+                id: chk.value,
+                nome: chk.getAttribute('data-nome'),
+                horas: parseInt(selectHoras.value) || 4
+            });
+        });
+
+        if (!dataSessao) return alert("Preenche a data da sessão.");
+        if (alunosPresentes.length === 0) return alert("Tens de selecionar pelo menos um aluno que esteve presente na sessão.");
+
+        const txtOriginal = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A gravar...';
+        btn.disabled = true;
+
+        try {
+            if (editId) {
+                // MODO EDIÇÃO
+                const { updateDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
+                await updateDoc(doc(db, "turmas", turmaDaSessao, "pap_sessoes", editId), {
+                    data: dataSessao,
+                    alunos: alunosPresentes
+                });
+            } else {
+                // MODO NOVA SESSÃO
+                await addDoc(collection(db, "turmas", turmaDaSessao, "pap_sessoes"), {
+                    data: dataSessao,
+                    orientador: state.myUserName,
+                    alunos: alunosPresentes,
+                    timestamp: Date.now()
+                });
+            }
+
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Sessão Guardada!';
+            carregarEcraDiario(); // Atualiza o ecrã no fundo
+
+            setTimeout(() => {
+                btn.innerHTML = txtOriginal;
+                btn.disabled = false;
+                document.getElementById('modal-nova-sessao-pap').style.display = 'none';
+            }, 1500);
+
+        } catch (err) {
+            console.error("Erro a gravar sessão:", err);
+            btn.innerHTML = 'Erro ao gravar!';
+            setTimeout(() => { btn.innerHTML = txtOriginal; btn.disabled = false; }, 2000);
+        }
+    }
 });

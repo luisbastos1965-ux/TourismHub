@@ -188,7 +188,7 @@ onAuthStateChanged(auth, async (user) => {
 
             if (docSnap.exists()) {
                 state.profData = docSnap.data();
-                state.myRoles = state.profData.papeis || [];
+                state.myRoles = state.profData.cargos_especiais || [];
                 state.disciplinasProfessor = state.profData.disciplinas || [];
                 state.turmasProfessor = state.profData.turmas || [];
                 state.minhaTurmaDT = state.profData.turmaDT || (state.turmasProfessor.length > 0 ? state.turmasProfessor[0] : "10T");
@@ -240,15 +240,15 @@ onAuthStateChanged(auth, async (user) => {
                             navPap.forEach(el => el.style.display = 'flex');
                             // O Orientador salta direto para os Orientandos
                             setTimeout(() => {
-                                const btnOrientandos = document.querySelector('.nav-role-pap[data-target="view-prof-orientandos"]');
+                                const btnOrientandos = document.getElementById('nav-pap-orientandos');
                                 if (btnOrientandos) btnOrientandos.click();
                             }, 50);
                         } else if (novoPapel === 'coordenador') {
                             navCoord.forEach(el => el.style.display = 'flex');
-                            // O Coordenador salta direto para as Turmas
+                            // O Coordenador salta direto para a aba de FCT
                             setTimeout(() => {
-                                const btnTurmasCoord = document.querySelector('.nav-role-coord[data-target="view-prof-turmas"]');
-                                if (btnTurmasCoord) btnTurmasCoord.click();
+                                const btnFCTCoord = document.getElementById('nav-coord-fct');
+                                if (btnFCTCoord) btnFCTCoord.click();
                             }, 50);
                         } else if (novoPapel === 'diretor_turma') {
                             navDt.forEach(el => el.style.display = 'flex');
@@ -1076,6 +1076,22 @@ document.body.addEventListener('click', async (e) => {
         esconderTodasAsVistas();
 
         const tId = nav.getAttribute('data-target');
+
+        // ===============================================
+        // TRUQUE MÁGICO PARA OS MENUS DO COORDENADOR
+        // ===============================================
+        if (nav.id === 'nav-coord-fct') {
+            const tFCT = document.getElementById('tab-coord-fct'); if (tFCT) tFCT.classList.add('active');
+            const tPAP = document.getElementById('tab-coord-pap'); if (tPAP) tPAP.classList.remove('active');
+            const cLayout = document.getElementById('card-layout-pap-coord'); if (cLayout) cLayout.style.display = 'none';
+        }
+        if (nav.id === 'nav-coord-pap') {
+            const tFCT = document.getElementById('tab-coord-fct'); if (tFCT) tFCT.classList.remove('active');
+            const tPAP = document.getElementById('tab-coord-pap'); if (tPAP) tPAP.classList.add('active');
+            const cLayout = document.getElementById('card-layout-pap-coord'); if (cLayout) cLayout.style.display = 'block';
+        }
+        // ===============================================
+
         const targetView = document.getElementById(tId);
         if (targetView) targetView.style.display = (tId === 'view-prof-forum') ? 'flex' : 'block';
 
@@ -5026,23 +5042,62 @@ document.body.addEventListener('click', async (e) => {
     }
 
     if (e.target.closest('#btn-dt-falta-gravar')) {
+        e.preventDefault(); // Impede duplo clique acidental
         const btn = e.target.closest('#btn-dt-falta-gravar');
         const editId = document.getElementById('dt-falta-edit-id').value;
-        const alunoIdFinal = editId ? document.getElementById('dt-falta-edit-alunoid').value : document.getElementById('dt-falta-form-aluno').value;
+        const formAlunoId = document.getElementById('dt-falta-form-aluno').value;
+        const alunoIdFinal = editId ? document.getElementById('dt-falta-edit-alunoid').value : formAlunoId;
+
         const disc = document.getElementById('dt-falta-form-disc').value;
         const mod = document.getElementById('dt-falta-form-mod').value;
-        const duracao = document.getElementById('dt-falta-form-duracao').value;
+        const duracaoText = document.getElementById('dt-falta-form-duracao').value; // Retira string "2"
         const dataF = document.getElementById('dt-falta-form-data').value;
         const just = document.getElementById('dt-falta-form-justificada').checked;
 
         if (!alunoIdFinal || !disc || !dataF) return alert("Preenche Aluno, Disciplina e Data!");
+        
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+
         try {
-            const dSave = { turma: state.selectedTurma, disciplina: disc, modulo: mod, dataFalta: dataF, duracaoBlocos: parseInt(duracao), justificada: just, dataRegisto: new Date().toISOString(), professor: state.myUserName };
-            if (editId) await setDoc(doc(db, "utilizadores", alunoIdFinal, "faltas", editId), dSave, { merge: true });
-            else await addDoc(collection(db, "utilizadores", alunoIdFinal, "faltas"), dSave);
+            // Conversão segura do valor da duração para garantir que nunca envia undefined
+            const temposValidos = parseInt(duracaoText) || 2; 
+
+            // Para manter a compatibilidade a 100% com o que a App Familiar e Aluno leem:
+            const dSave = { 
+                turma: state.selectedTurma, 
+                disciplina: disc, 
+                modulo: mod, 
+                dataFalta: dataF, 
+                duracaoBlocos: temposValidos, // Lê os blocos
+                horas: temposValidos, // Guarda as horas como espelho (é o que a App lê!)
+                justificada: just, 
+                dataRegisto: new Date().toISOString(), 
+                professor: state.myUserName 
+            };
+
+            // Certifica-se que a gravação é feita
+            if (editId) {
+                await setDoc(doc(db, "utilizadores", alunoIdFinal, "faltas", editId), dSave, { merge: true });
+            } else {
+                await addDoc(collection(db, "utilizadores", alunoIdFinal, "faltas"), dSave);
+            }
+
+            // Forçar a recarga visual do Painel
             await window.abrirGestaoFaltasDT(state.selectedTurma);
-        } catch (err) {}
+            
+            // Sucesso!
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Gravado';
+            setTimeout(() => { 
+                btn.innerHTML = 'Gravar'; 
+                btn.disabled = false; 
+            }, 1000);
+
+        } catch (err) {
+            console.error("Erro Faltas:", err);
+            btn.innerHTML = 'Erro!';
+            setTimeout(() => { btn.innerHTML = 'Gravar'; btn.disabled = false; }, 2000);
+        }
         return;
     }
 

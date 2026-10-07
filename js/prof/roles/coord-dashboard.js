@@ -225,10 +225,10 @@ export async function carregarEcraProjetosCoord() {
                         <button class="secondary-btn small-btn btn-editar-pap-coord" data-id="${al.id}" style="border-color:#9333ea; color:#9333ea; font-size:0.8rem; padding: 8px 4px;">
                             <i class="fa-solid fa-server"></i> Fases
                         </button>
-                        <button class="secondary-btn small-btn" onclick="alert('Cofre em breve')" data-id="${al.id}" style="border-color:var(--warning-yellow); color:var(--warning-yellow); font-size:0.8rem; padding: 8px 4px;">
+                        <button class="secondary-btn small-btn btn-cofre-pap-coord" data-id="${al.id}" data-nome="${nomeCurto(al.nome)}" style="border-color:var(--primary-green); color:var(--primary-green); font-size:0.8rem; padding: 8px 4px;">
                             <i class="fa-solid fa-vault"></i> Cofre
                         </button>
-                        <button class="secondary-btn small-btn" onclick="alert('Observar em breve')" data-id="${al.id}" style="border-color:var(--warning-yellow); color:var(--warning-yellow); font-size:0.8rem; padding: 8px 4px;">
+                        <button class="secondary-btn small-btn btn-observar-pap-coord" data-id="${al.id}" data-nome="${nomeCurto(al.nome)}" style="border-color:var(--warning-yellow); color:var(--warning-yellow); font-size:0.8rem; padding: 8px 4px;">
                             <i class="fa-solid fa-eye"></i> Observar
                         </button>
                     </div>
@@ -250,6 +250,21 @@ export async function carregarEcraProjetosCoord() {
                 btn.onclick = (e) => {
                     const idAluno = e.currentTarget.getAttribute('data-id');
                     if (window.abrirModalEdicaoPAP) window.abrirModalEdicaoPAP(idAluno);
+                };
+            });
+            // NOVO: Ligações para o Cofre e Observatório
+            document.querySelectorAll('.btn-cofre-pap-coord').forEach(btn => {
+                btn.onclick = (e) => {
+                    const idAluno = e.currentTarget.getAttribute('data-id');
+                    const nomeAluno = e.currentTarget.getAttribute('data-nome');
+                    if (window.abrirModalCofrePAP) window.abrirModalCofrePAP(idAluno, nomeAluno);
+                };
+            });
+            document.querySelectorAll('.btn-observar-pap-coord').forEach(btn => {
+                btn.onclick = (e) => {
+                    const idAluno = e.currentTarget.getAttribute('data-id');
+                    const nomeAluno = e.currentTarget.getAttribute('data-nome');
+                    if (window.abrirModalObservatorioPAP) window.abrirModalObservatorioPAP(idAluno, nomeAluno);
                 };
             });
         }, 50);
