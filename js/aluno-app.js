@@ -24,7 +24,7 @@ try { enableIndexedDbPersistence(db).catch(function(){}); } catch(e){}
 // ==========================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        window.myUserId = user.email.split('@')[0];
+        window.myUserId = user.email.split('@')[0].toLowerCase();
         try {
             const docSnap = await getDoc(doc(db, "utilizadores", window.myUserId));
             if (docSnap.exists() && docSnap.data().papel === 'aluno') {

@@ -107,7 +107,7 @@ function obterDisciplinasDoAno() {
 // ==========================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        myUserId = user.email.split('@')[0];
+        myUserId = user.email.split('@')[0].toLowerCase();
         try {
             const docSnap = await getDoc(doc(db, "utilizadores", myUserId));
             if (docSnap.exists() && docSnap.data().papel === 'ee') {

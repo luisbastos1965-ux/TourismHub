@@ -182,7 +182,7 @@ function esconderTodasAsVistas() {
 // ----------------------------------------------------
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        state.myUserId = user.email.split('@')[0];
+        state.myUserId = user.email.split('@')[0].toLowerCase();
         try {
             const docSnap = await getDoc(doc(db, "utilizadores", state.myUserId));
 
