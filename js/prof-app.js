@@ -187,39 +187,62 @@ onAuthStateChanged(auth, async (user) => {
             const docSnap = await getDoc(doc(db, "utilizadores", state.myUserId));
 
             if (docSnap.exists()) {
-                state.profData = docSnap.data();
-                state.myRoles = state.profData.cargos_especiais || [];
-                state.disciplinasProfessor = state.profData.disciplinas || [];
-                state.turmasProfessor = state.profData.turmas || [];
-                state.minhaTurmaDT = state.profData.turmaDT || (state.turmasProfessor.length > 0 ? state.turmasProfessor[0] : "10T");
+    state.profData = docSnap.data();
+    
+    // --- NOVA LÓGICA DE EXTRAÇÃO DE TURMAS E DISCIPLINAS ---
+    state.myRoles = state.profData.cargos_especiais || [];
 
-                if (state.profData.papel && !state.myRoles.includes(state.profData.papel)) {
-                    state.myRoles.push(state.profData.papel);
-                }
+    let turmasSet = new Set();
+    let discSet = new Set();
 
-                if (state.myRoles.some(r => ['professor', 'diretor_turma', 'orientador_pap', 'coordenador'].includes(r))) {
-                    let baseName = state.profData.nome || state.profData.nomeCompleto || state.profData.Nome || state.myUserId;
-                    state.myUserName = baseName.replace(/^(Prof\.|Professor|Professora|Prof)\s+/i, '').trim();
+    if (state.profData.atribuicoes) {
+        state.profData.atribuicoes.forEach(atrib => {
+            const partes = atrib.split('-'); // Corta pelo hífen
+            if (partes.length >= 2) {
+                turmasSet.add(partes[0].trim()); // Guarda a turma "10T"
+                discSet.add(partes[1].trim());   // Guarda a disciplina "AI"
+            }
+        });
+    }
 
-                    document.getElementById('header-user-name-prof').innerText = state.myUserName;
+    // Mantém compatibilidade caso noutros professores uses os campos antigos
+    (state.profData.turmas || []).forEach(t => turmasSet.add(t));
+    (state.profData.disciplinas || []).forEach(d => discSet.add(d));
 
-                    const configuracaoPerfis = {
-                        'professor': { nome: 'Professor', cor: '#64748b' },
-                        'diretor_turma': { nome: 'Diretor de Turma', cor: '#f59e0b' },
-                        'coordenador': { nome: 'Coordenador', cor: '#9333ea' },
-                        'orientador_pap': { nome: 'Orientador PAP', cor: '#10b981' }
-                    };
+    state.turmasProfessor = Array.from(turmasSet);
+    state.disciplinasProfessor = Array.from(discSet);
 
-                    let dropdownHtml = '';
-                    state.myRoles.forEach(papel => {
-                        if (configuracaoPerfis[papel]) {
-                            dropdownHtml += `
-                            <button onclick="window.mudarCapaProfessor('${papel}')" style="width: 100%; text-align: left; padding: 12px 15px; background: transparent; border: none; color: white; cursor: pointer; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 10px;">
-                                <span style="width: 10px; height: 10px; border-radius: 50%; background-color: ${configuracaoPerfis[papel].cor};"></span> ${configuracaoPerfis[papel].nome}
-                            </button>`;
-                        }
-                    });
-                    document.getElementById('lista-capas-dropdown').innerHTML = dropdownHtml;
+    // Lê o campo turma_direcao
+    state.minhaTurmaDT = state.profData.turma_direcao || state.profData.turmaDT || (state.turmasProfessor.length > 0 ? state.turmasProfessor[0] : "10T");
+    // --- FIM DA NOVA LÓGICA ---
+
+    if (state.profData.papel && !state.myRoles.includes(state.profData.papel)) {
+        state.myRoles.push(state.profData.papel);
+    }
+
+    if (state.myRoles.some(r => ['professor', 'diretor_turma', 'orientador_pap', 'coordenador'].includes(r))) {
+        let baseName = state.profData.nome || state.profData.nomeCompleto || state.profData.Nome || state.myUserId;
+        state.myUserName = baseName.replace(/^(Prof\.|Professor|Professora|Prof)\s+/i, '').trim();
+
+        document.getElementById('header-user-name-prof').innerText = state.myUserName;
+
+        const configuracaoPerfis = {
+            'professor': { nome: 'Professor', cor: '#64748b' },
+            'diretor_turma': { nome: 'Diretor de Turma', cor: '#f59e0b' },
+            'coordenador': { nome: 'Coordenador', cor: '#9333ea' },
+            'orientador_pap': { nome: 'Orientador PAP', cor: '#10b981' }
+        };
+
+        let dropdownHtml = '';
+        state.myRoles.forEach(papel => {
+            if (configuracaoPerfis[papel]) {
+                dropdownHtml += `
+                <button onclick="window.mudarCapaProfessor('${papel}')" style="width: 100%; text-align: left; padding: 12px 15px; background: transparent; border: none; color: white; cursor: pointer; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 10px;">
+                    <span style="width: 10px; height: 10px; border-radius: 50%; background-color: ${configuracaoPerfis[papel].cor};"></span> ${configuracaoPerfis[papel].nome}
+                </button>`;
+            }
+        });
+        document.getElementById('lista-capas-dropdown').innerHTML = dropdownHtml;
 
                     window.mudarCapaProfessor = (novoPapel) => {
                         state.activeRole = novoPapel;
