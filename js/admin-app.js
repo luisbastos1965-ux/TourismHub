@@ -115,45 +115,57 @@ document.getElementById('btn-hub-horario')?.addEventListener('click', () => { es
 let containerAlunosGlobal = null;
 
 async function carregarAlunos(turmaEscolhida) {
-    // CORREÇÃO: Força o código a buscar a lista estritamente dentro da vista da turma
     containerAlunosGlobal = document.querySelector('#class-view .students-list-container'); 
     if(!containerAlunosGlobal) return;
     containerAlunosGlobal.innerHTML = '<p class="text-muted">A carregar...</p>';
     
     try {
-        const q = turmaEscolhida === 'TUR' ? query(collection(db, "utilizadores"), where("papel", "==", "aluno")) : query(collection(db, "utilizadores"), where("turma", "==", turmaEscolhida), where("papel", "==", "aluno"));
-        const res = await getDocs(q); 
-        if (res.empty) { containerAlunosGlobal.innerHTML = '<p class="text-muted">Sem alunos.</p>'; return; }
+        let listaAlunos = [];
+        const cacheChave = `cache_admin_alunos_${turmaEscolhida}`;
+        const tempoChave = `tempo_${cacheChave}`;
+        const agora = Date.now();
+        const tempoGuardado = localStorage.getItem(tempoChave);
+
+        if (tempoGuardado && (agora - parseInt(tempoGuardado) < 43200000)) {
+            console.log("⚡ A ler Alunos Admin da Memória Local");
+            listaAlunos = JSON.parse(localStorage.getItem(cacheChave));
+        } else {
+            console.log("🔥 A ler Firebase (Admin Alunos)...");
+            const q = turmaEscolhida === 'TUR' ? query(collection(db, "utilizadores"), where("papel", "==", "aluno")) : query(collection(db, "utilizadores"), where("turma", "==", turmaEscolhida), where("papel", "==", "aluno"));
+            const res = await getDocs(q); 
+            if (!res.empty) {
+                res.forEach(doc => listaAlunos.push({ id: doc.id, ...doc.data() }));
+                localStorage.setItem(cacheChave, JSON.stringify(listaAlunos));
+                localStorage.setItem(tempoChave, agora.toString());
+            }
+        }
+
+        if (listaAlunos.length === 0) { containerAlunosGlobal.innerHTML = '<p class="text-muted">Sem alunos.</p>'; return; }
         
         let html = '<ul class="students-list">';
-        res.forEach((doc) => {
-            const aluno = doc.data(); 
+        listaAlunos.forEach((aluno) => {
             const tagTurma = turmaEscolhida === 'TUR' ? ` (${aluno.turma})` : '';
             const miniatura = aluno.fotoPerfil ? `<img src="${aluno.fotoPerfil}" class="list-avatar" style="flex-shrink:0;">` : `<div class="list-avatar" style="flex-shrink:0;"><i class="fa-solid fa-user"></i></div>`;
-            
-            // O segredo do alinhamento está nos estilos "flex:1" e "min-width:0" adicionados abaixo
             html += `
             <li class="student-item" style="display:flex; justify-content:space-between; align-items:center; gap:10px; overflow:hidden; padding: 12px;">
                 <div style="display:flex; align-items:center; gap:12px; flex:1; min-width:0; overflow:hidden;">
                     ${miniatura}
                     <div class="student-info" style="display:flex; flex-direction:column; min-width:0; overflow:hidden; flex:1;">
                         <strong style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${aluno.nome}${tagTurma}</strong>
-                        <span style="font-size:0.75rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${doc.id.toLowerCase()}</span>
+                        <span style="font-size:0.75rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${aluno.id.toLowerCase()}</span>
                     </div>
                 </div>
-                <button class="secondary-btn small-btn btn-ver-aluno" data-nome="${aluno.nome}" data-numero="${doc.id}" data-turma="${aluno.turma}" style="flex-shrink:0;">
+                <button class="secondary-btn small-btn btn-ver-aluno" data-nome="${aluno.nome}" data-numero="${aluno.id}" data-turma="${aluno.turma}" style="flex-shrink:0;">
                     <i class="fa-solid fa-eye"></i> Ver
                 </button>
             </li>`;
         });
         containerAlunosGlobal.innerHTML = html + '</ul>';
         
-        // ABRIR PERFIL DO ALUNO (MODO LEITURA)
         containerAlunosGlobal.querySelectorAll('.btn-ver-aluno').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 alunoAtualId = e.currentTarget.getAttribute('data-numero'); 
                 const nomeAlunoCol = e.currentTarget.getAttribute('data-nome');
-                
                 document.getElementById('detail-student-name').innerText = nomeAlunoCol;
                 document.getElementById('detail-student-number').innerText = alunoAtualId.toUpperCase();
                 
@@ -173,11 +185,7 @@ async function carregarAlunos(turmaEscolhida) {
                     const docSnap = await getDoc(doc(db, "utilizadores", alunoAtualId));
                     if (docSnap.exists()) {
                         const d = docSnap.data();
-                        if(d.fotoPerfil) { 
-                            document.getElementById('avatar-img').src = d.fotoPerfil; 
-                            document.getElementById('avatar-img').style.display = 'block'; 
-                            document.getElementById('avatar-icon').style.display = 'none'; 
-                        }
+                        if(d.fotoPerfil) { document.getElementById('avatar-img').src = d.fotoPerfil; document.getElementById('avatar-img').style.display = 'block'; document.getElementById('avatar-icon').style.display = 'none'; }
                         document.getElementById('detail-student-name').innerText = d.nome || nomeAlunoCol;
                         document.getElementById('display-aluno-idade').innerText = d.idade || "-"; 
                         document.getElementById('display-aluno-tel').innerText = d.telAluno || "-"; 
@@ -263,25 +271,39 @@ document.getElementById('btn-apagar-aluno-ficha')?.addEventListener('click', asy
 });
 
 // ==========================================
-// 2. DASHBOARD GLOBAL
+// 2. DASHBOARD GLOBAL ADMIN (COM CACHE DE 12H)
 // ==========================================
 async function carregarEstatisticaRiscoGlobal() {
     const container = document.getElementById('admin-risco-content');
     try {
         let alunosEmRiscoFull = [];
-        const snap = await getDocs(query(collection(db, "utilizadores"), where("papel", "==", "aluno")));
-        for(const docAl of snap.docs) {
-            let countPRHF = 0; let countFaltas = 0;
-            const pSnap = await getDocs(collection(db, "utilizadores", docAl.id, "prhfs"));
-            pSnap.forEach(p => { if (p.data().status !== 'concluida') countPRHF++; });
-            const fSnap = await getDocs(collection(db, "utilizadores", docAl.id, "faltas"));
-            fSnap.forEach(f => { if (!f.data().justificada) countFaltas += Number(f.data().horas || 0); });
-            
-            if (countPRHF >= 2 || countFaltas >= 10) {
-                alunosEmRiscoFull.push({ id: docAl.id, nome: docAl.data().nome, turma: docAl.data().turma, faltas: countFaltas, prhfs: countPRHF });
+        const cacheChave = `cache_admin_risco_global`;
+        const tempoChave = `tempo_${cacheChave}`;
+        const agora = Date.now();
+        const tempoGuardado = localStorage.getItem(tempoChave);
+
+        if (tempoGuardado && (agora - parseInt(tempoGuardado) < 43200000)) {
+            console.log("⚡ A ler Risco Admin da Memória Local (0 leituras!)");
+            alunosEmRiscoFull = JSON.parse(localStorage.getItem(cacheChave));
+        } else {
+            console.log("🔥 A ler Firebase (Admin Risco Global)...");
+            const snap = await getDocs(query(collection(db, "utilizadores"), where("papel", "==", "aluno")));
+            for(const docAl of snap.docs) {
+                let countPRHF = 0; let countFaltas = 0;
+                const pSnap = await getDocs(collection(db, "utilizadores", docAl.id, "prhfs"));
+                pSnap.forEach(p => { if (p.data().status !== 'concluida') countPRHF++; });
+                const fSnap = await getDocs(collection(db, "utilizadores", docAl.id, "faltas"));
+                fSnap.forEach(f => { if (!f.data().justificada) countFaltas += Number(f.data().horas || 0); });
+                
+                if (countPRHF >= 2 || countFaltas >= 10) {
+                    alunosEmRiscoFull.push({ id: docAl.id, nome: docAl.data().nome, turma: docAl.data().turma, faltas: countFaltas, prhfs: countPRHF });
+                }
             }
+            alunosEmRiscoFull.sort((a,b) => (b.prhfs * 10 + b.faltas) - (a.prhfs * 10 + a.faltas));
+            
+            localStorage.setItem(cacheChave, JSON.stringify(alunosEmRiscoFull));
+            localStorage.setItem(tempoChave, agora.toString());
         }
-        alunosEmRiscoFull.sort((a,b) => (b.prhfs * 10 + b.faltas) - (a.prhfs * 10 + a.faltas));
         
         let htmlRisco = '';
         if(alunosEmRiscoFull.length === 0) {
@@ -290,13 +312,8 @@ async function carregarEstatisticaRiscoGlobal() {
             alunosEmRiscoFull.slice(0,5).forEach(ar => {
                 htmlRisco += `
                 <div class="aluno-list-item" data-id="${ar.id}" style="border-left: 4px solid var(--danger-red); margin-bottom:10px; cursor:pointer; padding:10px; display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); border-radius:6px; border-top:1px solid #333; border-right:1px solid #333; border-bottom:1px solid #333;">
-                    <div>
-                        <strong style="color:white;">${nomeCurto(ar.nome)}</strong> <span style="font-size:0.75rem; color:var(--text-muted);">(${ar.turma})</span>
-                    </div>
-                    <div style="text-align:right;">
-                        <span style="font-size:0.75rem; color:var(--warning-yellow);">${ar.prhfs} PRHFs</span> | 
-                        <span style="font-size:0.75rem; color:var(--danger-red); font-weight:bold;">${ar.faltas}h Faltas</span>
-                    </div>
+                    <div><strong style="color:white;">${nomeCurto(ar.nome)}</strong> <span style="font-size:0.75rem; color:var(--text-muted);">(${ar.turma})</span></div>
+                    <div style="text-align:right;"><span style="font-size:0.75rem; color:var(--warning-yellow);">${ar.prhfs} PRHFs</span> | <span style="font-size:0.75rem; color:var(--danger-red); font-weight:bold;">${ar.faltas}h Faltas</span></div>
                 </div>`;
             });
         }

@@ -477,83 +477,83 @@ export async function analisarEAtualizarTurma(turmaId) {
             if (btnMateriais) btnMateriais.style.display = 'none';
         } else {
             // Se for Professor base, mostra Faltas, Notas e Sumário (3 colunas/botoes)
-            lmsGrid.style.setProperty('grid-template-columns', '1fr 1fr', 'important'); // Mantém igual
+            lmsGrid.style.setProperty('grid-template-columns', '1fr 1fr', 'important');
             if (btnMateriais) btnMateriais.style.display = '';
         }
     }
 
     try {
-        const qAlunos = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turmaId), where("papel", "==", "aluno")));
-        state.alunosTurmaRAM = []; 
-        qAlunos.forEach(d => state.alunosTurmaRAM.push({ id: d.id, ...d.data() })); 
-        state.alunosTurmaRAM.sort((a,b) => a.nome.localeCompare(b.nome));
-
-        let alunosEmRisco = 0; 
-        let totalPrhfs = 0; 
-        let totalRepsAtraso = 0;
-        let htmlAlunos = '';
-
         const matVerificar = isDT ? (typeof ordemDisciplinasGlobal !== 'undefined' ? ordemDisciplinasGlobal : state.disciplinasProfessor) : state.disciplinasProfessor;
+        
+        let alunosProcessados = [];
+        const cacheChave = `cache_prof_turma_${turmaId}_${matVerificar.join('')}`; 
+        const tempoChave = `tempo_${cacheChave}`;
+        const agora = Date.now();
+        const tempoGuardado = localStorage.getItem(tempoChave);
 
-        // O SEGREDO DA VELOCIDADE: Promise.all() dispara TUDO em paralelo
-        const promisesAlunos = state.alunosTurmaRAM.map(async (al) => {
-            let nFaltas = 0; 
-            let nPrhfs = 0;
-            let nAtrasos = 0;
+        // 1. O COFRE: LER DA MEMÓRIA
+        if (tempoGuardado && (agora - parseInt(tempoGuardado) < 43200000)) {
+            console.log(`⚡ A ler Turma ${turmaId} da Memória Local`);
+            alunosProcessados = JSON.parse(localStorage.getItem(cacheChave));
+            // Precisamos do state global para preencher a pauta depois
+            state.alunosTurmaRAM = alunosProcessados; 
+        } 
+        // 2. IR AO FIREBASE
+        else {
+            console.log(`🔥 A ler Firebase (Turma ${turmaId})...`);
+            const qAlunos = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turmaId), where("papel", "==", "aluno")));
+            state.alunosTurmaRAM = []; 
+            qAlunos.forEach(d => state.alunosTurmaRAM.push({ id: d.id, ...d.data() })); 
+            state.alunosTurmaRAM.sort((a,b) => a.nome.localeCompare(b.nome));
+
+            const promisesAlunos = state.alunosTurmaRAM.map(async (al) => {
+                let nFaltas = 0; let nPrhfs = 0; let nAtrasos = 0;
+                
+                const [fS, pS, avalSnap, notasOldSnap] = await Promise.all([
+                    getDocs(collection(db, "utilizadores", al.id, "faltas")).catch(() => ({ forEach: () => {} })),
+                    getDocs(collection(db, "utilizadores", al.id, "prhfs")).catch(() => ({ forEach: () => {} })),
+                    getDocs(collection(db, "utilizadores", al.id, "avaliacoes")).catch(() => ({ docs: [] })),
+                    getDocs(collection(db, "utilizadores", al.id, "notas")).catch(() => ({ docs: [] }))
+                ]);
+
+                fS.forEach(f => { if(!f.data().justificada && matVerificar.includes(f.data().disciplina)) nFaltas++; });
+
+                const modulosComPrhf = [];
+                pS.forEach(p => { 
+                    if(p.data().status !== 'concluida' && matVerificar.includes(p.data().disciplina)) {
+                        nPrhfs++; modulosComPrhf.push(`${p.data().disciplina}_${p.data().modulo}`);
+                    } 
+                });
+
+                const notasCombinadas = [...(avalSnap.docs || []), ...(notasOldSnap.docs || [])];
+                notasCombinadas.forEach(n => {
+                    if (matVerificar.includes(n.data().disciplina) && n.data().nota === 'REP') {
+                        const mId = `${n.data().disciplina}_${n.data().modulo}`;
+                        if (!modulosComPrhf.includes(mId)) nAtrasos++;
+                    }
+                });
+
+                return { id: al.id, nome: al.nome, fotoPerfil: al.fotoPerfil, nFaltas: nFaltas, nPrhfs: nPrhfs, nAtrasos: nAtrasos };
+            });
+
+            alunosProcessados = await Promise.all(promisesAlunos);
+            state.alunosTurmaRAM = alunosProcessados; // Reatribui já com os dados somados
             
-            // Disparar os pedidos de Faltas, PRHFs e Notas DENTRO do aluno simultaneamente
-            const [fS, pS, avalSnap, notasOldSnap] = await Promise.all([
-                getDocs(collection(db, "utilizadores", al.id, "faltas")).catch(() => ({ forEach: () => {} })),
-                getDocs(collection(db, "utilizadores", al.id, "prhfs")).catch(() => ({ forEach: () => {} })),
-                getDocs(collection(db, "utilizadores", al.id, "avaliacoes")).catch(() => ({ docs: [] })),
-                getDocs(collection(db, "utilizadores", al.id, "notas")).catch(() => ({ docs: [] }))
-            ]);
+            // GUARDA NO COFRE
+            localStorage.setItem(cacheChave, JSON.stringify(alunosProcessados));
+            localStorage.setItem(tempoChave, agora.toString());
+        }
 
-            fS.forEach(f => { 
-                if(!f.data().justificada && matVerificar.includes(f.data().disciplina)) nFaltas++; 
-            });
+        // DESENHAR O ECRÃ
+        let alunosEmRisco = 0; let totalPrhfs = 0; let totalRepsAtraso = 0; let htmlAlunos = '';
 
-            const modulosComPrhf = [];
-            pS.forEach(p => { 
-                if(p.data().status !== 'concluida' && matVerificar.includes(p.data().disciplina)) {
-                    nPrhfs++;
-                    modulosComPrhf.push(`${p.data().disciplina}_${p.data().modulo}`);
-                } 
-            });
-
-            const notasCombinadas = [...(avalSnap.docs || []), ...(notasOldSnap.docs || [])];
-            notasCombinadas.forEach(n => {
-                if (matVerificar.includes(n.data().disciplina) && n.data().nota === 'REP') {
-                    const mId = `${n.data().disciplina}_${n.data().modulo}`;
-                    if (!modulosComPrhf.includes(mId)) nAtrasos++;
-                }
-            });
-
-            return {
-                id: al.id,
-                nome: al.nome,
-                fotoPerfil: al.fotoPerfil,
-                nFaltas: nFaltas,
-                nPrhfs: nPrhfs,
-                nAtrasos: nAtrasos
-            };
-        });
-
-        // Espera que TODOS os alunos acabem as suas consultas simultâneas
-        const resultadosProcessados = await Promise.all(promisesAlunos);
-
-        // Agora que temos tudo instantaneamente na memória, é só desenhar o ecrã
-        resultadosProcessados.forEach(al => {
+        alunosProcessados.forEach(al => {
             totalPrhfs += al.nPrhfs;
             totalRepsAtraso += al.nAtrasos;
 
             let corBola = 'status-green';
-            if (al.nFaltas > 5 || al.nPrhfs > 2) { 
-                corBola = 'status-red'; 
-                alunosEmRisco++; 
-            } else if (al.nFaltas > 2 || al.nPrhfs > 0) { 
-                corBola = 'status-yellow'; 
-            }
+            if (al.nFaltas > 5 || al.nPrhfs > 2) { corBola = 'status-red'; alunosEmRisco++; } 
+            else if (al.nFaltas > 2 || al.nPrhfs > 0) { corBola = 'status-yellow'; }
 
             htmlAlunos += `
             <div class="aluno-list-item" data-id="${al.id}" onclick="window.abrirPerfil360Aluno('${al.id}')" style="cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background=''">
@@ -570,46 +570,24 @@ export async function analisarEAtualizarTurma(turmaId) {
             </div>`;
         });
         
-        // O NOVO ASSISTENTE DA TURMA (Design Mais Limpo e Uniforme)
         let asstHtml = `
             <div style="display: flex; gap: 15px; align-items: stretch; flex-wrap: wrap; justify-content: center;">
-                
-                <!-- Métrica: Total da Turma -->
                 <div style="flex: 1; min-width: 120px; display: flex; flex-direction: column; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">
                     <span style="color: var(--text-muted); font-size: 0.7rem; text-transform: uppercase; font-weight: bold; margin-bottom: 5px; letter-spacing: 0.5px;">Total da Turma</span>
-                    <div style="display: flex; align-items: baseline; gap: 8px;">
-                        <span style="color: white; font-size: 1.4rem; font-weight: 900;">${state.alunosTurmaRAM.length}</span>
-                        <i class="fa-solid fa-users" style="color: #3b82f6; font-size: 1rem;"></i>
-                    </div>
+                    <div style="display: flex; align-items: baseline; gap: 8px;"><span style="color: white; font-size: 1.4rem; font-weight: 900;">${alunosProcessados.length}</span><i class="fa-solid fa-users" style="color: #3b82f6; font-size: 1rem;"></i></div>
                 </div>
-
-                <!-- Métrica: Em Risco -->
                 <div style="flex: 1; min-width: 120px; display: flex; flex-direction: column; border-bottom: 2px solid ${alunosEmRisco > 0 ? 'var(--danger-red)' : 'var(--success-green)'}; padding-bottom: 8px;">
                     <span style="color: var(--text-muted); font-size: 0.7rem; text-transform: uppercase; font-weight: bold; margin-bottom: 5px; letter-spacing: 0.5px;">Em Risco</span>
-                    <div style="display: flex; align-items: baseline; gap: 8px;">
-                        <span style="color: white; font-size: 1.4rem; font-weight: 900;">${alunosEmRisco}</span>
-                        <i class="fa-solid ${alunosEmRisco > 0 ? 'fa-triangle-exclamation' : 'fa-check'}" style="color: ${alunosEmRisco > 0 ? 'var(--danger-red)' : 'var(--success-green)'}; font-size: 1rem;"></i>
-                    </div>
+                    <div style="display: flex; align-items: baseline; gap: 8px;"><span style="color: white; font-size: 1.4rem; font-weight: 900;">${alunosEmRisco}</span><i class="fa-solid ${alunosEmRisco > 0 ? 'fa-triangle-exclamation' : 'fa-check'}" style="color: ${alunosEmRisco > 0 ? 'var(--danger-red)' : 'var(--success-green)'}; font-size: 1rem;"></i></div>
                 </div>
-
-                <!-- Métrica: Avaliações em Atraso (REPs) -->
                 <div style="flex: 1; min-width: 120px; display: flex; flex-direction: column; border-bottom: 2px solid ${totalRepsAtraso > 0 ? 'var(--danger-red)' : '#444'}; padding-bottom: 8px;">
                     <span style="color: var(--text-muted); font-size: 0.7rem; text-transform: uppercase; font-weight: bold; margin-bottom: 5px; letter-spacing: 0.5px;">Atrasos (REP)</span>
-                    <div style="display: flex; align-items: baseline; gap: 8px;">
-                        <span style="color: ${totalRepsAtraso > 0 ? 'white' : '#666'}; font-size: 1.4rem; font-weight: 900;">${totalRepsAtraso}</span>
-                        <span style="color: ${totalRepsAtraso > 0 ? 'var(--danger-red)' : '#666'}; font-size: 0.9rem; font-weight: bold;">A</span>
-                    </div>
+                    <div style="display: flex; align-items: baseline; gap: 8px;"><span style="color: ${totalRepsAtraso > 0 ? 'white' : '#666'}; font-size: 1.4rem; font-weight: 900;">${totalRepsAtraso}</span><span style="color: ${totalRepsAtraso > 0 ? 'var(--danger-red)' : '#666'}; font-size: 0.9rem; font-weight: bold;">A</span></div>
                 </div>
-
-                <!-- Métrica: Planos Ativos (PRHFs) -->
                 <div style="flex: 1; min-width: 120px; display: flex; flex-direction: column; border-bottom: 2px solid ${totalPrhfs > 0 ? 'var(--warning-yellow)' : '#444'}; padding-bottom: 8px;">
                     <span style="color: var(--text-muted); font-size: 0.7rem; text-transform: uppercase; font-weight: bold; margin-bottom: 5px; letter-spacing: 0.5px;">Planos Ativos</span>
-                    <div style="display: flex; align-items: baseline; gap: 8px;">
-                        <span style="color: ${totalPrhfs > 0 ? 'white' : '#666'}; font-size: 1.4rem; font-weight: 900;">${totalPrhfs}</span>
-                        <span style="color: ${totalPrhfs > 0 ? 'var(--warning-yellow)' : '#666'}; font-size: 0.9rem; font-weight: bold;">P</span>
-                    </div>
+                    <div style="display: flex; align-items: baseline; gap: 8px;"><span style="color: ${totalPrhfs > 0 ? 'white' : '#666'}; font-size: 1.4rem; font-weight: 900;">${totalPrhfs}</span><span style="color: ${totalPrhfs > 0 ? 'var(--warning-yellow)' : '#666'}; font-size: 0.9rem; font-weight: bold;">P</span></div>
                 </div>
-
             </div>
         `;
 

@@ -1,5 +1,50 @@
 import { collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
+// ==========================================
+// CACHE INTELIGENTE PARA ALUNO (COFRE 12H)
+// ==========================================
+async function lerFirebaseOuCacheAluno(caminho, queryParams = null) {
+    // Usamos um truque de cache que até guarda as queries (se existirem) 
+    const baseId = caminho.replace(/\//g, '_');
+    const paramStr = queryParams ? JSON.stringify(queryParams) : 'tudo';
+    const cacheChave = `cache_al_${baseId}_${paramStr}`;
+    const tempoChave = `tempo_${cacheChave}`;
+    
+    const agora = Date.now();
+    const tempoGuardado = localStorage.getItem(tempoChave);
+    let arrayDados = [];
+    
+    if (tempoGuardado && (agora - parseInt(tempoGuardado) < 43200000)) {
+        console.log(`⚡ A ler do Cofre Local: ${caminho}`);
+        arrayDados = JSON.parse(localStorage.getItem(cacheChave));
+    } else {
+        console.log(`🔥 A ler do Firebase: ${caminho}`);
+        
+        let q;
+        if (queryParams && queryParams.tipo === "orderBy") {
+            const { query: fbQuery, collection: fbCollection, orderBy: fbOrderBy } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
+            q = fbQuery(fbCollection(window.db, caminho), fbOrderBy(queryParams.campo, queryParams.ordem));
+        } else {
+            const { collection: fbCollection } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
+            q = fbCollection(window.db, caminho);
+        }
+        
+        const { getDocs } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
+        const snap = await getDocs(q);
+        snap.forEach(d => arrayDados.push({ _id: d.id, ...d.data() }));
+        
+        localStorage.setItem(cacheChave, JSON.stringify(arrayDados));
+        localStorage.setItem(tempoChave, agora.toString());
+    }
+    
+    // Simula a resposta do Firebase para manter a compatibilidade total
+    return {
+        empty: arrayDados.length === 0,
+        docs: arrayDados.map(item => ({ id: item._id, data: () => item })),
+        forEach: function(cb) { this.docs.forEach(doc => cb(doc)); }
+    };
+}
+
 export const matrizAmbos = {
     "Sociocultural": { "PORT": {"1":33,"2":34,"3":33,"4":33,"5":34,"6":33,"7":40,"8":40,"9":40}, "ING": {"1":27,"2":24,"3":24,"4":24,"5":24,"6":24,"7":24,"8":24,"9":24}, "AI": {"1":36,"2":36,"3":36,"4":36,"5":37,"6":39}, "EF": {"1":10,"2":8,"3":10,"4":10,"5":10,"6":12,"7":6,"8":12,"9":8,"10":10,"11":12,"12":8,"13":6,"14":10,"15":6,"16":2}, "TIC": {"1":25,"2":25,"3":25,"4":25} },
     "Científica": { "GEO": {"1":33,"2":33,"3":30,"4":26,"5":21,"6":21,"7":21,"8":15}, "HCA": {"1":20,"2":18,"3":18,"4":18,"5":24,"6":18,"7":18,"8":24,"9":21,"10":21}, "MAT": {"1":33,"2":27,"3":20,"4":20} }
@@ -60,8 +105,8 @@ async function carregarTimelineAluno() {
     try {
         let ev = [];
         
-        const nS_novas = await getDocs(collection(window.db, "utilizadores", window.myUserId, "avaliacoes"));
-        const nS_antigas = await getDocs(collection(window.db, "utilizadores", window.myUserId, "notas"));
+        const nS_novas = await lerFirebaseOuCacheAluno(`utilizadores/${window.myUserId}/avaliacoes`);
+        const nS_antigas = await lerFirebaseOuCacheAluno(`utilizadores/${window.myUserId}/notas`);
         
         [...nS_novas.docs, ...nS_antigas.docs].forEach(d => { 
             const n = d.data(); 
@@ -77,7 +122,7 @@ async function carregarTimelineAluno() {
             }); 
         });
         
-        const fS = await getDocs(collection(window.db, "utilizadores", window.myUserId, "faltas")); 
+        const fS = await lerFirebaseOuCacheAluno(`utilizadores/${window.myUserId}/faltas`); 
         fS.forEach(d => { 
             const f = d.data(); 
             ev.push({ 
@@ -122,10 +167,10 @@ async function carregarEvolucaoAluno() {
         let html = `<h4 style="color:var(--text-muted); margin-bottom:15px; font-size:0.9rem; text-transform:uppercase;"><i class="fa-solid fa-bolt"></i> Histórico de XP e Comportamento</h4>`;
         let regs = [];
 
-        const ocSnap = await getDocs(query(collection(window.db, "utilizadores", window.myUserId, "ocorrencias"))); 
+        const ocSnap = await lerFirebaseOuCacheAluno(`utilizadores/${window.myUserId}/ocorrencias`); 
         ocSnap.forEach(d => { const o = d.data(); regs.push({ time: new Date(o.data).getTime() || o.timestamp, ...o }); });
 
-        const mdSnap = await getDocs(query(collection(window.db, "utilizadores", window.myUserId, "humor"))); 
+        const mdSnap = await lerFirebaseOuCacheAluno(`utilizadores/${window.myUserId}/humor`); 
         mdSnap.forEach(d => { 
             const h = d.data(); const dataStr = new Date(h.timestamp).toLocaleDateString('pt-PT');
             regs.push({ time: h.timestamp, tipo: 'positiva', titulo: 'Check-in Diário', descricao: `Sentiste-te ${h.humor}.`, xp: 10, data: dataStr, autor: 'App' }); 
@@ -161,7 +206,7 @@ async function carregarReunioesAluno() {
     const MOMENTOS_DB = ['momento_1', 'momento_2', 'momento_3', 'momento_4', 'momento_5'];
     
     try {
-        const snap = await getDocs(query(collection(window.db, "utilizadores", window.myUserId, "reunioes"))); 
+        const snap = await lerFirebaseOuCacheAluno(`utilizadores/${window.myUserId}/reunioes`); 
         let notasReunioes = {};
         
         snap.forEach(d => {
@@ -235,8 +280,8 @@ async function carregarReunioesAluno() {
 async function carregarNotasAluno() {
     const cCont = document.getElementById('aluno-caderneta-content'); if(!cCont) return;
     try {
-        const notasNovas = await getDocs(collection(window.db, "utilizadores", window.myUserId, "avaliacoes"));
-        const notasAntigas = await getDocs(collection(window.db, "utilizadores", window.myUserId, "notas"));
+        const notasNovas = await lerFirebaseOuCacheAluno(`utilizadores/${window.myUserId}/avaliacoes`);
+        const notasAntigas = await lerFirebaseOuCacheAluno(`utilizadores/${window.myUserId}/notas`);
         
         let disciplinasDoAluno = {}; window.mapNotasCache = {};
         
@@ -318,7 +363,7 @@ window.abrirModalPautaGlobal = function() {
 async function carregarFaltasAluno() {
     const cCont = document.getElementById('aluno-caderneta-content'); if(!cCont) return;
     try {
-        const snap = await getDocs(query(collection(window.db, "utilizadores", window.myUserId, "faltas"), orderBy("dataRegisto", "desc"))); 
+        const snap = await lerFirebaseOuCacheAluno(`utilizadores/${window.myUserId}/faltas`, { tipo: "orderBy", campo: "dataRegisto", ordem: "desc" }); 
         if(snap.empty) { cCont.innerHTML = getEmptyState('Nenhuma falta registada.', 'fa-user-check'); return; }
 
         let faltasPorChave = {};
@@ -372,7 +417,7 @@ async function carregarFaltasAluno() {
 async function carregarPRHFsAluno() {
     const cCont = document.getElementById('aluno-caderneta-content'); if(!cCont) return;
     try {
-        const snap = await getDocs(query(collection(window.db, "utilizadores", window.myUserId, "prhfs"))); 
+        const snap = await lerFirebaseOuCacheAluno(`utilizadores/${window.myUserId}/prhfs`); 
         let pArr = [];
         snap.forEach(d => pArr.push({id: d.id, ...d.data()})); 
         

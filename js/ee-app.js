@@ -333,6 +333,35 @@ bindClick('btn-tab-pap', () => {
 });
 
 // ==========================================
+// CACHE INTELIGENTE PARA E.E. (COFRE 12H)
+// ==========================================
+async function lerFirebaseOuCacheEE(caminho) {
+    const cacheChave = `cache_ee_${caminho.replace(/\//g, '_')}`;
+    const tempoChave = `tempo_${cacheChave}`;
+    const agora = Date.now();
+    const tempoGuardado = localStorage.getItem(tempoChave);
+    let arrayDados = [];
+    
+    if (tempoGuardado && (agora - parseInt(tempoGuardado) < 43200000)) {
+        console.log(`⚡ A ler do Cofre Local: ${caminho}`);
+        arrayDados = JSON.parse(localStorage.getItem(cacheChave));
+    } else {
+        console.log(`🔥 A ler do Firebase: ${caminho}`);
+        const snap = await getDocs(collection(db, caminho));
+        snap.forEach(d => arrayDados.push({ _id: d.id, ...d.data() }));
+        localStorage.setItem(cacheChave, JSON.stringify(arrayDados));
+        localStorage.setItem(tempoChave, agora.toString());
+    }
+    
+    // Simula a resposta do Firebase para não quebrar o teu código antigo!
+    return {
+        empty: arrayDados.length === 0,
+        docs: arrayDados.map(item => ({ id: item._id, data: () => item })),
+        forEach: function(cb) { this.docs.forEach(doc => cb(doc)); }
+    };
+}
+
+// ==========================================
 // DASHBOARD
 // ==========================================
 async function carregarResumoDashboard() {
@@ -340,9 +369,8 @@ async function carregarResumoDashboard() {
     let faltasTotais = 0; let nPrhf = 0;
 
     try {
-        // CORREÇÃO: LER NOTAS ANTIGAS E NOVAS PARA O GRÁFICO DO E.E.
-        const notasNovas = await getDocs(collection(db, "utilizadores", educandoAtualId, "avaliacoes"));
-        const notasAntigas = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
+        const notasNovas = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/avaliacoes`);
+        const notasAntigas = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/notas`);
         const todasAsNotas = [...notasAntigas.docs, ...notasNovas.docs];
 
         let mapaUnico = {};
@@ -401,36 +429,28 @@ async function carregarResumoDashboard() {
     } catch (e) { }
 
     try {
-        const faltasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
+        const faltasSnap = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/faltas`);
         faltasSnap.forEach(d => {
             const faltaData = d.data();
-            // Só soma as faltas se não estiverem justificadas
             if (faltaData.justificada === false || !faltaData.hasOwnProperty("justificada")) {
-                // Tenta apanhar o novo formato 'duracaoBlocos', se não existir, tenta o antigo 'horas'. Se ambos falharem, assume 0.
                 faltasTotais += Number(faltaData.duracaoBlocos) || Number(faltaData.horas) || 0;
             }
         });
 
         const textElement = document.getElementById('resumo-faltas');
         textElement.innerText = `${faltasTotais}h`;
-
-        // Bónus visual: Fica vermelho se o aluno tiver faltas injustificadas para chamar a atenção do pai!
-        if (faltasTotais > 0) {
-            textElement.style.color = "var(--danger-red)";
-        } else {
-            textElement.style.color = "white";
-        }
+        if (faltasTotais > 0) { textElement.style.color = "var(--danger-red)"; } else { textElement.style.color = "white"; }
     } catch (e) { }
 
     try {
-        const prhfSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "prhfs"));
+        const prhfSnap = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/prhfs`);
         prhfSnap.forEach(d => { if ((d.data().status || 'ativa') === 'ativa') nPrhf++; });
         document.getElementById('resumo-prhfs').innerText = nPrhf;
     } catch (e) { }
 
     try {
         if (turmaAtual) {
-            const evSnap = await getDocs(collection(db, "turmas", turmaAtual, "eventos"));
+            const evSnap = await lerFirebaseOuCacheEE(`turmas/${turmaAtual}/eventos`);
             const hojeIso = new Date().toISOString().split('T')[0];
             let futuros = [];
             evSnap.forEach(d => { if (d.data().data >= hojeIso) futuros.push(d.data()); });
@@ -504,7 +524,6 @@ function iniciarEscutaNotificacoes() {
     if (!educandoAtualId) return;
     if (unsubNotificacoes) unsubNotificacoes();
 
-    // Fica a "escutar" a base de dados ao vivo
     const qOco = query(collection(db, "utilizadores", educandoAtualId, "ocorrencias"), orderBy("data", "desc"));
 
     unsubNotificacoes = onSnapshot(qOco, (snap) => {
@@ -513,8 +532,6 @@ function iniciarEscutaNotificacoes() {
 
         snap.forEach(docSnap => {
             const oco = docSnap.data();
-
-            // Só conta para o número vermelho se o Professor marcou "Notificar E.E." e se ainda não foi lida
             if (oco.notificarEE && !oco.lidaEE) naoLidas++;
 
             const isPos = oco.tipo === 'positiva';
@@ -539,7 +556,6 @@ function iniciarEscutaNotificacoes() {
             </div>`;
         });
 
-        // 1. Atualiza a bolinha vermelha no ícone do sino (header)
         const btnSino = document.getElementById('btn-open-notificacoes');
         if (btnSino) {
             if (naoLidas > 0) {
@@ -550,12 +566,9 @@ function iniciarEscutaNotificacoes() {
             }
         }
 
-        // 2. Injeta na aba de notificações
         const cont = document.getElementById('ee-notificacoes-container');
         if (cont) {
             cont.innerHTML = html === '' ? getEmptyState('Não há registos disciplinares ou de evolução.', 'fa-bell-slash') : html;
-
-            // Lógica do botão "Visto"
             document.querySelectorAll('.btn-marcar-lida').forEach(b => {
                 b.addEventListener('click', async (e) => {
                     const id = e.currentTarget.getAttribute('data-id');
@@ -567,7 +580,6 @@ function iniciarEscutaNotificacoes() {
     });
 }
 
-// Quando o E.E. clica no botão do Sino, abre a janela certa!
 bindClick('btn-open-notificacoes', () => {
     navItems.forEach(nav => nav.classList.remove('active'));
     esconderTodasAsVistas();
@@ -634,33 +646,28 @@ async function carregarEvolucaoEE() {
         let html = `
         <div class="card" style="border-top: 4px solid var(--primary-green); margin-bottom: 20px;">
             <h3 style="color: white; margin-bottom: 15px; font-size: 1.1rem;"><i class="fa-solid fa-chart-radar"></i> Perfil de Competências</h3>
-            
             <div style="margin-bottom: 12px;">
                 <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-comments" style="color:#0ea5e9;"></i> Comunicação & Hospitalidade</span><strong style="color:var(--primary-green);">Nvl ${lvlCom}</strong></div>
                 <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percCom}%; background:#0ea5e9;"></div></div>
             </div>
-            
             <div style="margin-bottom: 12px;">
                 <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-lightbulb" style="color:#8b5cf6;"></i> Criatividade & Inovação</span><strong style="color:var(--primary-green);">Nvl ${lvlCri}</strong></div>
                 <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percCri}%; background:#8b5cf6;"></div></div>
             </div>
-            
             <div style="margin-bottom: 12px;">
                 <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-compass" style="color:#f97316;"></i> Liderança & Autonomia</span><strong style="color:var(--primary-green);">Nvl ${lvlLid}</strong></div>
                 <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percLid}%; background:#f97316;"></div></div>
             </div>
-            
             <div style="margin-bottom: 12px;">
                 <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;"><span><i class="fa-solid fa-chess-knight" style="color:#10b981;"></i> Organização & Estratégia</span><strong style="color:var(--primary-green);">Nvl ${lvlOrg}</strong></div>
                 <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percOrg}%; background:#10b981;"></div></div>
             </div>
         </div>
-        
         <h4 style="color:var(--text-muted); margin-bottom:10px; font-size:0.9rem; text-transform:uppercase;"><i class="fa-solid fa-bolt"></i> Últimos Registos</h4>`;
 
         const fDiscEl = document.getElementById('filtro-caderneta-disc');
         const fDisc = fDiscEl ? fDiscEl.value : "";
-        const ocSnap = await getDocs(query(collection(db, "utilizadores", educandoAtualId, "ocorrencias")));
+        const ocSnap = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/ocorrencias`);
         let regs = [];
         ocSnap.forEach(d => { if (!fDisc || d.data().disciplina === fDisc) regs.push(d.data()); });
 
@@ -690,7 +697,6 @@ async function carregarEvolucaoEE() {
 
         cadernetaContent.innerHTML = html;
     } catch (e) {
-        console.error("Erro evolução:", e);
         cadernetaContent.innerHTML = '<p class="text-danger center">Erro ao carregar evolução.</p>';
     }
 }
@@ -700,18 +706,16 @@ async function carregarTimelineEE() {
     const cadernetaContent = document.getElementById('ee-caderneta-content');
     try {
         let eventos = [];
-        const notasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
+        const notasSnap = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/notas`);
         notasSnap.forEach(d => {
             const n = d.data();
             eventos.push({ time: new Date(n.data).getTime(), icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação', desc: `${n.disciplina} (Mod. ${n.modulo}): <strong style="color:var(--text-light);">${n.nota}</strong>` });
         });
 
-        const faltasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
+        const faltasSnap = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/faltas`);
         faltasSnap.forEach(d => {
             const f = d.data();
-            // Lógica blindada: Lê a duracao de qualquer chave onde ela esteja guardada e mete sempre "h" no fim.
             const horasFalta = f.duracaoBlocos || f.duracao || f.horas || 2; 
-            
             eventos.push({ 
                 time: new Date(f.criadoEm || f.dataRegisto || f.dataInicio || Date.now()).getTime(), 
                 icon: '<i class="fa-solid fa-user-xmark"></i>', 
@@ -721,13 +725,13 @@ async function carregarTimelineEE() {
             });
         });
 
-        const ocSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "ocorrencias"));
+        const ocSnap = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/ocorrencias`);
         ocSnap.forEach(d => {
             const o = d.data();
             eventos.push({ time: o.timestamp || Date.now(), icon: o.tipo === 'positiva' ? '<i class="fa-solid fa-medal"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>', cor: o.tipo === 'positiva' ? 'var(--success-green)' : 'var(--danger-red)', titulo: `Registo Disciplinar`, desc: `<strong style="color:var(--text-light);">${o.titulo}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">${o.descricao || ''}</span>` });
         });
 
-        const prhfSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "prhfs"));
+        const prhfSnap = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/prhfs`);
         prhfSnap.forEach(d => {
             const p = d.data();
             eventos.push({ time: new Date(p.dataRegisto || Date.now()).getTime(), icon: '<i class="fa-solid fa-book-medical"></i>', cor: 'var(--warning-yellow)', titulo: `Plano de Recuperação Criado`, desc: `${p.disciplina} (Mod. ${p.modulo})` });
@@ -756,23 +760,20 @@ async function carregarNotasEE() {
     cadernetaContent.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar avaliações...</p>';
 
     try {
-        // 1. Ler as notas das DUAS gavetas
-        const notasNovas = await getDocs(collection(db, "utilizadores", educandoAtualId, "avaliacoes"));
-        const notasAntigas = await getDocs(collection(db, "utilizadores", educandoAtualId, "notas"));
+        const notasNovas = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/avaliacoes`);
+        const notasAntigas = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/notas`);
 
         let disciplinasDoAluno = {};
-        window.mapNotasCache = {}; // Cache para a pauta global ler super rápido
+        window.mapNotasCache = {};
 
-        // 2. Fundir e organizar tudo
         [...notasAntigas.docs, ...notasNovas.docs].forEach(d => {
             const n = d.data();
-            const discNome = (n.disciplina || '').trim(); // Remove espaços em branco perdidos
+            const discNome = (n.disciplina || '').trim();
             const modF = n.modulo ? n.modulo.toString().replace(/\D/g, '') : '?';
             n.modulo = modF;
 
             if (!disciplinasDoAluno[discNome]) disciplinasDoAluno[discNome] = [];
 
-            // Substitui se for uma atualização do mesmo módulo
             const index = disciplinasDoAluno[discNome].findIndex(x => x.modulo === modF);
             if (index > -1) {
                 disciplinasDoAluno[discNome][index] = n;
@@ -786,13 +787,11 @@ async function carregarNotasEE() {
         const ordemDisciplinas = obterDisciplinasDoAno();
         let html = `<button id="btn-pauta-global" class="primary-btn" style="margin-bottom: 20px; background-color: transparent; border: 1px solid var(--primary-green); color: var(--primary-green);"><i class="fa-solid fa-table-list"></i> Pauta Global</button>`;
 
-        // 3. Desenhar a lista
         ordemDisciplinas.forEach(disc => {
             const discTrim = disc.trim();
             if (disciplinasDoAluno[discTrim] && disciplinasDoAluno[discTrim].length > 0) {
                 let sum = 0; let c = 0; let modsHtml = '';
 
-                // Ordena os módulos (1, 2, 3...)
                 disciplinasDoAluno[discTrim].sort((a, b) => parseInt(a.modulo) - parseInt(b.modulo)).forEach(n => {
                     if (n.nota !== 'REP' && !isNaN(n.nota)) { sum += Number(n.nota); c++; }
                     const cor = (n.nota === 'REP' || Number(n.nota) < 10) ? 'var(--danger-red)' : 'var(--success-green)';
@@ -817,7 +816,6 @@ async function carregarNotasEE() {
 
         if (cadernetaContent) cadernetaContent.innerHTML = html;
 
-        // 4. Lógica da Pauta Global
         bindClick('btn-pauta-global', () => {
             const mod = document.getElementById('modal-pauta-global'); if (mod) mod.style.display = 'flex';
             const container = document.getElementById('pauta-global-content');
@@ -856,7 +854,6 @@ async function carregarNotasEE() {
         });
 
     } catch (e) {
-        console.error("Erro ao carregar notas EE:", e);
         if (cadernetaContent) cadernetaContent.innerHTML = '<p class="text-danger center">Erro ao carregar avaliações.</p>';
     }
 }
@@ -868,15 +865,10 @@ async function carregarFaltasEE() {
     cadernetaContent.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar faltas e a calcular limites...</p>';
 
     try {
-        // 1. Puxamos a Matriz para descobrir a carga horária real de cada módulo
         let matrizCargaHoraria = {};
-        try {
-            if (typeof getMatriz === 'function') {
-                matrizCargaHoraria = getMatriz();
-            }
-        } catch (e) { }
+        try { if (typeof getMatriz === 'function') { matrizCargaHoraria = getMatriz(); } } catch (e) { }
 
-        const faltasSnap = await getDocs(collection(db, "utilizadores", educandoAtualId, "faltas"));
+        const faltasSnap = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/faltas`);
         let faltasPorDisciplina = {};
 
         faltasSnap.forEach(d => {
@@ -886,13 +878,8 @@ async function carregarFaltasEE() {
             const moduloNum = f.modulo || "?";
 
             if (!faltasPorDisciplina[discNome]) {
-                faltasPorDisciplina[discNome] = {
-                    totalInjustificadas: 0,
-                    totalJustificadas: 0,
-                    modulos: {}
-                };
+                faltasPorDisciplina[discNome] = { totalInjustificadas: 0, totalJustificadas: 0, modulos: {} };
             }
-
             if (!faltasPorDisciplina[discNome].modulos[moduloNum]) {
                 faltasPorDisciplina[discNome].modulos[moduloNum] = { horasTotais: 0, detalhes: [] };
             }
@@ -913,18 +900,13 @@ async function carregarFaltasEE() {
         ordemDisciplinas.forEach(disc => {
             const discTrim = disc.trim();
             const dadosFaltas = faltasPorDisciplina[discTrim] || { totalInjustificadas: 0, totalJustificadas: 0, modulos: {} };
-
             const totalFaltasDisc = dadosFaltas.totalInjustificadas + dadosFaltas.totalJustificadas;
 
             let corGlobal = 'var(--text-muted)';
             if (totalFaltasDisc > 0) {
-                if (dadosFaltas.totalInjustificadas > 0 && dadosFaltas.totalJustificadas === 0) {
-                    corGlobal = 'var(--danger-red)';
-                } else if (dadosFaltas.totalInjustificadas === 0 && dadosFaltas.totalJustificadas > 0) {
-                    corGlobal = 'var(--success-green)';
-                } else {
-                    corGlobal = 'var(--warning-yellow)';
-                }
+                if (dadosFaltas.totalInjustificadas > 0 && dadosFaltas.totalJustificadas === 0) corGlobal = 'var(--danger-red)';
+                else if (dadosFaltas.totalInjustificadas === 0 && dadosFaltas.totalJustificadas > 0) corGlobal = 'var(--success-green)';
+                else corGlobal = 'var(--warning-yellow)';
             }
 
             let detalhesHtml = '';
@@ -935,7 +917,6 @@ async function carregarFaltasEE() {
                     const dadosMod = dadosFaltas.modulos[mod];
                     const modLabel = mod.toString().startsWith('UC') ? mod : `Módulo ${mod}`;
 
-                    // 2. A MAGIA MATEMÁTICA DOS 10%
                     let horasTotaisDoModulo = 0;
                     for (const comp in matrizCargaHoraria) {
                         if (matrizCargaHoraria[comp][discTrim] && matrizCargaHoraria[comp][discTrim][mod]) {
@@ -946,9 +927,7 @@ async function carregarFaltasEE() {
 
                     let avisoLimite = '';
                     if (horasTotaisDoModulo > 0) {
-                        // O SEGREDO ESTÁ AQUI: Math.round() arredonda por excesso ou defeito automaticamente!
                         const limiteFaltas = Math.round(horasTotaisDoModulo * 0.10);
-
                         if (dadosMod.horasTotais > limiteFaltas) {
                             avisoLimite = `<span style="color:var(--danger-red); font-size:0.75rem; margin-left:8px; background:rgba(239,68,68,0.1); padding:2px 6px; border-radius:4px;"><i class="fa-solid fa-xmark"></i> Excedeu Limite (Máx: ${limiteFaltas}h)</span>`;
                         } else if (dadosMod.horasTotais === limiteFaltas) {
@@ -957,7 +936,6 @@ async function carregarFaltasEE() {
                             avisoLimite = `<span style="color:var(--warning-yellow); font-size:0.75rem; margin-left:8px; background:rgba(245,158,11,0.1); padding:2px 6px; border-radius:4px;"><i class="fa-solid fa-circle-exclamation"></i> Quase no limite (Máx: ${limiteFaltas}h)</span>`;
                         }
                     } else {
-                        // Fallback se não encontrar o módulo na base de dados
                         if (dadosMod.horasTotais >= 6) {
                             avisoLimite = `<span style="color:var(--danger-red); font-size:0.75rem; margin-left:8px; background:rgba(239,68,68,0.1); padding:2px 6px; border-radius:4px;"><i class="fa-solid fa-triangle-exclamation"></i> Limite em Risco!</span>`;
                         }
@@ -984,7 +962,6 @@ async function carregarFaltasEE() {
                                 <span style="color:var(--text-muted); font-size:0.85rem;">${f.duracao}h</span>
                             </div>`;
                     });
-
                     detalhesHtml += `</div>`;
                 });
             } else {
@@ -1006,9 +983,7 @@ async function carregarFaltasEE() {
         });
 
         cadernetaContent.innerHTML = html;
-
     } catch (e) {
-        console.error("Erro ao carregar faltas na caderneta:", e);
         cadernetaContent.innerHTML = '<p class="text-danger center">Erro ao carregar faltas.</p>';
     }
 }
@@ -1018,7 +993,7 @@ async function carregarPrhfsEE() {
     try {
         const fDiscEl = document.getElementById('filtro-caderneta-disc');
         const fDisc = fDiscEl ? fDiscEl.value : "";
-        const prhfsDb = await getDocs(collection(db, "utilizadores", educandoAtualId, "prhfs"));
+        const prhfsDb = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/prhfs`);
         let prhfsArr = [];
         prhfsDb.forEach(d => {
             const p = d.data();
@@ -1042,95 +1017,75 @@ async function carregarPrhfsEE() {
     } catch (e) { }
 }
 
-async function carregarReunioesEE(reuniaoSelecionada = 'momento_1') {
-    const cadernetaContent = document.getElementById('ee-caderneta-content');
+async function carregarAgendaEE() {
+    const subContainer = document.getElementById('ee-agenda-content');
+    if (!subContainer) return;
+    subContainer.innerHTML = '<p class="text-muted center">A sincronizar agenda...</p>';
+    if (!turmaAtual) return;
 
-    // Agora apontamos para os IDs reais que os professores gravam na base de dados (momento_1, momento_2, etc)
-    const reunioesMenu = [
-        { id: 'momento_1', label: '1ª Intercalar' },
-        { id: 'momento_2', label: '1ª Avaliação' },
-        { id: 'momento_3', label: '2ª Intercalar' },
-        { id: 'momento_4', label: '2ª Avaliação' },
-        { id: 'momento_5', label: '3ª Avaliação' }
-    ];
-
-    let html = '<div style="display:flex; overflow-x:auto; gap:10px; margin-bottom:20px; padding-bottom:10px;">';
-    reunioesMenu.forEach(r => {
-        const bg = r.id === reuniaoSelecionada ? 'var(--primary-green)' : 'var(--bg-dark)';
-        const color = r.id === reuniaoSelecionada ? 'var(--bg-dark)' : 'var(--text-muted)';
-        html += `<button class="btn-select-reuniao" data-id="${r.id}" style="background:${bg}; color:${color}; border:1px solid #333; padding:8px 15px; border-radius:20px; cursor:pointer; font-weight:bold; white-space:nowrap; transition:0.2s; flex-shrink:0;">${r.label}</button>`;
-    });
-    html += '</div><div id="reuniao-content-area"><p class="text-muted center">A carregar dados...</p></div>';
-
-    if (cadernetaContent) cadernetaContent.innerHTML = html;
-
-    document.querySelectorAll('.btn-select-reuniao').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            carregarReunioesEE(e.currentTarget.getAttribute('data-id'));
-        });
-    });
+    const elT = document.getElementById('filtro-agenda-testes');
+    const elTr = document.getElementById('filtro-agenda-trabalhos');
+    const elO = document.getElementById('filtro-agenda-outros');
+    const mostraT = elT ? elT.checked : true;
+    const mostraTr = elTr ? elTr.checked : true;
+    const mostraO = elO ? elO.checked : true;
 
     try {
-        const docSnap = await getDoc(doc(db, "utilizadores", educandoAtualId, "reunioes", reuniaoSelecionada));
-        let dadosReuniao = docSnap.exists() ? docSnap.data() : {};
-
-        let contentHtml = '<div style="display:flex; flex-direction:column; gap:10px;">';
-
-        // =========================================================================
-        // O CADEADO: Verifica se o Diretor de Turma já publicou as sínteses!
-        // =========================================================================
-        if (dadosReuniao.publicado !== true) {
-            contentHtml += `
-                <div style="text-align: center; padding: 40px 20px; border: 1px dashed #444; border-radius: 8px; background: rgba(0,0,0,0.2);">
-                    <i class="fa-solid fa-lock" style="font-size: 3rem; color: #555; margin-bottom: 15px;"></i>
-                    <h4 style="color: var(--text-light); font-size: 1.1rem; margin-bottom: 8px;">Reunião Em Processamento</h4>
-                    <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0;">As sínteses e os pareceres deste momento de avaliação ainda não foram disponibilizados pelo Diretor de Turma.</p>
-                </div>
-            </div>`;
-            const rArea = document.getElementById('reuniao-content-area');
-            if (rArea) rArea.innerHTML = contentHtml;
-            return; // Aborta e não desenha as disciplinas!
+        const evDb = await lerFirebaseOuCacheEE(`turmas/${turmaAtual}/eventos`);
+        if (evDb.empty) {
+            subContainer.innerHTML = getEmptyState('Sem eventos agendados.', 'fa-calendar-xmark');
+            return;
         }
-        // =========================================================================
 
-        const ordemDisciplinas = obterDisciplinasDoAno();
+        let evs = [];
+        evDb.forEach(d => {
+            const e = d.data();
+            let bgC = '#8b5cf6';
+            let txtT = 'Evento';
 
-        if (ordemDisciplinas.length === 0) {
-            contentHtml += '<p class="text-muted center">Ainda não existem disciplinas associadas à turma.</p>';
+            if (e.tipo === 'teste' || e.tipo === 'avaliacao') {
+                if (mostraT) { bgC = '#f59e0b'; txtT = 'Avaliação'; evs.push({ ...e, cor: bgC, txt: txtT }); }
+            }
+            else if (e.tipo === 'trabalho' || e.tipo === 'entrega') {
+                if (mostraTr) { bgC = '#00d2ff'; txtT = 'Entrega'; evs.push({ ...e, cor: bgC, txt: txtT }); }
+            }
+            else {
+                if (mostraO) evs.push({ ...e, cor: bgC, txt: txtT });
+            }
+        });
+
+        if (evs.length === 0) {
+            subContainer.innerHTML = getEmptyState('Sem eventos com os filtros atuais.', 'fa-filter');
+            return;
+        }
+
+        const hoje = new Date().toISOString().split('T')[0];
+        const futuros = evs.filter(e => (e.data || '') >= hoje).sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+        const passados = evs.filter(e => (e.data || '') < hoje).sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+        const mesArr = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+        let html = '';
+
+        const renderEv = (ev) => {
+            if (!ev.data) return '';
+            const dp = ev.data.split('-');
+            const mes = mesArr[parseInt(dp[1]) - 1];
+            return `<div class="calendar-event-card" style="border-left-color:${ev.cor}; margin-bottom:10px;"><div class="calendar-date-box"><span class="day">${dp[2]}</span><span class="month" style="color:${ev.cor};">${mes}</span></div><div class="calendar-info"><h4 style="margin:0; color:var(--text-light);">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt || 'evento').toUpperCase()}</span></div></div>`;
+        };
+
+        if (futuros.length > 0) {
+            futuros.forEach(e => html += renderEv(e));
         } else {
-            // Renderiza as disciplinas usando a nova estrutura de dados (sinteses_disciplinas)
-            ordemDisciplinas.forEach(disc => {
-                let comentario = '<span style="color:var(--text-muted);">Sem comentário (SN)</span>';
-                if (dadosReuniao.sinteses_disciplinas && dadosReuniao.sinteses_disciplinas[disc]) {
-                    comentario = dadosReuniao.sinteses_disciplinas[disc];
-                }
-                contentHtml += `<div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;">
-                                    <h4 style="margin-bottom:8px; color:var(--text-light); font-size:1rem;">${disc}</h4>
-                                    <p style="color:var(--text-light); font-size:0.9rem; line-height:1.5; margin:0; white-space: pre-wrap;">${comentario}</p>
-                                </div>`;
-            });
+            html += '<p class="text-muted center">Sem eventos futuros.</p>';
         }
 
-        // Renderiza as observações globais do Diretor de Turma (sintese_global)
-        const global = dadosReuniao.sintese_global || '<span style="color:var(--text-muted);">Sem observações globais registadas (SN).</span>';
+        if (passados.length > 0) {
+            html += '<div class="calendar-divider" style="margin-top:20px;"><span>Passados</span></div>';
+            passados.forEach(e => html += renderEv(e));
+        }
 
-        contentHtml += `<div class="card" style="margin-top:15px; border:1px solid var(--warning-yellow); background:rgba(245,204,0,0.05); padding:15px;">
-                            <h3 style="color:var(--warning-yellow); margin-bottom:10px; font-size:1.1rem;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3>
-                            <p style="color:var(--text-light); font-size:0.95rem; line-height:1.6; margin:0; white-space: pre-wrap;">${global}</p>
-                        </div></div>`;
-
-        const rArea = document.getElementById('reuniao-content-area');
-        if (rArea) rArea.innerHTML = contentHtml;
-    } catch (e) {
-        const rArea = document.getElementById('reuniao-content-area');
-        if (rArea) rArea.innerHTML = '<p class="text-danger center">Erro ao carregar a reunião.</p>';
-    }
+        subContainer.innerHTML = html;
+    } catch (e) { }
 }
-
-// 5. AGENDA E HORÁRIO
-bindChange('filtro-agenda-testes', carregarAgendaEE);
-bindChange('filtro-agenda-trabalhos', carregarAgendaEE);
-bindChange('filtro-agenda-outros', carregarAgendaEE);
 
 async function carregarAgendaEE() {
     const subContainer = document.getElementById('ee-agenda-content');
