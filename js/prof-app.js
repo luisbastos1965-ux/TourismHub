@@ -189,6 +189,11 @@ onAuthStateChanged(auth, async (user) => {
             if (docSnap.exists()) {
                 state.profData = docSnap.data();
 
+                // TRUQUE DE MESTRE: Traduz a turma da BD para que todos os modais (Faltas, Notas, Planta, etc) a reconheçam automaticamente!
+                if (state.profData.turma_direcao) {
+                    state.profData.turmaDT = state.profData.turma_direcao;
+                }
+
                 // --- NOVA LÓGICA DE EXTRAÇÃO DE TURMAS E DISCIPLINAS ---
                 state.myRoles = state.profData.cargos_especiais || [];
 
