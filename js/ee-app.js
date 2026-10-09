@@ -107,31 +107,59 @@ function obterDisciplinasDoAno() {
 // ==========================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        myUserId = user.email.split('@')[0].toLowerCase();
+        let rawId = user.email.split('@')[0].toLowerCase();
+        
+        // TRUQUE INTELIGENTE: Se o ID começar por 'a' (ex: a3726), 
+        // a aplicação converte automaticamente para 'e' (ex: e3726) para encontrar o documento do EE!
+        if (rawId.startsWith('a')) {
+            myUserId = 'e' + rawId.substring(1);
+        } else {
+            myUserId = rawId;
+        }
+
+        console.log("🔍 [DEBUG EE] ID original do email:", rawId);
+        console.log("🔍 [DEBUG EE] ID ajustado para procurar na BD:", myUserId);
+
         try {
-            const docSnap = await getDoc(doc(db, "utilizadores", myUserId));
-            if (docSnap.exists() && docSnap.data().papel === 'ee') {
+            const docRef = doc(db, "utilizadores", myUserId);
+            const docSnap = await getDoc(docRef);
+            
+            if (docSnap.exists()) {
                 const dados = docSnap.data();
-                myUserName = dados.nome || "Encarregado";
+                
+                // Aceita 'ee' ou 'encarregado' independentemente de maiúsculas/minúsculas
+                const papelUser = (dados.papel || "").toLowerCase();
+                
+                if (papelUser === 'ee' || papelUser === 'encarregado') {
+                    myUserName = dados.nome || "Encarregado";
 
-                let arr = [];
-                if (dados.educandos && Array.isArray(dados.educandos)) { arr = dados.educandos; }
-                else if (dados.educandoId && Array.isArray(dados.educandoId)) { arr = dados.educandoId; }
-                else if (dados.educandoId && typeof dados.educandoId === 'string') { arr = [dados.educandoId]; }
-                else if (dados.educando) { arr = [dados.educando]; }
+                    let arr = [];
+                    if (dados.educandos && Array.isArray(dados.educandos)) { arr = dados.educandos; }
+                    else if (dados.educandoId && Array.isArray(dados.educandoId)) { arr = dados.educandoId; }
+                    else if (dados.educandoId && typeof dados.educandoId === 'string') { arr = [dados.educandoId]; }
+                    else if (dados.educando) { arr = [dados.educando]; }
 
-                educandosArray = arr;
+                    educandosArray = arr;
 
-                if (educandosArray.length > 0) {
-                    await construirSeletorEducandos();
+                    if (educandosArray.length > 0) {
+                        await construirSeletorEducandos();
+                    } else {
+                        document.getElementById('header-ee-student-selector').innerHTML = '<option value="">Sem alunos</option>';
+                        document.getElementById('ee-dashboard').innerHTML = getEmptyState('Sem educandos associados na base de dados.', 'fa-user-group');
+                    }
                 } else {
-                    document.getElementById('header-ee-student-selector').innerHTML = '<option value="">Sem alunos</option>';
-                    document.getElementById('ee-dashboard').innerHTML = getEmptyState('Sem educandos associados na base de dados.', 'fa-user-group');
+                    console.warn("⚠️ O utilizador existe mas o papel não é 'ee'. Papel encontrado:", dados.papel);
+                    alert("A sua conta não tem permissões de Encarregado de Educação.");
+                    window.location.href = "index.html";
                 }
             } else {
+                console.error("❌ O ID (" + myUserId + ") não foi encontrado na coleção 'utilizadores'.");
+                alert("Erro: Perfil de Encarregado de Educação não encontrado na base de dados.");
                 window.location.href = "index.html";
             }
-        } catch (e) { }
+        } catch (e) {
+            console.error("🔥 Erro crítico ao carregar dados do EE:", e);
+        }
     } else {
         window.location.href = "index.html";
     }
