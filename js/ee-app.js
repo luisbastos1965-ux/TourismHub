@@ -107,37 +107,24 @@ function obterDisciplinasDoAno() {
 // ==========================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        let rawId = user.email.split('@')[0].toLowerCase();
-        
-        // TRUQUE INTELIGENTE: Se o ID começar por 'a' (ex: a3726), 
-        // a aplicação converte automaticamente para 'e' (ex: e3726) para encontrar o documento do EE!
-        if (rawId.startsWith('a')) {
-            myUserId = 'e' + rawId.substring(1);
-        } else {
-            myUserId = rawId;
-        }
-
-        console.log("🔍 [DEBUG EE] ID original do email:", rawId);
-        console.log("🔍 [DEBUG EE] ID ajustado para procurar na BD:", myUserId);
-
+        myUserId = user.email.split('@')[0].toLowerCase();
         try {
-            const docRef = doc(db, "utilizadores", myUserId);
-            const docSnap = await getDoc(docRef);
+            const docSnap = await getDoc(doc(db, "utilizadores", myUserId));
             
             if (docSnap.exists()) {
                 const dados = docSnap.data();
-                
-                // Aceita 'ee' ou 'encarregado' independentemente de maiúsculas/minúsculas
                 const papelUser = (dados.papel || "").toLowerCase();
                 
-                if (papelUser === 'ee' || papelUser === 'encarregado') {
+                // Aceita tanto 'ee' como 'encarregado_educacao'
+                if (papelUser === 'ee' || papelUser === 'encarregado_educacao') {
                     myUserName = dados.nome || "Encarregado";
 
+                    // Lê os educandos independentemente de estarem no singular, plural ou array
                     let arr = [];
-                    if (dados.educandos && Array.isArray(dados.educandos)) { arr = dados.educandos; }
+                    if (dados.educando) { arr = [dados.educando]; }
+                    else if (dados.educandos && Array.isArray(dados.educandos)) { arr = dados.educandos; }
                     else if (dados.educandoId && Array.isArray(dados.educandoId)) { arr = dados.educandoId; }
                     else if (dados.educandoId && typeof dados.educandoId === 'string') { arr = [dados.educandoId]; }
-                    else if (dados.educando) { arr = [dados.educando]; }
 
                     educandosArray = arr;
 
@@ -148,17 +135,14 @@ onAuthStateChanged(auth, async (user) => {
                         document.getElementById('ee-dashboard').innerHTML = getEmptyState('Sem educandos associados na base de dados.', 'fa-user-group');
                     }
                 } else {
-                    console.warn("⚠️ O utilizador existe mas o papel não é 'ee'. Papel encontrado:", dados.papel);
                     alert("A sua conta não tem permissões de Encarregado de Educação.");
                     window.location.href = "index.html";
                 }
             } else {
-                console.error("❌ O ID (" + myUserId + ") não foi encontrado na coleção 'utilizadores'.");
-                alert("Erro: Perfil de Encarregado de Educação não encontrado na base de dados.");
                 window.location.href = "index.html";
             }
         } catch (e) {
-            console.error("🔥 Erro crítico ao carregar dados do EE:", e);
+            console.error("Erro no login EE:", e);
         }
     } else {
         window.location.href = "index.html";
@@ -169,6 +153,7 @@ async function construirSeletorEducandos() {
     const selector = document.getElementById('header-ee-student-selector');
     if (!selector) return;
     selector.innerHTML = '';
+    
     for (let id of educandosArray) {
         if (!id) continue;
         try {
@@ -182,6 +167,7 @@ async function construirSeletorEducandos() {
             }
         } catch (e) { }
     }
+    
     if (selector.options.length > 0) {
         educandoAtualId = selector.value;
         carregarDadosDoFilhoSelecionado();
