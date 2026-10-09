@@ -465,18 +465,15 @@ export async function analisarEAtualizarTurma(turmaId) {
         document.getElementById('badge-dt-turma').style.display = 'none'; 
     }
     
-    // VISUAL DOS BOTÕES INFERIORES LIMPO
     const lmsGrid = document.querySelector('.lms-action-grid');
     const btnMateriais = document.getElementById('btn-modal-materiais');
     
     if (lmsGrid) {
         lmsGrid.style.display = 'grid';
         if (state.activeRole === 'diretor_turma' && isDT) {
-            // Se for DT na sua turma, só mostra Faltas e Notas (esconde sumário)
             lmsGrid.style.setProperty('grid-template-columns', '1fr 1fr', 'important');
             if (btnMateriais) btnMateriais.style.display = 'none';
         } else {
-            // Se for Professor base, mostra Faltas, Notas e Sumário (3 colunas/botoes)
             lmsGrid.style.setProperty('grid-template-columns', '1fr 1fr', 'important');
             if (btnMateriais) btnMateriais.style.display = '';
         }
@@ -491,16 +488,11 @@ export async function analisarEAtualizarTurma(turmaId) {
         const agora = Date.now();
         const tempoGuardado = localStorage.getItem(tempoChave);
 
-        // 1. O COFRE: LER DA MEMÓRIA
         if (tempoGuardado && (agora - parseInt(tempoGuardado) < 43200000)) {
-            console.log(`⚡ A ler Turma ${turmaId} da Memória Local`);
             alunosProcessados = JSON.parse(localStorage.getItem(cacheChave));
-            // Precisamos do state global para preencher a pauta depois
             state.alunosTurmaRAM = alunosProcessados; 
         } 
-        // 2. IR AO FIREBASE
         else {
-            console.log(`🔥 A ler Firebase (Turma ${turmaId})...`);
             const qAlunos = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turmaId), where("papel", "==", "aluno")));
             state.alunosTurmaRAM = []; 
             qAlunos.forEach(d => state.alunosTurmaRAM.push({ id: d.id, ...d.data() })); 
@@ -525,7 +517,16 @@ export async function analisarEAtualizarTurma(turmaId) {
                     } 
                 });
 
-                const notasCombinadas = [...(avalSnap.docs || []), ...(notasOldSnap.docs || [])];
+                // --- O DESEMPACOTADOR ENTRA AQUI ---
+                let notasCombinadas = [...(avalSnap.docs || [])];
+                if(notasOldSnap && notasOldSnap.docs) {
+                    notasOldSnap.forEach(d => {
+                        const data = d.data();
+                        if (data.lista_notas) data.lista_notas.forEach(n => notasCombinadas.push({ data: () => n }));
+                        else if (data.disciplina) notasCombinadas.push(d);
+                    });
+                }
+
                 notasCombinadas.forEach(n => {
                     if (matVerificar.includes(n.data().disciplina) && n.data().nota === 'REP') {
                         const mId = `${n.data().disciplina}_${n.data().modulo}`;
@@ -537,14 +538,12 @@ export async function analisarEAtualizarTurma(turmaId) {
             });
 
             alunosProcessados = await Promise.all(promisesAlunos);
-            state.alunosTurmaRAM = alunosProcessados; // Reatribui já com os dados somados
+            state.alunosTurmaRAM = alunosProcessados; 
             
-            // GUARDA NO COFRE
             localStorage.setItem(cacheChave, JSON.stringify(alunosProcessados));
             localStorage.setItem(tempoChave, agora.toString());
         }
 
-        // DESENHAR O ECRÃ
         let alunosEmRisco = 0; let totalPrhfs = 0; let totalRepsAtraso = 0; let htmlAlunos = '';
 
         alunosProcessados.forEach(al => {
@@ -606,15 +605,12 @@ export async function renderizarPautaTurma() {
     
     const discSelect = document.getElementById('pauta-disc-select');
     
-    // CORREÇÃO 1: Mostrar SEMPRE o seletor para saberes o que estás a ver!
     discSelect.style.display = 'block'; 
     
     if(isDT) { 
-        // Se for DT, tenta ler a ordem global do curso
         const discValidas = typeof filtrarDisciplinasDoAno === "function" ? filtrarDisciplinasDoAno(state.selectedTurma, ordemDisciplinasGlobal) : ordemDisciplinasGlobal;
         discSelect.innerHTML = discValidas.map(dc => `<option value="${dc}">${dc}</option>`).join(''); 
     } else { 
-        // Se for Professor, lê as suas disciplinas
         const discValidas = state.disciplinasProfessor || [];
         discSelect.innerHTML = discValidas.map(dc => `<option value="${dc}">${dc}</option>`).join(''); 
     }
@@ -629,33 +625,34 @@ export async function renderizarPautaTurma() {
         let html = `<tr><th style="text-align:left;">Aluno</th><th style="text-align:center;">Mod. 1</th><th style="text-align:center;">Mod. 2</th><th style="text-align:center;">Mod. 3</th><th style="text-align:center;">Média</th></tr>`;
         
         for(const al of state.alunosTurmaRAM) {
-            // CORREÇÃO 2: Procurar na coleção correta "avaliacoes" (onde a nossa App grava). 
-            // Adicionei também a "notas" caso o Excel tenha ido parar lá por engano!
             const nS_novas = await getDocs(collection(db, "utilizadores", al.id, "avaliacoes"));
             const nS_antigas = await getDocs(collection(db, "utilizadores", al.id, "notas"));
-            const todosRegistos = [...nS_novas.docs, ...nS_antigas.docs];
+            
+            // --- O DESEMPACOTADOR AQUI ---
+            let todosRegistos = [...nS_novas.docs];
+            nS_antigas.forEach(d => {
+                const data = d.data();
+                if(data.lista_notas) data.lista_notas.forEach(n => todosRegistos.push({ data: () => n }));
+                else if(data.disciplina) todosRegistos.push(d);
+            });
 
             let m1='-', m2='-', m3='-'; 
             let sum = 0; let count = 0;
             
             todosRegistos.forEach(n => {
                 const d = n.data();
-                // Limpa espaços vazios no nome da disciplina vindos do Excel
                 const nomeDisciplina = String(d.disciplina || '').trim();
                 
                 if(nomeDisciplina === curDisc) {
-                    // CORREÇÃO 3: Arrancar o número exato do módulo (ex: "Módulo 1" -> 1, "02" -> 2)
                     const modStr = String(d.modulo || '').replace(/\D/g, ''); 
                     const modNum = parseInt(modStr, 10);
                     
                     const notaRaw = String(d.nota || '').trim().toUpperCase();
                     
-                    // Coloca a nota na coluna certa, independentemente de como o Excel escreveu
                     if(modNum === 1) m1 = notaRaw;
                     else if(modNum === 2) m2 = notaRaw;
                     else if(modNum === 3) m3 = notaRaw;
                     
-                    // Soma para a média apenas se for número válido (ignora 'REP')
                     if(notaRaw !== 'REP' && !isNaN(notaRaw) && notaRaw !== '') { 
                         sum += Number(notaRaw); 
                         count++; 
@@ -933,7 +930,7 @@ export async function abrirPerfil360Aluno(alunoId) {
             const ctxEl = document.getElementById('chartEvolucaoAluno');
             if (ctxEl) {
                 if (window.graficoAlunoInstance) window.graficoAlunoInstance.destroy();
-                if (state.chartEvolucao) { state.chartEvolucao.destroy(); state.chartEvolucao = null; } // Apaga vestígios do sistema antigo
+                if (state.chartEvolucao) { state.chartEvolucao.destroy(); state.chartEvolucao = null; }
 
                 window.graficoAlunoInstance = new Chart(ctxEl, {
                     type: 'line',
@@ -995,27 +992,34 @@ export async function abrirPerfil360Aluno(alunoId) {
         
         const extrairMod = (dados, idDoc) => {
             let m = dados.modulo || dados.mod || dados.ufcd;
-            if (!m && idDoc) m = idDoc.split('_').pop();
+            if (!m && idDoc && idDoc !== 'hist') m = idDoc.split('_').pop();
             return parseInt(String(m).replace(/\D/g, '')) || m || "?";
         };
 
-        // Ler notas da NOVA gaveta
         const nS = await getDocs(collection(db, "utilizadores", alunoId, "avaliacoes")); 
-        nS.forEach(n => { 
-            if(disciplinasDoAno.includes(n.data().disciplina)) { 
-                const mFormatado = extrairMod(n.data(), n.id);
-                state.notasAlunoRAM.push({ disciplina: n.data().disciplina, moduloReal: mFormatado, notaOriginal: n.data().nota, valor: isNaN(n.data().nota) ? 0 : Number(n.data().nota) }); 
-            } 
+        const oldS = await getDocs(collection(db, "utilizadores", alunoId, "notas")); 
+
+        // --- O DESEMPACOTADOR ENTRA AQUI ---
+        let notasProcessadas = [...nS.docs];
+        oldS.forEach(d => {
+            const data = d.data();
+            if(data.lista_notas) data.lista_notas.forEach(n => notasProcessadas.push({ data: () => n, id: 'hist' })); // id mock para evitar quebra no extrairMod
+            else if(data.disciplina) notasProcessadas.push(d);
         });
 
-        // Ler notas da VELHA gaveta
-        const oldS = await getDocs(collection(db, "utilizadores", alunoId, "notas")); 
-        oldS.forEach(n => { 
-            if(disciplinasDoAno.includes(n.data().disciplina)) { 
-                const mFormatado = extrairMod(n.data(), n.id);
+        // Agora processamos o array unificado (antigas + novas)
+        notasProcessadas.forEach(n => { 
+            const dados = n.data();
+            if(disciplinasDoAno.includes(dados.disciplina)) { 
+                const mFormatado = extrairMod(dados, n.id);
                 // Evita notas duplicadas caso exista migração
-                if (!state.notasAlunoRAM.some(existente => existente.disciplina === n.data().disciplina && String(existente.moduloReal) === String(mFormatado))) {
-                    state.notasAlunoRAM.push({ disciplina: n.data().disciplina, moduloReal: mFormatado, notaOriginal: n.data().nota, valor: isNaN(n.data().nota) ? 0 : Number(n.data().nota) }); 
+                if (!state.notasAlunoRAM.some(existente => existente.disciplina === dados.disciplina && String(existente.moduloReal) === String(mFormatado))) {
+                    state.notasAlunoRAM.push({ 
+                        disciplina: dados.disciplina, 
+                        moduloReal: mFormatado, 
+                        notaOriginal: dados.nota, 
+                        valor: isNaN(dados.nota) ? 0 : Number(dados.nota) 
+                    }); 
                 }
             } 
         });
@@ -1066,7 +1070,6 @@ export async function abrirPerfil360Aluno(alunoId) {
                 });
                 discSintSelect.innerHTML = opts;
                 
-                // CORREÇÃO: Mostra sempre a caixa, mas bloqueia se for só 1 disciplina (ajuda visual)
                 discSintSelect.style.display = 'block';
                 discSintSelect.disabled = state.disciplinasProfessor.length === 1;
             }

@@ -187,62 +187,62 @@ onAuthStateChanged(auth, async (user) => {
             const docSnap = await getDoc(doc(db, "utilizadores", state.myUserId));
 
             if (docSnap.exists()) {
-    state.profData = docSnap.data();
-    
-    // --- NOVA LÓGICA DE EXTRAÇÃO DE TURMAS E DISCIPLINAS ---
-    state.myRoles = state.profData.cargos_especiais || [];
+                state.profData = docSnap.data();
 
-    let turmasSet = new Set();
-    let discSet = new Set();
+                // --- NOVA LÓGICA DE EXTRAÇÃO DE TURMAS E DISCIPLINAS ---
+                state.myRoles = state.profData.cargos_especiais || [];
 
-    if (state.profData.atribuicoes) {
-        state.profData.atribuicoes.forEach(atrib => {
-            const partes = atrib.split('-'); // Corta pelo hífen
-            if (partes.length >= 2) {
-                turmasSet.add(partes[0].trim()); // Guarda a turma "10T"
-                discSet.add(partes[1].trim());   // Guarda a disciplina "AI"
-            }
-        });
-    }
+                let turmasSet = new Set();
+                let discSet = new Set();
 
-    // Mantém compatibilidade caso noutros professores uses os campos antigos
-    (state.profData.turmas || []).forEach(t => turmasSet.add(t));
-    (state.profData.disciplinas || []).forEach(d => discSet.add(d));
+                if (state.profData.atribuicoes) {
+                    state.profData.atribuicoes.forEach(atrib => {
+                        const partes = atrib.split('-'); // Corta pelo hífen
+                        if (partes.length >= 2) {
+                            turmasSet.add(partes[0].trim()); // Guarda a turma "10T"
+                            discSet.add(partes[1].trim());   // Guarda a disciplina "AI"
+                        }
+                    });
+                }
 
-    state.turmasProfessor = Array.from(turmasSet);
-    state.disciplinasProfessor = Array.from(discSet);
+                // Mantém compatibilidade caso noutros professores uses os campos antigos
+                (state.profData.turmas || []).forEach(t => turmasSet.add(t));
+                (state.profData.disciplinas || []).forEach(d => discSet.add(d));
 
-    // Lê o campo turma_direcao
-    state.minhaTurmaDT = state.profData.turma_direcao || state.profData.turmaDT || (state.turmasProfessor.length > 0 ? state.turmasProfessor[0] : "10T");
-    // --- FIM DA NOVA LÓGICA ---
+                state.turmasProfessor = Array.from(turmasSet);
+                state.disciplinasProfessor = Array.from(discSet);
 
-    if (state.profData.papel && !state.myRoles.includes(state.profData.papel)) {
-        state.myRoles.push(state.profData.papel);
-    }
+                // Lê o campo turma_direcao
+                state.minhaTurmaDT = state.profData.turma_direcao || state.profData.turmaDT || (state.turmasProfessor.length > 0 ? state.turmasProfessor[0] : "10T");
+                // --- FIM DA NOVA LÓGICA ---
 
-    if (state.myRoles.some(r => ['professor', 'diretor_turma', 'orientador_pap', 'coordenador'].includes(r))) {
-        let baseName = state.profData.nome || state.profData.nomeCompleto || state.profData.Nome || state.myUserId;
-        state.myUserName = baseName.replace(/^(Prof\.|Professor|Professora|Prof)\s+/i, '').trim();
+                if (state.profData.papel && !state.myRoles.includes(state.profData.papel)) {
+                    state.myRoles.push(state.profData.papel);
+                }
 
-        document.getElementById('header-user-name-prof').innerText = state.myUserName;
+                if (state.myRoles.some(r => ['professor', 'diretor_turma', 'orientador_pap', 'coordenador'].includes(r))) {
+                    let baseName = state.profData.nome || state.profData.nomeCompleto || state.profData.Nome || state.myUserId;
+                    state.myUserName = baseName.replace(/^(Prof\.|Professor|Professora|Prof)\s+/i, '').trim();
 
-        const configuracaoPerfis = {
-            'professor': { nome: 'Professor', cor: '#64748b' },
-            'diretor_turma': { nome: 'Diretor de Turma', cor: '#f59e0b' },
-            'coordenador': { nome: 'Coordenador', cor: '#9333ea' },
-            'orientador_pap': { nome: 'Orientador PAP', cor: '#10b981' }
-        };
+                    document.getElementById('header-user-name-prof').innerText = state.myUserName;
 
-        let dropdownHtml = '';
-        state.myRoles.forEach(papel => {
-            if (configuracaoPerfis[papel]) {
-                dropdownHtml += `
+                    const configuracaoPerfis = {
+                        'professor': { nome: 'Professor', cor: '#64748b' },
+                        'diretor_turma': { nome: 'Diretor de Turma', cor: '#f59e0b' },
+                        'coordenador': { nome: 'Coordenador', cor: '#9333ea' },
+                        'orientador_pap': { nome: 'Orientador PAP', cor: '#10b981' }
+                    };
+
+                    let dropdownHtml = '';
+                    state.myRoles.forEach(papel => {
+                        if (configuracaoPerfis[papel]) {
+                            dropdownHtml += `
                 <button onclick="window.mudarCapaProfessor('${papel}')" style="width: 100%; text-align: left; padding: 12px 15px; background: transparent; border: none; color: white; cursor: pointer; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 10px;">
                     <span style="width: 10px; height: 10px; border-radius: 50%; background-color: ${configuracaoPerfis[papel].cor};"></span> ${configuracaoPerfis[papel].nome}
                 </button>`;
-            }
-        });
-        document.getElementById('lista-capas-dropdown').innerHTML = dropdownHtml;
+                        }
+                    });
+                    document.getElementById('lista-capas-dropdown').innerHTML = dropdownHtml;
 
                     window.mudarCapaProfessor = (novoPapel) => {
                         state.activeRole = novoPapel;
@@ -505,11 +505,18 @@ document.body.addEventListener('change', async (e) => {
                             if (snap.exists()) {
                                 notaVal = snap.data().nota;
                             } else {
-                                // 3. Procurar na velha gaveta (Ignora o formato Número vs Texto)
-                                const oldNotas = await getDocs(query(collection(db, "utilizadores", alunoId, "notas"), where("disciplina", "==", disc)));
-                                oldNotas.forEach(nDoc => {
-                                    if (String(nDoc.data().modulo) === String(mod)) notaVal = nDoc.data().nota;
-                                });
+                                // 3. Procurar na velha gaveta agregada
+                                const oldNotasDoc = await getDoc(doc(db, "utilizadores", alunoId, "notas", "historico_agregado"));
+                                if (oldNotasDoc.exists() && oldNotasDoc.data().lista_notas) {
+                                    const notaAntiga = oldNotasDoc.data().lista_notas.find(n => n.disciplina === disc && String(n.modulo) === String(mod));
+                                    if (notaAntiga) notaVal = notaAntiga.nota;
+                                } else {
+                                    // Fallback de segurança (caso o aluno não tenha o histórico agregado por algum motivo)
+                                    const oldNotas = await getDocs(query(collection(db, "utilizadores", alunoId, "notas"), where("disciplina", "==", disc)));
+                                    oldNotas.forEach(nDoc => {
+                                        if (String(nDoc.data().modulo) === String(mod)) notaVal = nDoc.data().nota;
+                                    });
+                                }
                             }
 
                             // 4. Se a nota existir, pinta o botão e mostra o lixo!
@@ -894,7 +901,7 @@ document.body.addEventListener('click', async (e) => {
 
         const modal = document.getElementById('modal-contactos-aluno');
         const btn = document.getElementById('btn-abrir-contactos-360');
-        
+
         if (!modal) {
             alert("Erro: O HTML do modal de contactos não está no prof.html!");
             return;
@@ -902,15 +909,15 @@ document.body.addEventListener('click', async (e) => {
 
         const originalHtml = btn.innerHTML;
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size: 1.3rem;"></i> <span style="font-size: 0.9rem; text-align: center; line-height: 1.2;">A carregar...</span>';
-        
+
         try {
             const snap = await getDoc(doc(db, "utilizadores", alunoId));
             if (snap.exists()) {
                 const dados = snap.data();
-                
+
                 // 1. Guardar o ID no input escondido
                 document.getElementById('contactos-aluno-id').value = alunoId;
-                
+
                 // 2. Preencher a zona de LEITURA (Spans)
                 document.getElementById('display-info-morada').innerText = dados.morada || "-";
                 document.getElementById('display-info-tel').innerText = dados.telAluno || "-";
@@ -930,13 +937,13 @@ document.body.addEventListener('click', async (e) => {
                 document.getElementById('info-ee-tel').value = dados.telEE || "";
                 document.getElementById('info-ee-email').value = dados.emailEE || "";
             }
-            
+
             // 4. Forçar o modal a abrir no estado inicial (Leitura)
             const painelLeitura = document.getElementById('contactos-modo-leitura');
             const painelEdicao = document.getElementById('contactos-modo-edicao');
             const btnToggle = document.getElementById('btn-toggle-edicao-contactos');
-            
-            if(painelLeitura && painelEdicao && btnToggle) {
+
+            if (painelLeitura && painelEdicao && btnToggle) {
                 painelLeitura.style.display = 'block';
                 painelEdicao.style.display = 'none';
                 btnToggle.innerHTML = '<i class="fa-solid fa-pen"></i> Editar Informações';
@@ -964,10 +971,10 @@ document.body.addEventListener('click', async (e) => {
         if (modoAtual === 'leitura') {
             document.getElementById('contactos-modo-leitura').style.display = 'none';
             document.getElementById('contactos-modo-edicao').style.display = 'block';
-            
+
             btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar Alterações';
             btn.setAttribute('data-mode', 'edicao');
-        } 
+        }
         else {
             const originalHtml = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A gravar...';
@@ -995,11 +1002,11 @@ document.body.addEventListener('click', async (e) => {
                 document.getElementById('display-info-ee-email').innerText = document.getElementById('info-ee-email').value.trim() || "-";
 
                 btn.innerHTML = '<i class="fa-solid fa-check"></i> Gravado!';
-                
+
                 setTimeout(() => {
                     document.getElementById('contactos-modo-leitura').style.display = 'block';
                     document.getElementById('contactos-modo-edicao').style.display = 'none';
-                    
+
                     btn.innerHTML = '<i class="fa-solid fa-pen"></i> Editar Informações';
                     btn.setAttribute('data-mode', 'leitura');
                     btn.disabled = false;
@@ -1019,17 +1026,17 @@ document.body.addEventListener('click', async (e) => {
     // ==========================================
     if (e.target.closest('.clickable-contact')) {
         const el = e.target.closest('.clickable-contact');
-        const tipo = el.getAttribute('data-type'); 
-        const valor = el.innerText; 
-        
-        if (valor === "-" || valor === "") return; 
-        
-        if (tipo === 'tel') { 
-            document.getElementById('action-ligar').href = `tel:${valor.replace(/\s+/g, '')}`; 
-            document.getElementById('modal-telefone').style.display = 'flex'; 
-        } else if (tipo === 'email') { 
-            document.getElementById('action-enviar-email').href = `mailto:${valor}`; 
-            document.getElementById('modal-email').style.display = 'flex'; 
+        const tipo = el.getAttribute('data-type');
+        const valor = el.innerText;
+
+        if (valor === "-" || valor === "") return;
+
+        if (tipo === 'tel') {
+            document.getElementById('action-ligar').href = `tel:${valor.replace(/\s+/g, '')}`;
+            document.getElementById('modal-telefone').style.display = 'flex';
+        } else if (tipo === 'email') {
+            document.getElementById('action-enviar-email').href = `mailto:${valor}`;
+            document.getElementById('modal-email').style.display = 'flex';
         }
         return;
     }
@@ -1042,18 +1049,18 @@ document.body.addEventListener('click', async (e) => {
         if (!href) return;
         const phone = href.replace('tel:', '');
         const nomeAluno = document.getElementById('p-aluno-nome').innerText || "Aluno";
-        
+
         // Cria um ficheiro vCard virtual para o telemóvel adicionar à lista telefónica!
         const vcard = `BEGIN:VCARD\nVERSION:3.0\nFN:${nomeAluno} (Turma PRO)\nTEL;TYPE=CELL:${phone}\nEND:VCARD`;
         const blob = new Blob([vcard], { type: "text/vcard" });
         const url = URL.createObjectURL(blob);
-        
+
         const a = document.createElement('a');
         a.href = url;
         a.download = `Contacto_${nomeAluno.replace(/\s+/g, '_')}.vcf`;
         a.click();
         URL.revokeObjectURL(url);
-        
+
         document.getElementById('modal-telefone').style.display = 'none';
         return;
     }
@@ -1122,7 +1129,7 @@ document.body.addEventListener('click', async (e) => {
             carregarRadarProfessor();
             if (window.carregarAlertasBurocraticos) window.carregarAlertasBurocraticos();
         }
-        if (tId === 'view-dt-dashboard') { 
+        if (tId === 'view-dt-dashboard') {
             let turmasDoDT = [];
             if (Array.isArray(state.profData.turmaDT)) turmasDoDT = state.profData.turmaDT;
             else if (state.profData.turmaDT) turmasDoDT = [state.profData.turmaDT];
@@ -1142,8 +1149,8 @@ document.body.addEventListener('click', async (e) => {
                 m.className = 'modal-overlay';
                 m.style.zIndex = '9999';
                 m.style.display = 'flex';
-                
-                let botoes = turmasDoDT.map(t => 
+
+                let botoes = turmasDoDT.map(t =>
                     `<button class="primary-btn" style="margin-bottom:10px; width:100%; background: #b82bf2;" 
                         onclick="state.selectedTurma='${t}'; state.minhaTurmaDT='${t}'; 
                         if(document.getElementById('prof-seletor-turmas')) document.getElementById('prof-seletor-turmas').value='${t}'; 
@@ -1153,7 +1160,7 @@ document.body.addEventListener('click', async (e) => {
                         Turma ${t}
                     </button>`
                 ).join('');
-                
+
                 m.innerHTML = `<div class="action-sheet" style="max-width: 300px; padding: 20px; text-align:center; border: 1px solid #b82bf2;">
                     <h3 style="color: white; margin-bottom:15px;"><i class="fa-solid fa-users-viewfinder" style="color: #b82bf2;"></i> Gerir qual Turma?</h3>
                     ${botoes}
@@ -1369,19 +1376,19 @@ document.body.addEventListener('click', async (e) => {
         const btn = e.target.closest('.btn-apagar-falta');
         const faltaId = btn.getAttribute('data-id');
         const alunoId = btn.getAttribute('data-aluno');
-        
-        if(!confirm("Tens a certeza que queres eliminar permanentemente esta falta?")) return;
-        
+
+        if (!confirm("Tens a certeza que queres eliminar permanentemente esta falta?")) return;
+
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         try {
             const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
             await deleteDoc(doc(db, "utilizadores", alunoId, "faltas", faltaId));
-            
+
             // Remove a linha da tabela visualmente de imediato
             const row = btn.closest('tr');
-            if(row) row.remove();
-            
-        } catch(err) {
+            if (row) row.remove();
+
+        } catch (err) {
             console.error("Erro ao apagar falta:", err);
             btn.innerHTML = '<i class="fa-solid fa-trash"></i>';
         }
@@ -2709,7 +2716,7 @@ document.body.addEventListener('click', async (e) => {
 
         try {
             const docRef = doc(db, "utilizadores", alunoId, "reunioes", momento);
-            
+
             // 1. Ler a "gaveta" primeiro para NÃO APAGAR as sínteses dos colegas!
             const snapAtual = await getDoc(docRef);
             let sintesesExistentes = {};
@@ -2784,7 +2791,7 @@ document.body.addEventListener('click', async (e) => {
         try {
             // Vai buscar todos os alunos da turma
             const cS = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turma), where("papel", "==", "aluno")));
-            
+
             const operacoes = [];
             cS.forEach(d => {
                 // Injeta a permissão "publicado" na avaliação deste momento para cada aluno
@@ -3657,7 +3664,7 @@ window.carregarAlunoNoMiniModalSintese = function (linhaHTML) {
 
     // Reset Visual das 12 Escalas
     estadoEscalasAluno = {}; // Limpa as opções guardadas
-    
+
     // Volta a desenhar o Assistente do zero, começando pelo Passo 1
     if (window.renderizarDimensoesQualitativas) {
         window.renderizarDimensoesQualitativas();
@@ -3685,7 +3692,7 @@ if (modalPerfilGlobal) {
                     const alunoId = document.getElementById('perfil-aluno-id-hidden').value;
 
                     if (btnJustificar && alunoId) {
-                        
+
                         // Nova lógica blindada para quem tem múltiplas turmas de direção
                         let turmasDoDT = [];
                         if (Array.isArray(state.profData.turmaDT)) turmasDoDT = state.profData.turmaDT;
@@ -3889,12 +3896,12 @@ window.abrirChatDiretoAluno = async function (alunoId, alunoNome) {
 // ==========================================
 
 // 1. Muda a cor para verde quando se escolhe um ficheiro (MATERIAL E PRHF)
-document.addEventListener('change', function(e) {
+document.addEventListener('change', function (e) {
     // Para o modal de Material/Sumário
     if (e.target && e.target.id === 'mat-file') {
         const fileInput = e.target;
         const uploadArea = document.getElementById('mat-upload-area');
-        
+
         if (fileInput.files.length > 0) {
             const fileName = fileInput.files[0].name;
             uploadArea.innerHTML = `
@@ -3918,7 +3925,7 @@ document.addEventListener('change', function(e) {
     if (e.target && e.target.id === 'prhf-file') {
         const fileInput = e.target;
         const uploadArea = document.getElementById('prhf-upload-area');
-        
+
         if (fileInput.files.length > 0) {
             const fileName = fileInput.files[0].name;
             uploadArea.innerHTML = `
@@ -3928,10 +3935,10 @@ document.addEventListener('change', function(e) {
             `;
             uploadArea.style.borderColor = 'var(--success-green)';
             uploadArea.style.background = 'rgba(16, 185, 129, 0.05)';
-            
+
             // Lê o ficheiro e guarda na variável de estado para enviar para o Firebase
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 state.prhfBase64 = e.target.result;
             };
             reader.readAsDataURL(fileInput.files[0]);
@@ -3949,11 +3956,11 @@ document.addEventListener('change', function(e) {
 });
 
 // 2. Faz o "Reset" do formulário sempre que clicas no X de um modal
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
     if (e.target.closest('.fechar-modal')) {
         // Reset do Material
         const uploadAreaMat = document.getElementById('mat-upload-area');
-        if(uploadAreaMat) {
+        if (uploadAreaMat) {
             uploadAreaMat.innerHTML = `
                 <i class="fa-solid fa-paperclip" style="font-size:1.5rem; color:#0099ff; margin-bottom:10px;"></i>
                 <h4 style="color:white; margin-bottom:5px; font-size:0.85rem;">Anexar Ficha (Opcional)</h4>
@@ -3961,12 +3968,12 @@ document.addEventListener('click', function(e) {
             uploadAreaMat.style.borderColor = '#0099ff';
             uploadAreaMat.style.background = 'rgba(0,153,255,0.05)';
             const matFile = document.getElementById('mat-file');
-            if (matFile) matFile.value = ""; 
+            if (matFile) matFile.value = "";
         }
 
         // Reset do PRHF
         const uploadAreaPrhf = document.getElementById('prhf-upload-area');
-        if(uploadAreaPrhf) {
+        if (uploadAreaPrhf) {
             uploadAreaPrhf.innerHTML = `
                 <i class="fa-solid fa-paperclip" style="font-size:1.5rem; color:var(--danger-red); margin-bottom:5px;"></i>
                 <h4 style="color:white; margin-bottom:5px; font-size:0.9rem;">Anexar Ficha / Teste</h4>
@@ -3999,89 +4006,89 @@ document.addEventListener('click', function (e) {
 });
 
 // =========================================================================
-    // ALERTAS BUROCRÁTICOS (SÍNTESES E PCT) - O INTERRUPTOR DO DT
-    // =========================================================================
+// ALERTAS BUROCRÁTICOS (SÍNTESES E PCT) - O INTERRUPTOR DO DT
+// =========================================================================
 
-    window.carregarAlertasBurocraticos = async function() {
-        const containerProf = document.getElementById('avisos-dt-container'); // Início dos Profs
-        const containerDT = document.getElementById('avisos-dt-dashboard-container'); // Painel do DT
-        
-        try {
-            // 1. MODO DIRETOR DE TURMA (Painel DT - Interrutores)
-            if (containerDT && state.activeRole === 'diretor_turma' && state.minhaTurmaDT) {
-                const turmaDT = state.selectedTurma || state.minhaTurmaDT;
-                const snapDT = await getDoc(doc(db, "turmas", turmaDT, "alertas", "dt"));
-                const alertasDT = snapDT.exists() ? snapDT.data() : { sinteses: false, pct: false };
-                
-                containerDT.innerHTML = `
+window.carregarAlertasBurocraticos = async function () {
+    const containerProf = document.getElementById('avisos-dt-container'); // Início dos Profs
+    const containerDT = document.getElementById('avisos-dt-dashboard-container'); // Painel do DT
+
+    try {
+        // 1. MODO DIRETOR DE TURMA (Painel DT - Interrutores)
+        if (containerDT && state.activeRole === 'diretor_turma' && state.minhaTurmaDT) {
+            const turmaDT = state.selectedTurma || state.minhaTurmaDT;
+            const snapDT = await getDoc(doc(db, "turmas", turmaDT, "alertas", "dt"));
+            const alertasDT = snapDT.exists() ? snapDT.data() : { sinteses: false, pct: false };
+
+            containerDT.innerHTML = `
                     <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:5px;">Ativar alertas no Início dos Professores:</p>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                         ${buildBotaoAlerta('Sínteses', 'fa-solid fa-clipboard', '#10b981', alertasDT.sinteses, true, 'sinteses', turmaDT)}
                         ${buildBotaoAlerta('PCT', 'fa-solid fa-users-rectangle', '#b82bf2', alertasDT.pct, true, 'pct', turmaDT)}
                     </div>
                 `;
-            }
-
-            // 2. MODO PROFESSOR (Início - Painel de Leitura de TODAS as turmas)
-            if (containerProf && state.turmasProfessor) {
-                let htmlProf = '';
-                
-                // Varre TODAS as turmas do professor
-                const promessas = state.turmasProfessor.map(t => getDoc(doc(db, "turmas", t, "alertas", "dt")));
-                const snaps = await Promise.all(promessas);
-                
-                snaps.forEach((snap, index) => {
-                    const turma = state.turmasProfessor[index];
-                    
-                    // Se a base de dados existir para esta turma, lê os valores, senão assume false
-                    const al = snap.exists() ? snap.data() : { sinteses: false, pct: false };
-                    
-                    // Desenha SEMPRE os dois botões, mas passa o estado (true ou false) para eles brilharem ou ficarem apagados
-                    htmlProf += buildBotaoAlerta(`Sínteses ${turma}`, 'fa-solid fa-clipboard', '#10b981', al.sinteses, false, 'sinteses', turma);
-                    htmlProf += buildBotaoAlerta(`PCT ${turma}`, 'fa-solid fa-users-rectangle', '#b82bf2', al.pct, false, 'pct', turma);
-                });
-
-                containerProf.style.display = 'grid'; // Mostra sempre a grelha
-                containerProf.innerHTML = htmlProf;
-            }
-        } catch(e) {
-            console.error("Erro ao carregar alertas burocráticos:", e);
         }
-    };
 
-    function buildBotaoAlerta(nome, icon, cor, ativo, isDT, dbKey, turma) {
-        const onClick = isDT ? `onclick="window.toggleAlertaBurocratico('${dbKey}', ${ativo}, '${turma}')"` : '';
-        const cursor = isDT ? 'cursor: pointer;' : 'cursor: default;';
-        const opacity = ativo ? '1' : '0.4';
-        const shadow = ativo ? `0 0 15px ${cor}60` : 'none';
-        const border = ativo ? cor : '#333';
-        const colorBg = ativo ? cor : '#333';
-        const colorIcon = ativo ? 'black' : 'var(--text-muted)';
-        const colorText = ativo ? 'white' : 'var(--text-muted)';
+        // 2. MODO PROFESSOR (Início - Painel de Leitura de TODAS as turmas)
+        if (containerProf && state.turmasProfessor) {
+            let htmlProf = '';
 
-        return `
+            // Varre TODAS as turmas do professor
+            const promessas = state.turmasProfessor.map(t => getDoc(doc(db, "turmas", t, "alertas", "dt")));
+            const snaps = await Promise.all(promessas);
+
+            snaps.forEach((snap, index) => {
+                const turma = state.turmasProfessor[index];
+
+                // Se a base de dados existir para esta turma, lê os valores, senão assume false
+                const al = snap.exists() ? snap.data() : { sinteses: false, pct: false };
+
+                // Desenha SEMPRE os dois botões, mas passa o estado (true ou false) para eles brilharem ou ficarem apagados
+                htmlProf += buildBotaoAlerta(`Sínteses ${turma}`, 'fa-solid fa-clipboard', '#10b981', al.sinteses, false, 'sinteses', turma);
+                htmlProf += buildBotaoAlerta(`PCT ${turma}`, 'fa-solid fa-users-rectangle', '#b82bf2', al.pct, false, 'pct', turma);
+            });
+
+            containerProf.style.display = 'grid'; // Mostra sempre a grelha
+            containerProf.innerHTML = htmlProf;
+        }
+    } catch (e) {
+        console.error("Erro ao carregar alertas burocráticos:", e);
+    }
+};
+
+function buildBotaoAlerta(nome, icon, cor, ativo, isDT, dbKey, turma) {
+    const onClick = isDT ? `onclick="window.toggleAlertaBurocratico('${dbKey}', ${ativo}, '${turma}')"` : '';
+    const cursor = isDT ? 'cursor: pointer;' : 'cursor: default;';
+    const opacity = ativo ? '1' : '0.4';
+    const shadow = ativo ? `0 0 15px ${cor}60` : 'none';
+    const border = ativo ? cor : '#333';
+    const colorBg = ativo ? cor : '#333';
+    const colorIcon = ativo ? 'black' : 'var(--text-muted)';
+    const colorText = ativo ? 'white' : 'var(--text-muted)';
+
+    return `
         <div ${onClick} style="background: rgba(0,0,0,0.2); border: 1px solid ${border}; box-shadow: ${shadow}; border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; opacity: ${opacity}; transition: 0.3s; ${cursor}">
             <div style="background: ${colorBg}; color: ${colorIcon}; width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center;"><i class="${icon}"></i></div>
             <strong style="color: ${colorText}; font-size: 0.9rem; margin: 0;">${nome}</strong>
         </div>`;
+}
+
+window.toggleAlertaBurocratico = async function (dbKey, estadoAtual, turma) {
+    if (!turma) return;
+
+    try {
+        await setDoc(doc(db, "turmas", turma, "alertas", "dt"), {
+            [dbKey]: !estadoAtual
+        }, { merge: true });
+
+        // Recarrega as luzes na hora
+        window.carregarAlertasBurocraticos();
+    } catch (e) {
+        console.error("Erro ao alternar alerta:", e);
     }
+};
 
-    window.toggleAlertaBurocratico = async function(dbKey, estadoAtual, turma) {
-        if (!turma) return;
-        
-        try {
-            await setDoc(doc(db, "turmas", turma, "alertas", "dt"), {
-                [dbKey]: !estadoAtual 
-            }, { merge: true });
-            
-            // Recarrega as luzes na hora
-            window.carregarAlertasBurocraticos();
-        } catch(e) {
-            console.error("Erro ao alternar alerta:", e);
-        }
-    };
-
-    // ==========================================
+// ==========================================
 // 12 DIMENSÕES QUALITATIVAS (ESCALAS DE SÍNTESE)
 // ==========================================
 const DIMENSOES_AVALIACAO = [
@@ -4089,12 +4096,12 @@ const DIMENSOES_AVALIACAO = [
     { id: 'pontualidade', categoria: '1. Dinâmica Diária', nome: 'Pontualidade', niveis: ['Pontual', 'Pontualidade irregular', 'Frequentemente atrasado'] },
     { id: 'participacao', categoria: '1. Dinâmica Diária', nome: 'Participação', niveis: ['Muito participativo', 'Participativo', 'Pouco participativo', 'Não participativo'] },
     { id: 'interesse', categoria: '1. Dinâmica Diária', nome: 'Interesse / Motivação', niveis: ['Muito interessado', 'Interessado', 'Pouco interessado', 'Desinteressado'] },
-    
+
     { id: 'empenho', categoria: '2. Postura e Trabalho', nome: 'Empenho', niveis: ['Muito empenhado', 'Empenhado', 'Pouco empenhado', 'Sem empenho'] },
     { id: 'autonomia', categoria: '2. Postura e Trabalho', nome: 'Autonomia', niveis: ['Muito autónomo', 'Autónomo', 'Necessita de orientação', 'Muito dependente'] },
     { id: 'responsabilidade', categoria: '2. Postura e Trabalho', nome: 'Responsabilidade', niveis: ['Muito responsável', 'Responsável', 'Irregular', 'Pouco responsável'] },
     { id: 'comportamento', categoria: '2. Postura e Trabalho', nome: 'Comportamento / Atitude', niveis: ['Exemplar', 'Adequado', 'Irregular', 'Inadequado'] },
-    
+
     { id: 'relacao', categoria: '3. Relação e Evolução', nome: 'Relação com pares', niveis: ['Muito colaborativo', 'Colaborativo', 'Pouco colaborativo', 'Conflituoso'] },
     { id: 'organizacao', categoria: '3. Relação e Evolução', nome: 'Organização', niveis: ['Muito organizado', 'Organizado', 'Pouco organizado', 'Desorganizado'] },
     { id: 'tarefas', categoria: '3. Relação e Evolução', nome: 'Cumprimento de tarefas', niveis: ['Cumpre sempre', 'Cumpre habitualmente', 'Cumpre irregularmente', 'Não cumpre'] },
@@ -4104,7 +4111,7 @@ const DIMENSOES_AVALIACAO = [
 let estadoEscalasAluno = {};
 let passoAtualIndex = 0; // Controla qual a dimensão visível de 0 a 11
 
-window.renderizarDimensoesQualitativas = function() {
+window.renderizarDimensoesQualitativas = function () {
     passoAtualIndex = 0; // Sempre que abre o modal, começa na primeira dimensão
     desenharPassoAtual();
 };
@@ -4227,43 +4234,43 @@ document.body.addEventListener('click', (e) => {
 // ============================================================================
 // HORÁRIO DO DIRETOR DE TURMA (COM CLONE AUTOMÁTICO DE SEMANAS E EDIÇÃO PONTUAL)
 // ============================================================================
-let dtModoEdicaoHorario = false; 
+let dtModoEdicaoHorario = false;
 let dtSlotSelecionado = null;
-let dtDataInicioSemana = new Date(); 
+let dtDataInicioSemana = new Date();
 // Acerta sempre para a Segunda-feira da semana atual
 dtDataInicioSemana.setDate(dtDataInicioSemana.getDate() - (dtDataInicioSemana.getDay() === 0 ? 6 : dtDataInicioSemana.getDay() - 1));
 
-function formatarDataDT(dt) { const dp = String(dt.getDate()).padStart(2,'0'); const mp = String(dt.getMonth()+1).padStart(2,'0'); return `${dp}/${mp}`; }
-function dataStringDbDT(dt) { const y = dt.getFullYear(); const m = String(dt.getMonth()+1).padStart(2,'0'); const d = String(dt.getDate()).padStart(2,'0'); return `${y}-${m}-${d}`; }
+function formatarDataDT(dt) { const dp = String(dt.getDate()).padStart(2, '0'); const mp = String(dt.getMonth() + 1).padStart(2, '0'); return `${dp}/${mp}`; }
+function dataStringDbDT(dt) { const y = dt.getFullYear(); const m = String(dt.getMonth() + 1).padStart(2, '0'); const d = String(dt.getDate()).padStart(2, '0'); return `${y}-${m}-${d}`; }
 
-window.carregarHorarioDT = async function() {
+window.carregarHorarioDT = async function () {
     const diasUIAbrv = ['seg', 'ter', 'qua', 'qui', 'sex'];
     const grid = document.getElementById('dt-grid-horario-turma');
     if (!grid) return;
-    
-    let endOfWeek = new Date(dtDataInicioSemana); 
+
+    let endOfWeek = new Date(dtDataInicioSemana);
     endOfWeek.setDate(endOfWeek.getDate() + 4);
     document.getElementById('dt-week-display').innerText = `${formatarDataDT(dtDataInicioSemana)} a ${formatarDataDT(endOfWeek)}`;
-    
+
     let iterDate = new Date(dtDataInicioSemana);
-    
+
     // Desenha o Cabeçalho (Dias da Semana)
     let html = `<div></div>`;
-    for(let i=0; i<5; i++) {
+    for (let i = 0; i < 5; i++) {
         html += `<div class="horario-header">${diasUIAbrv[i].toUpperCase()} <span style="font-size:0.75rem; display:block; color:var(--text-muted);">${formatarDataDT(iterDate)}</span></div>`;
         iterDate.setDate(iterDate.getDate() + 1);
     }
 
     const blocos = [
-        {id: 1, label: "08:30<br>09:30"}, {id: 2, label: "09:35<br>10:35"},
-        {id: 3, label: "10:50<br>11:50"}, {id: 4, label: "11:55<br>12:55"},
-        {id: 5, label: "13:00<br>14:00"}, {id: 6, label: "14:05<br>15:05"},
-        {id: 7, label: "15:15<br>16:15"}, {id: 8, label: "16:20<br>17:20"}
+        { id: 1, label: "08:30<br>09:30" }, { id: 2, label: "09:35<br>10:35" },
+        { id: 3, label: "10:50<br>11:50" }, { id: 4, label: "11:55<br>12:55" },
+        { id: 5, label: "13:00<br>14:00" }, { id: 6, label: "14:05<br>15:05" },
+        { id: 7, label: "15:15<br>16:15" }, { id: 8, label: "16:20<br>17:20" }
     ];
 
     iterDate = new Date(dtDataInicioSemana);
     let datasSemana = [];
-    for(let i=0; i<5; i++) {
+    for (let i = 0; i < 5; i++) {
         datasSemana.push(dataStringDbDT(iterDate));
         iterDate.setDate(iterDate.getDate() + 1);
     }
@@ -4271,7 +4278,7 @@ window.carregarHorarioDT = async function() {
     // Desenha a grelha de blocos
     blocos.forEach(bloco => {
         html += `<div class="horario-time">${bloco.label}</div>`;
-        for(let i=0; i<5; i++) {
+        for (let i = 0; i < 5; i++) {
             html += `<div class="horario-slot dt-h-slot" data-datareal="${datasSemana[i]}" data-hora="${bloco.id}"></div>`;
         }
     });
@@ -4281,22 +4288,22 @@ window.carregarHorarioDT = async function() {
     // Busca os dados gravados e preenche a grelha para a semana que estamos a ver
     try {
         const docSnap = await getDoc(doc(db, "turmas", state.selectedTurma));
-        if(docSnap.exists() && docSnap.data().horario) {
+        if (docSnap.exists() && docSnap.data().horario) {
             const horarioBase = docSnap.data().horario;
-            for(const key in horarioBase) {
-                const [dataReal, hora] = key.split('_'); 
-                const disc = horarioBase[key]; 
+            for (const key in horarioBase) {
+                const [dataReal, hora] = key.split('_');
+                const disc = horarioBase[key];
                 const slot = document.querySelector(`.dt-h-slot[data-datareal="${dataReal}"][data-hora="${hora}"]`);
-                if(slot && disc) { 
-                    slot.innerHTML = `<strong>${disc}</strong>`; 
-                    aplicarEstiloSlotHorario(slot, disc); 
+                if (slot && disc) {
+                    slot.innerHTML = `<strong>${disc}</strong>`;
+                    aplicarEstiloSlotHorario(slot, disc);
                 }
             }
         }
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
 
     // Re-aplica as classes de edição se estiver em modo de edição
-    if(dtModoEdicaoHorario) {
+    if (dtModoEdicaoHorario) {
         document.querySelectorAll('.dt-h-slot').forEach(s => s.classList.add('edit-mode'));
     }
 };
@@ -4339,39 +4346,39 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('.dt-h-slot')) {
         if (!dtModoEdicaoHorario) return;
         dtSlotSelecionado = e.target.closest('.dt-h-slot');
-        
+
         let opt = '<option value="">Sem Aula (Limpar)</option>';
         try {
             const snapEstrutura = await getDocs(collection(db, "estrutura_modular"));
             let disciplinasUnicas = new Set();
-            snapEstrutura.forEach(docSnap => { if(docSnap.data().disciplina) disciplinasUnicas.add(docSnap.data().disciplina); });
+            snapEstrutura.forEach(docSnap => { if (docSnap.data().disciplina) disciplinasUnicas.add(docSnap.data().disciplina); });
             const disciplinasOrdenadas = Array.from(disciplinasUnicas).sort();
             disciplinasOrdenadas.forEach(disc => { opt += `<option value="${disc}">${disc}</option>`; });
-        } catch (err) {}
-        
+        } catch (err) { }
+
         opt += `<option disabled>──────────</option><option value="ALM">Almoço</option><option value="Visita">Visita Estudo</option><option value="FCT">FCT</option><option value="PAP">PAP</option><option value="PRHF">PRHF</option>`;
-        
-        document.getElementById('dt-ed-horario-disc').innerHTML = opt; 
+
+        document.getElementById('dt-ed-horario-disc').innerHTML = opt;
         document.getElementById('modal-dt-editar-bloco').style.display = 'flex';
         return;
     }
 
     // CONFIRMAR EDIÇÃO DE UM BLOCO E GRAVAR
     if (e.target.closest('#btn-dt-gravar-bloco')) {
-        if(!dtSlotSelecionado) return; 
+        if (!dtSlotSelecionado) return;
         const novaDisc = document.getElementById('dt-ed-horario-disc').value;
-        const dataReal = dtSlotSelecionado.getAttribute('data-datareal'); 
+        const dataReal = dtSlotSelecionado.getAttribute('data-datareal');
         const horaId = dtSlotSelecionado.getAttribute('data-hora');
-        const btnRef = e.target.closest('#btn-dt-gravar-bloco'); 
-        
+        const btnRef = e.target.closest('#btn-dt-gravar-bloco');
+
         btnRef.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-        try { 
+        try {
             // Atualizamos a base de dados apenas PARA AQUELE DIA ESPECÍFICO
-            await setDoc(doc(db, "turmas", state.selectedTurma), { horario: { [`${dataReal}_${horaId}`]: novaDisc } }, {merge:true}); 
-            document.getElementById('modal-dt-editar-bloco').style.display = 'none'; 
-            btnRef.innerText = "Confirmar"; 
-            window.carregarHorarioDT(); 
-        } catch(err) { btnRef.innerText = "Erro!"; }
+            await setDoc(doc(db, "turmas", state.selectedTurma), { horario: { [`${dataReal}_${horaId}`]: novaDisc } }, { merge: true });
+            document.getElementById('modal-dt-editar-bloco').style.display = 'none';
+            btnRef.innerText = "Confirmar";
+            window.carregarHorarioDT();
+        } catch (err) { btnRef.innerText = "Erro!"; }
         return;
     }
 
@@ -4381,33 +4388,33 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('#btn-dt-repeat-week')) {
         const btn = e.target.closest('#btn-dt-repeat-week');
         const endDateStr = document.getElementById('dt-horario-repeat-date').value;
-        
-        if(!endDateStr) return alert("Indica primeiro na caixa de data até quando queres multiplicar esta semana!");
-        
+
+        if (!endDateStr) return alert("Indica primeiro na caixa de data até quando queres multiplicar esta semana!");
+
         const endDataLimit = new Date(endDateStr);
         let currDataIter = new Date(dtDataInicioSemana);
         currDataIter.setDate(currDataIter.getDate() + 7); // Começa a colar a partir da PRÓXIMA semana
-        
-        if(currDataIter > endDataLimit) return alert("A data limite tem de ser no futuro (próximas semanas)!");
+
+        if (currDataIter > endDataLimit) return alert("A data limite tem de ser no futuro (próximas semanas)!");
 
         const resposta = confirm("Atenção: A aplicação vai copiar o modelo exato desta semana e colar por cima das semanas seguintes até à data limite. Tudo o que já estiver marcado nessas futuras datas será substituído pelo molde atual. Avançar?");
         if (!resposta) return;
 
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A clonar...';
         btn.disabled = true;
-        
+
         try {
             const docSnap = await getDoc(doc(db, "turmas", state.selectedTurma));
             let horarioDB = docSnap.exists() ? (docSnap.data().horario || {}) : {};
 
             // 1. O Molde - Tirar "fotografia" à semana que está na janela agora
-            let templateSemana = []; 
+            let templateSemana = [];
             let tempIter = new Date(dtDataInicioSemana);
-            for(let i=0; i<5; i++) {
+            for (let i = 0; i < 5; i++) {
                 const dateStr = dataStringDbDT(tempIter);
-                for(let h=1; h<=8; h++) {
+                for (let h = 1; h <= 8; h++) {
                     const k = `${dateStr}_${h}`;
-                    if(horarioDB[k] !== undefined) {
+                    if (horarioDB[k] !== undefined) {
                         // Guardamos não só as aulas, mas os "brancos" para apagar aulas passadas, garantindo que o molde é exato
                         templateSemana.push({ diaOffset: i, hora: h, disc: horarioDB[k] });
                     }
@@ -4415,7 +4422,7 @@ document.body.addEventListener('click', async (e) => {
                 tempIter.setDate(tempIter.getDate() + 1);
             }
 
-            if(templateSemana.length === 0) {
+            if (templateSemana.length === 0) {
                 btn.innerHTML = '<i class="fa-solid fa-copy"></i> Multiplicar Horário';
                 btn.disabled = false;
                 return alert("A semana que estás a visualizar está vazia. Preenche pelo menos um bloco antes de replicar.");
@@ -4426,26 +4433,26 @@ document.body.addEventListener('click', async (e) => {
             // 2. Colar o Molde nas semanas que se seguem (ignorando o passado e parando na data final)
             while (currDataIter <= endDataLimit) {
                 let thisWeekStart = new Date(currDataIter);
-                for(const item of templateSemana) {
+                for (const item of templateSemana) {
                     let targetDay = new Date(thisWeekStart);
                     targetDay.setDate(targetDay.getDate() + item.diaOffset);
-                    
-                    if(targetDay <= endDataLimit) { 
+
+                    if (targetDay <= endDataLimit) {
                         const tk = `${dataStringDbDT(targetDay)}_${item.hora}`;
-                        horarioDB[tk] = item.disc; 
+                        horarioDB[tk] = item.disc;
                         blocosClonados++;
                     }
                 }
-                currDataIter.setDate(currDataIter.getDate() + 7); 
+                currDataIter.setDate(currDataIter.getDate() + 7);
             }
 
             // 3. Atualizar Firebase
             await setDoc(doc(db, "turmas", state.selectedTurma), { horario: horarioDB }, { merge: true });
-            
+
             alert(`Sucesso! Foram processados ${blocosClonados} blocos para as próximas semanas. Se quiseres mudar um dia pontual, basta navegar para essa data e editar.`);
             window.carregarHorarioDT();
 
-        } catch(err) {
+        } catch (err) {
             console.error(err);
             alert("Erro ao clonar o horário.");
         }
@@ -4457,10 +4464,10 @@ document.body.addEventListener('click', async (e) => {
 
 function aplicarEstiloSlotHorario(slotElement, disc) {
     if (!slotElement || !disc) return;
-    
+
     // Remove classes anteriores para evitar conflitos
     slotElement.classList.remove('slot-alm', 'slot-visita', 'slot-pap', 'slot-fct', 'slot-prhf', 'filled');
-    
+
     const dUpper = disc.toUpperCase();
     if (dUpper === 'ALM') {
         slotElement.classList.add('slot-alm');
@@ -4482,7 +4489,7 @@ function aplicarEstiloSlotHorario(slotElement, disc) {
 // ============================================================================
 window.dtFaltasGerais = [];
 
-window.abrirGestaoFaltasDT = async function(turma) {
+window.abrirGestaoFaltasDT = async function (turma) {
     const cLista = document.getElementById('dt-faltas-lista');
     cLista.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A reunir registos de faltas...</p>';
     window.dtFaltaLimparFormulario();
@@ -4491,17 +4498,17 @@ window.abrirGestaoFaltasDT = async function(turma) {
         // 1. Preencher Dropdown de Disciplinas do Curso
         const snapEstrutura = await getDocs(collection(db, "estrutura_modular"));
         let discUnicas = new Set();
-        snapEstrutura.forEach(d => { if(d.data().disciplina) discUnicas.add(d.data().disciplina); });
+        snapEstrutura.forEach(d => { if (d.data().disciplina) discUnicas.add(d.data().disciplina); });
         document.getElementById('dt-falta-form-disc').innerHTML = Array.from(discUnicas).sort().map(d => `<option value="${d}">${d}</option>`).join('');
 
         // 2. Preencher Dropdown de Alunos
         const snapAl = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turma), where("papel", "==", "aluno")));
         let alunosHtml = '<option value="">-- Escolher Aluno --</option>';
         let alunosIds = [];
-        snapAl.forEach(d => { 
+        snapAl.forEach(d => {
             const n = d.data().nome;
-            alunosHtml += `<option value="${d.id}">${n}</option>`; 
-            alunosIds.push({id: d.id, nome: n});
+            alunosHtml += `<option value="${d.id}">${n}</option>`;
+            alunosIds.push({ id: d.id, nome: n });
         });
         document.getElementById('dt-falta-form-aluno').innerHTML = alunosHtml;
 
@@ -4524,7 +4531,7 @@ window.abrirGestaoFaltasDT = async function(turma) {
             });
         });
         await Promise.all(promessas);
-        
+
         // 4. Iniciar Filtros (Padrão: Ver por Data)
         document.getElementById('dt-faltas-filtro-tipo').value = 'data';
         window.dtFaltasAtualizarFiltros();
@@ -4535,10 +4542,10 @@ window.abrirGestaoFaltasDT = async function(turma) {
     }
 };
 
-window.dtFaltasAtualizarFiltros = function() {
+window.dtFaltasAtualizarFiltros = function () {
     const tipo = document.getElementById('dt-faltas-filtro-tipo').value;
     const selVal = document.getElementById('dt-faltas-filtro-valor');
-    
+
     let valoresUnicos = new Set();
     window.dtFaltasGerais.forEach(f => {
         if (tipo === 'data') valoresUnicos.add(f.dataFalta);
@@ -4547,16 +4554,16 @@ window.dtFaltasAtualizarFiltros = function() {
     });
 
     let sorted = Array.from(valoresUnicos).sort();
-    if(tipo === 'data') sorted.reverse(); // As datas mais recentes aparecem primeiro
+    if (tipo === 'data') sorted.reverse(); // As datas mais recentes aparecem primeiro
 
-    selVal.innerHTML = sorted.length > 0 
+    selVal.innerHTML = sorted.length > 0
         ? sorted.map(v => `<option value="${v}">${tipo === 'data' && v.includes('-') ? v.split('-').reverse().join('/') : v}</option>`).join('')
         : '<option value="">Sem registos disponíveis</option>';
 
     window.dtFaltasRenderLista();
 };
 
-window.dtFaltasRenderLista = function() {
+window.dtFaltasRenderLista = function () {
     const tipo = document.getElementById('dt-faltas-filtro-tipo').value;
     const valor = document.getElementById('dt-faltas-filtro-valor').value;
     const container = document.getElementById('dt-faltas-lista');
@@ -4570,7 +4577,7 @@ window.dtFaltasRenderLista = function() {
 
     // Se estivermos a ver por Aluno ou Disciplina, convém ordenar por data (as mais recentes em cima)
     if (tipo !== 'data') {
-        filtradas.sort((a,b) => b.dataFalta.localeCompare(a.dataFalta));
+        filtradas.sort((a, b) => b.dataFalta.localeCompare(a.dataFalta));
     }
 
     if (filtradas.length === 0) {
@@ -4583,7 +4590,7 @@ window.dtFaltasRenderLista = function() {
         const cor = f.justificada ? 'var(--success-green)' : 'var(--danger-red)';
         const bgCor = f.justificada ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)';
         const dataStr = f.dataFalta.includes('-') ? f.dataFalta.split('-').reverse().join('/') : f.dataFalta;
-        
+
         let subtexto = '';
         if (tipo === 'data') subtexto = `<strong>${f.alunoNome}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${f.disciplina} (Mod ${f.modulo})</span>`;
         if (tipo === 'aluno') subtexto = `<strong>${f.disciplina} (Mod ${f.modulo})</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${dataStr}</span>`;
@@ -4603,13 +4610,13 @@ window.dtFaltasRenderLista = function() {
     container.innerHTML = html;
 };
 
-window.dtFaltaLimparFormulario = function() {
+window.dtFaltaLimparFormulario = function () {
     document.getElementById('dt-falta-edit-id').value = '';
     document.getElementById('dt-falta-edit-alunoid').value = '';
     document.getElementById('dt-falta-form-aluno').disabled = false;
     document.getElementById('dt-falta-form-data').value = new Date().toISOString().split('T')[0];
     document.getElementById('dt-falta-form-justificada').checked = false;
-    
+
     document.getElementById('dt-faltas-form-title').innerHTML = '<i class="fa-solid fa-plus"></i> Registar Nova Falta';
     document.getElementById('btn-dt-falta-cancelar').style.display = 'none';
 };
@@ -4631,10 +4638,10 @@ document.body.addEventListener('click', async (e) => {
         document.getElementById('dt-faltas-form-title').innerHTML = '<i class="fa-solid fa-pen"></i> Editar Falta';
         document.getElementById('dt-falta-edit-id').value = faltaData.id;
         document.getElementById('dt-falta-edit-alunoid').value = faltaData.alunoId;
-        
+
         document.getElementById('dt-falta-form-aluno').value = faltaData.alunoId;
         document.getElementById('dt-falta-form-aluno').disabled = true; // Não deixa mudar o aluno ao editar
-        
+
         document.getElementById('dt-falta-form-disc').value = faltaData.disciplina;
         document.getElementById('dt-falta-form-mod').value = faltaData.modulo;
         document.getElementById('dt-falta-form-duracao').value = faltaData.duracaoBlocos;
@@ -4692,7 +4699,7 @@ document.body.addEventListener('click', async (e) => {
 
             // Recarregar os dados do zero para garantir que tudo está perfeito
             await window.abrirGestaoFaltasDT(state.selectedTurma);
-            
+
             btn.innerHTML = '<i class="fa-solid fa-check"></i>';
             setTimeout(() => { btn.innerHTML = btnTxt; btn.disabled = false; }, 1000);
 
@@ -4709,7 +4716,7 @@ document.body.addEventListener('click', async (e) => {
 // GATILHOS DE ABERTURA: FALTAS E NOTAS (DIRECIONA CONFORME A CAPA)
 // ============================================================================
 document.body.addEventListener('click', async (e) => {
-    
+
     // 1. ABRIR FALTAS
     if (e.target.closest('#btn-modal-faltas')) {
         const turma = state.selectedTurma;
@@ -4804,7 +4811,7 @@ document.body.addEventListener('click', async (e) => {
 // ============================================================================
 window.dtFaltasGerais = [];
 
-window.abrirGestaoFaltasDT = async function(turma) {
+window.abrirGestaoFaltasDT = async function (turma) {
     const cLista = document.getElementById('dt-faltas-lista');
     cLista.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A reunir registos de faltas...</p>';
     window.dtFaltaLimparFormulario();
@@ -4812,15 +4819,15 @@ window.abrirGestaoFaltasDT = async function(turma) {
     try {
         const snapEstrutura = await getDocs(collection(db, "estrutura_modular"));
         let discUnicas = new Set();
-        snapEstrutura.forEach(d => { if(d.data().disciplina) discUnicas.add(d.data().disciplina); });
+        snapEstrutura.forEach(d => { if (d.data().disciplina) discUnicas.add(d.data().disciplina); });
         document.getElementById('dt-falta-form-disc').innerHTML = Array.from(discUnicas).sort().map(d => `<option value="${d}">${d}</option>`).join('');
 
         const snapAl = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turma), where("papel", "==", "aluno")));
         let alunosHtml = '<option value="">-- Escolher Aluno --</option>';
         let alunosIds = [];
-        snapAl.forEach(d => { 
-            alunosHtml += `<option value="${d.id}">${d.data().nome}</option>`; 
-            alunosIds.push({id: d.id, nome: d.data().nome});
+        snapAl.forEach(d => {
+            alunosHtml += `<option value="${d.id}">${d.data().nome}</option>`;
+            alunosIds.push({ id: d.id, nome: d.data().nome });
         });
         document.getElementById('dt-falta-form-aluno').innerHTML = alunosHtml;
 
@@ -4837,13 +4844,13 @@ window.abrirGestaoFaltasDT = async function(turma) {
             });
         });
         await Promise.all(promessas);
-        
+
         document.getElementById('dt-faltas-filtro-tipo').value = 'data';
         window.dtFaltasAtualizarFiltros();
     } catch (e) { cLista.innerHTML = '<p class="text-danger center">Erro a ler base de dados.</p>'; }
 };
 
-window.dtFaltasAtualizarFiltros = function() {
+window.dtFaltasAtualizarFiltros = function () {
     const tipo = document.getElementById('dt-faltas-filtro-tipo').value;
     const selVal = document.getElementById('dt-faltas-filtro-valor');
     let vUnicos = new Set();
@@ -4854,13 +4861,13 @@ window.dtFaltasAtualizarFiltros = function() {
     });
 
     let sorted = Array.from(vUnicos).sort();
-    if(tipo === 'data') sorted.reverse(); 
+    if (tipo === 'data') sorted.reverse();
 
     selVal.innerHTML = sorted.length > 0 ? sorted.map(v => `<option value="${v}">${tipo === 'data' && v.includes('-') ? v.split('-').reverse().join('/') : v}</option>`).join('') : '<option value="">Sem registos</option>';
     window.dtFaltasRenderLista();
 };
 
-window.dtFaltasRenderLista = function() {
+window.dtFaltasRenderLista = function () {
     const tipo = document.getElementById('dt-faltas-filtro-tipo').value;
     const valor = document.getElementById('dt-faltas-filtro-valor').value;
     const container = document.getElementById('dt-faltas-lista');
@@ -4872,7 +4879,7 @@ window.dtFaltasRenderLista = function() {
         return true;
     });
 
-    if (tipo !== 'data') filtradas.sort((a,b) => b.dataFalta.localeCompare(a.dataFalta));
+    if (tipo !== 'data') filtradas.sort((a, b) => b.dataFalta.localeCompare(a.dataFalta));
 
     if (filtradas.length === 0) return container.innerHTML = '<p class="text-muted center" style="margin-top:20px;">Nenhuma falta encontrada.</p>';
 
@@ -4881,7 +4888,7 @@ window.dtFaltasRenderLista = function() {
         const cor = f.justificada ? 'var(--success-green)' : 'var(--danger-red)';
         const bgCor = f.justificada ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)';
         const dataStr = f.dataFalta.includes('-') ? f.dataFalta.split('-').reverse().join('/') : f.dataFalta;
-        
+
         let sub = '';
         if (tipo === 'data') sub = `<strong>${f.alunoNome}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${f.disciplina} (Mod ${f.modulo})</span>`;
         if (tipo === 'aluno') sub = `<strong>${f.disciplina} (Mod ${f.modulo})</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${dataStr}</span>`;
@@ -4892,13 +4899,13 @@ window.dtFaltasRenderLista = function() {
     container.innerHTML = html;
 };
 
-window.dtFaltaLimparFormulario = function() {
+window.dtFaltaLimparFormulario = function () {
     document.getElementById('dt-falta-edit-id').value = '';
     document.getElementById('dt-falta-edit-alunoid').value = '';
     document.getElementById('dt-falta-form-aluno').disabled = false;
     document.getElementById('dt-falta-form-data').value = new Date().toISOString().split('T')[0];
     document.getElementById('dt-falta-form-justificada').checked = false;
-    
+
     document.getElementById('dt-faltas-form-title').innerHTML = '<i class="fa-solid fa-plus"></i> Registar Nova Falta';
     document.getElementById('btn-dt-falta-cancelar').style.display = 'none';
     document.getElementById('btn-dt-falta-apagar').style.display = 'none';
@@ -4909,7 +4916,7 @@ window.dtFaltaLimparFormulario = function() {
 // ============================================================================
 window.dtNotasGerais = [];
 
-window.abrirGestaoNotasDT = async function(turma) {
+window.abrirGestaoNotasDT = async function (turma) {
     const cLista = document.getElementById('dt-notas-lista');
     cLista.innerHTML = '<p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A reunir avaliações...</p>';
     window.dtNotaLimparFormulario();
@@ -4917,15 +4924,15 @@ window.abrirGestaoNotasDT = async function(turma) {
     try {
         const snapEstrutura = await getDocs(collection(db, "estrutura_modular"));
         let discUnicas = new Set();
-        snapEstrutura.forEach(d => { if(d.data().disciplina) discUnicas.add(d.data().disciplina); });
+        snapEstrutura.forEach(d => { if (d.data().disciplina) discUnicas.add(d.data().disciplina); });
         document.getElementById('dt-nota-form-disc').innerHTML = Array.from(discUnicas).sort().map(d => `<option value="${d}">${d}</option>`).join('');
 
         const snapAl = await getDocs(query(collection(db, "utilizadores"), where("turma", "==", turma), where("papel", "==", "aluno")));
         let alunosHtml = '<option value="">-- Escolher Aluno --</option>';
         let alunosIds = [];
-        snapAl.forEach(d => { 
-            alunosHtml += `<option value="${d.id}">${d.data().nome}</option>`; 
-            alunosIds.push({id: d.id, nome: d.data().nome});
+        snapAl.forEach(d => {
+            alunosHtml += `<option value="${d.id}">${d.data().nome}</option>`;
+            alunosIds.push({ id: d.id, nome: d.data().nome });
         });
         document.getElementById('dt-nota-form-aluno').innerHTML = alunosHtml;
 
@@ -4939,7 +4946,7 @@ window.abrirGestaoNotasDT = async function(turma) {
                 const nd = n.data();
                 const modRaw = nd.modulo || nd.mod || nd.ufcd;
                 const modFormatado = parseInt(String(modRaw).replace(/\D/g, '')) || modRaw;
-                
+
                 if (!window.dtNotasGerais.some(e => e.alunoId === al.id && e.disciplina === nd.disciplina && e.modulo == modFormatado)) {
                     window.dtNotasGerais.push({
                         id: n.id, alunoId: al.id, alunoNome: al.nome, disciplina: nd.disciplina,
@@ -4949,13 +4956,13 @@ window.abrirGestaoNotasDT = async function(turma) {
             });
         });
         await Promise.all(promessas);
-        
+
         document.getElementById('dt-notas-filtro-tipo').value = 'aluno';
         window.dtNotasAtualizarFiltros();
     } catch (e) { cLista.innerHTML = '<p class="text-danger center">Erro a ler base de dados.</p>'; }
 };
 
-window.dtNotasAtualizarFiltros = function() {
+window.dtNotasAtualizarFiltros = function () {
     const tipo = document.getElementById('dt-notas-filtro-tipo').value;
     const selVal = document.getElementById('dt-notas-filtro-valor');
     let vUnicos = new Set();
@@ -4969,7 +4976,7 @@ window.dtNotasAtualizarFiltros = function() {
     window.dtNotasRenderLista();
 };
 
-window.dtNotasRenderLista = function() {
+window.dtNotasRenderLista = function () {
     const tipo = document.getElementById('dt-notas-filtro-tipo').value;
     const valor = document.getElementById('dt-notas-filtro-valor').value;
     const container = document.getElementById('dt-notas-lista');
@@ -4980,7 +4987,7 @@ window.dtNotasRenderLista = function() {
         return true;
     });
 
-    filtradas.sort((a,b) => a.modulo - b.modulo);
+    filtradas.sort((a, b) => a.modulo - b.modulo);
 
     if (filtradas.length === 0) return container.innerHTML = '<p class="text-muted center" style="margin-top:20px;">Nenhuma avaliação encontrada.</p>';
 
@@ -4990,7 +4997,7 @@ window.dtNotasRenderLista = function() {
         const isNegativa = isRep || (!isNaN(n.nota) && parseInt(n.nota) < 10);
         const cor = isNegativa ? 'var(--danger-red)' : 'var(--success-green)';
         const bgCor = isNegativa ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)';
-        
+
         let sub = '';
         if (tipo === 'aluno') sub = `<strong>${n.disciplina}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Módulo ${n.modulo}</span>`;
         if (tipo === 'disciplina') sub = `<strong>${nomeCurto(n.alunoNome)}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Módulo ${n.modulo}</span>`;
@@ -5000,7 +5007,7 @@ window.dtNotasRenderLista = function() {
     container.innerHTML = html;
 };
 
-window.dtNotaLimparFormulario = function() {
+window.dtNotaLimparFormulario = function () {
     document.getElementById('dt-nota-edit-id').value = '';
     document.getElementById('dt-nota-edit-alunoid').value = '';
     document.getElementById('dt-nota-form-aluno').disabled = false;
@@ -5008,7 +5015,7 @@ window.dtNotaLimparFormulario = function() {
     document.getElementById('dt-nota-form-mod').disabled = false;
     document.getElementById('dt-nota-form-valor').value = '10';
     document.getElementById('dt-nota-form-rep-container').style.display = 'none';
-    
+
     document.getElementById('dt-notas-form-title').innerHTML = '<i class="fa-solid fa-plus"></i> Lançar Nova Nota';
     document.getElementById('btn-dt-nota-cancelar').style.display = 'none';
     document.getElementById('btn-dt-nota-apagar').style.display = 'none';
@@ -5028,7 +5035,7 @@ document.body.addEventListener('change', (e) => {
 });
 
 document.body.addEventListener('click', async (e) => {
-    
+
     // --- LÓGICA DO CLIQUE: FALTAS ---
     if (e.target.closest('.btn-dt-editar-falta-item')) {
         const faltaId = e.target.closest('.btn-dt-editar-falta-item').getAttribute('data-id');
@@ -5054,13 +5061,13 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('#btn-dt-falta-apagar')) {
         const idF = document.getElementById('dt-falta-edit-id').value;
         const idA = document.getElementById('dt-falta-edit-alunoid').value;
-        if(!confirm("Eliminar esta falta para sempre?")) return;
+        if (!confirm("Eliminar esta falta para sempre?")) return;
         e.target.closest('button').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         try {
             const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
             await deleteDoc(doc(db, "utilizadores", idA, "faltas", idF));
             await window.abrirGestaoFaltasDT(state.selectedTurma);
-        } catch(err) {}
+        } catch (err) { }
         return;
     }
 
@@ -5078,25 +5085,25 @@ document.body.addEventListener('click', async (e) => {
         const just = document.getElementById('dt-falta-form-justificada').checked;
 
         if (!alunoIdFinal || !disc || !dataF) return alert("Preenche Aluno, Disciplina e Data!");
-        
+
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         btn.disabled = true;
 
         try {
             // Conversão segura do valor da duração para garantir que nunca envia undefined
-            const temposValidos = parseInt(duracaoText) || 2; 
+            const temposValidos = parseInt(duracaoText) || 2;
 
             // Para manter a compatibilidade a 100% com o que a App Familiar e Aluno leem:
-            const dSave = { 
-                turma: state.selectedTurma, 
-                disciplina: disc, 
-                modulo: mod, 
-                dataFalta: dataF, 
+            const dSave = {
+                turma: state.selectedTurma,
+                disciplina: disc,
+                modulo: mod,
+                dataFalta: dataF,
                 duracaoBlocos: temposValidos, // Lê os blocos
                 horas: temposValidos, // Guarda as horas como espelho (é o que a App lê!)
-                justificada: just, 
-                dataRegisto: new Date().toISOString(), 
-                professor: state.myUserName 
+                justificada: just,
+                dataRegisto: new Date().toISOString(),
+                professor: state.myUserName
             };
 
             // Certifica-se que a gravação é feita
@@ -5108,12 +5115,12 @@ document.body.addEventListener('click', async (e) => {
 
             // Forçar a recarga visual do Painel
             await window.abrirGestaoFaltasDT(state.selectedTurma);
-            
+
             // Sucesso!
             btn.innerHTML = '<i class="fa-solid fa-check"></i> Gravado';
-            setTimeout(() => { 
-                btn.innerHTML = 'Gravar'; 
-                btn.disabled = false; 
+            setTimeout(() => {
+                btn.innerHTML = 'Gravar';
+                btn.disabled = false;
             }, 1000);
 
         } catch (err) {
@@ -5138,7 +5145,7 @@ document.body.addEventListener('click', async (e) => {
         document.getElementById('dt-nota-form-valor').value = notaData.nota;
         const isRep = notaData.nota === 'REP';
         document.getElementById('dt-nota-form-rep-container').style.display = isRep ? 'block' : 'none';
-        if(isRep) document.getElementById('dt-nota-form-rep-motivo').value = notaData.motivoREP;
+        if (isRep) document.getElementById('dt-nota-form-rep-motivo').value = notaData.motivoREP;
         document.getElementById('btn-dt-nota-cancelar').style.display = 'block';
         document.getElementById('btn-dt-nota-apagar').style.display = 'block';
         return;
@@ -5149,14 +5156,14 @@ document.body.addEventListener('click', async (e) => {
     if (e.target.closest('#btn-dt-nota-apagar')) {
         const idN = document.getElementById('dt-nota-edit-id').value;
         const idA = document.getElementById('dt-nota-edit-alunoid').value;
-        if(!confirm("Eliminar esta nota para sempre?")) return;
+        if (!confirm("Eliminar esta nota para sempre?")) return;
         e.target.closest('button').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         try {
             const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
             await deleteDoc(doc(db, "utilizadores", idA, "avaliacoes", idN));
-            try { await deleteDoc(doc(db, "utilizadores", idA, "notas", idN)); } catch(e){}
+            try { await deleteDoc(doc(db, "utilizadores", idA, "notas", idN)); } catch (e) { }
             await window.abrirGestaoNotasDT(state.selectedTurma);
-        } catch(err) {}
+        } catch (err) { }
         return;
     }
 
@@ -5168,14 +5175,14 @@ document.body.addEventListener('click', async (e) => {
         const mod = document.getElementById('dt-nota-form-mod').value;
         const nota = document.getElementById('dt-nota-form-valor').value;
         if (!idAl || !disc || !mod) return alert("Preenche Aluno, Disciplina e Módulo!");
-        
+
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         try {
             const nId = `${disc}_${mod}`;
             const dSave = { turma: state.selectedTurma, disciplina: disc, modulo: mod, nota: nota, motivoREP: nota === 'REP' ? document.getElementById('dt-nota-form-rep-motivo').value : null, dataLancamento: new Date().toISOString(), professor: state.myUserName };
             await setDoc(doc(db, "utilizadores", idAl, "avaliacoes", nId), dSave, { merge: true });
             await window.abrirGestaoNotasDT(state.selectedTurma);
-        } catch (err) {}
+        } catch (err) { }
         return;
     }
 });

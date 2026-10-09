@@ -104,21 +104,25 @@ async function carregarTimelineAluno() {
     const cCont = document.getElementById('aluno-caderneta-content'); if(!cCont) return;
     try {
         let ev = [];
-        
         const nS_novas = await lerFirebaseOuCacheAluno(`utilizadores/${window.myUserId}/avaliacoes`);
         const nS_antigas = await lerFirebaseOuCacheAluno(`utilizadores/${window.myUserId}/notas`);
         
-        [...nS_novas.docs, ...nS_antigas.docs].forEach(d => { 
+        // --- O DESEMPACOTADOR ---
+        let notasProcessadas = [...nS_novas.docs];
+        nS_antigas.forEach(d => {
+            const data = d.data();
+            if(data.lista_notas) data.lista_notas.forEach(n => notasProcessadas.push({ data: () => n }));
+            else if(data.disciplina) notasProcessadas.push(d);
+        });
+        
+        notasProcessadas.forEach(d => { 
             const n = d.data(); 
             const dataLancamento = n.dataLancamento || n.data || new Date().toISOString();
             const modLabel = n.modulo ? n.modulo.toString().replace(/\D/g, '') : '?';
             ev.push({ 
                 time: new Date(dataLancamento).getTime(), 
-                cat: 'notas', 
-                icon: '<i class="fa-solid fa-graduation-cap"></i>', 
-                cor: 'var(--primary-green)', 
-                titulo: 'Nova Avaliação', 
-                desc: `${n.disciplina} (M${modLabel}): <strong style="color:var(--text-light);">${n.nota}</strong>` 
+                cat: 'notas', icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', 
+                titulo: 'Nova Avaliação', desc: `${n.disciplina} (M${modLabel}): <strong style="color:var(--text-light);">${n.nota}</strong>` 
             }); 
         });
         
@@ -127,8 +131,7 @@ async function carregarTimelineAluno() {
             const f = d.data(); 
             ev.push({ 
                 time: new Date(f.dataRegisto || f.dataInicio).getTime(), 
-                cat: 'faltas', 
-                icon: '<i class="fa-solid fa-user-xmark"></i>', 
+                cat: 'faltas', icon: '<i class="fa-solid fa-user-xmark"></i>', 
                 cor: f.justificada ? 'var(--success-green)' : 'var(--danger-red)', 
                 titulo: `Falta a ${f.disciplina} (${f.duracaoBlocos || f.horas}h)`, 
                 desc: f.justificada ? `Justificada` : `Injustificada - Ocorrida a ${f.dataFalta ? new Date(f.dataFalta).toLocaleDateString('pt-PT') : (f.dataInicio || 'SN')}` 
@@ -136,26 +139,14 @@ async function carregarTimelineAluno() {
         });
         
         ev = ev.filter(e => !isNaN(e.time)); ev.sort((a,b) => b.time - a.time); 
-        
         let eventos = ev;
         window.timelineFilterCat = window.timelineFilterCat || 'all';
-        
-        if(window.timelineFilterCat !== 'all') {
-            eventos = eventos.filter(e => e.cat === window.timelineFilterCat);
-        }
-        
+        if(window.timelineFilterCat !== 'all') eventos = eventos.filter(e => e.cat === window.timelineFilterCat);
         if(eventos.length === 0) { cCont.innerHTML = getEmptyState('O teu histórico escolar está limpo.', 'fa-clock-rotate-left'); return; }
         
         let html = '<div class="timeline">';
         eventos.forEach(e => { 
-            html += `<div class="timeline-item">
-                        <div class="timeline-icon" style="color: ${e.cor}; border-color: ${e.cor};">${e.icon}</div>
-                        <div class="timeline-content" style="border-left: 3px solid ${e.cor};">
-                            <span class="timeline-date">${new Date(e.time).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}</span>
-                            <strong style="color:var(--text-light); display:block; margin-bottom:5px;">${e.titulo}</strong>
-                            <p style="font-size:0.85rem; color:var(--text-light); margin:0;">${e.desc}</p>
-                        </div>
-                     </div>`; 
+            html += `<div class="timeline-item"><div class="timeline-icon" style="color: ${e.cor}; border-color: ${e.cor};">${e.icon}</div><div class="timeline-content" style="border-left: 3px solid ${e.cor};"><span class="timeline-date">${new Date(e.time).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}</span><strong style="color:var(--text-light); display:block; margin-bottom:5px;">${e.titulo}</strong><p style="font-size:0.85rem; color:var(--text-light); margin:0;">${e.desc}</p></div></div>`; 
         });
         cCont.innerHTML = html + '</div>';
     } catch(e) { console.error("Erro na Timeline:", e); }
@@ -283,18 +274,25 @@ async function carregarNotasAluno() {
         const notasNovas = await lerFirebaseOuCacheAluno(`utilizadores/${window.myUserId}/avaliacoes`);
         const notasAntigas = await lerFirebaseOuCacheAluno(`utilizadores/${window.myUserId}/notas`);
         
+        // --- O DESEMPACOTADOR ---
+        let notasProcessadas = [...notasNovas.docs];
+        notasAntigas.forEach(d => {
+            const data = d.data();
+            if(data.lista_notas) data.lista_notas.forEach(n => notasProcessadas.push({ data: () => n }));
+            else if(data.disciplina) notasProcessadas.push(d);
+        });
+
         let disciplinasDoAluno = {}; window.mapNotasCache = {};
         
-        [...notasAntigas.docs, ...notasNovas.docs].forEach(d => { 
+        notasProcessadas.forEach(d => { 
             const n = d.data(); 
             const modF = n.modulo ? n.modulo.toString().replace(/\D/g, '') : '?';
             n.modulo = modF; 
             
             if(!disciplinasDoAluno[n.disciplina]) disciplinasDoAluno[n.disciplina] = []; 
-            
             const index = disciplinasDoAluno[n.disciplina].findIndex(x => x.modulo === modF);
-            if (index > -1) { disciplinasDoAluno[n.disciplina][index] = n; } 
-            else { disciplinasDoAluno[n.disciplina].push(n); }
+            if (index > -1) disciplinasDoAluno[n.disciplina][index] = n; 
+            else disciplinasDoAluno[n.disciplina].push(n); 
             
             window.mapNotasCache[`${n.disciplina}_${modF}`] = n.nota; 
         });
@@ -313,14 +311,12 @@ async function carregarNotasAluno() {
                     const modLabel = n.modulo.toString().startsWith('UC') ? n.modulo : `Módulo ${n.modulo}`;
                     modsHtml += `<div class="modulo-row"><span style="color:var(--text-light);">${modLabel}</span><span style="font-weight:bold; color:${cor};">${n.nota}</span></div>`;
                 });
-                
                 const med = c > 0 ? (sum/c).toFixed(1) : '-'; const medCor = (med !== '-' && med < 10) ? 'var(--danger-red)' : 'var(--text-light)';
                 
                 html += `<div class="disciplina-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'">
                             <span class="disciplina-title" style="color:var(--text-light);">${disc}</span>
                             <span><span style="font-size:0.75rem; color:var(--text-muted); margin-right:8px;">Média:</span><span class="disciplina-media" style="color:${medCor};">${med}</span> <i class="fa-solid fa-chevron-down" style="font-size:0.8rem; color:var(--text-muted); margin-left:5px;"></i></span>
-                         </div>
-                         <div class="disciplina-modules">${modsHtml}</div>`;
+                         </div><div class="disciplina-modules">${modsHtml}</div>`;
             } else { 
                 html += `<div class="disciplina-header" style="cursor:default;"><span class="disciplina-title" style="color:var(--text-muted);">${disc}</span><span><span class="disciplina-media" style="color:var(--text-muted); font-size:0.9rem;">SN</span></span></div>`; 
             }

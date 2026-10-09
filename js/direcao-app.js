@@ -109,7 +109,15 @@ async function carregarDadosReaisDirecao() {
                                 }
                             }
                         };
-                        avSnap.forEach(processarNota); notasSnap.forEach(processarNota);
+                        
+                        avSnap.forEach(processarNota); 
+                        
+                        // --- O DESEMPACOTADOR ENTRA AQUI ---
+                        notasSnap.forEach(d => {
+                            const data = d.data();
+                            if (data.lista_notas) data.lista_notas.forEach(n => processarNota({ id: 'hist', data: () => n }));
+                            else if (data.disciplina) processarNota(d);
+                        });
 
                         let prhfAtivos = 0; let prhfUrgentes = 0;
                         prhfSnap.forEach(p => { 

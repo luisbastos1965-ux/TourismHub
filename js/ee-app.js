@@ -371,7 +371,14 @@ async function carregarResumoDashboard() {
     try {
         const notasNovas = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/avaliacoes`);
         const notasAntigas = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/notas`);
-        const todasAsNotas = [...notasAntigas.docs, ...notasNovas.docs];
+        
+        // --- O DESEMPACOTADOR AQUI ---
+        let todasAsNotas = [...notasNovas.docs];
+        notasAntigas.forEach(d => {
+            const data = d.data();
+            if(data.lista_notas) data.lista_notas.forEach(n => todasAsNotas.push({ data: () => n }));
+            else if(data.disciplina) todasAsNotas.push(d);
+        });
 
         let mapaUnico = {};
         todasAsNotas.forEach(d => {
@@ -706,12 +713,32 @@ async function carregarTimelineEE() {
     const cadernetaContent = document.getElementById('ee-caderneta-content');
     try {
         let eventos = [];
-        const notasSnap = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/notas`);
-        notasSnap.forEach(d => {
-            const n = d.data();
-            eventos.push({ time: new Date(n.data).getTime(), icon: '<i class="fa-solid fa-graduation-cap"></i>', cor: 'var(--primary-green)', titulo: 'Nova Avaliação', desc: `${n.disciplina} (Mod. ${n.modulo}): <strong style="color:var(--text-light);">${n.nota}</strong>` });
+        
+        // 1. Vai buscar as notas às DUAS gavetas (novas e antigas agregadas)
+        const notasNovas = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/avaliacoes`);
+        const notasAntigas = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/notas`);
+        
+        // --- O DESEMPACOTADOR ---
+        let notasProcessadas = [...notasNovas.docs];
+        notasAntigas.forEach(d => {
+            const data = d.data();
+            if(data.lista_notas) data.lista_notas.forEach(n => notasProcessadas.push({ data: () => n }));
+            else if(data.disciplina) notasProcessadas.push(d);
         });
 
+        // 2. Transforma as notas desempacotadas em "Eventos" da Timeline
+        notasProcessadas.forEach(d => {
+            const n = d.data();
+            eventos.push({ 
+                time: new Date(n.data || Date.now()).getTime(), 
+                icon: '<i class="fa-solid fa-graduation-cap"></i>', 
+                cor: 'var(--primary-green)', 
+                titulo: 'Nova Avaliação', 
+                desc: `${n.disciplina} (Mod. ${n.modulo}): <strong style="color:var(--text-light);">${n.nota}</strong>` 
+            });
+        });
+
+        // O resto da tua função continua igual (as faltas, ocorrências e PRHFs não foram agrupadas em array)
         const faltasSnap = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/faltas`);
         faltasSnap.forEach(d => {
             const f = d.data();
@@ -763,10 +790,19 @@ async function carregarNotasEE() {
         const notasNovas = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/avaliacoes`);
         const notasAntigas = await lerFirebaseOuCacheEE(`utilizadores/${educandoAtualId}/notas`);
 
+        // --- O DESEMPACOTADOR AQUI ---
+        let notasProcessadas = [...notasNovas.docs];
+        notasAntigas.forEach(d => {
+            const data = d.data();
+            if(data.lista_notas) data.lista_notas.forEach(n => notasProcessadas.push({ data: () => n }));
+            else if(data.disciplina) notasProcessadas.push(d);
+        });
+
         let disciplinasDoAluno = {};
         window.mapNotasCache = {};
 
-        [...notasAntigas.docs, ...notasNovas.docs].forEach(d => {
+        // Iterar sobre a nova lista desempacotada
+        notasProcessadas.forEach(d => {
             const n = d.data();
             const discNome = (n.disciplina || '').trim();
             const modF = n.modulo ? n.modulo.toString().replace(/\D/g, '') : '?';
