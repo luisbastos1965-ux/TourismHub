@@ -1546,3 +1546,86 @@ async function carregarFaltasParaSelecao() {
         container.innerHTML = '<p class="text-danger">Erro ao carregar faltas.</p>';
     }
 }
+// ==========================================
+// CARREGAR OBSERVAÇÕES DE REUNIÕES (E.E.)
+// ==========================================
+async function carregarReunioesEE(reuniaoSelecionada = 'momento_1') {
+    const cadernetaContent = document.getElementById('ee-caderneta-content');
+    if (!cadernetaContent) return;
+
+    const reunioesMenu = [
+        { id: 'momento_1', label: '1ª Intercalar' },
+        { id: 'momento_2', label: '1ª Avaliação' },
+        { id: 'momento_3', label: '2ª Intercalar' },
+        { id: 'momento_4', label: '2ª Avaliação' },
+        { id: 'momento_5', label: '3ª Avaliação' }
+    ];
+
+    let html = '<div style="display:flex; overflow-x:auto; gap:10px; margin-bottom:20px; padding-bottom:10px;">';
+    reunioesMenu.forEach(r => {
+        const bg = r.id === reuniaoSelecionada ? 'var(--primary-green)' : 'var(--bg-dark)';
+        const color = r.id === reuniaoSelecionada ? 'var(--bg-dark)' : 'var(--text-muted)';
+        html += `<button class="btn-select-reuniao" data-id="${r.id}" style="background:${bg}; color:${color}; border:1px solid #333; padding:8px 15px; border-radius:20px; cursor:pointer; font-weight:bold; white-space:nowrap; transition:0.2s; flex-shrink:0;">${r.label}</button>`;
+    });
+    html += '</div><div id="reuniao-content-area"><p class="text-muted center"><i class="fa-solid fa-spinner fa-spin"></i> A carregar dados...</p></div>';
+
+    cadernetaContent.innerHTML = html;
+
+    document.querySelectorAll('.btn-select-reuniao').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            carregarReunioesEE(e.currentTarget.getAttribute('data-id'));
+        });
+    });
+
+    try {
+        const docSnap = await getDoc(doc(db, "utilizadores", educandoAtualId, "reunioes", reuniaoSelecionada));
+        let dadosReuniao = docSnap.exists() ? docSnap.data() : {};
+
+        let contentHtml = '<div style="display:flex; flex-direction:column; gap:10px;">';
+
+        // O CADEADO DE PUBLICAÇÃO
+        if (dadosReuniao.publicado !== true) {
+            contentHtml += `
+                <div style="text-align: center; padding: 40px 20px; border: 1px dashed #444; border-radius: 8px; background: rgba(0,0,0,0.2);">
+                    <i class="fa-solid fa-lock" style="font-size: 3rem; color: #555; margin-bottom: 15px;"></i>
+                    <h4 style="color: var(--text-light); font-size: 1.1rem; margin-bottom: 8px;">Reunião Em Processamento</h4>
+                    <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0;">As sínteses e os pareceres deste momento de avaliação ainda não foram disponibilizados pelo Diretor de Turma.</p>
+                </div>
+            </div>`;
+            const rArea = document.getElementById('reuniao-content-area');
+            if (rArea) rArea.innerHTML = contentHtml;
+            return; 
+        }
+
+        const ordemDisciplinas = obterDisciplinasDoAno();
+
+        if (ordemDisciplinas.length === 0) {
+            contentHtml += '<p class="text-muted center">Ainda não existem disciplinas associadas à turma.</p>';
+        } else {
+            ordemDisciplinas.forEach(disc => {
+                let comentario = '<span style="color:var(--text-muted);">Sem comentário (SN)</span>';
+                if (dadosReuniao.sinteses_disciplinas && dadosReuniao.sinteses_disciplinas[disc]) {
+                    comentario = dadosReuniao.sinteses_disciplinas[disc];
+                }
+                contentHtml += `<div class="card" style="margin-bottom:0; border-left:4px solid var(--primary-green); padding:15px;">
+                                    <h4 style="margin-bottom:8px; color:var(--text-light); font-size:1rem;">${disc}</h4>
+                                    <p style="color:var(--text-light); font-size:0.9rem; line-height:1.5; margin:0; white-space: pre-wrap;">${comentario}</p>
+                                </div>`;
+            });
+        }
+
+        const global = dadosReuniao.sintese_global || '<span style="color:var(--text-muted);">Sem observações globais registadas (SN).</span>';
+
+        contentHtml += `<div class="card" style="margin-top:15px; border:1px solid var(--warning-yellow); background:rgba(245,204,0,0.05); padding:15px;">
+                            <h3 style="color:var(--warning-yellow); margin-bottom:10px; font-size:1.1rem;"><i class="fa-solid fa-comment-dots"></i> Observações Globais</h3>
+                            <p style="color:var(--text-light); font-size:0.95rem; line-height:1.6; margin:0; white-space: pre-wrap;">${global}</p>
+                        </div></div>`;
+
+        const rArea = document.getElementById('reuniao-content-area');
+        if (rArea) rArea.innerHTML = contentHtml;
+    } catch (e) {
+        console.error("Erro ao carregar reuniões EE:", e);
+        const rArea = document.getElementById('reuniao-content-area');
+        if (rArea) rArea.innerHTML = '<p class="text-danger center">Erro ao carregar a reunião.</p>';
+    }
+}
