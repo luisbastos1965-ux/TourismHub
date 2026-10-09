@@ -163,7 +163,8 @@ function redirecionarParaPainel(papeis) {
     if (papeis.includes('direcao')) { paginaDestino = 'direcao.html'; } 
     else if (papeis.includes('admin')) { paginaDestino = 'admin.html'; } 
     else if (papeis.some(r => ['professor', 'diretor_turma', 'dt', 'orientador_pap', 'coordenador'].includes(r))) { paginaDestino = 'prof.html'; } 
-    else if (papeis.includes('ee')) { paginaDestino = 'ee.html'; } 
+    // ACEITA OS DOIS FORMATOS DO ENCARREGADO DE EDUCAÇÃO:
+    else if (papeis.includes('ee') || papeis.includes('encarregado_educacao')) { paginaDestino = 'ee.html'; } 
     else if (papeis.includes('aluno')) { paginaDestino = 'aluno.html'; }
 
     if (!paginaAtual.includes(paginaDestino)) {

@@ -1,3 +1,5 @@
+console.log("🚀 [TESTE EXTREMO] O ficheiro ee-app.js abriu e leu a linha 1!");
+
 import { auth, db } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, collection, getDocs, query, addDoc, onSnapshot, orderBy, where, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
@@ -103,11 +105,19 @@ function obterDisciplinasDoAno() {
 }
 
 // ==========================================
-// ARRANQUE E NAVEGAÇÃO BÁSICA
+// ARRANQUE E AUTENTICAÇÃO BLINDADA
 // ==========================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        myUserId = user.email.split('@')[0].toLowerCase();
+        let rawId = user.email.split('@')[0].toLowerCase();
+        
+        // TRUQUE INTELIGENTE: Se o ID começar por 'a' (ex: a3726), converte para 'e'
+        if (rawId.startsWith('a')) {
+            myUserId = 'e' + rawId.substring(1);
+        } else {
+            myUserId = rawId;
+        }
+
         try {
             const docSnap = await getDoc(doc(db, "utilizadores", myUserId));
             
@@ -115,34 +125,35 @@ onAuthStateChanged(auth, async (user) => {
                 const dados = docSnap.data();
                 const papelUser = (dados.papel || "").toLowerCase();
                 
-                // Aceita tanto 'ee' como 'encarregado_educacao'
-                if (papelUser === 'ee' || papelUser === 'encarregado_educacao') {
+                // Aceita 'ee' ou 'encarregado_educacao'
+                if (papelUser === 'ee' || papelUser === 'encarregado_educacao' || papelUser === 'encarregado') {
                     myUserName = dados.nome || "Encarregado";
 
-                    // Lê os educandos independentemente de estarem no singular, plural ou array
+                    // Extrator infalível do Educando
                     let arr = [];
-                    if (dados.educando) { arr = [dados.educando]; }
+                    if (dados.educando) { arr = [dados.educando.trim()]; }
                     else if (dados.educandos && Array.isArray(dados.educandos)) { arr = dados.educandos; }
                     else if (dados.educandoId && Array.isArray(dados.educandoId)) { arr = dados.educandoId; }
-                    else if (dados.educandoId && typeof dados.educandoId === 'string') { arr = [dados.educandoId]; }
+                    else if (dados.educandoId && typeof dados.educandoId === 'string') { arr = [dados.educandoId.trim()]; }
 
                     educandosArray = arr;
 
                     if (educandosArray.length > 0) {
                         await construirSeletorEducandos();
                     } else {
-                        document.getElementById('header-ee-student-selector').innerHTML = '<option value="">Sem alunos</option>';
-                        document.getElementById('ee-dashboard').innerHTML = getEmptyState('Sem educandos associados na base de dados.', 'fa-user-group');
+                        document.getElementById('header-ee-student-selector').innerHTML = '<option value="">Sem alunos associados</option>';
+                        document.getElementById('ee-dashboard').innerHTML = getEmptyState('A sua conta não tem nenhum educando associado. Contacte a escola.', 'fa-user-group');
                     }
                 } else {
-                    alert("A sua conta não tem permissões de Encarregado de Educação.");
+                    alert("Acesso Negado: A sua conta não está registada como Encarregado de Educação.");
                     window.location.href = "index.html";
                 }
             } else {
+                alert(`Erro Crítico: O perfil '${myUserId}' não existe na base de dados!`);
                 window.location.href = "index.html";
             }
         } catch (e) {
-            console.error("Erro no login EE:", e);
+            console.error("Erro no login:", e);
         }
     } else {
         window.location.href = "index.html";
@@ -154,6 +165,8 @@ async function construirSeletorEducandos() {
     if (!selector) return;
     selector.innerHTML = '';
     
+    let alunosCarregados = 0;
+
     for (let id of educandosArray) {
         if (!id) continue;
         try {
@@ -162,21 +175,24 @@ async function construirSeletorEducandos() {
                 const data = snap.data();
                 const opt = document.createElement('option');
                 opt.value = id;
-                opt.text = `${data.nome ? data.nome.split(' ')[0] : "Aluno"} (${data.turma || "S/ Turma"})`;
+                opt.text = `${data.nome ? data.nome.split(' ')[0] : "Aluno"} (${data.turma || "S/T"})`;
                 selector.appendChild(opt);
+                alunosCarregados++;
             }
-        } catch (e) { }
+        } catch (e) { console.error("Erro a ler aluno:", e); }
     }
     
-    if (selector.options.length > 0) {
+    if (alunosCarregados > 0) {
         educandoAtualId = selector.value;
-        carregarDadosDoFilhoSelecionado();
+        // O AWAIT AQUI GARANTE QUE O DASHBOARD CARREGA
+        await carregarDadosDoFilhoSelecionado(); 
         selector.onchange = (e) => {
             educandoAtualId = e.target.value;
             carregarDadosDoFilhoSelecionado();
         };
     } else {
-        selector.innerHTML = '<option value="">Alunos não encontrados</option>';
+        selector.innerHTML = '<option value="">Erro ao carregar o aluno</option>';
+        document.getElementById('ee-dashboard').innerHTML = getEmptyState('Ocorreu um problema ao carregar a ficha do aluno. Ele pode ter sido apagado.', 'fa-triangle-exclamation');
     }
 }
 
@@ -1134,77 +1150,9 @@ async function carregarAgendaEE() {
         }
 
         subContainer.innerHTML = html;
-    } catch (e) { }
-}
-
-async function carregarAgendaEE() {
-    const subContainer = document.getElementById('ee-agenda-content');
-    if (!subContainer) return;
-    subContainer.innerHTML = '<p class="text-muted center">A sincronizar agenda...</p>';
-    if (!turmaAtual) return;
-
-    const elT = document.getElementById('filtro-agenda-testes');
-    const elTr = document.getElementById('filtro-agenda-trabalhos');
-    const elO = document.getElementById('filtro-agenda-outros');
-    const mostraT = elT ? elT.checked : true;
-    const mostraTr = elTr ? elTr.checked : true;
-    const mostraO = elO ? elO.checked : true;
-
-    try {
-        const evDb = await getDocs(collection(db, "turmas", turmaAtual, "eventos"));
-        if (evDb.empty) {
-            subContainer.innerHTML = getEmptyState('Sem eventos agendados.', 'fa-calendar-xmark');
-            return;
-        }
-
-        let evs = [];
-        evDb.forEach(d => {
-            const e = d.data();
-            let bgC = '#8b5cf6';
-            let txtT = 'Evento';
-
-            if (e.tipo === 'teste' || e.tipo === 'avaliacao') {
-                if (mostraT) { bgC = '#f59e0b'; txtT = 'Avaliação'; evs.push({ ...e, cor: bgC, txt: txtT }); }
-            }
-            else if (e.tipo === 'trabalho' || e.tipo === 'entrega') {
-                if (mostraTr) { bgC = '#00d2ff'; txtT = 'Entrega'; evs.push({ ...e, cor: bgC, txt: txtT }); }
-            }
-            else {
-                if (mostraO) evs.push({ ...e, cor: bgC, txt: txtT });
-            }
-        });
-
-        if (evs.length === 0) {
-            subContainer.innerHTML = getEmptyState('Sem eventos com os filtros atuais.', 'fa-filter');
-            return;
-        }
-
-        const hoje = new Date().toISOString().split('T')[0];
-        const futuros = evs.filter(e => (e.data || '') >= hoje).sort((a, b) => (a.data || '').localeCompare(b.data || ''));
-        const passados = evs.filter(e => (e.data || '') < hoje).sort((a, b) => (b.data || '').localeCompare(a.data || ''));
-        const mesArr = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-        let html = '';
-
-        const renderEv = (ev) => {
-            if (!ev.data) return '';
-            const dp = ev.data.split('-');
-            const mes = mesArr[parseInt(dp[1]) - 1];
-            return `<div class="calendar-event-card" style="border-left-color:${ev.cor}; margin-bottom:10px;"><div class="calendar-date-box"><span class="day">${dp[2]}</span><span class="month" style="color:${ev.cor};">${mes}</span></div><div class="calendar-info"><h4 style="margin:0; color:var(--text-light);">${ev.titulo}</h4><span style="font-size:0.8rem; color:var(--text-muted);">${(ev.txt || 'evento').toUpperCase()}</span></div></div>`;
-        };
-
-        if (futuros.length > 0) {
-            futuros.forEach(e => html += renderEv(e));
-        } else {
-            html += '<p class="text-muted center">Sem eventos futuros.</p>';
-        }
-
-        if (passados.length > 0) {
-            html += '<div class="calendar-divider" style="margin-top:20px;"><span>Passados</span></div>';
-            passados.forEach(e => html += renderEv(e));
-        }
-
-        subContainer.innerHTML = html;
-    } catch (e) { }
+    } catch (e) { 
+        subContainer.innerHTML = '<p class="text-danger center">Erro ao carregar agenda.</p>';
+    }
 }
 
 let eeHorarioModo = 'dia';
