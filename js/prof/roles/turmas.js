@@ -13,9 +13,82 @@ export async function gerirCliquesTurmas(e) {
         if (e.target.closest('#btn-ver-pauta')) { renderizarPautaTurma(); return true; }
         if (e.target.closest('#btn-ver-faltas-turma')) { renderizarFaltasTurma(); return true; }
 
+        // ==========================================
+        // GRAVAR FALTAS EM MASSA (PROFESSORES)
+        // ==========================================
+        if (e.target.closest('#btn-gravar-faltas-turma')) {
+            const btn = e.target.closest('#btn-gravar-faltas-turma');
+            const turma = state.selectedTurma;
+            const disciplina = document.getElementById('lancar-falta-disciplina').value;
+            const modulo = document.getElementById('falta-modulo-select').value;
+            const dataFalta = document.getElementById('falta-data-input').value;
+
+            if (!disciplina || !modulo || !dataFalta) {
+                alert("⚠ Preenche a disciplina, módulo e data antes de gravar.");
+                return true;
+            }
+
+            const checkboxes = document.querySelectorAll('.falta-aluno-check:checked');
+            const alunosMarcados = Array.from(checkboxes).map(chk => chk.value);
+
+            if (alunosMarcados.length === 0) {
+                alert("Não selecionaste nenhum aluno para marcar falta.");
+                return true;
+            }
+
+            const txtOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A gravar...';
+            btn.disabled = true;
+
+            try {
+                const operacoes = alunosMarcados.map(alunoId => {
+                    return addDoc(collection(db, "utilizadores", alunoId, "faltas"), {
+                        turma: turma,
+                        disciplina: disciplina,
+                        modulo: modulo,
+                        dataFalta: dataFalta,
+                        duracaoBlocos: 2,
+                        horas: 2,
+                        justificada: false,
+                        dataRegisto: new Date().toISOString(),
+                        professor: state.myUserName
+                    });
+                });
+
+                await Promise.all(operacoes);
+
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> Faltas Registadas!';
+                
+                if (window.registarAtividadeProfessor) {
+                    window.registarAtividadeProfessor('falta', `Marcou falta a ${alunosMarcados.length} aluno(s)`, `Turma ${turma} | ${disciplina}`);
+                }
+
+                setTimeout(() => {
+                    btn.innerHTML = txtOriginal;
+                    btn.disabled = false;
+                    document.getElementById('modal-marcar-faltas').style.display = 'none';
+                    
+                    document.querySelectorAll('.falta-aluno-check').forEach(chk => {
+                        chk.checked = false;
+                        const label = chk.closest('label');
+                        if(label) {
+                            label.style.background = 'rgba(0,0,0,0.2)';
+                            label.style.borderColor = '#333';
+                        }
+                    });
+                }, 1500);
+
+            } catch (err) {
+                console.error("Erro ao gravar faltas:", err);
+                btn.innerHTML = 'Erro!';
+                setTimeout(() => { btn.innerHTML = txtOriginal; btn.disabled = false; }, 2000);
+            }
+            return true;
+        }
+
         // PLANTA DA SALA
         if (e.target.closest('#btn-ver-planta')) { 
-            if (!state.selectedTurma) { alert("Seleciona uma turma primeiro."); return true; } 
+            if (!state.selectedTurma) { alert("Seleciona uma turma primeiro."); return true; }
             document.getElementById('planta-sala-select').value = ''; 
             document.getElementById('planta-gerada-container').style.display = 'none'; 
             document.getElementById('planta-instrucoes-ia').value = ''; 
