@@ -160,6 +160,59 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-voltar-materiais')?.addEventListener('click', () => document.querySelector('.bottom-nav .nav-item.active').click());
 });
 
+// ==========================================
+// UPLOAD E GRAVAÇÃO DA FOTO DE PERFIL
+// ==========================================
+const uploadAvatar = document.getElementById('upload-avatar');
+if (uploadAvatar) {
+    uploadAvatar.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file || !window.myUserId) return;
+
+        // Feedback visual no ícone da câmara
+        const label = document.querySelector('label[for="upload-avatar"]');
+        const originalHTML = label.innerHTML;
+        label.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+        try {
+            // 1. Comprimir a imagem para evitar limites de Base64 no Firebase
+            const options = {
+                maxSizeMB: 0.1, // Limite de ~100KB
+                maxWidthOrHeight: 500,
+                useWebWorker: true
+            };
+            const compressedFile = await imageCompression(file, options);
+
+            // 2. Converter a imagem comprimida para Base64
+            const reader = new FileReader();
+            reader.readAsDataURL(compressedFile);
+            reader.onloadend = async () => {
+                const base64data = reader.result;
+
+                // 3. Gravar na gaveta do utilizador no Firestore
+                await setDoc(doc(db, "utilizadores", window.myUserId), {
+                    fotoPerfil: base64data
+                }, { merge: true });
+
+                // 4. Atualizar imediatamente o ecrã do aluno
+                const perfilImg = document.getElementById('perfil-avatar-img');
+                if (perfilImg) perfilImg.src = base64data;
+                
+                const headerAvatar = document.getElementById('header-avatar-circle');
+                if (headerAvatar) headerAvatar.innerHTML = `<img src="${base64data}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+
+                // Concluir animação
+                label.innerHTML = '<i class="fa-solid fa-check"></i>';
+                setTimeout(() => { label.innerHTML = originalHTML; }, 2000);
+            };
+        } catch (error) {
+            console.error("Erro ao processar a foto:", error);
+            label.innerHTML = '<i class="fa-solid fa-xmark" style="color:var(--danger-red);"></i>';
+            setTimeout(() => { label.innerHTML = originalHTML; }, 2000);
+        }
+    });
+}
+
 // =========================================================================
 // SISTEMA DE NOTIFICAÇÕES UNIFICADO (Caixa Blindada Anti-Conflitos)
 // =========================================================================
