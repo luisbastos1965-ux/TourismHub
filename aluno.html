@@ -263,10 +263,15 @@
 
             <!-- VISTA AGENDA / HORÁRIO -->
             <div id="view-aluno-agenda" style="display: none;">
-                <div class="falta-tabs" style="margin-bottom: 15px;">
+                <!-- NOVOS BOTÕES COM 3 COLUNAS SIMÉTRICAS -->
+                <div class="falta-tabs" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px;">
                     <button class="falta-tab-btn active" id="tab-aluno-eventos">Calendário</button>
                     <button class="falta-tab-btn" id="tab-aluno-horario">Horário</button>
+                    <button class="falta-tab-btn" id="tab-aluno-cronograma">Cronograma</button>
                 </div>
+                
+                <!-- CONTENTOR DO CRONOGRAMA -->
+                <div id="aluno-cronograma-container" style="display:none; margin-top:10px; overflow-x: auto; padding-bottom: 40px;"></div>
                 
                 <div class="agenda-filters" id="aluno-agenda-filtros" style="display:flex;">
                     <label class="agenda-filter-label"><input type="checkbox" id="aluno-filtro-agenda-testes" checked> <span style="color:#ffaa00;">●</span> Avaliações</label>

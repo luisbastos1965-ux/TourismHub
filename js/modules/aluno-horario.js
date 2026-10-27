@@ -1,4 +1,4 @@
-import { collection, getDocs, getDoc, doc, query } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { collection, getDocs, getDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { obterDisciplinasDoAno } from "./aluno-caderneta.js"; // IMPORTAÇÃO NOVA!
 
 let ahModo = 'dia', ahDOff = 0, ahSOff = 0;
@@ -33,6 +33,7 @@ export function setupHorario() {
         document.querySelectorAll('#view-aluno-agenda .falta-tab-btn').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); 
         document.getElementById('aluno-agenda-content').style.display = 'block'; 
         document.getElementById('aluno-horario-container').style.display = 'none'; 
+        document.getElementById('aluno-cronograma-container').style.display = 'none';
         document.getElementById('aluno-agenda-filtros').style.display = 'flex'; 
         carregarAgendaAlunoLista();
     });
@@ -40,12 +41,22 @@ export function setupHorario() {
     document.getElementById('tab-aluno-horario')?.addEventListener('click', (e) => { 
         document.querySelectorAll('#view-aluno-agenda .falta-tab-btn').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); 
         document.getElementById('aluno-agenda-content').style.display = 'none'; 
+        document.getElementById('aluno-cronograma-container').style.display = 'none';
         document.getElementById('aluno-horario-container').style.display = 'block'; 
         document.getElementById('aluno-agenda-filtros').style.display = 'none'; 
         carregarHorarioAluno(); 
     });
 
-    ['aluno-filtro-agenda-testes', 'aluno-filtro-agenda-trabalhos', 'aluno-filtro-agenda-outros'].forEach(id => { 
+    document.getElementById('tab-aluno-cronograma')?.addEventListener('click', (e) => { 
+        document.querySelectorAll('#view-aluno-agenda .falta-tab-btn').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); 
+        document.getElementById('aluno-agenda-content').style.display = 'none'; 
+        document.getElementById('aluno-horario-container').style.display = 'none'; 
+        document.getElementById('aluno-cronograma-container').style.display = 'block';
+        document.getElementById('aluno-agenda-filtros').style.display = 'none'; 
+        renderizarCronogramaModulos(); 
+    });
+
+    ['aluno-filtro-agenda-testes', 'aluno-filtro-agenda-trabalhos', 'aluno-filtro-agenda-outros'].forEach(id => {
         document.getElementById(id)?.addEventListener('change', carregarAgendaAlunoLista); 
     });
     
@@ -261,4 +272,112 @@ export async function carregarMateriaisAluno() {
         }); 
         c.innerHTML = html;
     } catch(e) { console.error(e); c.innerHTML = '<p class="text-danger center">Erro ao carregar sumários.</p>'; }
+}
+
+// ==========================================
+// CRONOGRAMA DE MÓDULOS (EFEITO CASCATA)
+// ==========================================
+export async function renderizarCronogramaModulos() {
+    const content = document.getElementById('aluno-cronograma-container');
+    if (!content) return;
+    
+    content.innerHTML = '<p class="text-muted center" style="padding:20px;"><i class="fa-solid fa-spinner fa-spin"></i> A calcular horas e módulos...</p>';
+
+    try {
+        const mMatch = window.minhaTurma.match(/\d+/);
+        const anoTurma = mMatch ? mMatch[0] : "10";
+
+        const turmaRef = doc(window.db, "turmas", window.minhaTurma);
+        const turmaSnap = await getDoc(turmaRef);
+        
+        if (!turmaSnap.exists() || !turmaSnap.data().horario) {
+            content.innerHTML = '<p class="text-muted center">Horário não encontrado para esta turma.</p>';
+            return;
+        }
+
+        const horarioMap = turmaSnap.data().horario;
+        const horasLecionadas = {};
+        
+        const hoje = new Date();
+        const hojeIso = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0') + '-' + String(hoje.getDate()).padStart(2, '0');
+
+        for (const [chave, disc] of Object.entries(horarioMap)) {
+            const dataAula = chave.split('_')[0]; 
+            if (dataAula <= hojeIso) { 
+                if (!horasLecionadas[disc]) horasLecionadas[disc] = 0;
+                horasLecionadas[disc] += 1; 
+            }
+        }
+
+        const qModulos = query(collection(window.db, "estrutura_modular"), where("ano", "==", anoTurma));
+        const modulosSnap = await getDocs(qModulos);
+        
+        const modulosPorDisc = {};
+        modulosSnap.forEach(d => {
+            const m = d.data();
+            if (!modulosPorDisc[m.disciplina]) modulosPorDisc[m.disciplina] = [];
+            modulosPorDisc[m.disciplina].push(m);
+        });
+
+        let html = '<div style="display:flex; flex-direction:column; gap:20px; padding: 10px;">';
+        const disciplinasAtivas = Object.keys(horasLecionadas).sort();
+
+        for (const disc of disciplinasAtivas) {
+            if (!modulosPorDisc[disc]) continue; 
+
+            modulosPorDisc[disc].sort((a, b) => a.ordem - b.ordem);
+
+            let horasDisponiveis = horasLecionadas[disc];
+            let modulosHtml = '';
+
+            modulosPorDisc[disc].forEach(mod => {
+                const horasDoModulo = parseInt(mod.horas) || 0;
+                let horasPreenchidas = 0;
+
+                if (horasDisponiveis >= horasDoModulo) {
+                    horasPreenchidas = horasDoModulo;
+                    horasDisponiveis -= horasDoModulo; 
+                } else if (horasDisponiveis > 0) {
+                    horasPreenchidas = horasDisponiveis;
+                    horasDisponiveis = 0; 
+                }
+
+                const perc = Math.min(100, Math.round((horasPreenchidas / horasDoModulo) * 100)) || 0;
+                const corBarra = perc === 100 ? 'var(--primary-green)' : (perc > 0 ? 'var(--warning-yellow)' : '#333');
+
+                modulosHtml += `
+                    <div style="margin-bottom: 15px;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:var(--text-light); margin-bottom:5px;">
+                            <span><strong>M${mod.ordem}</strong> - ${mod.nome_oficial || 'Módulo'}</span>
+                            <span>${horasPreenchidas}h / ${horasDoModulo}h (${perc}%)</span>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.3); border:1px solid #444; height:12px; border-radius:6px; overflow:hidden;">
+                            <div style="height:100%; width:${perc}%; background:${corBarra}; transition: width 1s ease-out; box-shadow: ${perc > 0 ? '0 0 5px ' + corBarra : 'none'};"></div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                <div class="card" style="border-left: 4px solid #0ea5e9; margin-bottom: 10px;">
+                    <h4 style="margin-top:0; margin-bottom:15px; color:#0ea5e9; font-size: 1.1rem; border-bottom: 1px dashed #333; padding-bottom: 8px;">
+                        <i class="fa-solid fa-layer-group"></i> ${disc}
+                        <span style="font-size:0.8rem; color:var(--text-muted); float:right; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 12px;">Dadas: ${horasLecionadas[disc]}h</span>
+                    </h4>
+                    ${modulosHtml}
+                </div>
+            `;
+        }
+
+        if (html === '<div style="display:flex; flex-direction:column; gap:20px; padding: 10px;">') {
+            html += '<p class="text-muted center">Não há dados suficientes para mostrar o cronograma.</p>';
+        }
+
+        html += '</div>';
+        content.innerHTML = html;
+
+    } catch (error) {
+        console.error("Erro no Cronograma:", error);
+        content.innerHTML = '<p style="color:var(--danger-red); text-align:center;">Ocorreu um erro ao gerar o cronograma.</p>';
+    }
 }
