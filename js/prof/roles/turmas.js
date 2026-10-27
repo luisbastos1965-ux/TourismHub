@@ -16,12 +16,13 @@ export async function gerirCliquesTurmas(e) {
         // ==========================================
         // GRAVAR FALTAS EM MASSA (PROFESSORES)
         // ==========================================
-        if (e.target.closest('#btn-gravar-faltas-turma')) {
-            const btn = e.target.closest('#btn-gravar-faltas-turma');
+        if (e.target.closest('#btn-confirmar-faltas')) {
+            const btn = e.target.closest('#btn-confirmar-faltas');
             const turma = state.selectedTurma;
             const disciplina = document.getElementById('lancar-falta-disciplina').value;
             const modulo = document.getElementById('falta-modulo-select').value;
             const dataFalta = document.getElementById('falta-data-input').value;
+            const duracao = parseInt(document.getElementById('falta-aula-select').value) || 2;
 
             if (!disciplina || !modulo || !dataFalta) {
                 alert("⚠ Preenche a disciplina, módulo e data antes de gravar.");
@@ -47,8 +48,8 @@ export async function gerirCliquesTurmas(e) {
                         disciplina: disciplina,
                         modulo: modulo,
                         dataFalta: dataFalta,
-                        duracaoBlocos: 2,
-                        horas: 2,
+                        duracaoBlocos: duracao,
+                        horas: duracao,
                         justificada: false,
                         dataRegisto: new Date().toISOString(),
                         professor: state.myUserName
@@ -60,7 +61,7 @@ export async function gerirCliquesTurmas(e) {
                 btn.innerHTML = '<i class="fa-solid fa-check"></i> Faltas Registadas!';
                 
                 if (window.registarAtividadeProfessor) {
-                    window.registarAtividadeProfessor('falta', `Marcou falta a ${alunosMarcados.length} aluno(s)`, `Turma ${turma} | ${disciplina}`);
+                    window.registarAtividadeProfessor('falta', `Marcou falta a ${alunosMarcados.length} aluno(s) (${duracao} tempos)`, `Turma ${turma} | ${disciplina}`);
                 }
 
                 setTimeout(() => {
