@@ -686,8 +686,8 @@ function renderFCT(dados) {
                         <div style="width:80px;"><label style="font-size:0.75rem; color:var(--text-muted);">Saída</label><input type="time" id="fct-hora-out" class="input-padrao" style="width:100%; padding:10px 5px; font-size:0.85rem;"></div>
                     </div>
                     <div style="display: flex; gap: 8px; align-items:center; margin-bottom: 15px; justify-content: space-between;">
-                        <label style="font-size:0.85rem; color:var(--text-light); margin:0;">Horas a validar na FCT hoje (Máx 7):</label>
-                        <input type="number" id="fct-hora-validar" class="input-padrao" placeholder="Ex: 4" style="width:80px; padding:8px; margin:0; text-align:center;" min="1" max="7">
+                        <label style="font-size:0.85rem; color:var(--text-light); margin:0;">Horas a validar na FCT hoje (0 a 7):</label>
+                        <input type="number" id="fct-hora-validar" class="input-padrao" placeholder="Ex: 0" style="width:80px; padding:8px; margin:0; text-align:center;" min="0" max="7">
                     </div>
                     <button class="primary-btn small-btn" style="width: 100%; background:var(--primary-green);" onclick="window.registarHorasDia()"><i class="fa-solid fa-clock"></i> Registar Horas</button>
                 </div>`;
@@ -772,10 +772,11 @@ async function registarHorasDia() {
     const dt = document.getElementById('fct-hora-data').value;
     const hIn = document.getElementById('fct-hora-in').value;
     const hOut = document.getElementById('fct-hora-out').value;
-    const validarIn = Number(document.getElementById('fct-hora-validar').value);
+    const inputValidar = document.getElementById('fct-hora-validar').value;
+    const validarIn = Number(inputValidar);
 
     if(!dt || !hIn || !hOut) { mostrarAlerta("Preenche a data e as horas de entrada e saída!"); return; }
-    if(!validarIn || validarIn < 1 || validarIn > 7) { mostrarAlerta("As horas a validar devem ser um número entre 1 e 7!"); return; }
+    if(inputValidar === '' || validarIn < 0 || validarIn > 7) { mostrarAlerta("As horas a validar na FCT devem ser um número entre 0 e 7!"); return; }
 
     const [hInStr, mInStr] = hIn.split(':').map(Number);
     const [hOutStr, mOutStr] = hOut.split(':').map(Number);
