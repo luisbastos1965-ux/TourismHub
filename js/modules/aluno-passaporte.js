@@ -689,7 +689,8 @@ function renderFCT(dados) {
                         <label style="font-size:0.85rem; color:var(--text-light); margin:0;">Horas a validar na FCT hoje (0 a 7):</label>
                         <input type="number" id="fct-hora-validar" class="input-padrao" placeholder="Ex: 0" style="width:80px; padding:8px; margin:0; text-align:center;" min="0" max="7">
                     </div>
-                    <button class="primary-btn small-btn" style="width: 100%; background:var(--primary-green);" onclick="window.registarHorasDia()"><i class="fa-solid fa-clock"></i> Registar Horas</button>
+                    <button class="primary-btn small-btn" style="width: 100%; background:var(--primary-green); margin-bottom: 8px;" onclick="window.registarHorasDia()"><i class="fa-solid fa-clock"></i> Registar Horas</button>
+                    <button class="secondary-btn small-btn" style="width: 100%; border-color:#0ea5e9; color:#0ea5e9;" onclick="window.registarTudoBanco()"><i class="fa-solid fa-piggy-bank"></i> Fim de Semana (100% para o Banco)</button>
                 </div>`;
                 
     if (window.historicoFCTAtual.length > 0) {
@@ -768,6 +769,21 @@ async function guardarFichaEntidade() {
     } catch(e) { mostrarAlerta("Erro ao guardar ficha."); }
 }
 
+window.registarTudoBanco = async function() {
+    const dt = document.getElementById('fct-hora-data').value;
+    const hIn = document.getElementById('fct-hora-in').value;
+    const hOut = document.getElementById('fct-hora-out').value;
+    
+    if(!dt || !hIn || !hOut) { mostrarAlerta("Preenche a data e as horas de entrada e saída primeiro!"); return; }
+    
+    const confirmou = await confirmarAcao("Queres enviar todas as horas deste turno diretamente para o Banco de Horas (0h validadas para a escola)?");
+    if(!confirmou) return;
+
+    // Força o valor a 0 e chama a função de registo normal
+    document.getElementById('fct-hora-validar').value = 0;
+    window.registarHorasDia();
+};
+
 async function registarHorasDia() {
     const dt = document.getElementById('fct-hora-data').value;
     const hIn = document.getElementById('fct-hora-in').value;
@@ -789,15 +805,25 @@ async function registarHorasDia() {
     if (validarIn > totalHorasFeitas) { mostrarAlerta(`As horas a validar (${validarIn}h) não podem ser superiores às horas efetuadas (${totalHorasFeitas}h)!`); return; }
 
     let bancoFinal = totalHorasFeitas - validarIn;
-    const btn = event.currentTarget; const textoOriginal = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
+    
+    // Captura segura do botão para evitar erros quando chamado por outra função
+    let btn = null;
+    let textoOriginal = "";
+    try {
+        btn = window.event ? window.event.currentTarget : null;
+        if (btn) {
+            textoOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; 
+            btn.disabled = true;
+        }
+    } catch(e) {}
 
     try {
         const snap = await getDoc(doc(window.db, "utilizadores", window.myUserId));
         const currentHoras = snap.data().fct?.horasRealizadas || 0;
         const currentBanco = snap.data().fct?.bancoHoras || 0;
         
-        // NOVO: Criar o registo detalhado para o Coordenador visualizar os dias/horas
+        // Criar o registo detalhado para o Coordenador visualizar os dias/horas
         const dataFormatada = dt.split('-').reverse().join('/');
         const novoRegistoDiario = {
             data: dataFormatada,
@@ -809,7 +835,6 @@ async function registarHorasDia() {
             "fct.horasRealizadas": currentHoras + validarIn,
             "fct.bancoHoras": currentBanco + bancoFinal,
             "fct.historicoHoras": arrayUnion({ data: dataFormatada, dataIso: dt, inicio: hIn, fim: hOut, horasTotal: totalHorasFeitas, horasValidadas: validarIn, horasBanco: bancoFinal }),
-            // ADICIONADO: Envia direto para o array que o coordenador lê no painel
             "fct.registosDiarios": arrayUnion(novoRegistoDiario)
         });
         
@@ -817,8 +842,10 @@ async function registarHorasDia() {
         window.recarregarViewPassaporte('fct');
     } catch(e) { 
         mostrarAlerta("Erro ao registar horas."); 
-        btn.innerHTML = textoOriginal; 
-        btn.disabled = false; 
+        if (btn) {
+            btn.innerHTML = textoOriginal; 
+            btn.disabled = false; 
+        }
     }
 }
 
